@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/install", "destination": "/api/install" },
+    { "source": "/counts",  "destination": "/api/counts"  }
+  ]
+}

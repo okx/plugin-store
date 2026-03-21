@@ -1,0 +1,24 @@
+[package]
+name = "ranking-sniper"
+version = "1.0.0"
+edition = "2021"
+description = "Automated token sniper based on DEX ranking board momentum signals on Solana"
+
+[[bin]]
+name = "strategy-ranking-sniper"
+path = "src/main.rs"
+
+[lib]
+name = "ranking_sniper"
+path = "src/mod.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4.44"
+dirs = "6.0.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+plugin-store-core = { path = "../core" }
+libc = "0.2.183"
