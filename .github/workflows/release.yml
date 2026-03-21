@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.binary }} ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        binary: [plugin-store, strategy-ranking-sniper, strategy-memepump-scanner, strategy-signal-tracker, dapp-hyperliquid]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+            cross: true
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-22.04
+            cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+          - target: i686-pc-windows-msvc
+            os: windows-2022
+          - target: aarch64-pc-windows-msvc
+            os: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Cargo.toml version matches tag
+        if: matrix.binary == 'plugin-store'
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "ERROR: tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
+            exit 1
+          fi
+          echo "Version check passed: $CARGO_VERSION"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Set manifest path
+        id: manifest
+        shell: bash
+        run: |
+          case "${{ matrix.binary }}" in
+            strategy-ranking-sniper)
+              echo "path=official/ranking-sniper/Cargo.toml" >> $GITHUB_OUTPUT ;;
+            strategy-memepump-scanner)
+              echo "path=official/memepump-scanner/Cargo.toml" >> $GITHUB_OUTPUT ;;
+            strategy-signal-tracker)
+              echo "path=official/signal-tracker/Cargo.toml" >> $GITHUB_OUTPUT ;;
+            dapp-hyperliquid)
+              echo "path=official/hyperliquid/Cargo.toml" >> $GITHUB_OUTPUT ;;
+            *)
+              echo "path=Cargo.toml" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        env:
+          CARGO_TARGET_DIR: target
+        run: |
+          MANIFEST="--manifest-path ${{ steps.manifest.outputs.path }}"
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} $MANIFEST
+          else
+            cargo build --release --target ${{ matrix.target }} $MANIFEST
+          fi
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        env:
+          CARGO_TARGET_DIR: target
+        run: cargo build --release --target ${{ matrix.target }} --manifest-path ${{ steps.manifest.outputs.path }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} \
+             ${{ matrix.binary }}-${{ matrix.target }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Copy-Item "target\${{ matrix.target }}\release\${{ matrix.binary }}.exe" `
+                    "${{ matrix.binary }}-${{ matrix.target }}.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}-${{ matrix.target }}
+          path: ${{ matrix.binary }}-${{ matrix.target }}*
+
+  checksums:
+    name: Generate checksums
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Generate SHA256 checksums
+        run: sha256sum plugin-store-* strategy-ranking-sniper-* strategy-memepump-scanner-* strategy-signal-tracker-* dapp-hyperliquid-* > checksums.txt
+
+      - name: Show checksums
+        run: cat checksums.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: checksums.txt
+
+  update-skill-version:
+    name: Update SKILL.md version
+    needs: checksums
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Extract version from tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update metadata.version in all SKILL.md files
+        run: |
+          find skills official -name "SKILL.md" | while read f; do
+            sed -i "s/^  version: .*/  version: \"${{ steps.version.outputs.value }}\"/" "$f"
+          done
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add skills/ official/
+          git diff --cached --quiet && echo "No version changes" || \
+            git commit -m "release: update SKILL.md metadata.version to ${{ steps.version.outputs.value }}"
+          git push origin HEAD:main
+
+  release:
+    name: Create Release
+    needs: checksums
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            plugin-store-*
+            strategy-ranking-sniper-*
+            strategy-memepump-scanner-*
+            strategy-signal-tracker-*
+            dapp-hyperliquid-*
+            checksums.txt
