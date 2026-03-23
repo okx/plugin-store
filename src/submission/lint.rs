@@ -170,6 +170,9 @@ pub fn lint_submission(submission_dir: &Path) -> Result<LintReport> {
     // ── 15. PR scope: directory name matches plugin name ──────────
     check_dir_name_match(&plugin.name, submission_dir, &mut diags);
 
+    // ── 16. onchainos API bypass detection ───────────────────────
+    check_onchainos_bypass(&plugin, submission_dir, &mut diags);
+
     Ok(LintReport {
         diagnostics: diags,
         plugin_name,
@@ -712,6 +715,87 @@ fn check_dir_name_match(plugin_name: &str, dir: &Path, diags: &mut Vec<LintDiag>
                     "directory name '{}' does not match plugin name '{}'",
                     dir_name, plugin_name
                 ),
+            });
+        }
+    }
+}
+
+/// Scan ALL text files in the submission for patterns indicating the plugin
+/// implements on-chain capabilities itself instead of using onchainos CLI.
+fn check_onchainos_bypass(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) {
+    use super::onchainos_api::BYPASS_PATTERNS;
+
+    // Collect all text content from the submission
+    let files = match walk_dir(dir) {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+
+    let mut all_content = String::new();
+    for file in &files {
+        if let Some(ext) = file.extension().and_then(|e| e.to_str()) {
+            if !["md", "yaml", "yml", "json", "txt", "toml"].contains(&ext) {
+                continue;
+            }
+        } else {
+            continue;
+        }
+        if let Ok(content) = std::fs::read_to_string(file) {
+            all_content.push_str(&content);
+            all_content.push('\n');
+        }
+    }
+
+    let lower = all_content.to_lowercase();
+
+    for bp in BYPASS_PATTERNS {
+        let mut matched_patterns: Vec<&str> = Vec::new();
+        for pattern in bp.patterns {
+            if lower.contains(&pattern.to_lowercase()) {
+                matched_patterns.push(pattern);
+            }
+        }
+
+        if !matched_patterns.is_empty() {
+            let level = if bp.severity == "error" {
+                DiagLevel::Error
+            } else {
+                DiagLevel::Warning
+            };
+
+            let code = if bp.severity == "error" {
+                "E200"
+            } else {
+                "W200"
+            };
+
+            diags.push(LintDiag {
+                level,
+                code,
+                message: format!(
+                    "onchainos API bypass: plugin appears to self-implement '{}'. \
+                     Found: [{}]. \
+                     Use {} instead.",
+                    bp.capability,
+                    matched_patterns.join(", "),
+                    bp.onchainos_alternative
+                ),
+            });
+        }
+    }
+
+    // Also check: does the plugin use ANY onchainos commands at all?
+    let uses_onchainos = lower.contains("onchainos ");
+    if !uses_onchainos {
+        // Check if it has a skill component (MCP-only or binary-only plugins are OK)
+        if plugin.components.skill.is_some() {
+            diags.push(LintDiag {
+                level: DiagLevel::Warning,
+                code: "W201",
+                message:
+                    "SKILL.md does not reference any 'onchainos' commands. \
+                     All community plugins must use onchainos CLI for on-chain operations."
+                        .to_string(),
             });
         }
     }
