@@ -139,7 +139,10 @@ pub fn lint_submission(submission_dir: &Path) -> Result<LintReport> {
         });
     }
 
-    // ── 10. Community plugins: MCP and Binary are forbidden ────────
+    // ── 10. Tag content validation ─────────────────────────────────
+    check_tags(&plugin, &mut diags);
+
+    // ── 11. Community plugins: MCP and Binary are forbidden ────────
     check_community_component_restrictions(&plugin, &mut diags);
 
     // ── 11. Components validation ─────────────────────────────────
@@ -327,6 +330,134 @@ fn check_license(license: &str, dir: &Path, diags: &mut Vec<LintDiag>) {
 ///
 /// With `build`: Verified Third Party flow (source audit + platform compilation).
 /// Without `build`: Community Developer flow (Skill only).
+/// Validate tags for format rules and forbidden content.
+fn check_tags(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
+    if plugin.tags.is_empty() {
+        return;
+    }
+
+    // Tag format: lowercase, alphanumeric + hyphens, reasonable length
+    let tag_re = regex::Regex::new(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$").unwrap();
+    for tag in &plugin.tags {
+        if tag.len() > 30 {
+            diags.push(LintDiag {
+                level: DiagLevel::Warning,
+                code: "W045",
+                message: format!("tag '{}' exceeds 30 characters", tag),
+            });
+        }
+        if !tag_re.is_match(tag) && tag != "TODO" {
+            diags.push(LintDiag {
+                level: DiagLevel::Warning,
+                code: "W046",
+                message: format!(
+                    "tag '{}' should be lowercase alphanumeric with hyphens",
+                    tag
+                ),
+            });
+        }
+    }
+
+    if plugin.tags.len() > 10 {
+        diags.push(LintDiag {
+            level: DiagLevel::Warning,
+            code: "W047",
+            message: format!(
+                "too many tags ({}, max recommended: 10)",
+                plugin.tags.len()
+            ),
+        });
+    }
+
+    // Forbidden content in tags, name, alias, and description.
+    // Covers: financial fraud, political sensitivity, illegal content.
+    let fields_to_check: Vec<(&str, &str)> = {
+        let mut v = Vec::new();
+        for tag in &plugin.tags {
+            v.push(("tag", tag.as_str()));
+        }
+        v.push(("name", plugin.name.as_str()));
+        v.push(("description", plugin.description.as_str()));
+        if let Some(ref alias) = plugin.alias {
+            v.push(("alias", alias.as_str()));
+        }
+        v
+    };
+
+    // Financial fraud / misleading claims
+    let fraud_keywords = [
+        "guaranteed profit", "guaranteed return", "risk free", "risk-free",
+        "100% profit", "no loss", "never lose", "free money",
+        "必赚", "稳赚", "保本", "零风险", "无风险", "百分百收益",
+        "躺赚", "暴富", "一夜暴富", "翻倍", "包赔",
+    ];
+
+    // Political sensitivity (mainland China restricted)
+    let political_keywords = [
+        "习近平", "xi jinping", "毛泽东", "邓小平", "江泽民", "胡锦涛",
+        "共产党", "共产主义", "天安门", "tiananmen",
+        "法轮功", "falun gong", "台独", "藏独", "疆独",
+        "六四", "64事件", "文化大革命", "文革",
+    ];
+
+    // Illegal / harmful content
+    let illegal_keywords = [
+        "gambling", "casino", "赌博", "赌场", "博彩",
+        "porn", "色情", "成人内容",
+        "drug", "毒品", "大麻",
+        "money laundering", "洗钱",
+        "terrorism", "恐怖主义",
+        "scam", "ponzi", "庞氏",
+        "rug pull", "rugpull",
+    ];
+
+    for (field_name, value) in &fields_to_check {
+        let lower = value.to_lowercase();
+
+        for kw in &fraud_keywords {
+            if lower.contains(&kw.to_lowercase()) {
+                diags.push(LintDiag {
+                    level: DiagLevel::Error,
+                    code: "E045",
+                    message: format!(
+                        "{} contains misleading financial claim: '{}'. \
+                         Plugins must not promise guaranteed returns or risk-free outcomes.",
+                        field_name, kw
+                    ),
+                });
+            }
+        }
+
+        for kw in &political_keywords {
+            if lower.contains(&kw.to_lowercase()) {
+                diags.push(LintDiag {
+                    level: DiagLevel::Error,
+                    code: "E046",
+                    message: format!(
+                        "{} contains politically sensitive content: '{}'. \
+                         This content is restricted.",
+                        field_name, kw
+                    ),
+                });
+            }
+        }
+
+        for kw in &illegal_keywords {
+            if lower.contains(&kw.to_lowercase()) {
+                diags.push(LintDiag {
+                    level: DiagLevel::Error,
+                    code: "E047",
+                    message: format!(
+                        "{} contains prohibited content: '{}'. \
+                         Illegal, harmful, or fraudulent content is not allowed.",
+                        field_name, kw
+                    ),
+                });
+            }
+        }
+    }
+}
+
 fn check_community_component_restrictions(plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
     let has_build = plugin.has_build();
 
