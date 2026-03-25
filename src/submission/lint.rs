@@ -630,6 +630,9 @@ fn check_skill_md(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) {
     // ── Dangerous onchainos commands must have confirmation ──────
     check_dangerous_commands_confirmation(&content, diags);
 
+    // ── External URL safety analysis ─────────────────────────────
+    check_external_urls(&content, plugin, diags);
+
     // ── onchainos command cross-check ────────────────────────────
     check_onchainos_command_consistency(&content, plugin, diags);
 }
@@ -802,6 +805,148 @@ fn check_dangerous_commands_confirmation(content: &str, diags: &mut Vec<LintDiag
                 }
             }
         }
+    }
+}
+
+/// Analyze external URLs in SKILL.md for security risks.
+///
+/// Three categories:
+/// 1. Safe: GitHub/docs links used as references (OK)
+/// 2. Declared API: listed in permissions.network.api_calls (OK but flagged)
+/// 3. Undeclared/dangerous: fetching instructions or sending data to unknown URLs (ERROR)
+fn check_external_urls(content: &str, plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
+    // Extract all URLs from content
+    let url_re = regex::Regex::new(r#"https?://[^\s\)>\]`"']+"#).unwrap();
+    let urls: Vec<&str> = url_re.find_iter(content).map(|m| m.as_str()).collect();
+
+    if urls.is_empty() {
+        return;
+    }
+
+    // Safe domains (documentation, known platforms)
+    let safe_domains = [
+        "github.com",
+        "raw.githubusercontent.com",
+        "web3.okx.com",
+        "docs.okx.com",
+        "onchainos.com",
+    ];
+
+    // Declared API domains
+    let declared_apis: Vec<&str> = plugin
+        .permissions
+        .as_ref()
+        .and_then(|p| p.network.as_ref())
+        .map(|n| n.api_calls.iter().map(|s| s.as_str()).collect())
+        .unwrap_or_default();
+
+    // Dangerous instruction patterns near URLs
+    let lower = content.to_lowercase();
+    let fetch_patterns = [
+        "download from",
+        "fetch from",
+        "load from",
+        "get from",
+        "retrieve from",
+        "pull from",
+        "import from",
+        "download instructions",
+        "fetch instructions",
+        "load prompt",
+        "load config",
+        "load script",
+        "execute from",
+        "run from",
+    ];
+    let exfil_patterns = [
+        "send to",
+        "post to",
+        "upload to",
+        "report to",
+        "transmit to",
+        "forward to",
+        "send wallet",
+        "send address",
+        "send balance",
+        "track user",
+    ];
+
+    let mut undeclared_urls: Vec<&str> = Vec::new();
+
+    for url in &urls {
+        let is_safe = safe_domains.iter().any(|d| url.contains(d));
+        let is_declared = declared_apis.iter().any(|d| url.contains(d));
+
+        if !is_safe && !is_declared {
+            undeclared_urls.push(url);
+        }
+    }
+
+    // Check for remote instruction loading (most dangerous)
+    for pattern in &fetch_patterns {
+        if lower.contains(pattern) {
+            // Check if it's near any URL
+            for url in &urls {
+                let safe = safe_domains.iter().any(|d| url.contains(d));
+                if !safe {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E140",
+                        message: format!(
+                            "SKILL.md instructs AI to fetch/load/download from external URL '{}'. \
+                             This allows remote code injection — an attacker can change the URL \
+                             content after review. Use onchainos commands or inline the content.",
+                            url
+                        ),
+                    });
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    // Check for data exfiltration
+    for pattern in &exfil_patterns {
+        if lower.contains(pattern) {
+            for url in &urls {
+                let safe = safe_domains.iter().any(|d| url.contains(d));
+                if !safe {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E141",
+                        message: format!(
+                            "SKILL.md instructs AI to send/post data to external URL '{}'. \
+                             This may exfiltrate user data (wallet addresses, balances, etc.).",
+                            url
+                        ),
+                    });
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    // Warn about undeclared URLs (even without fetch/send patterns)
+    if !undeclared_urls.is_empty() {
+        let urls_display: Vec<String> = undeclared_urls
+            .iter()
+            .take(5)
+            .map(|u| format!("'{}'", u))
+            .collect();
+
+        diags.push(LintDiag {
+            level: DiagLevel::Warning,
+            code: "W140",
+            message: format!(
+                "SKILL.md references {} external URL(s) not declared in \
+                 permissions.network.api_calls: {}. \
+                 Declare them in plugin.yaml or remove if not needed.",
+                undeclared_urls.len(),
+                urls_display.join(", ")
+            ),
+        });
     }
 }
 
