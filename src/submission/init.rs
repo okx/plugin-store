@@ -54,7 +54,7 @@ components:
   skill:
     dir: skills/{name}
   # binary:                          # Uncomment if providing a compiled binary
-  #   repo: your-org/your-repo       # (requires build section + Verified Third Party)
+  #   repo: your-org/your-repo       # (requires build section)
   #   asset_pattern: "my-binary-{{target}}"
   #   checksums_asset: checksums.txt
 

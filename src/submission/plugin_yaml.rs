@@ -16,7 +16,7 @@ pub struct PluginYaml {
     pub tags: Vec<String>,
     pub components: ComponentsDecl,
     /// Build configuration for Binary source code compilation.
-    /// Only available to Verified Third Party and OKX Official plugins.
+    /// Any developer can submit source code — our CI compiles it.
     /// Absent = pure Skill plugin (no compilation needed).
     #[serde(default)]
     pub build: Option<BuildConfig>,
