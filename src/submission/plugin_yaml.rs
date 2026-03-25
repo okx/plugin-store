@@ -193,7 +193,20 @@ pub const LANG_ENTRY_FILES: &[(&str, &str)] = &[
 /// File extensions that must NOT appear in source submissions
 /// (indicates pre-compiled binaries, which we don't accept).
 pub const FORBIDDEN_BINARY_EXTENSIONS: &[&str] = &[
-    "exe", "dll", "so", "dylib", "a", "lib", "o", "obj", "wasm", "class", "jar", "pyc", "pyd",
+    // Windows
+    "exe", "dll", "com", "cmd", "bat", "scr", "msi",
+    // Linux/Unix
+    "so", "a", "o", "elf",
+    // macOS
+    "dylib", "app",
+    // Cross-platform
+    "lib", "obj", "wasm",
+    // Java
+    "class", "jar", "jmod",
+    // Python
+    "pyc", "pyd", "pyo",
+    // Node native addons
+    "node",
 ];
 
 /// Valid license identifiers (common SPDX).

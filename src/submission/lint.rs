@@ -624,6 +624,12 @@ fn check_skill_md(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) {
     // ── Prompt injection scan ────────────────────────────────────
     check_prompt_injection(&content, diags);
 
+    // ── Zero-width / invisible character detection ───────────────
+    check_invisible_characters(&content, diags);
+
+    // ── Dangerous onchainos commands must have confirmation ──────
+    check_dangerous_commands_confirmation(&content, diags);
+
     // ── onchainos command cross-check ────────────────────────────
     check_onchainos_command_consistency(&content, plugin, diags);
 }
@@ -700,6 +706,101 @@ fn check_prompt_injection(content: &str, diags: &mut Vec<LintDiag>) {
                 code: "W100",
                 message: format!("suspicious pattern: '{}' — {}", pattern, reason),
             });
+        }
+    }
+}
+
+/// Detect invisible / zero-width characters that could hide malicious instructions.
+/// These characters are invisible in most editors but can be parsed by AI agents.
+fn check_invisible_characters(content: &str, diags: &mut Vec<LintDiag>) {
+    let invisible_chars: &[(char, &str)] = &[
+        ('\u{200B}', "zero-width space"),
+        ('\u{200C}', "zero-width non-joiner"),
+        ('\u{200D}', "zero-width joiner"),
+        ('\u{200E}', "left-to-right mark"),
+        ('\u{200F}', "right-to-left mark"),
+        ('\u{2060}', "word joiner"),
+        ('\u{FEFF}', "zero-width no-break space / BOM"),
+        ('\u{00AD}', "soft hyphen"),
+        ('\u{034F}', "combining grapheme joiner"),
+        ('\u{2028}', "line separator"),
+        ('\u{2029}', "paragraph separator"),
+        ('\u{202A}', "left-to-right embedding"),
+        ('\u{202B}', "right-to-left embedding"),
+        ('\u{202C}', "pop directional formatting"),
+        ('\u{202D}', "left-to-right override"),
+        ('\u{202E}', "right-to-left override"),
+    ];
+
+    for (ch, name) in invisible_chars {
+        if content.contains(*ch) {
+            let count = content.chars().filter(|c| c == ch).count();
+            diags.push(LintDiag {
+                level: DiagLevel::Error,
+                code: "E105",
+                message: format!(
+                    "invisible character detected: {} (U+{:04X}) appears {} time(s) — \
+                     may be used to hide malicious instructions",
+                    name,
+                    *ch as u32,
+                    count
+                ),
+            });
+        }
+    }
+}
+
+/// If SKILL.md references dangerous onchainos commands (wallet send,
+/// contract-call, gateway broadcast), it MUST include user confirmation
+/// language nearby. This is a heuristic, not a guarantee.
+fn check_dangerous_commands_confirmation(content: &str, diags: &mut Vec<LintDiag>) {
+    let lower = content.to_lowercase();
+
+    let dangerous_commands: &[(&str, &str)] = &[
+        ("wallet send", "transfer funds"),
+        ("wallet contract-call", "call smart contracts"),
+        ("gateway broadcast", "broadcast transactions"),
+        ("swap swap", "execute token swaps"),
+        ("payment x402-pay", "make payments"),
+    ];
+
+    let confirmation_phrases = [
+        "confirm",
+        "ask user",
+        "ask the user",
+        "user confirm",
+        "user approval",
+        "approval",
+        "verify with user",
+        "prompt user",
+        "require confirmation",
+    ];
+
+    for (cmd, description) in dangerous_commands {
+        if lower.contains(cmd) {
+            // Check if there's a confirmation phrase within ~500 chars of the command
+            if let Some(pos) = lower.find(cmd) {
+                let context_start = pos.saturating_sub(300);
+                let context_end = (pos + 500).min(lower.len());
+                let nearby = &lower[context_start..context_end];
+
+                let has_confirmation = confirmation_phrases
+                    .iter()
+                    .any(|phrase| nearby.contains(phrase));
+
+                if !has_confirmation {
+                    diags.push(LintDiag {
+                        level: DiagLevel::Error,
+                        code: "E106",
+                        message: format!(
+                            "SKILL.md uses 'onchainos {}' ({}) but no user confirmation \
+                             step found nearby. Dangerous operations MUST include explicit \
+                             user confirmation before execution.",
+                            cmd, description
+                        ),
+                    });
+                }
+            }
         }
     }
 }
