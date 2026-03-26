@@ -90,8 +90,9 @@ tags:
 
 TODO: Describe what this skill enables the AI agent to do.
 
-> All on-chain operations MUST use onchainos CLI. Do not implement your own
-> RPC calls, web3 libraries, or direct API integrations.
+> All on-chain write operations (signing, broadcasting, swaps, contract calls)
+> MUST use onchainos CLI. You are free to query external data sources
+> (third-party DeFi APIs, market data, analytics, etc.).
 
 ## Pre-flight Checks
 
