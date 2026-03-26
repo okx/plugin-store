@@ -532,8 +532,8 @@ fn check_components(plugin: &PluginYaml, dir: &Path, diags: &mut Vec<LintDiag>) 
 }
 
 fn check_file_sizes(dir: &Path, diags: &mut Vec<LintDiag>) {
-    const MAX_SINGLE_FILE: u64 = 100 * 1024; // 100 KB
-    const MAX_TOTAL: u64 = 1024 * 1024; // 1 MB
+    const MAX_SINGLE_FILE: u64 = 200 * 1024; // 200 KB
+    const MAX_TOTAL: u64 = 5 * 1024 * 1024; // 5 MB
 
     let mut total = 0u64;
 
@@ -548,7 +548,7 @@ fn check_file_sizes(dir: &Path, diags: &mut Vec<LintDiag>) {
                         level: DiagLevel::Error,
                         code: "E080",
                         message: format!(
-                            "file '{}' is {} KB (limit: 100 KB)",
+                            "file '{}' is {} KB (limit: 200 KB)",
                             entry.strip_prefix(dir).unwrap_or(&entry).display(),
                             size / 1024
                         ),
