@@ -20,9 +20,6 @@ pub struct PluginYaml {
     /// Absent = pure Skill plugin (no compilation needed).
     #[serde(default)]
     pub build: Option<BuildConfig>,
-    /// Blockchains this plugin operates on (informational, for reviewer reference).
-    #[serde(default)]
-    pub chains: Vec<String>,
     /// External API domains this plugin calls (informational, for reviewer reference).
     /// Lint uses this to distinguish expected vs unexpected external URLs.
     #[serde(default)]
