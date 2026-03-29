@@ -6,7 +6,7 @@ use crate::config;
 use crate::registry::models::Registry;
 use crate::utils::cache;
 
-const CACHE_TTL: Duration = Duration::from_secs(12 * 60 * 60);
+const CACHE_TTL: Duration = Duration::from_secs(30);
 
 pub struct RegistryFetcher {
     registry_url: String,

@@ -104,7 +104,10 @@ pub struct BinaryComponent {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DefiInfo {
+    #[serde(default)]
     pub chains: Vec<String>,
+    #[serde(default)]
     pub protocols: Vec<String>,
+    #[serde(default)]
     pub risk_level: String,
 }

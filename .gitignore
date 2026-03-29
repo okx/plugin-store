@@ -1,4 +1,5 @@
 /target
+official/core/target/
 .DS_Store
 .claude/
 docs/
