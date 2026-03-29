@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        binary: [plugin-store, strategy-ranking-sniper, strategy-memepump-scanner, strategy-signal-tracker, dapp-hyperliquid]
+        binary: [plugin-store]
         target:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
@@ -76,19 +76,7 @@ jobs:
       - name: Set manifest path
         id: manifest
         shell: bash
-        run: |
-          case "${{ matrix.binary }}" in
-            strategy-ranking-sniper)
-              echo "path=official/ranking-sniper/Cargo.toml" >> $GITHUB_OUTPUT ;;
-            strategy-memepump-scanner)
-              echo "path=official/memepump-scanner/Cargo.toml" >> $GITHUB_OUTPUT ;;
-            strategy-signal-tracker)
-              echo "path=official/signal-tracker/Cargo.toml" >> $GITHUB_OUTPUT ;;
-            dapp-hyperliquid)
-              echo "path=official/hyperliquid/Cargo.toml" >> $GITHUB_OUTPUT ;;
-            *)
-              echo "path=Cargo.toml" >> $GITHUB_OUTPUT ;;
-          esac
+        run: echo "path=Cargo.toml" >> $GITHUB_OUTPUT
 
       - name: Build (Unix)
         if: runner.os != 'Windows'
@@ -137,7 +125,7 @@ jobs:
           merge-multiple: true
 
       - name: Generate SHA256 checksums
-        run: sha256sum plugin-store-* strategy-ranking-sniper-* strategy-memepump-scanner-* strategy-signal-tracker-* dapp-hyperliquid-* > checksums.txt
+        run: sha256sum plugin-store-* > checksums.txt
 
       - name: Show checksums
         run: cat checksums.txt
@@ -191,8 +179,4 @@ jobs:
           generate_release_notes: true
           files: |
             plugin-store-*
-            strategy-ranking-sniper-*
-            strategy-memepump-scanner-*
-            strategy-signal-tracker-*
-            dapp-hyperliquid-*
             checksums.txt
