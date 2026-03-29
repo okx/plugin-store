@@ -93,6 +93,35 @@
       "link": "https://github.com/Polymarket/agent-skills"
     },
     {
+      "name": "signal-tracker",
+      "alias": "Signal Tracker",
+      "version": "1.0.0",
+      "description": "Track smart money wallet activity and aggregated buy signals via onchainos CLI",
+      "author": {
+        "name": "Mingtao"
+      },
+      "category": "analytics",
+      "tags": [
+        "smart-money",
+        "signals",
+        "wallet-tracker",
+        "analytics"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/signal-tracker",
+          "commit": "e8e455628bdd8aa143a0b9ffd281bfe2a7f64b32"
+        }
+      },
+      "extra": {
+        "protocols": [],
+        "risk_level": "low"
+      },
+      "link": "https://github.com/okx/plugin-store-community"
+    },
+    {
       "name": "sol-token-guard",
       "alias": "Solana Token Safety Guard",
       "version": "1.0.0",
@@ -113,7 +142,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "cda7c5dce31c2d405e7b18852aaadf553f42ea6d"
+          "commit": "e8e455628bdd8aa143a0b9ffd281bfe2a7f64b32"
         }
       },
       "extra": {
