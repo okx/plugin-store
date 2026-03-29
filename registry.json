@@ -110,7 +110,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/eth-gas-tracker",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -134,7 +134,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/go-echo-cli",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -169,7 +169,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/node-echo-cli",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -184,6 +184,41 @@
         "source_repo": "yz06276/node-echo-cli",
         "source_commit": "8044e759ecf00b6c1d17003b94a622cf1aa90872",
         "binary_name": "node-echo-cli"
+      }
+    },
+    {
+      "name": "python-echo-cli",
+      "version": "1.0.0",
+      "description": "A Python echo CLI with text analysis (word frequency, sentence split, character stats, Levenshtein distance)",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "utility",
+      "tags": [
+        "python",
+        "text-analysis",
+        "nlp"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/python-echo-cli",
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
+        },
+        "python": {
+          "source_repo": "yz06276/python-echo-cli",
+          "source_commit": "73995b8fb627486c5eab24aa788a32b8ee014d28",
+          "requires_python": ">=3.10",
+          "install_command": "pip install git+https://github.com/yz06276/python-echo-cli@73995b8fb627486c5eab24aa788a32b8ee014d28"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community",
+      "build": {
+        "lang": "python",
+        "source_repo": "yz06276/python-echo-cli",
+        "source_commit": "73995b8fb627486c5eab24aa788a32b8ee014d28",
+        "binary_name": "python-echo-cli"
       }
     },
     {
@@ -204,7 +239,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/rust-echo-cli",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -240,7 +275,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -278,7 +313,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -302,7 +337,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/ts-echo-cli",
-          "commit": "54b5988fdc00970368bcbedeef09e90a104b0461"
+          "commit": "2e43b0bc32b0f7d9b34a3b5afe0e055d089db8f3"
         },
         "binary": {
           "repo": "okx/plugin-store",
