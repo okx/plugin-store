@@ -111,7 +111,13 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "d31e80343356501674c1e257a5448beae826164c"
+          "commit": "f40ab7c36cc335cc15968b2cc893a79fb4d8567f"
+        },
+        "binary": {
+          "repo": "okx/plugin-store",
+          "asset_pattern": "signal-tracker-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "community/signal-tracker@1.0.0"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -143,7 +149,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "d31e80343356501674c1e257a5448beae826164c"
+          "commit": "f40ab7c36cc335cc15968b2cc893a79fb4d8567f"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
