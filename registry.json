@@ -93,6 +93,30 @@
       "link": "https://github.com/Polymarket/agent-skills"
     },
     {
+      "name": "eth-gas-tracker",
+      "version": "1.0.0",
+      "description": "Track Ethereum gas prices and estimate transaction costs using onchainos",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "analytics",
+      "tags": [
+        "ethereum",
+        "gas",
+        "analytics"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/eth-gas-tracker",
+          "commit": "f38487e30cb2c41c7f44593b91af080a4b764472"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community",
+      "alias": "ETH Gas Tracker"
+    },
+    {
       "name": "signal-tracker",
       "version": "1.0.0",
       "description": "Track smart money wallet activity and aggregated buy signals via onchainos CLI",
@@ -111,7 +135,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/signal-tracker",
-          "commit": "f40ab7c36cc335cc15968b2cc893a79fb4d8567f"
+          "commit": "f38487e30cb2c41c7f44593b91af080a4b764472"
         },
         "binary": {
           "repo": "okx/plugin-store",
@@ -149,7 +173,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/sol-token-guard",
-          "commit": "f40ab7c36cc335cc15968b2cc893a79fb4d8567f"
+          "commit": "f38487e30cb2c41c7f44593b91af080a4b764472"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
