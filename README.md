@@ -2,13 +2,15 @@
 
 Plugin Store is a **Skills and MCP marketplace** for AI coding assistants. It lets agents discover, install, update, and uninstall plugins — including on-chain trading strategies, DeFi protocol integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.
 
-## Install the Skill
+## Install
 
 ```bash
-npx skills add okx/plugin-store
-```
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/okx/plugin-store/main/install-local.sh | bash
 
-Once installed, the agent gains full access to the plugin marketplace through natural language or the commands below.
+# Or update an existing installation
+plugin-store self-update
+```
 
 ## Commands
 
@@ -21,7 +23,7 @@ plugin-store list
 # Search by keyword
 plugin-store search <keyword>
 
-# Show details for a plugin (description, chains, protocols, components)
+# Show details for a plugin (description, components, install command)
 plugin-store info <name>
 ```
 
@@ -34,28 +36,19 @@ plugin-store install <name>
 # Install to a specific agent
 plugin-store install <name> --agent claude-code
 
-# Install non-interactively (skip prompts, auto-detect agents)
+# Install non-interactively (skip prompts)
 plugin-store install <name> --yes
 
-# Install skill component only (no binary)
+# Install skill component only (no binary/npm/pip)
 plugin-store install <name> --skill-only
-
-# Install MCP component only
-plugin-store install <name> --mcp-only
 
 # Uninstall from all agents
 plugin-store uninstall <name>
-
-# Uninstall from a specific agent
-plugin-store uninstall <name> --agent claude-code
 ```
 
 ### Update
 
 ```bash
-# Update a specific plugin
-plugin-store update <name>
-
 # Update all installed plugins
 plugin-store update --all
 
@@ -73,6 +66,22 @@ plugin-store installed
 plugin-store registry update
 ```
 
+## Plugin Distribution Model
+
+Plugins are distributed differently based on their language:
+
+| Language | Distribution | User Install Size |
+|----------|-------------|-------------------|
+| **Rust** | GitHub Release binary | ~1-20 MB |
+| **Go** | GitHub Release binary | ~2-15 MB |
+| **TypeScript** | `npm install -g` from source | ~KB |
+| **Node.js** | `npm install -g` from source | ~KB |
+| **Python** | `pip install` from source | ~KB |
+| **Pure Skill** | SKILL.md download | ~KB |
+
+Binary plugins (Rust/Go) are compiled by our CI and published as GitHub Releases.
+TS/Node/Python plugins are installed directly from the developer's source repo via npm/pip.
+
 ## Supported Agents
 
 | Agent | Detection |
@@ -81,66 +90,21 @@ plugin-store registry update
 | Cursor | `~/.cursor/` exists |
 | OpenClaw | `~/.openclaw/` exists |
 
-## Plugin Source Trust Levels
+## Plugin Sources
 
 | Source | Meaning |
 |--------|---------|
 | `official` | Developed and maintained by Plugin Store |
 | `dapp-official` | Published by the DApp project itself |
-| `community` | Community contribution — install prompt includes a warning |
+| `community-developer` | Community contribution — install prompt includes a warning |
 
-## Official Strategies
+## Contributing
 
-After installing a strategy plugin, the corresponding binary and skill are available immediately. Each strategy requires [onchainos](https://web3.okx.com/zh-hans/onchainos/dev-docs/home/install-your-agentic-wallet) ≥ 2.0.0.
-
-### ranking-sniper
-
-Monitors the OKX DEX trending ranking board every 10s. Applies a 25-point safety filter, scores momentum (0–125 pts), and executes trades with a 6-layer exit system.
-
-```bash
-strategy-ranking-sniper start --budget 0.5 --per-trade 0.05
-strategy-ranking-sniper status
-strategy-ranking-sniper sell-all
-```
-
-### memepump-scanner
-
-Scans pump.fun MIGRATED tokens every 10s. Applies a 22-point safety filter (dev rug zero-tolerance, bundler checks), detects 3-signal momentum, and trades with an 8-layer exit system.
-
-```bash
-strategy-memepump-scanner start
-strategy-memepump-scanner analyze
-strategy-memepump-scanner status
-```
-
-### signal-tracker
-
-Polls OKX Signal API every 20s for SmartMoney / KOL / Whale buy signals. Applies a 17-point safety filter with cost-aware TP/SL, trailing stop, and session risk controls.
-
-```bash
-strategy-signal-tracker start
-strategy-signal-tracker status
-strategy-signal-tracker report
-```
-
-### hyperliquid
-
-Perpetual futures and spot trading on Hyperliquid. 11 commands covering market data (no auth required) and order management (requires `EVM_PRIVATE_KEY`).
-
-```bash
-dapp-hyperliquid markets
-dapp-hyperliquid price BTC
-dapp-hyperliquid buy --symbol BTC --size 0.001 --price 70000 --leverage 10
-dapp-hyperliquid positions
-```
+To submit a community plugin, visit [okx/plugin-store-community](https://github.com/okx/plugin-store-community) and follow the [Plugin Development Guide](https://github.com/okx/plugin-store-community/blob/main/PLUGIN_DEVELOPMENT_GUIDE.md).
 
 ## Risk Warning
 
 > **All trading strategies involve significant financial risk.** Always validate with `--dry-run` before going live. Never deploy more capital than you can afford to lose entirely.
-
-## Contributing
-
-To submit a community plugin, open a PR adding an entry to [`registry.json`](registry.json). See existing entries for the required schema.
 
 ## License
 
