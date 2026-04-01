@@ -11,30 +11,10 @@
       "name": "plugin-store",
       "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
       "source": "./skills/plugin-store",
-      "category": "productivity",
-      "author": { "name": "OKX" },
-      "homepage": "https://github.com/okx/plugin-store"
-    },
-    {
-      "name": "scan-live",
-      "description": "Chain Scanner Strategy v1.0 — Agentic Wallet TEE signing automated trading bot for Solana Launchpads",
-      "source": "./skills/scan-live",
       "category": "trading-strategy",
-      "author": { "name": "OKX" }
-    },
-    {
-      "name": "ranking-sniper",
-      "description": "Ranking Sniper Strategy v1.0 — monitors OKX leaderboard for newly listed tokens with safety checks and auto-sniping",
-      "source": "./skills/ranking-sniper",
-      "category": "trading-strategy",
-      "author": { "name": "OKX" }
-    },
-    {
-      "name": "smart-signal",
-      "description": "Smart Money Signal Strategy v1.0 — automated buy/sell based on smart money, KOL, and whale signals",
-      "source": "./skills/smart-signal",
-      "category": "trading-strategy",
-      "author": { "name": "OKX" }
+      "author": {
+        "name": "OKX"
+      }
     }
   ]
 }
