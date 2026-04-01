@@ -4,7 +4,7 @@
   "plugins": [
     {
       "name": "plugin-store",
-      "version": "0.3.0",
+      "version": "1.0.0",
       "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
       "author": {
         "name": "OKX"

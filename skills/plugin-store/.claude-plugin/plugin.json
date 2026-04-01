@@ -1,7 +1,7 @@
 {
   "name": "plugin-store",
   "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "author": {
     "name": "OKX",
     "email": "plugin-store@okx.com"
@@ -9,5 +9,12 @@
   "homepage": "https://github.com/okx/plugin-store",
   "repository": "https://github.com/okx/plugin-store",
   "license": "Apache-2.0",
-  "keywords": ["defi", "trading", "on-chain", "onchainos", "plugin-marketplace", "web3"]
+  "keywords": [
+    "defi",
+    "trading",
+    "on-chain",
+    "onchainos",
+    "plugin-marketplace",
+    "web3"
+  ]
 }
