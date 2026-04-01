@@ -141,11 +141,47 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "8c0cf7d5c77e5cca4ada46b8d4aa1097b5ba1b27"
+          "commit": "1f82d36371c1821cc20c631f7f822b3612ffb317"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
       "alias": "OKX Build X Hackathon"
+    },
+    {
+      "name": "scan-live",
+      "version": "1.0.0",
+      "description": "Chain Scanner Strategy v1.0 — Solana launchpad scanner + automated trading bot with safety filter and TP/SL exit system",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "memepump",
+        "scanner",
+        "trading-bot"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store-community",
+          "dir": "skills/scan-live",
+          "commit": "1f82d36371c1821cc20c631f7f822b3612ffb317"
+        },
+        "python": {
+          "source_repo": "yz06276/scan-live",
+          "source_commit": "8ca096253a7512478091582f98987185fee428ab",
+          "install_command": "pip install git+https://github.com/yz06276/scan-live@8ca096253a7512478091582f98987185fee428ab"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store-community",
+      "alias": "Chain Scanner",
+      "build": {
+        "lang": "python",
+        "source_repo": "yz06276/scan-live",
+        "source_commit": "8ca096253a7512478091582f98987185fee428ab",
+        "binary_name": "scan-live"
+      }
     },
     {
       "name": "smart-money-copy-trade",
@@ -168,7 +204,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/smart-money-copy-trade",
-          "commit": "8c0cf7d5c77e5cca4ada46b8d4aa1097b5ba1b27"
+          "commit": "1f82d36371c1821cc20c631f7f822b3612ffb317"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
