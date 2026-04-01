@@ -141,7 +141,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
+          "commit": "f1184d5b82cb91df07dfacaebe02d1917e49a135"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
