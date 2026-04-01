@@ -141,7 +141,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "e74c08dc3bd260e5cc620522c21b90f7f849caa5"
+          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -165,7 +165,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/ranking-sniper",
-          "commit": "e74c08dc3bd260e5cc620522c21b90f7f849caa5"
+          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
         }
       },
       "link": "https://github.com/okx/plugin-store-community"
@@ -189,7 +189,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/scan-live",
-          "commit": "e74c08dc3bd260e5cc620522c21b90f7f849caa5"
+          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
         },
         "python": {
           "source_repo": "yz06276/scan-live",
@@ -227,7 +227,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/smart-money-copy-trade",
-          "commit": "e74c08dc3bd260e5cc620522c21b90f7f849caa5"
+          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
         }
       },
       "link": "https://github.com/okx/plugin-store-community",
@@ -251,7 +251,7 @@
         "skill": {
           "repo": "okx/plugin-store-community",
           "dir": "skills/smart-signal",
-          "commit": "e74c08dc3bd260e5cc620522c21b90f7f849caa5"
+          "commit": "d4d0098e225002beb90930e8fe9b513fad710e90"
         }
       },
       "link": "https://github.com/okx/plugin-store-community"
