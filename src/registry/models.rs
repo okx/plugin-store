@@ -28,7 +28,9 @@ pub struct Plugin {
     pub source: String,
     pub components: Components,
     #[serde(default)]
-    pub skill_summary: Option<serde_json::Value>,
+    pub summary_url: Option<String>,
+    #[serde(default)]
+    pub skill_summary_url: Option<String>,
     pub extra: Option<DefiInfo>,
 }
 

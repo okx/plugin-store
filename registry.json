@@ -33,25 +33,8 @@
       "homepage": "https://github.com/okx/plugin-store",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL.md",
-      "skill_summary": {
-        "overview": "The plugin-store is a CLI marketplace for discovering, installing, updating, and managing AI plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw agents. It maintains a curated registry of skills and MCP servers, handles multi-agent installations with per-agent state tracking, and supports both interactive and non-interactive workflows for full lifecycle plugin management.",
-        "usage": "Run `plugin-store install <name>` to install any plugin interactively, or use `plugin-store list` / `plugin-store search <keyword>` to browse the registry. Use `plugin-store self-update` to keep the CLI itself up to date.",
-        "commands": [
-          "list: List all available plugins in the registry",
-          "search <keyword>: Search plugins by name, tag, or description",
-          "info <name>: Show detailed information about a specific plugin",
-          "install <name>: Install a plugin with interactive agent selection",
-          "uninstall <name>: Uninstall a previously installed plugin",
-          "update --all: Update all installed plugins to latest versions",
-          "installed: Show all currently installed plugins and their agents",
-          "registry update: Refresh the local registry cache from GitHub",
-          "init: Initialize a new plugin project scaffold",
-          "lint: Validate a plugin's registry entry and skill files",
-          "import: Import an existing skill or MCP server into the registry",
-          "self-update: Update the plugin-store CLI binary itself"
-        ],
-        "triggers": "Activate when the user asks to discover, install, uninstall, update, or manage plugins, skills, strategies, or capabilities; when they want to extend their AI agent with new tools; or when they need to explore what DeFi integrations or trading strategies are available."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-ai",
@@ -103,23 +86,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-ai",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-ai/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-ai/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-ai is an umbrella plugin that bundles all five Uniswap AI developer tools into a single install: swap integration (Trading API + Universal Router), swap planning (token discovery + deep links), liquidity planning (V2/V3/V4 LP positions), payment flows (HTTP 402 + Tempo CLI), V4 security foundations (hook audit reference), viem/wagmi integration patterns, CCA configurator, and CCA deployer. It provides comprehensive AI-assisted coverage of the entire Uniswap protocol surface across all versions.",
-        "usage": "Install this plugin to get all Uniswap sub-skills at once; each sub-skill activates automatically based on context (swap requests, LP planning, security review, etc.). You can also install individual uniswap-* plugins for targeted coverage.",
-        "commands": [
-          "swap quote: Get a swap quote via Uniswap Trading API",
-          "swap execute: Execute a swap through Universal Router",
-          "approve token: Approve token allowance for Uniswap contracts",
-          "search token: Discover tokens via DexScreener",
-          "generate deep link: Create Uniswap app deep links for swaps or LP",
-          "configure LP position: Set up V2/V3/V4 liquidity position parameters",
-          "tempo pay: Execute HTTP 402 payment flow",
-          "tempo wallet: Manage Tempo wallet for payments",
-          "forge script deploy: Deploy CCA factory contracts",
-          "configure_cca (MCP): Configure CCA auction parameters"
-        ],
-        "triggers": "Activate when the user is working on any Uniswap integration, including token swaps, liquidity provision, hook development, payment flows, auction configuration, or EVM TypeScript development with viem/wagmi on Uniswap contracts."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-ai/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-ai/SKILL_SUMMARY.md"
     },
     {
       "name": "polymarket-agent-skills",
@@ -163,22 +131,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/polymarket-agent-skills",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/polymarket-agent-skills/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/polymarket-agent-skills/SKILL.md",
-      "skill_summary": {
-        "overview": "polymarket-agent-skills provides a complete AI agent toolkit for interacting with Polymarket's prediction market infrastructure. It covers the CLOB (Central Limit Order Book) REST API for order management, the Gamma API for market data and search, WebSocket streaming for real-time price feeds, the CTF (Conditional Token Framework) Exchange for on-chain settlement, and the bridge API for moving funds between L1 and Polygon. Together these skills enable end-to-end automated prediction market trading.",
-        "usage": "Use this skill when building or operating a Polymarket trading agent; the AI will guide API authentication (L1/L2 signatures), order placement, market data retrieval, and fund bridging. Reference the relevant sub-skill section based on your current operation (ordering, data, streaming, settlement, or bridging).",
-        "commands": [
-          "GET /markets: Fetch active prediction markets from Gamma API",
-          "GET /market/<id>: Get detailed market data including order book",
-          "POST /order: Place a new CLOB limit or market order",
-          "DELETE /order/<id>: Cancel an open order",
-          "GET /orders: List open orders for authenticated user",
-          "GET /trades: Retrieve trade history",
-          "WebSocket subscribe: Connect to real-time price feed stream",
-          "POST /bridge: Initiate USDC bridge from L1 to Polygon",
-          "CTF redeem: Settle and redeem winning conditional tokens"
-        ],
-        "triggers": "Activate when the user is building a prediction market bot, trading on Polymarket, querying market odds, managing CLOB orders, streaming live prices, bridging funds to Polygon, or working with conditional tokens and outcome settlement."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/polymarket-agent-skills/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/polymarket-agent-skills/SKILL_SUMMARY.md"
     },
     {
       "name": "okx-buildx-hackathon-agent-track",
@@ -207,12 +161,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/okx-buildx-hackathon-agent-track",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/okx-buildx-hackathon-agent-track/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
-      "skill_summary": {
-        "overview": "okx-buildx-hackathon-agent-track is a comprehensive guide skill for participants in the OKX BuildX hackathon's agent track. It covers the hackathon structure, judging criteria, recommended technology stack (plugin-store, onchainos, MCP servers), submission requirements, example project ideas, and tips for building winning AI agent projects that leverage OKX's DeFi infrastructure and the plugin ecosystem.",
-        "usage": "Consult this skill at the start of hackathon participation to understand track requirements, during development to align architecture choices with judging criteria, and before submission to verify all requirements are met.",
-        "commands": [],
-        "triggers": "Activate when the user mentions OKX BuildX hackathon, the agent track, hackathon submission requirements, or when they are starting a new agent project and want guidance on the recommended stack and evaluation criteria."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/okx-buildx-hackathon-agent-track/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-cca-configurator",
@@ -242,14 +192,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-cca-configurator",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-configurator/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-cca-configurator/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-cca-configurator guides the configuration of Uniswap's Dutch Auction (CCA — Credibly Committed Auction) parameters via an MCP tool interface. It covers setting auction decay curves, minimum/maximum output bounds, filler allowlists, nonce management, and deadline configuration. The skill ensures correct parameter encoding before auction contracts are deployed or orders submitted.",
-        "usage": "Use the `configure_cca` MCP tool (exposed by this skill) to interactively set CCA parameters; the AI will validate parameter combinations and generate the correct encoded configuration for use in downstream deployment or order signing.",
-        "commands": [
-          "configure_cca (MCP tool): Set and validate CCA auction parameters including decay curve, output bounds, fillers, and deadlines"
-        ],
-        "triggers": "Activate when the user is setting up a Uniswap Dutch Auction (CCA), configuring auction decay parameters, defining filler allowlists, or preparing auction configuration before deploying CCA contracts or submitting signed orders."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-configurator/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-configurator/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-cca-deployer",
@@ -280,14 +224,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-cca-deployer",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-deployer/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-cca-deployer/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-cca-deployer handles the on-chain deployment of Uniswap CCA (Credibly Committed Auction) factory contracts using Foundry's forge scripting. It provides deployment scripts, constructor argument encoding, verification commands for Etherscan/Blockscout, and post-deployment sanity checks. The skill supports deployment across multiple EVM-compatible networks and integrates with the CCA configurator for end-to-end auction setup.",
-        "usage": "Run the provided `forge script` deployment command with your RPC URL and private key (or hardware wallet flag); the AI will guide constructor argument preparation, gas estimation, and post-deployment verification steps.",
-        "commands": [
-          "forge script deploy: Execute the CCA factory deployment script with network-specific RPC and signing configuration"
-        ],
-        "triggers": "Activate when the user is deploying Uniswap CCA factory contracts, running Foundry deployment scripts for auction infrastructure, verifying deployed auction contracts on block explorers, or setting up a new CCA environment on a target network."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-deployer/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-cca-deployer/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-liquidity-planner",
@@ -318,15 +256,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-liquidity-planner",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-liquidity-planner/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-liquidity-planner/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-liquidity-planner assists with planning and configuring liquidity provider (LP) positions across Uniswap V2, V3, and V4. It guides fee tier selection, price range configuration for V3/V4 concentrated liquidity, initial liquidity ratio calculations, and generates Uniswap app deep links for opening LP positions directly in the UI. It also covers V4-specific hook integration for LP positions.",
-        "usage": "Describe your LP strategy (token pair, target range, fee tier, capital amount) and the AI will help configure optimal parameters and generate a deep link to the Uniswap LP interface. Use for both new positions and range adjustments.",
-        "commands": [
-          "configure LP position: Set up V2/V3/V4 position parameters including fee tier, price range, and token amounts",
-          "generate LP deep link: Create a Uniswap app deep link to the add-liquidity UI with pre-filled parameters"
-        ],
-        "triggers": "Activate when the user is planning a new liquidity position on Uniswap, selecting fee tiers, configuring price ranges for concentrated liquidity, calculating token ratios, or needs guidance on V4 hook-enabled LP positions."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-liquidity-planner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-liquidity-planner/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-pay-with-any-token",
@@ -357,15 +288,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-pay-with-any-token",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-pay-with-any-token/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-pay-with-any-token/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-pay-with-any-token implements the HTTP 402 Payment Required flow using Uniswap's payment infrastructure and the Tempo CLI. It enables AI agents and dApps to pay for API services or gated content using any ERC-20 token, with Uniswap automatically handling the swap to the required payment token. The skill covers Tempo wallet setup, payment authorization flows, and integrating 402 responses into agent workflows.",
-        "usage": "Use the Tempo CLI to set up a wallet and configure payment credentials, then let the AI handle HTTP 402 responses automatically by constructing the required payment transaction. Ensure the Tempo wallet has sufficient token balance before initiating paid requests.",
-        "commands": [
-          "tempo pay: Execute a payment transaction in response to an HTTP 402 challenge",
-          "tempo wallet: View balance, configure payment token, and manage Tempo wallet settings"
-        ],
-        "triggers": "Activate when the user encounters HTTP 402 Payment Required responses, is building a payment-gated API or service, needs to pay for on-chain resources with any token, or is integrating Uniswap-powered payment flows into an AI agent."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-pay-with-any-token/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-pay-with-any-token/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-swap-integration",
@@ -396,16 +320,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-swap-integration",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-integration/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-swap-integration/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-swap-integration provides AI-guided patterns for integrating token swaps using Uniswap's Trading API and Universal Router. It covers fetching swap quotes with slippage configuration, building and submitting swap transactions, handling token approvals (ERC-20 permit and standard approve), error handling for failed quotes or reverts, and best practices for multi-hop routing across V2/V3/V4 pools.",
-        "usage": "Reference this skill when implementing swap functionality in a dApp or script; the AI will provide correct API call sequences, transaction construction patterns, and approval flows. Start with a quote request, then build the transaction from the response, then submit.",
-        "commands": [
-          "swap quote: Fetch a quote from Uniswap Trading API with tokenIn, tokenOut, amount, and slippage params",
-          "swap execute: Build and submit a swap transaction via Universal Router using the quote response",
-          "approve token: Send ERC-20 approve or permit2 signature for the input token before swapping"
-        ],
-        "triggers": "Activate when the user is implementing token swap functionality, integrating Uniswap's Trading API, building Universal Router transactions, handling swap quotes and execution, or managing token approvals for Uniswap interactions."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-integration/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-integration/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-swap-planner",
@@ -436,15 +352,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-swap-planner",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-planner/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-swap-planner/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-swap-planner helps users discover tokens and plan swap routes without writing code. It uses DexScreener's search API to find tokens by name or symbol across chains, retrieves pair data and liquidity metrics, and generates Uniswap app deep links that open pre-populated swap interfaces. This skill is optimized for quick exploratory trading and helping users navigate to the right swap UI with correct parameters.",
-        "usage": "Ask the AI to search for a token by name or contract address, review the returned liquidity and pair data, and then generate a deep link to the Uniswap interface for that specific swap. The deep link can be shared or opened directly.",
-        "commands": [
-          "DexScreener search: Query DexScreener API for token pairs by symbol or address",
-          "generate deep link: Create a Uniswap app deep link with tokenIn, tokenOut, chain, and amount parameters"
-        ],
-        "triggers": "Activate when the user wants to find a token's trading pair, check liquidity on DexScreener, get a shareable swap link, plan a swap without writing integration code, or quickly navigate to the Uniswap UI for a specific token trade."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-planner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-swap-planner/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-v4-security-foundations",
@@ -475,12 +384,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-v4-security-foundations",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-v4-security-foundations/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-v4-security-foundations/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-v4-security-foundations is a security reference skill for Uniswap V4 hook development. It catalogues common hook vulnerabilities (reentrancy, access control bypass, callback manipulation, price oracle abuse), provides secure coding patterns for each hook callback type (beforeSwap, afterSwap, beforeAddLiquidity, etc.), documents the PoolManager's trust model, and outlines an audit checklist for V4 hooks before deployment to mainnet.",
-        "usage": "Reference this skill during V4 hook development and code review; ask the AI to audit specific hook implementations against the security checklist or explain correct patterns for a given callback. No CLI commands are required — this is a reference knowledge base.",
-        "commands": [],
-        "triggers": "Activate when the user is writing, reviewing, or auditing Uniswap V4 hooks; when they encounter security concerns in hook callbacks; when preparing a V4 hook for mainnet deployment; or when researching reentrancy and access control patterns for the PoolManager architecture."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-v4-security-foundations/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-v4-security-foundations/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-viem-integration",
@@ -511,12 +416,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/uniswap-viem-integration",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-viem-integration/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/uniswap-viem-integration/SKILL.md",
-      "skill_summary": {
-        "overview": "uniswap-viem-integration provides reference patterns for interacting with Uniswap contracts using viem and wagmi in TypeScript. It covers wallet client setup, contract reads (quoter, pool state, tick data), write transactions (swap, addLiquidity), typed ABI usage, multicall batching, event watching, and wagmi hook integration for React frontends. The skill bridges Uniswap's contract interfaces with modern EVM TypeScript tooling.",
-        "usage": "Reference this skill when writing TypeScript code that calls Uniswap contracts with viem or wagmi; the AI will provide correct ABI references, client configuration, and transaction patterns. No CLI commands are needed — use it as a coding reference.",
-        "commands": [],
-        "triggers": "Activate when the user is writing TypeScript/JavaScript code that interacts with Uniswap contracts using viem or wagmi, building React dApp frontends with wagmi hooks for Uniswap, or needing typed contract interaction patterns for EVM development."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-viem-integration/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/uniswap-viem-integration/SKILL_SUMMARY.md"
     },
     {
       "name": "meme-trench-scanner",
@@ -543,14 +444,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/meme-trench-scanner",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/meme-trench-scanner/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/meme-trench-scanner/SKILL.md",
-      "skill_summary": {
-        "overview": "meme-trench-scanner is an agentic Solana meme token trading bot with TEE (Trusted Execution Environment) wallet signing via the onchainos CLI. It monitors 11 Solana launchpads (Pump.fun, Raydium, Moonshot, Believe, etc.) for newly launched tokens, applies a 7-layer exit strategy (time stop, profit target, trailing stop, volume drop, dev sell, rug signals, liquidity drain), and incorporates TraderSoul market psychology patterns. All trading is executed without API keys using the onchainos wallet infrastructure.",
-        "usage": "Run `python3 scan_live.py` to start the live scanner in the terminal; configure position size, launchpad filters, and exit thresholds in the config section before starting. The bot operates continuously and logs all signals and trades.",
-        "commands": [
-          "python3 scan_live.py: Start the live meme token scanner and automated trading bot"
-        ],
-        "triggers": "Activate when the user wants to scan for new Solana meme token launches, automate meme token trading with risk management, monitor launchpads like Pump.fun or Raydium for opportunities, or deploy a bot with multi-layer exit strategies on Solana."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/meme-trench-scanner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/meme-trench-scanner/SKILL_SUMMARY.md"
     },
     {
       "name": "smart-money-signal-copy-trade",
@@ -577,14 +472,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/smart-money-signal-copy-trade",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/smart-money-signal-copy-trade/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/smart-money-signal-copy-trade/SKILL.md",
-      "skill_summary": {
-        "overview": "smart-money-signal-copy-trade is an automated copy-trading bot that tracks on-chain signals from smart money wallets, KOL (Key Opinion Leader) addresses, and whale movements. It uses the onchainos agentic wallet for cost-aware position sizing with take-profit, stop-loss, and trailing-stop management. The bot includes developer wallet and bundler safety checks, session-level risk controls (max trades, max drawdown), and supports both Solana and EVM chains.",
-        "usage": "Run `python3 bot.py` with your configured signal sources and risk parameters; set smart money wallet addresses, position size limits, and session drawdown caps in the config before starting. The bot monitors on-chain activity and mirrors qualifying trades automatically.",
-        "commands": [
-          "python3 bot.py: Start the smart money signal tracker and copy-trading execution bot"
-        ],
-        "triggers": "Activate when the user wants to copy trade smart money or whale wallets, track KOL on-chain activity, automate signal-based trading with risk controls, or build a copy-trading strategy that mirrors high-performing wallet activity."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/smart-money-signal-copy-trade/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/smart-money-signal-copy-trade/SKILL_SUMMARY.md"
     },
     {
       "name": "top-rank-tokens-sniper",
@@ -611,14 +500,8 @@
       "homepage": "https://github.com/okx/plugin-store-community/tree/main/submissions/top-rank-tokens-sniper",
       "readme_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/top-rank-tokens-sniper/README.md",
       "skill_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/skills/top-rank-tokens-sniper/SKILL.md",
-      "skill_summary": {
-        "overview": "top-rank-tokens-sniper monitors the OKX leaderboard for newly listed tokens in the top 20 rankings and executes snipe trades when qualifying tokens appear. It applies 13 Slot Guard pre-checks (liquidity, holder distribution, contract risk, dev wallet flags) plus 9 advanced filters before entering a position, uses the onchainos wallet for real trading execution, and includes configurable take-profit and stop-loss levels with a session risk cap.",
-        "usage": "Run `python3 ranking_sniper.py` with your configured snipe parameters; set the target leaderboard URL, position size, TP/SL percentages, and filter thresholds before starting. The bot polls the ranking continuously and acts on new entries that pass all checks.",
-        "commands": [
-          "python3 ranking_sniper.py: Start the OKX ranking sniper bot with real trading execution"
-        ],
-        "triggers": "Activate when the user wants to snipe newly listed top-ranking tokens, automate a leaderboard-based trading strategy, apply pre-entry safety filters before buying ranked tokens, or build a ranking momentum strategy on OKX."
-      }
+      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/top-rank-tokens-sniper/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store-community/main/submissions/top-rank-tokens-sniper/SKILL_SUMMARY.md"
     }
   ]
 }
