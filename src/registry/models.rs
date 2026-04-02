@@ -27,6 +27,8 @@ pub struct Plugin {
     #[serde(rename = "type")]
     pub source: String,
     pub components: Components,
+    #[serde(default)]
+    pub skill_summary: Option<serde_json::Value>,
     pub extra: Option<DefiInfo>,
 }
 
