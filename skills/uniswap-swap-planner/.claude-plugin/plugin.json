@@ -1,0 +1,20 @@
+{
+  "name": "uniswap-swap-planner",
+  "description": "Plan token swaps and generate Uniswap deep links across all supported chains, with token discovery and research workflows",
+  "version": "0.2.1",
+  "author": {
+    "name": "Uniswap Labs",
+    "github": "wkoutre"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "swap",
+    "defi",
+    "token-discovery",
+    "deep-links",
+    "ethereum",
+    "multichain"
+  ],
+  "repository": "https://github.com/wkoutre"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "test-python-cli",
+  "description": "E2E test - Python CLI plugin with OnchainOS ETH price query",
+  "version": "1.0.0",
+  "author": {
+    "name": "E2E Test",
+    "github": "MigOKG"
+  },
+  "license": "MIT",
+  "keywords": [
+    "test",
+    "e2e",
+    "python",
+    "onchainos"
+  ],
+  "repository": "https://github.com/MigOKG"
+}

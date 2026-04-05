@@ -1,0 +1,19 @@
+{
+  "name": "polymarket-agent-skills",
+  "description": "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions",
+  "version": "1.0.0",
+  "author": {
+    "name": "Polymarket",
+    "github": "Polymarket"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "prediction-market",
+    "trading",
+    "polygon",
+    "gasless",
+    "bridge"
+  ],
+  "repository": "https://github.com/Polymarket"
+}

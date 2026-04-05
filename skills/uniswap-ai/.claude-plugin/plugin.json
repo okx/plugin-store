@@ -1,0 +1,20 @@
+{
+  "name": "uniswap-ai",
+  "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
+  "version": "1.7.0",
+  "author": {
+    "name": "Uniswap",
+    "github": "Uniswap"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "trading",
+    "hooks",
+    "v2",
+    "v3",
+    "v4",
+    "multi-chain"
+  ],
+  "repository": "https://github.com/Uniswap"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "test-stub-external",
+  "description": "E2E test - stub plugin from external repo with OnchainOS",
+  "version": "1.0.0",
+  "author": {
+    "name": "E2E Test",
+    "github": "MigOKG"
+  },
+  "license": "MIT",
+  "keywords": [
+    "test",
+    "e2e",
+    "stub",
+    "onchainos"
+  ],
+  "repository": "https://github.com/MigOKG"
+}

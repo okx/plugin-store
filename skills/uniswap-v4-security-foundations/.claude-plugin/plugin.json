@@ -1,0 +1,20 @@
+{
+  "name": "uniswap-v4-security-foundations",
+  "description": "Security-first guide for building Uniswap v4 hooks covering vulnerabilities, audit requirements, and best practices",
+  "version": "1.1.0",
+  "author": {
+    "name": "Uniswap Labs",
+    "github": "wkoutre"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "v4-hooks",
+    "security",
+    "smart-contracts",
+    "audit",
+    "solidity",
+    "ethereum"
+  ],
+  "repository": "https://github.com/wkoutre"
+}
