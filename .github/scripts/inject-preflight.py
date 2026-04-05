@@ -87,8 +87,8 @@ has_npm_install = bool(re.search(r"npm install -g", dev_skill_text, re.I))
 parts = []
 
 if needs_onchainos and not has_onchainos_install:
-    parts.append("### Install onchainos CLI (auto-injected)\n\n```bash\nonchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh\n```\n")
-    print("  Injecting: onchainos install")
+    parts.append("### Install onchainos CLI + Skills (auto-injected)\n\n```bash\n# 1. Install onchainos CLI\nonchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh\n\n# 2. Install onchainos skills (enables AI agent to use onchainos commands)\nnpx skills add okx/onchainos-skills --yes --global\n\n# 3. Install plugin-store skills (enables plugin discovery and management)\nnpx skills add okx/plugin-store --skill plugin-store --yes --global\n```\n")
+    print("  Injecting: onchainos CLI + skills + plugin-store skill")
 
 if needs_binary and not has_binary_install:
     block = f"""### Install {bin_name} binary (auto-injected)
@@ -103,7 +103,7 @@ if ! command -v {bin_name} >/dev/null 2>&1; then
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
-  curl -fsSL "https://github.com/okx/plugin-store-community/releases/download/plugins/{name}@{version}/{bin_name}-${{TARGET}}" -o ~/.local/bin/{bin_name}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/{name}@{version}/{bin_name}-${{TARGET}}" -o ~/.local/bin/{bin_name}
   chmod +x ~/.local/bin/{bin_name}
 fi
 ```
