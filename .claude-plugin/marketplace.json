@@ -52,69 +52,6 @@
       }
     },
     {
-      "name": "test-go-cli",
-      "description": "E2E test - Go CLI plugin with OnchainOS ETH price query",
-      "source": "./skills/test-go-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-node-cli",
-      "description": "E2E test - Node.js CLI plugin with OnchainOS ETH price query",
-      "source": "./skills/test-node-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-pure-skill",
-      "description": "E2E test - pure skill plugin with OnchainOS ETH price query",
-      "source": "./skills/test-pure-skill",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-python-cli",
-      "description": "E2E test - Python CLI plugin with OnchainOS ETH price query",
-      "source": "./skills/test-python-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-rust-cli",
-      "description": "E2E test - Rust CLI plugin with OnchainOS ETH price query",
-      "source": "./skills/test-rust-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-stub-external",
-      "description": "E2E test - stub plugin from external repo with OnchainOS",
-      "source": "./skills/test-stub-external",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
-      "name": "test-ts-cli",
-      "description": "E2E test - TypeScript CLI plugin with OnchainOS ETH price query",
-      "source": "./skills/test-ts-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
-    },
-    {
       "name": "top-rank-tokens-sniper",
       "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
       "source": "./skills/top-rank-tokens-sniper",
