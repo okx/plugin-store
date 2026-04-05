@@ -95,7 +95,27 @@ api_calls: []
 EOF
 ```
 
-### Step 4: Create SKILL.md
+### Step 4: Create .claude-plugin/plugin.json
+
+```bash
+mkdir -p skills/my-plugin/.claude-plugin
+cat > skills/my-plugin/.claude-plugin/plugin.json << 'EOF'
+{
+  "name": "my-plugin",
+  "description": "What my plugin does in one sentence",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name"
+  },
+  "license": "MIT",
+  "keywords": ["keyword1", "keyword2"]
+}
+EOF
+```
+
+> **Important**: The `name`, `description`, and `version` fields must match your `plugin.yaml` exactly.
+
+### Step 5: Create SKILL.md
 
 ```bash
 cat > skills/my-plugin/SKILL.md << 'SKILLEOF'
@@ -151,7 +171,7 @@ example-command --flag "real-value"
 SKILLEOF
 ```
 
-### Step 5: Validate Locally
+### Step 6: Validate Locally
 
 ```bash
 cd /path/to/plugin-store
@@ -166,7 +186,7 @@ Linting skills/my-plugin...
   Plugin 'my-plugin' passed all checks!
 ```
 
-### Step 6: Submit a Pull Request
+### Step 7: Submit a Pull Request
 
 ```bash
 git checkout -b submit/my-plugin
@@ -192,6 +212,8 @@ Each PR should contain **one plugin only** and should only modify files inside
 
 ```
 skills/my-plugin/
+├── .claude-plugin/
+│   └── plugin.json      # Required -- Claude Skill registration metadata
 ├── plugin.yaml          # Required -- plugin metadata and manifest
 ├── SKILL.md             # Required -- skill definition for the AI agent
 ├── scripts/             # Optional -- Python scripts, shell scripts
@@ -205,7 +227,38 @@ skills/my-plugin/
 └── LICENSE              # Recommended -- SPDX-compatible license file
 ```
 
-Both `plugin.yaml` and `SKILL.md` are **required**. Everything else is optional.
+`.claude-plugin/plugin.json`, `plugin.yaml`, and `SKILL.md` are all **required**. Everything else is optional.
+
+### .claude-plugin/plugin.json
+
+This file follows the [Claude Skill architecture](https://docs.anthropic.com/en/docs/claude-code) and is required for plugin registration. It must be consistent with your `plugin.yaml`.
+
+```json
+{
+  "name": "my-plugin",
+  "description": "What my plugin does in one sentence",
+  "version": "1.0.0",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "homepage": "https://github.com/your-username/your-repo",
+  "repository": "https://github.com/your-username/your-repo",
+  "license": "MIT",
+  "keywords": ["keyword1", "keyword2"]
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Must match `plugin.yaml` name |
+| `description` | Yes | Must match `plugin.yaml` description |
+| `version` | Yes | Must match `plugin.yaml` version (semver) |
+| `author` | Yes | Name and optional email |
+| `license` | Yes | SPDX identifier (MIT, Apache-2.0, etc.) |
+| `keywords` | No | Searchable tags |
+| `homepage` | No | Project homepage URL |
+| `repository` | No | Source code URL |
 
 ### plugin.yaml Reference
 
