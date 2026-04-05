@@ -49,6 +49,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 1
 
+      - name: Overlay CI scripts from base branch
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- .github/scripts/
+
       - name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
