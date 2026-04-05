@@ -1,0 +1,20 @@
+schema_version: 1
+name: top-rank-tokens-sniper
+version: "1.0.0"
+description: "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system"
+author:
+  name: "yz06276"
+  github: "yz06276"
+license: MIT
+category: trading-strategy
+tags:
+  - solana
+  - onchainos
+  - trading-bot
+
+components:
+  skill:
+    repo: "yz06276/top-rank-tokens-sniper"
+    commit: "80489f89ed4a5ee5e9717e48fe8265e88db85fa1"
+
+api_calls: []

@@ -1,0 +1,16 @@
+{
+  "name": "meme-trench-scanner",
+  "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
+  "version": "1.0.0",
+  "author": {
+    "name": "yz06276",
+    "github": "yz06276"
+  },
+  "license": "MIT",
+  "keywords": [
+    "solana",
+    "onchainos",
+    "trading-bot"
+  ],
+  "repository": "https://github.com/yz06276"
+}

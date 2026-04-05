@@ -1,0 +1,24 @@
+schema_version: 1
+name: uniswap-v4-security-foundations
+version: "1.1.0"
+description: "Security-first guide for building Uniswap v4 hooks covering vulnerabilities, audit requirements, and best practices"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: security
+type: "dapp-official"
+tags:
+  - uniswap
+  - v4-hooks
+  - security
+  - smart-contracts
+  - audit
+  - solidity
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-v4-security-foundations
+
+api_calls: []

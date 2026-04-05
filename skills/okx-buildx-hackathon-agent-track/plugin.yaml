@@ -1,0 +1,25 @@
+schema_version: 1
+name: okx-buildx-hackathon-agent-track
+version: "1.0.0"
+description: "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes."
+author:
+  name: "OKX"
+  github: "MigOKG"
+license: MIT
+category: utility
+type: "official"
+tags:
+  - hackathon
+  - xlayer
+  - onchainos
+  - uniswap
+  - moltbook
+
+components:
+  skill:
+    dir: skills/okx-buildx-hackathon-agent-track
+
+api_calls:
+  - "www.moltbook.com"
+  - "web3.okx.com"
+  - "docs.uniswap.org"

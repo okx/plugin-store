@@ -1,0 +1,25 @@
+schema_version: 1
+name: uniswap-swap-planner
+version: "0.2.1"
+description: "Plan token swaps and generate Uniswap deep links across all supported chains, with token discovery and research workflows"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - swap
+  - defi
+  - token-discovery
+  - deep-links
+  - ethereum
+  - multichain
+
+components:
+  skill:
+    dir: skills/uniswap-swap-planner
+
+api_calls:
+  - "trade-api.gateway.uniswap.org"

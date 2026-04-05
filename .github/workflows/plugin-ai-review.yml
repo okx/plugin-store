@@ -1,0 +1,671 @@
+# Phase 3: AI Code Review (Advisory — does NOT block merge)
+#
+# Before reviewing, this workflow fetches the latest onchainos source code
+# and documentation as context. This ensures the review stays current even
+# as onchainos evolves — no hardcoded command lists.
+#
+# API Provider Selection:
+#   - Default: Anthropic API (requires ANTHROPIC_API_KEY secret)
+#   - Future:  OpenRouter API (set OPENROUTER_API_KEY secret to activate)
+#   When OPENROUTER_API_KEY is set, the workflow uses OpenRouter to access
+#   Claude models. This enables auto-selection of the best model and
+#   provides access to multiple providers via a single API key.
+#
+# This workflow NEVER fails the PR check — it only provides information.
+
+name: "Phase 3: AI Code Review"
+
+on:
+  pull_request_target:
+    paths:
+      - 'skills/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# onchainos source repo — change this if the repo moves
+env:
+  ONCHAINOS_REPO: "okx/onchainos-skills"
+  ONCHAINOS_BRANCH: "main"
+
+jobs:
+  ai-review:
+    name: AI code review
+    environment: ai-review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      # ── Step 1: Detect which plugin is being submitted ──────────
+      - name: Detect plugin
+        id: detect
+        run: |
+          CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
+          PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+          PLUGIN_DIR="skills/${PLUGIN_NAME}"
+          echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
+          echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+      # ── Step 2: Fetch onchainos source code as review context ───
+      - name: Fetch onchainos source
+        id: onchainos
+        run: |
+          echo "Fetching onchainos source from ${{ env.ONCHAINOS_REPO }}@${{ env.ONCHAINOS_BRANCH }}..."
+
+          git clone --depth=1 --branch "${{ env.ONCHAINOS_BRANCH }}" \
+            "https://github.com/${{ env.ONCHAINOS_REPO }}.git" /tmp/onchainos 2>/dev/null || {
+            echo "::warning::Failed to clone onchainos repo, proceeding without source context"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+          # Build onchainos context document
+          {
+            echo "# onchainos Source Code Reference"
+            echo ""
+            echo "This is the LATEST source code of onchainos CLI — the authoritative"
+            echo "reference for what capabilities are available. Use this to verify"
+            echo "whether a plugin correctly uses onchainos APIs."
+            echo ""
+
+            echo "## CLI Command Definitions (src/main.rs)"
+            echo '```rust'
+            cat /tmp/onchainos/cli/src/main.rs
+            echo '```'
+            echo ""
+
+            echo "## Command Modules (src/commands/mod.rs)"
+            echo '```rust'
+            cat /tmp/onchainos/cli/src/commands/mod.rs
+            echo '```'
+            echo ""
+
+            if ls /tmp/onchainos/cli/src/commands/*.rs 1>/dev/null 2>&1; then
+              for cmd_file in /tmp/onchainos/cli/src/commands/*.rs; do
+                CMD_NAME=$(basename "$cmd_file" .rs)
+                [ "$CMD_NAME" = "mod" ] && continue
+                echo "## Command: ${CMD_NAME}"
+                echo '```rust'
+                cat "$cmd_file"
+                echo '```'
+                echo ""
+              done
+            fi
+
+            if ls /tmp/onchainos/cli/src/commands/agentic_wallet/*.rs 1>/dev/null 2>&1; then
+              for cmd_file in /tmp/onchainos/cli/src/commands/agentic_wallet/*.rs; do
+                CMD_NAME=$(basename "$cmd_file" .rs)
+                [ "$CMD_NAME" = "mod" ] && continue
+                echo "## Wallet: ${CMD_NAME}"
+                echo '```rust'
+                cat "$cmd_file"
+                echo '```'
+                echo ""
+              done
+            fi
+
+            if [ -f /tmp/onchainos/cli/src/mcp/mod.rs ]; then
+              echo "## MCP Server Tools"
+              echo '```rust'
+              head -200 /tmp/onchainos/cli/src/mcp/mod.rs
+              echo '```'
+              echo ""
+            fi
+
+            echo "## Official SKILL.md Examples"
+            echo ""
+            for skill_dir in /tmp/onchainos/skills/*/; do
+              SKILL_NAME=$(basename "$skill_dir")
+              SKILL_FILE="${skill_dir}SKILL.md"
+              [ -f "$SKILL_FILE" ] || continue
+              echo "### ${SKILL_NAME}"
+              echo '```markdown'
+              cat "$SKILL_FILE"
+              echo '```'
+              echo ""
+            done
+
+            echo "## API Client (src/client.rs)"
+            echo '```rust'
+            head -100 /tmp/onchainos/cli/src/client.rs
+            echo '```'
+            echo ""
+
+            echo "## Supported Chains (src/chains.rs)"
+            echo '```rust'
+            cat /tmp/onchainos/cli/src/chains.rs
+            echo '```'
+
+          } > /tmp/onchainos_context.txt
+
+          SIZE=$(wc -c < /tmp/onchainos_context.txt)
+          TOKENS_EST=$((SIZE / 4))
+          echo "onchainos context: ${SIZE} bytes (~${TOKENS_EST} tokens)"
+
+      # ── Step 3: Detect API provider and select model ────────────
+      - name: Select API provider and model
+        id: provider
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          # ── Provider selection: OpenRouter if key exists, else Anthropic ──
+          if [ -n "$OPENROUTER_API_KEY" ]; then
+            echo "provider=openrouter" >> "$GITHUB_OUTPUT"
+            echo "api_url=https://openrouter.ai/api/v1/chat/completions" >> "$GITHUB_OUTPUT"
+            echo "auth_header=Authorization: Bearer ${OPENROUTER_API_KEY}" >> "$GITHUB_OUTPUT"
+
+            # Auto-select best Claude Opus model from OpenRouter
+            HTTP_CODE=$(curl -s -o /tmp/models.json -w "%{http_code}" \
+              https://openrouter.ai/api/v1/models \
+              -H "Authorization: Bearer ${OPENROUTER_API_KEY}")
+
+            BEST_MODEL=""
+            if [ "$HTTP_CODE" = "200" ]; then
+              BEST_MODEL=$(jq -r '
+                [.data[]
+                 | select(.id | startswith("anthropic/claude-"))
+                 | select(.id | test("opus"))
+                 | . + { version: (.id | capture("(?<v>[0-9]+(\\.[0-9]+)?)$") | .v // "0") }
+                ]
+                | sort_by(.version) | reverse | first | .id // empty
+              ' /tmp/models.json 2>/dev/null || echo "")
+
+              if [ -z "$BEST_MODEL" ]; then
+                BEST_MODEL=$(jq -r '
+                  [.data[] | select(.id | startswith("anthropic/claude-")) | select(.id | test("sonnet"))]
+                  | sort_by(.id) | reverse | first | .id // empty
+                ' /tmp/models.json 2>/dev/null || echo "")
+              fi
+            fi
+            echo "model=${BEST_MODEL:-anthropic/claude-sonnet-4}" >> "$GITHUB_OUTPUT"
+            echo "Provider: OpenRouter | Model: ${BEST_MODEL:-anthropic/claude-sonnet-4}"
+
+          else
+            echo "provider=anthropic" >> "$GITHUB_OUTPUT"
+            echo "api_url=https://api.anthropic.com/v1/messages" >> "$GITHUB_OUTPUT"
+            echo "auth_header=x-api-key: ${ANTHROPIC_API_KEY}" >> "$GITHUB_OUTPUT"
+
+            # Select best Claude model from Anthropic
+            HTTP_CODE=$(curl -s -o /tmp/models.json -w "%{http_code}" \
+              https://api.anthropic.com/v1/models?limit=100 \
+              -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+              -H "anthropic-version: 2023-06-01")
+
+            BEST_MODEL=""
+            if [ "$HTTP_CODE" = "200" ]; then
+              HAS_DATA=$(jq -r '.data | type // "null"' /tmp/models.json 2>/dev/null || echo "null")
+              if [ "$HAS_DATA" = "array" ]; then
+                BEST_MODEL=$(jq -r '
+                  [.data[]
+                   | select(.id | startswith("claude-"))
+                   | . + {
+                       tier_score: (
+                         if (.id | test("opus")) then 3
+                         elif (.id | test("sonnet")) then 2
+                         elif (.id | test("haiku")) then 1
+                         else 0 end
+                       )
+                     }
+                  ]
+                  | sort_by(.tier_score, .created_at) | reverse | first | .id // empty
+                ' /tmp/models.json 2>/dev/null || echo "")
+              fi
+            fi
+            echo "model=${BEST_MODEL:-claude-sonnet-4-20250514}" >> "$GITHUB_OUTPUT"
+            echo "Provider: Anthropic | Model: ${BEST_MODEL:-claude-sonnet-4-20250514}"
+          fi
+
+      # ── Step 4: Build the API request ───────────────────────────
+      - name: Build API request
+        id: build
+        run: |
+          PLUGIN_DIR="${{ steps.detect.outputs.plugin_dir }}"
+          YAML_FILE="${PLUGIN_DIR}/plugin.yaml"
+          SKILL_FILE=$(find "${PLUGIN_DIR}" -name "SKILL.md" -type f | head -1)
+
+          if [ ! -f "$YAML_FILE" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          # ── Fetch external repo content (Mode B/C) ──────────────
+          # When plugin.yaml points to an external repo via components.skill.repo,
+          # the SKILL.md and source code live there, not in the local skills/ dir.
+          # Clone the external repo at the pinned commit so AI can review it.
+          EXTERNAL_DIR=""
+          SKILL_REPO=$(python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          skill = data.get('components', {}).get('skill', {})
+          repo = skill.get('repo', '')
+          commit = skill.get('commit', '')
+          if repo and repo != 'okx/plugin-store':
+              print(f'{repo} {commit}')
+          " 2>/dev/null || echo "")
+
+          if [ -n "$SKILL_REPO" ]; then
+            EXT_REPO=$(echo "$SKILL_REPO" | cut -d' ' -f1)
+            EXT_COMMIT=$(echo "$SKILL_REPO" | cut -d' ' -f2)
+            echo "External repo detected: ${EXT_REPO}@${EXT_COMMIT:-HEAD}"
+
+            EXTERNAL_DIR="/tmp/external-plugin"
+            rm -rf "$EXTERNAL_DIR"
+            if git clone --depth=100 "https://github.com/${EXT_REPO}.git" "$EXTERNAL_DIR" 2>/dev/null; then
+              if [ -n "$EXT_COMMIT" ]; then
+                cd "$EXTERNAL_DIR" && git checkout "$EXT_COMMIT" 2>/dev/null && cd - > /dev/null
+              fi
+              echo "External repo cloned successfully"
+
+              # Find SKILL.md in external repo if not found locally
+              if [ -z "$SKILL_FILE" ] || [ ! -f "$SKILL_FILE" ]; then
+                SKILL_FILE=$(find "$EXTERNAL_DIR" -name "SKILL.md" -o -name "skill.md" | head -1)
+                echo "SKILL.md found in external repo: ${SKILL_FILE}"
+              fi
+            else
+              echo "::warning::Failed to clone external repo ${EXT_REPO}"
+              EXTERNAL_DIR=""
+            fi
+          fi
+
+          # Build plugin content
+          {
+            echo "# Plugin Submission to Review"
+            echo ""
+            echo "## plugin.yaml"
+            echo '```yaml'
+            cat "$YAML_FILE"
+            echo '```'
+            echo ""
+            if [ -n "$SKILL_FILE" ] && [ -f "$SKILL_FILE" ]; then
+              echo "## SKILL.md"
+              echo '```markdown'
+              cat "$SKILL_FILE"
+              echo '```'
+            fi
+            echo ""
+
+            # Include references from local submissions or external repo
+            for search_dir in "${PLUGIN_DIR}" "${EXTERNAL_DIR}"; do
+              [ -z "$search_dir" ] && continue
+              for ref in $(find "$search_dir" -path "*/references/*.md" -type f 2>/dev/null); do
+                echo "## references/$(basename "$ref")"
+                echo '```markdown'
+                cat "$ref"
+                echo '```'
+                echo ""
+              done
+            done
+
+            # ── Include source code from external repo for security review ──
+            if [ -n "$EXTERNAL_DIR" ] && [ -d "$EXTERNAL_DIR" ]; then
+              echo ""
+              echo "# External Repository Source Code (for security review)"
+              echo "> Cloned from: ${EXT_REPO}@${EXT_COMMIT:-HEAD}"
+              echo ""
+              find "$EXTERNAL_DIR" -type f \
+                \( -name "*.rs" -o -name "*.go" -o -name "*.ts" -o -name "*.js" \
+                   -o -name "*.py" -o -name "*.toml" -o -name "*.json" -o -name "*.yaml" \
+                   -o -name "*.yml" -o -name "*.md" -o -name "*.html" \) \
+                ! -path "*/.git/*" ! -path "*/node_modules/*" ! -path "*/target/*" \
+                | sort | while read src_file; do
+                REL_PATH=$(echo "$src_file" | sed "s|${EXTERNAL_DIR}/||")
+                FILE_LINES=$(wc -l < "$src_file")
+                EXT="${src_file##*.}"
+                echo "## Source: ${REL_PATH} (${FILE_LINES} lines)"
+                echo "\`\`\`${EXT}"
+                cat "$src_file"
+                echo '```'
+                echo ""
+              done
+            fi
+
+            # ── Include local source code (Mode A: direct upload) ──
+            BUILD_DIR=$(python3 -c "
+          import yaml
+          with open('${YAML_FILE}') as f:
+              data = yaml.safe_load(f)
+          build = data.get('build')
+          if build:
+              print(build.get('source_dir', ''))
+          " 2>/dev/null || echo "")
+
+            if [ -n "$BUILD_DIR" ] && [ -d "${PLUGIN_DIR}/${BUILD_DIR}" ]; then
+              echo ""
+              echo "# Source Code (for security review)"
+              echo ""
+              find "${PLUGIN_DIR}/${BUILD_DIR}" -type f \
+                \( -name "*.rs" -o -name "*.go" -o -name "*.ts" -o -name "*.js" \
+                   -o -name "*.py" -o -name "*.toml" -o -name "*.json" -o -name "*.yaml" \
+                   -o -name "*.yml" -o -name "*.lock" -o -name "*.mod" -o -name "*.sum" \) \
+                | sort | while read src_file; do
+                REL_PATH=$(echo "$src_file" | sed "s|${PLUGIN_DIR}/||")
+                FILE_LINES=$(wc -l < "$src_file")
+                EXT="${src_file##*.}"
+                echo "## Source: ${REL_PATH} (${FILE_LINES} lines)"
+                echo "\`\`\`${EXT}"
+                cat "$src_file"
+                echo '```'
+                echo ""
+              done
+            fi
+          } > /tmp/plugin_content.txt
+
+          cp .github/prompts/ai-review-system.md /tmp/system_prompt.txt
+
+          {
+            echo "# OKX Skill Security Scanner Rules"
+            echo ""
+            echo "Apply these security rules when reviewing the plugin submission."
+            echo "For each rule that matches, include it in your Security Assessment section."
+            echo ""
+            if [ -f .github/security-rules/static-rules.md ]; then
+              cat .github/security-rules/static-rules.md
+              echo ""
+            fi
+            if [ -f .github/security-rules/llm-judges.md ]; then
+              cat .github/security-rules/llm-judges.md
+              echo ""
+            fi
+            if [ -f .github/security-rules/toxic-flows.md ]; then
+              cat .github/security-rules/toxic-flows.md
+            fi
+          } > /tmp/security_rules.txt
+
+          # Build request body (same format works for both Anthropic Messages API and OpenRouter)
+          MODEL="${{ steps.provider.outputs.model }}"
+          PROVIDER="${{ steps.provider.outputs.provider }}"
+          echo "Using model: ${MODEL} via ${PROVIDER}"
+
+          # Build the full API request in one jq call — avoids shell ARG_MAX limits
+          # by using --rawfile to read large files directly, never passing through $variables.
+          ONCHAINOS_AVAILABLE="${{ steps.onchainos.outputs.available }}"
+          if [ "$ONCHAINOS_AVAILABLE" = "true" ] && [ -f /tmp/onchainos_context.txt ]; then
+            jq -n \
+              --arg model "$MODEL" \
+              --rawfile system /tmp/system_prompt.txt \
+              --rawfile rules /tmp/security_rules.txt \
+              --rawfile onchainos /tmp/onchainos_context.txt \
+              --rawfile plugin /tmp/plugin_content.txt \
+              '{
+                model: $model,
+                max_tokens: 16384,
+                messages: [{
+                  role: "user",
+                  content: ($system + "\n\n---\n\n" + $rules + "\n\n---\n\n" + $onchainos + "\n\n---\n\n" + $plugin)
+                }]
+              }' > /tmp/api_request.json
+          else
+            jq -n \
+              --arg model "$MODEL" \
+              --rawfile system /tmp/system_prompt.txt \
+              --rawfile rules /tmp/security_rules.txt \
+              --rawfile plugin /tmp/plugin_content.txt \
+              '{
+                model: $model,
+                max_tokens: 16384,
+                messages: [{
+                  role: "user",
+                  content: ($system + "\n\n---\n\n" + $rules + "\n\n---\n\n(onchainos source not available)\n\n---\n\n" + $plugin)
+                }]
+              }' > /tmp/api_request.json
+          fi
+
+          SIZE=$(wc -c < /tmp/api_request.json)
+          echo "Total API request: ${SIZE} bytes"
+
+      # ── Step 5: Call Claude API (with jitter + retry) ─────────────
+      - name: Call Claude API
+        id: ai_review
+        if: steps.build.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          PROVIDER="${{ steps.provider.outputs.provider }}"
+
+          # ── Random jitter (0-90s) to stagger concurrent PR reviews ──
+          JITTER=$(( RANDOM % 90 ))
+          echo "Waiting ${JITTER}s jitter to avoid rate limits..."
+          sleep "$JITTER"
+
+          # ── API call with exponential backoff retry on rate limit ──
+          MAX_RETRIES=3
+          RETRY_DELAY=60
+          HTTP_CODE=""
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "API call attempt ${attempt}/${MAX_RETRIES}..."
+
+            if [ "$PROVIDER" = "openrouter" ]; then
+              HTTP_CODE=$(curl -s -o /tmp/api_response.json -w "%{http_code}" \
+                https://openrouter.ai/api/v1/chat/completions \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+                -d @/tmp/api_request.json)
+            else
+              HTTP_CODE=$(curl -s -o /tmp/api_response.json -w "%{http_code}" \
+                https://api.anthropic.com/v1/messages \
+                -H "Content-Type: application/json" \
+                -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+                -H "anthropic-version: 2023-06-01" \
+                -d @/tmp/api_request.json)
+            fi
+
+            echo "HTTP status: ${HTTP_CODE} (provider: ${PROVIDER}, attempt: ${attempt})"
+
+            # Success — break out of retry loop
+            if [ "$HTTP_CODE" = "200" ]; then
+              break
+            fi
+
+            # Check if retryable (rate limit / 529 overloaded)
+            ERROR_MSG=$(jq -r '.error.message // .error // "Unknown error"' /tmp/api_response.json 2>/dev/null || echo "HTTP ${HTTP_CODE}")
+            if echo "$ERROR_MSG" | grep -qiE "rate.limit|too many requests|429|overloaded|529|quota"; then
+              if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+                WAIT=$((RETRY_DELAY * attempt + RANDOM % 30))
+                echo "Rate limited. Retrying in ${WAIT}s..."
+                sleep "$WAIT"
+                continue
+              fi
+            fi
+
+            # Non-retryable error or last attempt — break
+            break
+          done
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            ERROR_MSG=$(jq -r '.error.message // .error // "Unknown error"' /tmp/api_response.json 2>/dev/null || echo "HTTP ${HTTP_CODE}")
+            REQUEST_SIZE=$(wc -c < /tmp/api_request.json)
+            CONTENT_SIZE=$(wc -c < /tmp/plugin_content.txt)
+
+            # Classify error type
+            if echo "$ERROR_MSG" | grep -qiE "rate.limit|too many requests|429|quota"; then
+              echo "⏳ **AI review FAILED: rate limit exceeded after ${MAX_RETRIES} retries** — Error: ${ERROR_MSG}." > /tmp/ai_review.md
+              echo "merge_rec=manual" >> "$GITHUB_OUTPUT"
+            elif echo "$ERROR_MSG" | grep -qiE "too many tokens|context length|token limit|content.*large|request.*large"; then
+              echo "❌ **AI review FAILED: source code exceeds context limit** (request: ${REQUEST_SIZE} bytes, plugin content: ${CONTENT_SIZE} bytes). Error: ${ERROR_MSG}" > /tmp/ai_review.md
+              echo "merge_rec=blocked" >> "$GITHUB_OUTPUT"
+            else
+              echo "❌ **AI review FAILED** (HTTP ${HTTP_CODE}): ${ERROR_MSG}. Request size: ${REQUEST_SIZE} bytes, plugin content: ${CONTENT_SIZE} bytes." > /tmp/ai_review.md
+              echo "merge_rec=manual" >> "$GITHUB_OUTPUT"
+            fi
+
+            echo "score=N/A" >> "$GITHUB_OUTPUT"
+            echo "actual_model=unavailable" >> "$GITHUB_OUTPUT"
+            echo "cost=N/A" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract review text — different response format per provider
+          if [ "$PROVIDER" = "openrouter" ]; then
+            jq -r '.choices[0].message.content // "ERROR: No text in response"' /tmp/api_response.json > /tmp/ai_review.md
+            ACTUAL_MODEL=$(jq -r '.model // "unknown"' /tmp/api_response.json)
+            COST=$(jq -r '.usage.cost // "unknown"' /tmp/api_response.json)
+          else
+            jq -r '.content[0].text // "ERROR: No text in response"' /tmp/api_response.json > /tmp/ai_review.md
+            ACTUAL_MODEL=$(jq -r '.model // "unknown"' /tmp/api_response.json)
+            PROMPT_TOKENS=$(jq -r '.usage.input_tokens // 0' /tmp/api_response.json)
+            OUTPUT_TOKENS=$(jq -r '.usage.output_tokens // 0' /tmp/api_response.json)
+            COST="~${PROMPT_TOKENS}+${OUTPUT_TOKENS} tokens"
+          fi
+
+          echo "Model used: ${ACTUAL_MODEL}, Cost: ${COST}"
+          echo "actual_model=${ACTUAL_MODEL}" >> "$GITHUB_OUTPUT"
+          echo "cost=${COST}" >> "$GITHUB_OUTPUT"
+
+          REVIEW=$(cat /tmp/ai_review.md)
+
+          SCORE=$(echo "$REVIEW" | grep -oP 'Quality Score:\s*\K\d+' | head -1 || echo "N/A")
+          echo "score=${SCORE:-N/A}" >> "$GITHUB_OUTPUT"
+
+          if echo "$REVIEW" | grep -qi "Ready to merge"; then
+            echo "merge_rec=ready" >> "$GITHUB_OUTPUT"
+          elif echo "$REVIEW" | grep -qi "Needs changes"; then
+            echo "merge_rec=changes" >> "$GITHUB_OUTPUT"
+          else
+            echo "merge_rec=caveats" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step 6: Post report to PR ──────────────────────────────
+      - name: Post review report
+        if: always() && steps.build.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let review = 'AI review did not produce output.';
+            try {
+              review = fs.readFileSync('/tmp/ai_review.md', 'utf8');
+            } catch (e) {
+              console.log('No review file:', e.message);
+            }
+
+            const pluginName = '${{ steps.detect.outputs.plugin_name }}';
+            const score = '${{ steps.ai_review.outputs.score }}' || 'N/A';
+            const mergeRec = '${{ steps.ai_review.outputs.merge_rec }}' || 'manual';
+            const hasOnchainos = '${{ steps.onchainos.outputs.available }}' === 'true';
+            const actualModel = '${{ steps.ai_review.outputs.actual_model }}' || 'unknown';
+            const cost = '${{ steps.ai_review.outputs.cost }}' || 'unknown';
+            const provider = '${{ steps.provider.outputs.provider }}';
+
+            let recIcon, recText;
+            if (mergeRec === 'blocked') {
+              recIcon = '❌'; recText = 'BLOCKED — source code exceeds context limit';
+            } else if (mergeRec === 'ready') {
+              recIcon = '✅'; recText = 'Ready to merge';
+            } else if (mergeRec === 'changes') {
+              recIcon = '🔍'; recText = 'Needs changes';
+            } else if (mergeRec === 'caveats') {
+              recIcon = '⚠️'; recText = 'Merge with caveats';
+            } else {
+              recIcon = '👤'; recText = 'Manual review required';
+            }
+
+            const providerNote = provider === 'openrouter' ? 'via OpenRouter' : 'via Anthropic API';
+            const contextNote = hasOnchainos
+              ? `🔗 Reviewed against **latest onchainos source code** (live from main branch) | Model: \`${actualModel}\` ${providerNote} | Cost: ${cost}`
+              : `⚠️ onchainos source was unavailable — review based on AI knowledge only | Model: \`${actualModel}\` ${providerNote}`;
+
+            // Split into collapsible sections
+            const sections = review.split(/(?=^## \d+\.)/m).filter(s => s.trim());
+            let reportBody = '';
+            for (const section of sections) {
+              const lines = section.trim().split('\n');
+              const title = lines[0].replace(/^#+\s*/, '').trim();
+              const content = lines.slice(1).join('\n').trim();
+              if (content) {
+                reportBody += `<details>\n<summary><strong>${title}</strong></summary>\n\n${content}\n\n</details>\n\n`;
+              }
+            }
+            if (!reportBody.trim()) {
+              reportBody = review;
+            }
+
+            const body = [
+              `## 📋 Phase 3: AI Code Review Report — Score: ${score}/100`,
+              '',
+              `> **Plugin**: \`${pluginName}\` | **Recommendation**: ${recIcon} ${recText}`,
+              `> `,
+              `> ${contextNote}`,
+              `> `,
+              `> *This is an advisory report. It does NOT block merging. Final decision is made by human reviewers.*`,
+              '',
+              '---',
+              '',
+              reportBody,
+              '---',
+              '',
+              `*Generated by Claude AI ${providerNote} — review the full report before approving.*`
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }},
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Phase 3: AI Code Review Report')
+            );
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (botComment) {
+              await github.rest.issues.updateComment({ ...params, comment_id: botComment.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: ${{ github.event.pull_request.number }} });
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }},
+              labels: ['ai-reviewed']
+            });
+
+      # ── Step 7: Watchdog — verify report was posted ─────────────
+      - name: Watchdog — verify AI review report exists
+        if: always() && steps.build.outputs.skip != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ github.event.pull_request.number }};
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const hasReport = comments.some(c =>
+              c.user.type === 'Bot' && c.body.includes('Phase 3: AI Code Review Report')
+            );
+
+            if (!hasReport) {
+              core.warning(`Watchdog: No AI review report found on PR #${prNumber}. Re-triggering workflow...`);
+
+              // Re-trigger by dispatching a repository_dispatch event
+              // that a separate watchdog workflow can pick up
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: `## ⚠️ Phase 3: AI Code Review Report — Missing\n\n> AI review workflow completed but no report was generated.\n> This is typically caused by API rate limiting during high-traffic periods.\n>\n> **Action needed**: A maintainer should re-run this workflow, or the developer can push an empty commit to re-trigger.\n\n---\n*Watchdog detected missing report at ${new Date().toISOString()}*`
+                });
+              } catch (e) {
+                core.warning(`Failed to post watchdog comment: ${e.message}`);
+              }
+
+              core.setFailed('AI review report was not posted to PR. See watchdog comment.');
+            } else {
+              console.log(`Watchdog: AI review report confirmed on PR #${prNumber}`);
+            }

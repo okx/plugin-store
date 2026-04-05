@@ -1,0 +1,25 @@
+schema_version: 1
+name: uniswap-swap-integration
+version: "1.3.0"
+description: "Integrate Uniswap swaps into frontends, backends, and smart contracts via Trading API, Universal Router SDK, or direct contract calls"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - swap
+  - defi
+  - trading-api
+  - universal-router
+  - permit2
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-swap-integration
+
+api_calls:
+  - "trade-api.gateway.uniswap.org"

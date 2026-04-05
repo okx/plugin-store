@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          CARGO_VERSION=$(grep '^version' cli/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
           if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
             echo "ERROR: tag $GITHUB_REF_NAME does not match Cargo.toml version $CARGO_VERSION"
             exit 1
@@ -76,7 +76,7 @@ jobs:
       - name: Set manifest path
         id: manifest
         shell: bash
-        run: echo "path=Cargo.toml" >> $GITHUB_OUTPUT
+        run: echo "path=cli/Cargo.toml" >> $GITHUB_OUTPUT
 
       - name: Build (Unix)
         if: runner.os != 'Windows'
@@ -151,7 +151,7 @@ jobs:
 
       - name: Update metadata.version in all SKILL.md files
         run: |
-          find skills official -name "SKILL.md" | while read f; do
+          find skills -name "SKILL.md" | while read f; do
             sed -i "s/^  version: .*/  version: \"${{ steps.version.outputs.value }}\"/" "$f"
           done
 
@@ -159,7 +159,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add skills/ official/
+          git add skills/
           git diff --cached --quiet && echo "No version changes" || \
             git commit -m "release: update SKILL.md metadata.version to ${{ steps.version.outputs.value }}"
           git push origin HEAD:main

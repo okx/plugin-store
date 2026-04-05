@@ -37,7 +37,7 @@ jobs:
 
       - name: Install Rust and build CLI
         uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --release
+      - run: cd cli && cargo build --release
 
       # ── Detect which plugins changed ──────────────────────────
       - name: Detect changed plugins

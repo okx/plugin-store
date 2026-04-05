@@ -1,0 +1,25 @@
+schema_version: 1
+name: uniswap-pay-with-any-token
+version: "2.0.0"
+description: "Pay HTTP 402 payment challenges using any token via Tempo CLI and Uniswap Trading API, supporting MPP and x402 protocols"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - payments
+  - x402
+  - mpp
+  - tempo
+  - defi
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-pay-with-any-token
+
+api_calls:
+  - "trade-api.gateway.uniswap.org"

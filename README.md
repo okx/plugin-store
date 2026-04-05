@@ -1,123 +1,70 @@
-# Plugin Store
+# OKX Plugin Store
 
-Plugin Store is a **Skills and MCP marketplace** for AI coding assistants. It lets agents discover, install, update, and uninstall plugins — including on-chain trading strategies, DeFi protocol integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.
+Discover, install, and build AI agent plugins for DeFi, trading, and Web3.
 
-## Install
-
-```bash
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/okx/plugin-store/main/install-local.sh | bash
-
-# Or update an existing installation
-plugin-store self-update
-```
-
-## Commands
-
-### Discovery
+**Supported platforms:** Claude Code, Cursor, OpenClaw
 
 ```bash
-# List all available plugins
-plugin-store list
-
-# Search by keyword
-plugin-store search <keyword>
-
-# Show details for a plugin (description, components, install command)
-plugin-store info <name>
+npx skills add okx/plugin-store --skill <plugin-name>
 ```
 
-### Install & Uninstall
+---
+
+## Browse by Category
+
+| Category | Plugins |
+|----------|---------|
+| Trading | uniswap-ai, uniswap-swap-planner, uniswap-swap-integration |
+| DeFi | uniswap-liquidity-planner, uniswap-pay-with-any-token, uniswap-cca-configurator, uniswap-cca-deployer |
+| Prediction | polymarket-agent-skills |
+| Dev Tools | uniswap-v4-security-foundations, uniswap-viem-integration, plugin-store |
+| Automated Trading | meme-trench-scanner, top-rank-tokens-sniper, smart-money-signal-copy-trade |
+| Other | okx-buildx-hackathon-agent-track |
+
+## Browse by Risk Level
+
+| Level | Meaning | Plugins |
+|-------|---------|---------|
+| 🟢 Starter | Safe to explore. Read-only queries, planning tools, and documentation. No transactions. | plugin-store, okx-buildx-hackathon-agent-track, uniswap-swap-planner, uniswap-liquidity-planner, uniswap-v4-security-foundations, uniswap-viem-integration |
+| 🟡 Standard | Executes transactions with user confirmation. Always asks before signing or sending. | uniswap-ai, uniswap-swap-integration, uniswap-pay-with-any-token, uniswap-cca-configurator, uniswap-cca-deployer, polymarket-agent-skills |
+| 🔴 Advanced | Automated trading strategies. Requires understanding of financial risks before use. | meme-trench-scanner, top-rank-tokens-sniper, smart-money-signal-copy-trade |
+
+## Trust Indicators
+
+| Badge | Source | Meaning |
+|-------|--------|---------|
+| 🟢 Official | plugin-store | Developed and maintained by OKX |
+| 🔵 Verified Partner | uniswap-\*, polymarket-\* | Published by the protocol team itself |
+| ⚪ Community | everything else | Community contribution; review before use |
+
+---
+
+## Documentation
+
+| You are... | Go to... |
+|------------|----------|
+| Plugin user | [FOR-USERS.md](docs/FOR-USERS.md) |
+| Plugin developer | [FOR-DEVELOPERS.md](docs/FOR-DEVELOPERS.md) |
+| OKX/Partner team | [FOR-PARTNERS.md](docs/FOR-PARTNERS.md) |
+| Reviewing standards | [REVIEW-GUIDELINES.md](docs/REVIEW-GUIDELINES.md) |
+
+## Install a Plugin
 
 ```bash
-# Install a plugin (interactive agent selection)
-plugin-store install <name>
+# Browse all available plugins
+npx skills add okx/plugin-store
 
-# Install to a specific agent
-plugin-store install <name> --agent claude-code
-
-# Install non-interactively (skip prompts)
-plugin-store install <name> --yes
-
-# Install skill component only (no binary/npm/pip)
-plugin-store install <name> --skill-only
-
-# Uninstall from all agents
-plugin-store uninstall <name>
+# Install a specific plugin
+npx skills add okx/plugin-store --skill <plugin-name>
 ```
-
-### Update
-
-```bash
-# Update all installed plugins
-plugin-store update --all
-
-# Update the plugin-store CLI itself
-plugin-store self-update
-```
-
-### Manage
-
-```bash
-# Show all installed plugins and their status
-plugin-store installed
-
-# Force refresh the registry cache
-plugin-store registry update
-```
-
-### Develop & Submit
-
-```bash
-# Scaffold a new plugin (Mode A: direct upload)
-plugin-store init <name>
-
-# Validate before submitting
-plugin-store lint ./submissions/<name>/
-
-# Import a Claude marketplace repo (Mode C: one-click)
-plugin-store import <owner/repo>
-```
-
-## Plugin Distribution Model
-
-Plugins are distributed differently based on their language:
-
-| Language | Distribution | User Install Size |
-|----------|-------------|-------------------|
-| **Rust** | GitHub Release binary | ~1-20 MB |
-| **Go** | GitHub Release binary | ~2-15 MB |
-| **TypeScript** | `npm install -g` from source | ~KB |
-| **Node.js** | `npm install -g` from source | ~KB |
-| **Python** | `pip install` from source | ~KB |
-| **Pure Skill** | SKILL.md download | ~KB |
-
-Binary plugins (Rust/Go) are compiled by our CI and published as GitHub Releases.
-TS/Node/Python plugins are installed directly from the developer's source repo via npm/pip.
-
-## Supported Agents
-
-| Agent | Detection |
-|-------|-----------|
-| Claude Code | `~/.claude/` exists |
-| Cursor | `~/.cursor/` exists |
-| OpenClaw | `~/.openclaw/` exists |
-
-## Plugin Sources
-
-| Source | Meaning |
-|--------|---------|
-| `official` | Developed and maintained by Plugin Store |
-| `dapp-official` | Published by the DApp project itself |
-| `community-developer` | Community contribution — install prompt includes a warning |
 
 ## Contributing
 
-To submit a community plugin, visit [okx/plugin-store-community](https://github.com/okx/plugin-store-community) and follow the [Plugin Development Guide](https://github.com/okx/plugin-store-community/blob/main/PLUGIN_DEVELOPMENT_GUIDE.md).
+To submit a plugin, see [FOR-DEVELOPERS.md](docs/FOR-DEVELOPERS.md). The workflow is Fork, develop, then open a Pull Request.
 
-## Risk Warning
+## Security
 
-> **All trading strategies involve significant financial risk.** Always validate with `--dry-run` before going live. Never deploy more capital than you can afford to lose entirely.
+To report a security issue, please email [security@okx.com](mailto:security@okx.com). Do not open a public issue for security vulnerabilities.
 
 ## License
 
