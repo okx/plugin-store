@@ -1,7 +1,6 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "okx-plugin-store",
-  "description": "AI Agent plugins for DeFi, trading, and Web3",
+  "description": "Official and community plugins for OKX Plugin Store.",
   "owner": {
     "name": "OKX",
     "email": "plugin-store@okx.com"
@@ -33,6 +32,11 @@
       "author": {
         "name": "OKX"
       }
+    },
+    {
+      "name": "plugin-store",
+      "description": "Plugin: plugin-store",
+      "source": "./skills/plugin-store"
     },
     {
       "name": "polymarket-agent-skills",
@@ -105,6 +109,41 @@
       "author": {
         "name": "E2E Test"
       }
+    },
+    {
+      "name": "test-go-cli",
+      "description": "E2E test - Go CLI plugin with OnchainOS ETH price query",
+      "source": "./skills/test-go-cli"
+    },
+    {
+      "name": "test-node-cli",
+      "description": "E2E test - Node.js CLI plugin with OnchainOS ETH price query",
+      "source": "./skills/test-node-cli"
+    },
+    {
+      "name": "test-pure-skill",
+      "description": "E2E test - pure skill plugin with OnchainOS ETH price query",
+      "source": "./skills/test-pure-skill"
+    },
+    {
+      "name": "test-python-cli",
+      "description": "E2E test - Python CLI plugin with OnchainOS ETH price query",
+      "source": "./skills/test-python-cli"
+    },
+    {
+      "name": "test-rust-cli",
+      "description": "E2E test - Rust CLI plugin with OnchainOS ETH price query",
+      "source": "./skills/test-rust-cli"
+    },
+    {
+      "name": "test-stub-external",
+      "description": "E2E test - stub plugin from external repo with OnchainOS",
+      "source": "./skills/test-stub-external"
+    },
+    {
+      "name": "test-ts-cli",
+      "description": "E2E test - TypeScript CLI plugin with OnchainOS ETH price query",
+      "source": "./skills/test-ts-cli"
     },
     {
       "name": "top-rank-tokens-sniper",
