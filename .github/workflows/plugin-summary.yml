@@ -151,7 +151,7 @@ jobs:
           git add "${{ needs.detect.outputs.plugin_dir }}"
           git diff --staged --quiet && echo "No changes" && exit 0
           git commit -m "auto: summaries + pre-flight for ${{ needs.detect.outputs.plugin_name }}"
-          git push
+          git push origin HEAD:refs/heads/${{ github.event.pull_request.head.ref }}
 
       # ── Post combined report to PR ──
       - name: Post report to PR
