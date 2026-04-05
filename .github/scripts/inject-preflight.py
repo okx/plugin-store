@@ -67,14 +67,18 @@ dev_skill_text = re.sub(
     "", skill_text, flags=re.DOTALL
 )
 
-# Only match actual install commands, not doc references like "Install via onchainos upgrade"
-has_onchainos_install = bool(re.search(
+# Only skip onchainos injection if developer already has BOTH CLI install AND skills install
+has_onchainos_cli = bool(re.search(
     r"curl.*onchainos.*install\.sh|"
-    r"skills add.*onchainos|"
     r"onchainos.*install\.sh\s*\|\s*sh|"
     r"brew install.*onchainos",
     dev_skill_text, re.I
 ))
+has_onchainos_skills = bool(re.search(
+    r"npx\s+skills\s+add\s+okx/onchainos-skills",
+    dev_skill_text, re.I
+))
+has_onchainos_install = has_onchainos_cli and has_onchainos_skills
 has_binary_install = bool(re.search(r"curl.*releases/download|wget.*releases/download", dev_skill_text, re.I))
 has_pip_install = bool(re.search(r"pip3? install", dev_skill_text, re.I))
 has_npm_install = bool(re.search(r"npm install -g", dev_skill_text, re.I))
