@@ -1,0 +1,17 @@
+{
+  "name": "test-go-cli",
+  "description": "E2E test - Go CLI plugin with OnchainOS ETH price query",
+  "version": "1.0.0",
+  "author": {
+    "name": "E2E Test",
+    "github": "MigOKG"
+  },
+  "license": "MIT",
+  "keywords": [
+    "test",
+    "e2e",
+    "go",
+    "onchainos"
+  ],
+  "repository": "https://github.com/MigOKG"
+}
