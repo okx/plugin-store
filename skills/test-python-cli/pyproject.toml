@@ -1,0 +1,7 @@
+[project]
+name = "test-python-cli"
+version = "1.0.0"
+requires-python = ">=3.9"
+
+[project.scripts]
+test-python-cli = "scripts.query_price:main"
