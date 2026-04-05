@@ -10,28 +10,6 @@ npx skills add okx/plugin-store --skill <plugin-name>
 
 ---
 
-## Plugin Directory
-
-| Plugin | Description | Source | Risk | Install Command |
-|--------|-------------|--------|------|-----------------|
-| plugin-store | CLI marketplace for discovering, installing, and managing plugins | 🟢 Official | 🟢 Starter | `npx skills add okx/plugin-store --skill plugin-store` |
-| okx-buildx-hackathon-agent-track | AI Hackathon participation guide: registration, wallet setup, project building, and submission | 🟢 Official | 🟢 Starter | `npx skills add okx/plugin-store --skill okx-buildx-hackathon-agent-track` |
-| uniswap-ai | AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4 | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill uniswap-ai` |
-| uniswap-swap-planner | Plan token swaps and generate Uniswap deep links across all supported chains | 🔵 Verified Partner | 🟢 Starter | `npx skills add okx/plugin-store --skill uniswap-swap-planner` |
-| uniswap-swap-integration | Integrate Uniswap swaps into frontends, backends, and smart contracts | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill uniswap-swap-integration` |
-| uniswap-liquidity-planner | Plan and generate deep links for creating liquidity positions on Uniswap v2/v3/v4 | 🔵 Verified Partner | 🟢 Starter | `npx skills add okx/plugin-store --skill uniswap-liquidity-planner` |
-| uniswap-pay-with-any-token | Pay HTTP 402 challenges using any token via Tempo CLI and Uniswap Trading API | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill uniswap-pay-with-any-token` |
-| uniswap-cca-configurator | Configure Continuous Clearing Auction (CCA) smart contract parameters for token distribution | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill uniswap-cca-configurator` |
-| uniswap-cca-deployer | Deploy CCA smart contracts using the Factory pattern with CREATE2 | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill uniswap-cca-deployer` |
-| uniswap-v4-security-foundations | Security-first guide for building Uniswap v4 hooks: vulnerabilities, audits, and best practices | 🔵 Verified Partner | 🟢 Starter | `npx skills add okx/plugin-store --skill uniswap-v4-security-foundations` |
-| uniswap-viem-integration | Integrate EVM blockchains using viem and wagmi for TypeScript/JavaScript apps | 🔵 Verified Partner | 🟢 Starter | `npx skills add okx/plugin-store --skill uniswap-viem-integration` |
-| polymarket-agent-skills | Polymarket prediction market integration: trading, market data, streaming, bridge, and gasless transactions | 🔵 Verified Partner | 🟡 Standard | `npx skills add okx/plugin-store --skill polymarket-agent-skills` |
-| meme-trench-scanner | Solana meme token automated trading bot with 11 launchpad coverage and 7-layer exit system | ⚪ Community | 🔴 Advanced | `npx skills add okx/plugin-store --skill meme-trench-scanner` |
-| top-rank-tokens-sniper | OKX ranking leaderboard sniper with momentum scoring, safety checks, and 6-layer exit system | ⚪ Community | 🔴 Advanced | `npx skills add okx/plugin-store --skill top-rank-tokens-sniper` |
-| smart-money-signal-copy-trade | Smart money signal tracker with cost-aware take-profit, safety checks, and copy trading | ⚪ Community | 🔴 Advanced | `npx skills add okx/plugin-store --skill smart-money-signal-copy-trade` |
-
----
-
 ## Browse by Category
 
 | Category | Plugins |
@@ -70,23 +48,14 @@ npx skills add okx/plugin-store --skill <plugin-name>
 | OKX/Partner team | [FOR-PARTNERS.md](docs/FOR-PARTNERS.md) |
 | Reviewing standards | [REVIEW-GUIDELINES.md](docs/REVIEW-GUIDELINES.md) |
 
-## Quick CLI Reference
+## Install a Plugin
 
 ```bash
-# List all available plugins
-plugin-store list
+# Browse all available plugins
+npx skills add okx/plugin-store
 
-# Search by keyword
-plugin-store search <keyword>
-
-# Install a plugin
-plugin-store install <name>
-
-# Update all installed plugins
-plugin-store update --all
-
-# Uninstall a plugin
-plugin-store uninstall <name>
+# Install a specific plugin
+npx skills add okx/plugin-store --skill <plugin-name>
 ```
 
 ## Contributing
