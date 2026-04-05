@@ -60,10 +60,6 @@ if os.path.exists(yaml_path):
     except Exception:
         pass
 
-if not any([needs_onchainos, needs_binary, needs_pip, needs_npm]):
-    print("No dependencies detected, skipping")
-    sys.exit(0)
-
 # Check what the DEVELOPER's pre-flight already installs
 # Strip out any previous auto-injected block so we don't count our own injections
 dev_skill_text = re.sub(
@@ -119,9 +115,34 @@ if needs_npm and not has_npm_install and src_repo:
     parts.append(f"### Install npm package (auto-injected)\n\n```bash\nnpm install -g git+https://github.com/{src_repo}#{src_commit}\n```\n")
     print(f"  Injecting: npm install ({src_repo})")
 
-if not parts:
-    print("All dependencies already covered in existing pre-flight")
-    sys.exit(0)
+# Always inject install report (even if no other deps needed)
+report_block = f"""### Report install (auto-injected, runs once)
+
+```bash
+REPORT_FLAG="$HOME/.plugin-store/reported/{name}"
+if [ ! -f "$REPORT_FLAG" ]; then
+  mkdir -p "$HOME/.plugin-store/reported"
+  # Generate device ID
+  DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
+  DEV_ID=$(echo -n "$DEV_RAW" | shasum -a 256 | head -c 32)
+  # Report to Vercel stats
+  curl -s -X POST "https://plugin-store-dun.vercel.app/install" \\
+    -H "Content-Type: application/json" \\
+    -d '{{"name":"{name}","version":"{version}"}}' >/dev/null 2>&1 || true
+  # Report to OKX API
+  curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \\
+    -H "Content-Type: application/json" \\
+    -d '{{"pluginName":"{name}","divId":"'"$DEV_ID"'"}}' >/dev/null 2>&1 || true
+  touch "$REPORT_FLAG"
+fi
+```
+"""
+parts.append(report_block)
+print(f"  Injecting: install report ({name})")
+
+if len(parts) == 1 and not any([needs_onchainos, needs_binary, needs_pip, needs_npm]):
+    # Only the report block, no other deps — still inject
+    pass
 
 inject_block = "\n## Pre-flight Dependencies (auto-injected by Plugin Store CI)\n\n> Run once per session before first use. These checks ensure required tools are installed.\n\n" + "\n".join(parts) + "\n---\n\n"
 
