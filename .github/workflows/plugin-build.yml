@@ -105,20 +105,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        if: needs.detect.outputs.source_mode == 'local'
+        if: needs.detect.outputs.source_mode != 'external'
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Prepare source
         run: |
-          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
-            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
-            echo "Using local source from ${{ needs.detect.outputs.local_source_dir }}"
-          else
+          if [ "${{ needs.detect.outputs.source_mode }}" = "external" ] && [ -n "${{ needs.detect.outputs.source_repo }}" ]; then
             git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
             cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
             echo "Checked out $(git rev-parse HEAD)"
+          else
+            LOCAL_DIR="${{ needs.detect.outputs.local_source_dir }}"
+            [ -z "$LOCAL_DIR" ] && LOCAL_DIR="${{ needs.detect.outputs.plugin_dir }}"
+            cp -r "$LOCAL_DIR" /tmp/source
+            echo "Using local source from $LOCAL_DIR"
           fi
 
       - name: Install Rust
@@ -170,18 +172,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        if: needs.detect.outputs.source_mode == 'local'
+        if: needs.detect.outputs.source_mode != 'external'
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Prepare source
         run: |
-          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
-            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
-          else
+          if [ "${{ needs.detect.outputs.source_mode }}" = "external" ] && [ -n "${{ needs.detect.outputs.source_repo }}" ]; then
             git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
             cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+            echo "Checked out $(git rev-parse HEAD)"
+          else
+            LOCAL_DIR="${{ needs.detect.outputs.local_source_dir }}"
+            [ -z "$LOCAL_DIR" ] && LOCAL_DIR="${{ needs.detect.outputs.plugin_dir }}"
+            cp -r "$LOCAL_DIR" /tmp/source
+            echo "Using local source from $LOCAL_DIR"
           fi
 
       - uses: actions/setup-go@v5
@@ -234,18 +240,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        if: needs.detect.outputs.source_mode == 'local'
+        if: needs.detect.outputs.source_mode != 'external'
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Prepare source
         run: |
-          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
-            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
-          else
+          if [ "${{ needs.detect.outputs.source_mode }}" = "external" ] && [ -n "${{ needs.detect.outputs.source_repo }}" ]; then
             git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
             cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+            echo "Checked out $(git rev-parse HEAD)"
+          else
+            LOCAL_DIR="${{ needs.detect.outputs.local_source_dir }}"
+            [ -z "$LOCAL_DIR" ] && LOCAL_DIR="${{ needs.detect.outputs.plugin_dir }}"
+            cp -r "$LOCAL_DIR" /tmp/source
+            echo "Using local source from $LOCAL_DIR"
           fi
 
       - uses: oven-sh/setup-bun@v2
@@ -288,18 +298,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        if: needs.detect.outputs.source_mode == 'local'
+        if: needs.detect.outputs.source_mode != 'external'
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Prepare source
         run: |
-          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
-            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
-          else
+          if [ "${{ needs.detect.outputs.source_mode }}" = "external" ] && [ -n "${{ needs.detect.outputs.source_repo }}" ]; then
             git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
             cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+            echo "Checked out $(git rev-parse HEAD)"
+          else
+            LOCAL_DIR="${{ needs.detect.outputs.local_source_dir }}"
+            [ -z "$LOCAL_DIR" ] && LOCAL_DIR="${{ needs.detect.outputs.plugin_dir }}"
+            cp -r "$LOCAL_DIR" /tmp/source
+            echo "Using local source from $LOCAL_DIR"
           fi
 
       - uses: oven-sh/setup-bun@v2
@@ -344,18 +358,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        if: needs.detect.outputs.source_mode == 'local'
+        if: needs.detect.outputs.source_mode != 'external'
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Prepare source
         run: |
-          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
-            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
-          else
+          if [ "${{ needs.detect.outputs.source_mode }}" = "external" ] && [ -n "${{ needs.detect.outputs.source_repo }}" ]; then
             git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
             cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+            echo "Checked out $(git rev-parse HEAD)"
+          else
+            LOCAL_DIR="${{ needs.detect.outputs.local_source_dir }}"
+            [ -z "$LOCAL_DIR" ] && LOCAL_DIR="${{ needs.detect.outputs.plugin_dir }}"
+            cp -r "$LOCAL_DIR" /tmp/source
+            echo "Using local source from $LOCAL_DIR"
           fi
 
       - uses: actions/setup-python@v5
