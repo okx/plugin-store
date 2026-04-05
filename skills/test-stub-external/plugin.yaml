@@ -1,0 +1,14 @@
+schema_version: 1
+name: test-stub-external
+version: "1.0.0"
+description: "E2E test - stub plugin from external repo with OnchainOS"
+author:
+  name: "E2E Test"
+  github: "MigOKG"
+license: MIT
+category: utility
+tags: [test, e2e, stub, onchainos]
+components:
+  skill:
+    repo: "MigOKG/test-stub-skill"
+    commit: "772e6bf6aac41e8c6eaf7a4eb44f69d4851a2927"
