@@ -6,7 +6,7 @@ fn main() {
     if args.len() > 1 && args[1] == "--query" && args.get(2).map(|s| s.as_str()) == Some("eth-price") {
         println!("Querying ETH price via onchainos...");
         let output = Command::new("onchainos")
-            .args(["token", "price", "ETH"])
+            .args(["token", "price-info", "--address", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "--chain", "ethereum"])
             .output();
         match output {
             Ok(o) => print!("{}", String::from_utf8_lossy(&o.stdout)),

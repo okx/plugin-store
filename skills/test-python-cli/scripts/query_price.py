@@ -14,7 +14,7 @@ def main():
         print("Querying ETH price via onchainos...")
         try:
             result = subprocess.run(
-                ["onchainos", "token", "price", "ETH"],
+                ["onchainos", "token", "price-info", "--address", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "--chain", "ethereum"],
                 capture_output=True, text=True
             )
             print(result.stdout)

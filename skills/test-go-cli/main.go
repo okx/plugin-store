@@ -9,7 +9,7 @@ import (
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--query" && len(os.Args) > 2 && os.Args[2] == "eth-price" {
 		fmt.Println("Querying ETH price via onchainos...")
-		cmd := exec.Command("onchainos", "token", "price", "ETH")
+		cmd := exec.Command("onchainos", "token", "price-info", "--address", "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "--chain", "ethereum")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Run()
