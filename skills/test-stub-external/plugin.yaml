@@ -11,4 +11,4 @@ tags: [test, e2e, stub, onchainos]
 components:
   skill:
     repo: "MigOKG/test-stub-skill"
-    commit: "772e6bf6aac41e8c6eaf7a4eb44f69d4851a2927"
+    commit: "b1c4c8bf9014dab61b395e9f06fc5ab8c8f1523e"

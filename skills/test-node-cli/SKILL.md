@@ -22,11 +22,11 @@ E2E test plugin with Node.js CLI binary and OnchainOS integration.
 test-node-cli --query eth-price
 ```
 **When to use:** When user asks about ETH price.
-**Output:** Calls `onchainos token price ETH` and formats the result.
+**Output:** Calls `onchainos token price-info --address 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 --chain ethereum` and formats the result.
 
 ### Direct OnchainOS Query
 ```bash
-onchainos token price ETH
+onchainos token price-info --address 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 --chain ethereum
 ```
 
 ## Error Handling

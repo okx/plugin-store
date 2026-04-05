@@ -18,7 +18,7 @@ E2E test plugin for verifying pure skill submission flow.
 
 ### Query ETH Price
 ```bash
-onchainos token price ETH
+onchainos token price-info --address 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 --chain ethereum
 ```
 **When to use:** When user asks about ETH price or market data.
 **Output:** Current ETH price in USD.
