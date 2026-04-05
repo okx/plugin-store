@@ -1,0 +1,22 @@
+schema_version: 1
+name: polymarket-agent-skills
+version: "1.0.0"
+description: "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions"
+author:
+  name: "Polymarket"
+  github: "Polymarket"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+link: "https://github.com/Polymarket/agent-skills"
+tags:
+  - polymarket
+  - prediction-market
+  - trading
+  - polygon
+  - gasless
+  - bridge
+components:
+  skill:
+    dir: skills/polymarket-agent-skills
+api_calls: []

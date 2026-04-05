@@ -1,0 +1,23 @@
+schema_version: 1
+name: uniswap-cca-configurator
+version: "1.0.0"
+description: "Configure Continuous Clearing Auction (CCA) smart contract parameters for fair and transparent token distribution"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - cca
+  - auction
+  - token-distribution
+  - smart-contracts
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-cca-configurator
+
+api_calls: []

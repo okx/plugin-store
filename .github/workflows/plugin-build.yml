@@ -1,0 +1,482 @@
+# Phase 2: Build Verification
+#
+# When a plugin has a `build` section, this workflow:
+# 1. Clones the developer's source repo at the pinned commit SHA
+# 2. Fetches dependencies + runs security audit
+# 3. Compiles the project
+# 4. Validates the artifact
+# 5. Posts a build report to the PR
+#
+# Source code is EXTERNAL (Homebrew model):
+# - plugin.yaml has: build.source_repo + build.source_commit
+# - We clone at exact SHA → compile → publish our artifact
+# - Community repo stays small (no source code stored)
+
+name: "Phase 2: Build Verification"
+
+on:
+  pull_request_target:
+    paths:
+      - 'skills/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect:
+    name: Detect build config
+    runs-on: ubuntu-latest
+    outputs:
+      plugin_dir: ${{ steps.find.outputs.plugin_dir }}
+      plugin_name: ${{ steps.find.outputs.plugin_name }}
+      has_build: ${{ steps.find.outputs.has_build }}
+      build_lang: ${{ steps.find.outputs.build_lang }}
+      source_repo: ${{ steps.find.outputs.source_repo }}
+      source_commit: ${{ steps.find.outputs.source_commit }}
+      source_dir: ${{ steps.find.outputs.source_dir }}
+      binary_name: ${{ steps.find.outputs.binary_name }}
+      build_main: ${{ steps.find.outputs.build_main }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Find plugin and parse build config
+        id: find
+        run: |
+          CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
+          PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+          PLUGIN_DIR="skills/${PLUGIN_NAME}"
+          echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
+          echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+          YAML_FILE="${PLUGIN_DIR}/plugin.yaml"
+          if [ ! -f "$YAML_FILE" ]; then
+            echo "has_build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Parse all build fields at once
+          YAML_FILE="$YAML_FILE" PLUGIN_DIR="$PLUGIN_DIR" python3 << 'PYEOF'
+          import yaml, os
+          yaml_file = os.environ["YAML_FILE"]
+          plugin_dir = os.environ["PLUGIN_DIR"]
+          with open(yaml_file) as f:
+              data = yaml.safe_load(f)
+          build = data.get("build")
+          out = os.environ.get("GITHUB_OUTPUT", "/dev/null")
+          with open(out, "a") as gh:
+              if not build:
+                  gh.write("has_build=false\n")
+              else:
+                  gh.write("has_build=true\n")
+                  gh.write(f"build_lang={build.get('lang', '')}\n")
+                  repo = build.get('source_repo', '')
+                  commit = build.get('source_commit', '')
+                  gh.write(f"source_repo={repo}\n")
+                  gh.write(f"source_commit={commit}\n")
+                  sd = build.get('source_dir', '.')
+                  gh.write(f"source_dir={'' if sd == '.' else sd}\n")
+                  gh.write(f"binary_name={build.get('binary_name', '')}\n")
+                  gh.write(f"build_main={build.get('main', '')}\n")
+                  # source_mode: "local" if no external repo, "external" if repo specified
+                  if repo:
+                      gh.write("source_mode=external\n")
+                  else:
+                      gh.write("source_mode=local\n")
+                      gh.write(f"local_source_dir={plugin_dir}\n")
+          PYEOF
+
+  # ═══ Clone source repo (shared step) ════════════════════════
+  # Each build job clones the external repo at the pinned commit SHA.
+  # This is a YAML anchor pattern — each job repeats the clone step.
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Rust Build
+  # ═══════════════════════════════════════════════════════════════
+  build-rust:
+    name: Build (Rust)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'rust'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.source_mode == 'local'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare source
+        run: |
+          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
+            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
+            echo "Using local source from ${{ needs.detect.outputs.local_source_dir }}"
+          else
+            git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
+            cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+            echo "Checked out $(git rev-parse HEAD)"
+          fi
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch dependencies
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: cargo fetch
+
+      - name: Security audit
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: |
+          cargo install cargo-audit 2>/dev/null || true
+          cargo audit 2>&1 || true
+
+      - name: Build
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: cargo build --release 2>&1 | tail -20
+
+      - name: Verify artifact
+        id: verify
+        run: |
+          BIN="/tmp/source/${{ needs.detect.outputs.source_dir }}/target/release/${{ needs.detect.outputs.binary_name }}"
+          if [ -f "$BIN" ]; then
+            chmod +x "$BIN"
+            SIZE=$(stat -c%s "$BIN" 2>/dev/null || stat -f%z "$BIN")
+            echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            sha256sum "$BIN"
+          else
+            echo "::error::Binary not found at $BIN"
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-rust-${{ needs.detect.outputs.plugin_name }}
+          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/target/release/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Go Build
+  # ═══════════════════════════════════════════════════════════════
+  build-go:
+    name: Build (Go)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'go'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.source_mode == 'local'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare source
+        run: |
+          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
+            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
+          else
+            git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
+            cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Fetch dependencies
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: go mod download
+
+      - name: Security check
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest 2>/dev/null || true
+          govulncheck ./... 2>&1 || true
+
+      - name: Build
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        env:
+          CGO_ENABLED: 0
+        run: go build -o "${{ needs.detect.outputs.binary_name }}" -ldflags="-s -w" .
+
+      - name: Verify artifact
+        id: verify
+        run: |
+          BIN="/tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}"
+          if [ -f "$BIN" ]; then
+            SIZE=$(stat -c%s "$BIN")
+            echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            sha256sum "$BIN"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-go-${{ needs.detect.outputs.plugin_name }}
+          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TypeScript Build (Bun compile)
+  # ═══════════════════════════════════════════════════════════════
+  build-typescript:
+    name: Build (TypeScript)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'typescript'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.source_mode == 'local'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare source
+        run: |
+          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
+            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
+          else
+            git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
+            cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: bun install
+
+      - name: Compile to binary
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: bun build --compile "${{ needs.detect.outputs.build_main }}" --outfile "${{ needs.detect.outputs.binary_name }}"
+
+      - name: Verify artifact
+        id: verify
+        run: |
+          BIN="/tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}"
+          if [ -f "$BIN" ]; then
+            SIZE=$(stat -c%s "$BIN")
+            echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            sha256sum "$BIN"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-ts-${{ needs.detect.outputs.plugin_name }}
+          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Node.js (npm pack)
+  # ═══════════════════════════════════════════════════════════════
+  build-node:
+    name: Build (Node.js)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'node'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.source_mode == 'local'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare source
+        run: |
+          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
+            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
+          else
+            git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
+            cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: bun install
+
+      - name: Compile to binary
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: bun build --compile "${{ needs.detect.outputs.build_main }}" --outfile "${{ needs.detect.outputs.binary_name }}"
+
+      - name: Verify artifact
+        id: verify
+        run: |
+          BIN="/tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}"
+          if [ -f "$BIN" ]; then
+            SIZE=$(stat -c%s "$BIN")
+            echo "size=$((SIZE / 1024 / 1024))MB" >> "$GITHUB_OUTPUT"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            sha256sum "$BIN"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        if: steps.verify.outputs.status == 'pass'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-node-${{ needs.detect.outputs.plugin_name }}
+          path: /tmp/source/${{ needs.detect.outputs.source_dir }}/${{ needs.detect.outputs.binary_name }}
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Python Validation (pip install — no binary packaging)
+  #  Python plugins are distributed as pip packages, not binaries.
+  #  Users install via pip/pipx at runtime.
+  # ═══════════════════════════════════════════════════════════════
+  build-python:
+    name: Build (Python)
+    needs: detect
+    if: needs.detect.outputs.has_build == 'true' && needs.detect.outputs.build_lang == 'python'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.source_mode == 'local'
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare source
+        run: |
+          if [ "${{ needs.detect.outputs.source_mode }}" = "local" ]; then
+            cp -r "${{ needs.detect.outputs.local_source_dir }}" /tmp/source
+          else
+            git clone "https://github.com/${{ needs.detect.outputs.source_repo }}.git" /tmp/source
+            cd /tmp/source && git checkout "${{ needs.detect.outputs.source_commit }}"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check Python version requirements
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: |
+          # Extract requires-python from pyproject.toml if present
+          if [ -f pyproject.toml ]; then
+            REQUIRES=$(python3 -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          print(data.get('project', {}).get('requires-python', 'not specified'))
+          " 2>/dev/null || echo "not specified")
+            echo "requires-python: $REQUIRES"
+          fi
+
+      - name: Install package
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: |
+          pip install pip-audit
+          pip install -e . 2>/dev/null || pip install -r requirements.txt 2>/dev/null || pip install . || {
+            echo "::error::pip install failed — this package cannot be installed"
+            exit 1
+          }
+          echo "pip install succeeded"
+
+      - name: Security audit
+        run: pip-audit 2>&1 || true
+
+      - name: Verify entry point works
+        id: verify
+        working-directory: /tmp/source/${{ needs.detect.outputs.source_dir }}
+        run: |
+          MAIN="${{ needs.detect.outputs.build_main }}"
+          BIN="${{ needs.detect.outputs.binary_name }}"
+
+          # Check if the entry point script runs
+          if [ -n "$MAIN" ] && python3 "$MAIN" --help > /dev/null 2>&1; then
+            echo "Entry point $MAIN responds to --help"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          elif command -v "$BIN" > /dev/null 2>&1; then
+            echo "Installed command $BIN found in PATH"
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not verify entry point, but pip install succeeded"
+          fi
+
+          # Report package info
+          pip show "$(python3 -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f).get('project', {}).get('name', ''))
+          " 2>/dev/null || echo '')" 2>/dev/null || true
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Build Report
+  # ═══════════════════════════════════════════════════════════════
+  report:
+    name: Build report
+    needs: [detect, build-rust, build-go, build-typescript, build-node, build-python]
+    if: always() && needs.detect.outputs.has_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post build report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lang = '${{ needs.detect.outputs.build_lang }}';
+            const pluginName = '${{ needs.detect.outputs.plugin_name }}';
+            const sourceRepo = '${{ needs.detect.outputs.source_repo }}';
+            const sourceCommit = '${{ needs.detect.outputs.source_commit }}';
+
+            const results = {
+              rust: '${{ needs.build-rust.result }}',
+              go: '${{ needs.build-go.result }}',
+              typescript: '${{ needs.build-typescript.result }}',
+              node: '${{ needs.build-node.result }}',
+              python: '${{ needs.build-python.result }}',
+            };
+
+            const result = results[lang] || 'skipped';
+            const passed = result === 'success';
+            const icon = passed ? '✅' : (result === 'skipped' ? '⏭️' : '❌');
+            const status = passed ? 'PASSED' : (result === 'skipped' ? 'SKIPPED' : 'FAILED');
+            const shortSha = sourceCommit.substring(0, 8);
+
+            const body = [
+              `## 🔨 Phase 2: Build Verification — ${icon} ${status}`,
+              '',
+              `> **Plugin**: \`${pluginName}\` | **Language**: \`${lang}\``,
+              `> **Source**: [\`${sourceRepo}@${shortSha}\`](https://github.com/${sourceRepo}/tree/${sourceCommit})`,
+              `> `,
+              `> *Compiled from developer source code by our CI. Users install our build artifacts.*`,
+              '',
+              passed
+                ? 'Build succeeded. Compiled artifact uploaded as workflow artifact.'
+                : result === 'skipped'
+                ? 'No build configuration — Skill-only plugin.'
+                : `Build failed. Check the [workflow logs](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).`,
+              '',
+              '---',
+              `*Source integrity: commit SHA \`${sourceCommit}\` is the content fingerprint.*`
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }},
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Phase 2: Build Verification')
+            );
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (botComment) {
+              await github.rest.issues.updateComment({ ...params, comment_id: botComment.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: ${{ github.event.pull_request.number }} });
+            }

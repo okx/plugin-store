@@ -53,6 +53,7 @@ jobs:
                   continue
 
               pjson_path = f"{skill_dir}/.claude-plugin/plugin.json"
+              pyaml_path = f"{skill_dir}/plugin.yaml"
               skill_path = f"{skill_dir}/SKILL.md"
 
               if not os.path.exists(skill_path):
@@ -63,6 +64,19 @@ jobs:
               if os.path.exists(pjson_path):
                   with open(pjson_path) as f:
                       pjson = json.load(f)
+              elif os.path.exists(pyaml_path):
+                  # Community plugins use plugin.yaml instead of plugin.json
+                  import yaml
+                  with open(pyaml_path) as f:
+                      pyaml_data = yaml.safe_load(f) or {}
+                  pjson = {
+                      "name": pyaml_data.get("name", skill_name),
+                      "version": str(pyaml_data.get("version", "1.0.0")),
+                      "description": pyaml_data.get("description", ""),
+                      "author": pyaml_data.get("author", {}),
+                      "category": pyaml_data.get("category", "utility"),
+                      "tags": pyaml_data.get("tags", []),
+                  }
 
               # Read SKILL.md frontmatter
               description = pjson.get("description", "")
