@@ -3,13 +3,78 @@
   "stats_url": "https://plugin-store-dun.vercel.app",
   "plugins": [
     {
+      "name": "meme-trench-scanner",
+      "version": "1.0",
+      "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "trading",
+        "signal",
+        "scanner",
+        "sniper",
+        "defi",
+        "memepump"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/meme-trench-scanner"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
+      "name": "okx-buildx-hackathon-agent-track",
+      "version": "1.0.0",
+      "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
+      "author": {
+        "name": "OKX"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "trading",
+        "defi",
+        "ranking",
+        "hackathon"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/okx-buildx-hackathon-agent-track"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "base",
+          "xlayer"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
       "name": "plugin-store",
       "version": "1.0.0",
       "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
       "author": {
         "name": "OKX"
       },
-      "category": "trading",
+      "category": "trading-strategy",
       "tags": [
         "trading",
         "defi",
@@ -29,48 +94,7 @@
         ],
         "protocols": [],
         "risk_level": "high"
-      },
-      "homepage": "https://github.com/okx/plugin-store",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL_SUMMARY.md",
-      "trust_source": "official",
-      "risk_level": "high"
-    },
-    {
-      "name": "uniswap-ai",
-      "version": "1.7.0",
-      "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
-      "author": {
-        "name": "Uniswap"
-      },
-      "category": "defi",
-      "tags": [
-        "uniswap",
-        "trading",
-        "hooks",
-        "v2",
-        "v3",
-        "v4",
-        "multi-chain"
-      ],
-      "type": "dapp-official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-ai",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
-        }
-      },
-      "link": "https://github.com/Uniswap/uniswap-ai",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-ai",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "standard"
+      }
     },
     {
       "name": "polymarket-agent-skills",
@@ -79,63 +103,267 @@
       "author": {
         "name": "Polymarket"
       },
-      "category": "defi",
+      "category": "trading-strategy",
       "tags": [
-        "polymarket",
-        "prediction-market",
-        "trading",
-        "polygon",
-        "gasless",
-        "bridge"
-      ],
-      "type": "dapp-official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/polymarket-agent-skills",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
-        }
-      },
-      "link": "https://github.com/Polymarket/agent-skills",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/polymarket-agent-skills",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "standard"
-    },
-    {
-      "name": "okx-buildx-hackathon-agent-track",
-      "version": "1.0.0",
-      "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
-      "author": {
-        "name": "OKX"
-      },
-      "category": "others",
-      "tags": [
-        "hackathon",
-        "xlayer",
-        "onchainos",
-        "uniswap",
-        "moltbook"
+        "trading"
       ],
       "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/polymarket-agent-skills"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md",
-      "trust_source": "official",
-      "risk_level": "starter"
+      "link": "https://github.com/okx/plugin-store"
+    },
+    {
+      "name": "smart-money-signal-copy-trade",
+      "version": "1.0",
+      "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "trading",
+        "signal",
+        "sniper",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/smart-money-signal-copy-trade"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
+      "name": "test-go-cli",
+      "version": "1.0.0",
+      "description": "E2E test - Go CLI plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-go-cli"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "test-node-cli",
+      "version": "1.0.0",
+      "description": "E2E test - Node.js CLI plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-node-cli"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "test-pure-skill",
+      "version": "1.0.0",
+      "description": "E2E test - pure skill plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-pure-skill"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "test-python-cli",
+      "version": "1.0.0",
+      "description": "E2E test - Python CLI plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-python-cli"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "test-rust-cli",
+      "version": "1.0.0",
+      "description": "E2E test - Rust CLI plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-rust-cli"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "test-ts-cli",
+      "version": "1.0.0",
+      "description": "E2E test - TypeScript CLI plugin with OnchainOS ETH price query",
+      "author": {
+        "name": "E2E Test"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/test-ts-cli"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "top-rank-tokens-sniper",
+      "version": "1.0",
+      "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
+      "author": {
+        "name": "yz06276"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "trading",
+        "signal",
+        "scanner",
+        "sniper",
+        "defi",
+        "ranking"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/top-rank-tokens-sniper"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
+      "name": "uniswap-ai",
+      "version": "1.7.0",
+      "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
+      "author": {
+        "name": "Uniswap"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/uniswap-ai"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-cca-configurator",
@@ -144,31 +372,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "cca",
-        "auction",
-        "token-distribution",
-        "smart-contracts",
-        "ethereum"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-cca-configurator",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-cca-configurator"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "starter"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-cca-deployer",
@@ -177,32 +392,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "cca",
-        "auction",
-        "deployment",
-        "create2",
-        "smart-contracts",
-        "ethereum"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-cca-deployer",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-cca-deployer"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "standard"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-liquidity-planner",
@@ -211,32 +412,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "liquidity",
-        "defi",
-        "lp-position",
-        "concentrated-liquidity",
-        "deep-links",
-        "ethereum"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-liquidity-planner",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-liquidity-planner"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "starter"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-pay-with-any-token",
@@ -245,32 +432,19 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "trading-strategy",
       "tags": [
-        "uniswap",
-        "payments",
-        "x402",
-        "mpp",
-        "tempo",
-        "defi",
-        "ethereum"
+        "trading",
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-pay-with-any-token",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-pay-with-any-token"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "standard"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-swap-integration",
@@ -279,32 +453,19 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "trading-strategy",
       "tags": [
-        "uniswap",
-        "swap",
-        "defi",
-        "trading-api",
-        "universal-router",
-        "permit2",
-        "ethereum"
+        "trading",
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-swap-integration",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-swap-integration"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "standard"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-swap-planner",
@@ -313,32 +474,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "defi",
+      "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "swap",
-        "defi",
-        "token-discovery",
-        "deep-links",
-        "ethereum",
-        "multichain"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-swap-planner",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-swap-planner"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "starter"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-v4-security-foundations",
@@ -347,32 +494,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "dev_tools",
+      "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "v4-hooks",
-        "security",
-        "smart-contracts",
-        "audit",
-        "solidity",
-        "ethereum"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-v4-security-foundations",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-v4-security-foundations"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "starter"
+      "link": "https://github.com/okx/plugin-store"
     },
     {
       "name": "uniswap-viem-integration",
@@ -381,122 +514,18 @@
       "author": {
         "name": "Uniswap Labs"
       },
-      "category": "dev_tools",
+      "category": "defi-protocol",
       "tags": [
-        "viem",
-        "wagmi",
-        "ethereum",
-        "evm",
-        "blockchain",
-        "typescript",
-        "smart-contracts"
+        "defi"
       ],
-      "type": "dapp-official",
+      "type": "official",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
-          "dir": "skills/uniswap-viem-integration",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
+          "dir": "skills/uniswap-viem-integration"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md",
-      "trust_source": "verified_partner",
-      "risk_level": "starter"
-    },
-    {
-      "name": "meme-trench-scanner",
-      "version": "1.0.0",
-      "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
-      "author": {
-        "name": "yz06276"
-      },
-      "category": "trading",
-      "tags": [
-        "solana",
-        "onchainos",
-        "trading-bot"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/meme-trench-scanner",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
-        }
-      },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/meme-trench-scanner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SKILL_SUMMARY.md",
-      "trust_source": "community",
-      "risk_level": "advanced"
-    },
-    {
-      "name": "smart-money-signal-copy-trade",
-      "version": "1.0.0",
-      "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
-      "author": {
-        "name": "yz06276"
-      },
-      "category": "trading",
-      "tags": [
-        "solana",
-        "onchainos",
-        "trading-bot"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/smart-money-signal-copy-trade",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
-        }
-      },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/smart-money-signal-copy-trade",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL_SUMMARY.md",
-      "trust_source": "community",
-      "risk_level": "advanced"
-    },
-    {
-      "name": "top-rank-tokens-sniper",
-      "version": "1.0.0",
-      "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
-      "author": {
-        "name": "yz06276"
-      },
-      "category": "trading",
-      "tags": [
-        "solana",
-        "onchainos",
-        "trading-bot"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/top-rank-tokens-sniper",
-          "commit": "0d7b0aed418b35c7374582fa2007116e1e07c782"
-        }
-      },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/top-rank-tokens-sniper",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SKILL_SUMMARY.md",
-      "trust_source": "community",
-      "risk_level": "advanced"
+      "link": "https://github.com/okx/plugin-store"
     }
   ]
 }
