@@ -1,0 +1,17 @@
+{
+  "name": "test-node-cli",
+  "description": "E2E test - Node.js CLI plugin with OnchainOS ETH price query",
+  "version": "1.0.0",
+  "author": {
+    "name": "E2E Test",
+    "github": "MigOKG"
+  },
+  "license": "MIT",
+  "keywords": [
+    "test",
+    "e2e",
+    "node",
+    "onchainos"
+  ],
+  "repository": "https://github.com/MigOKG"
+}
