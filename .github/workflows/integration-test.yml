@@ -15,9 +15,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
+      - 'cli/src/**'
+      - 'cli/Cargo.toml'
+      - 'cli/Cargo.lock'
   workflow_dispatch:
 
 permissions:
@@ -38,10 +38,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build plugin-store
-        run: cargo build --release
+        run: cd cli && cargo build --release
 
       - name: Add to PATH
-        run: echo "$PWD/target/release" >> $GITHUB_PATH
+        run: echo "$PWD/cli/target/release" >> $GITHUB_PATH
 
       - name: Verify CLI
         run: |
@@ -63,10 +63,10 @@ jobs:
       # ─── Test 2: Scaffold + Lint (Pure Skill) ─────────────
       - name: "Test: init + lint — pure skill plugin"
         run: |
-          mkdir -p /tmp/test-community/submissions
+          mkdir -p /tmp/test-community/skills
           cd /tmp/test-community
           plugin-store init test-skill-plugin
-          cat > submissions/test-skill-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-skill-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-skill-plugin
           version: "1.0.0"
@@ -83,7 +83,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-skill-plugin/skills/test-skill-plugin/SKILL.md << 'MD'
+          cat > skills/test-skill-plugin/skills/test-skill-plugin/SKILL.md << 'MD'
           ---
           name: test-skill-plugin
           description: "Test plugin for CI"
@@ -109,7 +109,7 @@ jobs:
           | "Chain not supported" | Wrong chain | Use ethereum |
           MD
 
-          plugin-store lint ./submissions/test-skill-plugin/
+          plugin-store lint ./skills/test-skill-plugin/
           echo "PASS: pure skill init + lint"
 
       # ─── Test 3: Scaffold + Lint (Rust Binary) ────────────
@@ -117,7 +117,7 @@ jobs:
         run: |
           cd /tmp/test-community
           plugin-store init test-rust-plugin
-          cat > submissions/test-rust-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-rust-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-rust-plugin
           version: "1.0.0"
@@ -139,7 +139,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-rust-plugin/skills/test-rust-plugin/SKILL.md << 'MD'
+          cat > skills/test-rust-plugin/skills/test-rust-plugin/SKILL.md << 'MD'
           ---
           name: test-rust-plugin
           description: "Test Rust binary plugin"
@@ -165,7 +165,7 @@ jobs:
           | Command not found | Not installed | Install plugin |
           MD
 
-          plugin-store lint ./submissions/test-rust-plugin/
+          plugin-store lint ./skills/test-rust-plugin/
           echo "PASS: rust binary init + lint"
 
       # ─── Test 4: Scaffold + Lint (Go Binary) ──────────────
@@ -173,7 +173,7 @@ jobs:
         run: |
           cd /tmp/test-community
           plugin-store init test-go-plugin
-          cat > submissions/test-go-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-go-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-go-plugin
           version: "1.0.0"
@@ -195,7 +195,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-go-plugin/skills/test-go-plugin/SKILL.md << 'MD'
+          cat > skills/test-go-plugin/skills/test-go-plugin/SKILL.md << 'MD'
           ---
           name: test-go-plugin
           description: "Test Go binary plugin"
@@ -221,7 +221,7 @@ jobs:
           | Command not found | Not installed | Install plugin |
           MD
 
-          plugin-store lint ./submissions/test-go-plugin/
+          plugin-store lint ./skills/test-go-plugin/
           echo "PASS: go binary init + lint"
 
       # ─── Test 5: Scaffold + Lint (TypeScript npm) ─────────
@@ -229,7 +229,7 @@ jobs:
         run: |
           cd /tmp/test-community
           plugin-store init test-ts-plugin
-          cat > submissions/test-ts-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-ts-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-ts-plugin
           version: "1.0.0"
@@ -252,7 +252,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-ts-plugin/skills/test-ts-plugin/SKILL.md << 'MD'
+          cat > skills/test-ts-plugin/skills/test-ts-plugin/SKILL.md << 'MD'
           ---
           name: test-ts-plugin
           description: "Test TypeScript npm plugin"
@@ -278,7 +278,7 @@ jobs:
           | Command not found | Not installed | Install plugin |
           MD
 
-          plugin-store lint ./submissions/test-ts-plugin/
+          plugin-store lint ./skills/test-ts-plugin/
           echo "PASS: typescript npm init + lint"
 
       # ─── Test 6: Scaffold + Lint (Node.js npm) ────────────
@@ -286,7 +286,7 @@ jobs:
         run: |
           cd /tmp/test-community
           plugin-store init test-node-plugin
-          cat > submissions/test-node-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-node-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-node-plugin
           version: "1.0.0"
@@ -309,7 +309,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-node-plugin/skills/test-node-plugin/SKILL.md << 'MD'
+          cat > skills/test-node-plugin/skills/test-node-plugin/SKILL.md << 'MD'
           ---
           name: test-node-plugin
           description: "Test Node.js npm plugin"
@@ -335,7 +335,7 @@ jobs:
           | Command not found | Not installed | Install plugin |
           MD
 
-          plugin-store lint ./submissions/test-node-plugin/
+          plugin-store lint ./skills/test-node-plugin/
           echo "PASS: node npm init + lint"
 
       # ─── Test 7: Scaffold + Lint (Python pip) ─────────────
@@ -343,7 +343,7 @@ jobs:
         run: |
           cd /tmp/test-community
           plugin-store init test-python-plugin
-          cat > submissions/test-python-plugin/plugin.yaml << 'YAML'
+          cat > skills/test-python-plugin/plugin.yaml << 'YAML'
           schema_version: 1
           name: test-python-plugin
           version: "1.0.0"
@@ -366,7 +366,7 @@ jobs:
           api_calls: []
           YAML
 
-          cat > submissions/test-python-plugin/skills/test-python-plugin/SKILL.md << 'MD'
+          cat > skills/test-python-plugin/skills/test-python-plugin/SKILL.md << 'MD'
           ---
           name: test-python-plugin
           description: "Test Python pip plugin"
@@ -392,7 +392,7 @@ jobs:
           | Command not found | Not installed | Install plugin |
           MD
 
-          plugin-store lint ./submissions/test-python-plugin/
+          plugin-store lint ./skills/test-python-plugin/
           echo "PASS: python pip init + lint"
 
       # ─── Test 8: Install real plugins from registry ────────

@@ -1,0 +1,23 @@
+schema_version: 1
+name: uniswap-ai
+version: "1.7.0"
+description: "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4"
+author:
+  name: "Uniswap"
+  github: "Uniswap"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+link: "https://github.com/Uniswap/uniswap-ai"
+tags:
+  - uniswap
+  - trading
+  - hooks
+  - v2
+  - v3
+  - v4
+  - multi-chain
+components:
+  skill:
+    dir: skills/uniswap-ai
+api_calls: []

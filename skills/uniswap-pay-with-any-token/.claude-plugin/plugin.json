@@ -1,0 +1,20 @@
+{
+  "name": "uniswap-pay-with-any-token",
+  "description": "Pay HTTP 402 payment challenges using any token via Tempo CLI and Uniswap Trading API, supporting MPP and x402 protocols",
+  "version": "2.0.0",
+  "author": {
+    "name": "Uniswap Labs",
+    "github": "wkoutre"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "payments",
+    "x402",
+    "mpp",
+    "tempo",
+    "defi",
+    "ethereum"
+  ],
+  "repository": "https://github.com/wkoutre"
+}

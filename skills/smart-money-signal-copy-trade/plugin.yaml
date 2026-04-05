@@ -1,0 +1,20 @@
+schema_version: 1
+name: smart-money-signal-copy-trade
+version: "1.0.0"
+description: "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system"
+author:
+  name: "yz06276"
+  github: "yz06276"
+license: MIT
+category: trading-strategy
+tags:
+  - solana
+  - onchainos
+  - trading-bot
+
+components:
+  skill:
+    repo: "yz06276/smart-money-signal-copy-trade"
+    commit: "d2aa628e063d780c370b0ec075a43df4859be951"
+
+api_calls: []

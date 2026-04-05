@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top Rank Tokens Sniper — Live Bot v1.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0B0E11;--card:#1B1F25;--input:#252930;--border:#2B3039;
+  --text:#FFFFFF;--sub:#8B919E;--green:#2DC98A;--red:#F04866;--warn:#F0B90B;
+}
+body{background:var(--bg);color:var(--text);font-family:"Roboto Mono","SF Mono",monospace;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+button{cursor:pointer;border:none;font-family:inherit;font-size:12px;transition:opacity .15s}
+button:disabled{opacity:.4;cursor:not-allowed}
+table{width:100%;border-collapse:collapse}
+th{font-weight:600;color:var(--sub);font-size:10px;text-transform:uppercase;padding:4px 10px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:5px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.card-header{padding:6px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;flex-shrink:0}
+.card-body{overflow-y:auto;flex:1}
+.green{color:var(--green)}.red{color:var(--red)}.warn{color:var(--warn)}.sub{color:var(--sub)}
+.text-right{text-align:right}
+.mono{font-family:"Roboto Mono","SF Mono",monospace}
+.bold{font-weight:600}
+.empty{display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:12px;padding:24px;flex:1}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+header h1{font-size:15px;font-weight:600}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-right{display:flex;align-items:center;gap:10px}
+.powered{font-size:11px;color:var(--sub)}
+.status{display:flex;align-items:center;gap:6px;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.on{background:var(--green);animation:pulse 1.5s infinite}
+.dot.off{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.mode-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mode-toggle button{padding:4px 12px;background:transparent;color:var(--sub);font-weight:600}
+.mode-toggle button.active-paper{background:var(--warn);color:var(--bg)}
+.mode-toggle button.active-live{background:var(--green);color:var(--bg)}
+.btn-primary{background:var(--text);color:var(--bg);padding:4px 12px;border-radius:8px;font-weight:600}
+.btn-primary:hover{opacity:.85}
+.btn-danger{background:transparent;border:1px solid var(--red);color:var(--red);padding:4px 12px;border-radius:8px}
+.btn-danger:hover{background:rgba(240,72,102,.1)}
+.btn-secondary{background:transparent;border:1px solid var(--sub);color:var(--sub);padding:4px 12px;border-radius:8px}
+.btn-secondary:hover{color:var(--text);border-color:var(--text)}
+.wallet-info{display:flex;align-items:center;gap:8px;padding:3px 8px;background:var(--input);border:1px solid var(--border);border-radius:8px;font-size:11px}
+.wallet-addr{color:var(--sub);cursor:pointer}.wallet-addr:hover{color:var(--text)}
+.wallet-bal{color:var(--text);font-weight:600}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px 16px;flex-shrink:0}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.stat-label{font-size:10px;color:var(--sub)}
+.stat-value{font-size:18px;font-weight:600;margin-top:2px}
+
+/* Main grid */
+.main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 12px;min-height:0}
+.col{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+/* Log entries */
+.log-entry{display:flex;gap:6px;font-size:11px;line-height:16px;padding:1px 8px}
+.log-time{color:var(--sub);flex-shrink:0;width:60px}
+.log-type{flex-shrink:0;width:80px}
+.log-msg{color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Top Rank Tokens Sniper</h1>
+    <span class="powered">Powered By Onchain OS</span>
+  </div>
+  <div class="header-right">
+    <div id="wallet-box" class="wallet-info" style="display:none">
+      <span id="wallet-addr" class="wallet-addr mono" title="" onclick="copyAddr()"></span>
+      <span id="wallet-bal" class="wallet-bal mono"></span>
+    </div>
+    <div class="status">
+      <div id="status-dot" class="dot off"></div>
+      <span id="status-text">Stopped</span>
+    </div>
+    <div class="mode-toggle">
+      <button id="btn-paper" onclick="setMode('paper')" disabled>Paper</button>
+      <button id="btn-live" onclick="setMode('live')" disabled>Live</button>
+    </div>
+    <button id="btn-start" class="btn-primary" onclick="doStart()">Start</button>
+    <button id="btn-stop" class="btn-danger" onclick="doStop()" style="display:none">Stop</button>
+    <button id="btn-reset" class="btn-secondary" onclick="doReset()">Reset</button>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat-card"><div class="stat-label">Total PnL</div><div id="s-total" class="stat-value sub">0 SOL</div></div>
+  <div class="stat-card"><div class="stat-label">Today PnL</div><div id="s-today" class="stat-value sub">0 SOL</div></div>
+  <div class="stat-card"><div class="stat-label">Win Rate</div><div id="s-wr" class="stat-value">—</div></div>
+  <div class="stat-card"><div class="stat-label">Positions</div><div id="s-pos" class="stat-value">0 / 5</div></div>
+</div>
+
+<div class="main">
+  <div class="col">
+    <div id="pos-card" class="card" style="flex:0 1 auto;max-height:45%">
+      <div class="card-header">Current Positions</div>
+      <div class="card-body" id="pos-body"><div class="empty">No positions</div></div>
+    </div>
+    <div class="card" style="flex:1;min-height:0">
+      <div class="card-header">Recent Trades</div>
+      <div class="card-body" id="trades-body"><div class="empty">No trades</div></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card" style="flex:1;min-height:0">
+      <div class="card-header">Ranking Top 20</div>
+      <div class="card-body" id="roster-body"><div class="empty">No ranking data</div></div>
+    </div>
+    <div class="card" style="flex:1;min-height:0">
+      <div class="card-header">Signal Logs</div>
+      <div class="card-body" id="logs-body"><div class="empty">No logs</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let state = {};
+
+function pc(v){const n=parseFloat(v);return n>0?'green':n<0?'red':'sub'}
+function fp(v,s='%'){const n=parseFloat(v);if(isNaN(n))return '0'+s;const d=s==='%'?2:(Math.abs(n)<0.01?4:2);return(n>=0?'+':'')+n.toFixed(d)+s}
+function f$(v){const n=parseFloat(v);if(!n)return '$0';if(n<0.0001)return '$'+n.toExponential(2);return n<1?'$'+n.toFixed(6):'$'+n.toLocaleString(undefined,{maximumFractionDigits:2})}
+function fk(v){const n=parseFloat(v);if(!n)return '$0';return n>=1e6?'$'+(n/1e6).toFixed(1)+'M':'$'+(n/1000).toFixed(1)+'k'}
+function ftime(ts){return new Date(ts).toLocaleTimeString('en-US',{hour12:false})}
+
+function copyAddr(){
+  const a=document.getElementById('wallet-addr').title;
+  if(a)navigator.clipboard.writeText(a);
+}
+
+async function doStart(){try{await fetch(API+'/api/start',{method:'POST'})}catch(e){}}
+async function doStop(){try{await fetch(API+'/api/stop',{method:'POST'})}catch(e){}}
+async function setMode(m){
+  try{
+    const r=await fetch(API+'/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:m})});
+    const d=await r.json();if(!d.ok)alert(d.msg);
+  }catch(e){}
+}
+async function doReset(){
+  if(!confirm('Confirm clear all data? Positions, trade history, and logs will be reset.'))return;
+  try{const r=await fetch(API+'/api/reset',{method:'POST'});const d=await r.json();alert(d.msg)}catch(e){}
+}
+
+function render(s){
+  if(!s)return;
+  state=s;
+  const on=s.running;
+  const mode=s.mode||'paper';
+
+  // Status
+  const dot=document.getElementById('status-dot');
+  dot.className='dot '+(on?'on':'off');
+  document.getElementById('status-text').textContent=on?'Running':'Stopped';
+
+  // Mode buttons
+  const bp=document.getElementById('btn-paper'),bl=document.getElementById('btn-live');
+  bp.disabled=on;bl.disabled=on;
+  bp.className=mode==='paper'?'active-paper':'';
+  bl.className=mode==='live'?'active-live':'';
+
+  // Start/Stop
+  document.getElementById('btn-start').style.display=on?'none':'';
+  document.getElementById('btn-stop').style.display=on?'':'none';
+  document.getElementById('btn-reset').disabled=on;
+
+  // Wallet
+  const wb=document.getElementById('wallet-box');
+  if(mode==='live'&&s.wallet){
+    wb.style.display='';
+    const wa=document.getElementById('wallet-addr');
+    wa.textContent=s.wallet.slice(0,4)+'...'+s.wallet.slice(-4);
+    wa.title=s.wallet;
+    document.getElementById('wallet-bal').textContent=(s.solBalance!=null?s.solBalance.toFixed(4):'—')+' SOL';
+  }else{wb.style.display='none'}
+
+  // Stats
+  const sells=(s.trades||[]).filter(t=>t.direction==='sell');
+  const total=sells.reduce((a,t)=>a+parseFloat(t.pnlSol||0),0);
+  const todayStr=new Date().toDateString();
+  const todayS=sells.filter(t=>new Date(t.timestamp).toDateString()===todayStr);
+  const todayP=todayS.reduce((a,t)=>a+parseFloat(t.pnlSol||0),0);
+  const w=todayS.filter(t=>parseFloat(t.pnlSol||0)>=0).length;
+  const wr=todayS.length?((w/todayS.length)*100).toFixed(1)+'%':'—';
+
+  const st=document.getElementById('s-total');st.textContent=fp(total,' SOL');st.className='stat-value '+pc(total);
+  const sy=document.getElementById('s-today');sy.textContent=fp(todayP,' SOL');sy.className='stat-value '+pc(todayP);
+  document.getElementById('s-wr').textContent=wr;
+  document.getElementById('s-pos').textContent=(s.positionsCount??0)+' / '+(s.maxPositions??5);
+
+  // Positions
+  const pb=document.getElementById('pos-body');
+  const pos=s.positions||[];
+  if(!pos.length){pb.innerHTML='<div class="empty">No positions</div>'}
+  else{
+    let h='<table><thead><tr><th>Token</th><th class="text-right">Buy Price</th><th class="text-right">Current Price</th><th class="text-right">PnL%</th><th class="text-right">Time</th><th>Trigger</th></tr></thead><tbody>';
+    pos.forEach(p=>{
+      const bp=parseFloat(p.buyPrice),cp=parseFloat(p.lastCheckPrice),pnl=bp>0?((cp-bp)/bp)*100:0,m=Math.floor((Date.now()-p.buyTimestamp)/60000);
+      h+=`<tr><td class="bold">${p.tokenSymbol}</td><td class="text-right sub">${f$(bp)}</td><td class="text-right">${f$(cp)}</td><td class="text-right bold ${pc(pnl)}">${fp(pnl)}</td><td class="text-right sub">${m}m</td><td class="sub" style="font-size:10px">${p.triggerReason||''}</td></tr>`;
+    });
+    h+='</tbody></table>';pb.innerHTML=h;
+  }
+
+  // Trades
+  const tb=document.getElementById('trades-body');
+  const tr2=(s.trades||[]).slice(-20).reverse();
+  if(!tr2.length){tb.innerHTML='<div class="empty">No trades</div>'}
+  else{
+    let h='<table><thead><tr><th>Time</th><th>Direction</th><th>Token</th><th class="text-right">Amount</th><th class="text-right">PnL</th><th>Reason</th></tr></thead><tbody>';
+    tr2.forEach(t=>{
+      const dc=t.direction==='buy'?'green':'red';
+      h+=`<tr><td class="sub">${ftime(t.timestamp)}</td><td class="bold ${dc}">${t.direction.toUpperCase()}</td><td class="bold">${t.tokenSymbol}</td><td class="text-right">${parseFloat(t.amountSol).toFixed(4)}</td><td class="text-right ${pc(t.pnlPercent)}">${t.direction==='sell'?fp(t.pnlPercent):'—'}</td><td class="sub" style="max-width:100px;overflow:hidden;text-overflow:ellipsis">${t.reason}</td></tr>`;
+    });
+    h+='</tbody></table>';tb.innerHTML=h;
+  }
+
+  // Roster
+  const rb=document.getElementById('roster-body');
+  const ro=s.roster||[];
+  if(!ro.length){rb.innerHTML='<div class="empty">No ranking data</div>'}
+  else{
+    let h='<table><thead><tr><th>#</th><th>Token</th><th class="text-right">Change%</th><th class="text-right">Liquidity</th><th class="text-right">Market Cap</th></tr></thead><tbody>';
+    ro.forEach((t,i)=>{
+      const chg=parseFloat(t.change||0);
+      h+=`<tr><td class="sub">${i+1}</td><td class="bold">${t.tokenSymbol}</td><td class="text-right ${chg>=0?'green':'red'}">${chg.toFixed(1)}%</td><td class="text-right sub">${fk(t.liquidity)}</td><td class="text-right sub">${fk(t.marketCap)}</td></tr>`;
+    });
+    h+='</tbody></table>';rb.innerHTML=h;
+  }
+
+  // Logs
+  const lb=document.getElementById('logs-body');
+  const lg=s.logs||[];
+  if(!lg.length){lb.innerHTML='<div class="empty">No logs</div>'}
+  else{
+    const tc={BUY:'green',SELL:'red',SKIP:'sub',SAFETY_REJECT:'warn',HOLDER_REJECT:'warn',RANK_EXIT:'red',LIVE_BUY:'green',ENGINE:'',PASS:'green',ERROR:'red',WARN:'warn',CONFIRMED:'green',BUY_UNCONFIRMED:'warn',UNCONFIRMED:'sub',UNCONFIRMED_EXPIRED:'red',AUDIT:'sub',RECONCILE:'sub'};
+    let h='';
+    [...lg].reverse().forEach(l=>{
+      const cls=tc[l.type]||'sub';
+      h+=`<div class="log-entry"><span class="log-time">${ftime(l.ts)}</span><span class="log-type ${cls}">${l.type}</span><span class="log-msg">${l.msg}</span></div>`;
+    });
+    lb.innerHTML=h;
+  }
+}
+
+// Poll
+async function poll(){
+  try{
+    const r=await fetch(API+'/api/state');
+    const d=await r.json();
+    render(d);
+  }catch(e){}
+}
+poll();
+setInterval(poll,3000);
+</script>
+</body>
+</html>

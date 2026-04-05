@@ -1,0 +1,19 @@
+{
+  "name": "uniswap-cca-configurator",
+  "description": "Configure Continuous Clearing Auction (CCA) smart contract parameters for fair and transparent token distribution",
+  "version": "1.0.0",
+  "author": {
+    "name": "Uniswap Labs",
+    "github": "wkoutre"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "cca",
+    "auction",
+    "token-distribution",
+    "smart-contracts",
+    "ethereum"
+  ],
+  "repository": "https://github.com/wkoutre"
+}

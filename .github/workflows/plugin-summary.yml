@@ -1,0 +1,208 @@
+# Phase 4: AI Review + Summary Generation + Pre-flight Injection
+# Requires maintainer approval via "summary-generation" environment.
+# All Claude API calls are here — no automatic API spend on PR pushes.
+
+name: "Phase 4: Generate Summary"
+
+on:
+  pull_request_target:
+    paths:
+      - 'skills/**'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  detect:
+    name: Detect plugin
+    runs-on: ubuntu-latest
+    outputs:
+      plugin_name: ${{ steps.find.outputs.plugin_name }}
+      plugin_dir: ${{ steps.find.outputs.plugin_dir }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Find plugin
+        id: find
+        run: |
+          CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
+          PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+          echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+          echo "plugin_dir=skills/${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+  review-and-generate:
+    name: AI Review + Summary
+    needs: detect
+    runs-on: ubuntu-latest
+    environment: summary-generation
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Overlay CI scripts from base branch
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- .github/scripts/
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Resolve SKILL.md
+        id: skill
+        run: |
+          NAME="${{ needs.detect.outputs.plugin_name }}"
+          YAML="${{ needs.detect.outputs.plugin_dir }}/plugin.yaml"
+          SKILL_CONTENT=""
+
+          FOUND=$(find "skills/${NAME}" -name "SKILL.md" -type f 2>/dev/null | head -1)
+          [ -n "$FOUND" ] && SKILL_CONTENT=$(cat "$FOUND") && echo "Source: local"
+
+          if [ -z "$SKILL_CONTENT" ] && [ -f "$YAML" ]; then
+            EXT_REPO=$(yq '.components.skill.repo // ""' "$YAML")
+            EXT_COMMIT=$(yq '.components.skill.commit // ""' "$YAML")
+            if [ -n "$EXT_REPO" ] && [ "$EXT_REPO" != "okx/plugin-store" ]; then
+              REF="${EXT_COMMIT:-main}"
+              for path in "SKILL.md" "skills/${NAME}/SKILL.md"; do
+                SKILL_CONTENT=$(curl -sSL --max-time 10 "https://raw.githubusercontent.com/${EXT_REPO}/${REF}/${path}" 2>/dev/null || true)
+                echo "$SKILL_CONTENT" | head -1 | grep -q "^---\|^#" && break
+                SKILL_CONTENT=""
+              done
+            fi
+          fi
+
+          if [ -z "$SKILL_CONTENT" ] || echo "$SKILL_CONTENT" | grep -q "Install the full version"; then
+            STUB_REPO=$(echo "$SKILL_CONTENT" | grep -oE 'github\.com/[^/]+/[^/)]+' | head -1 | sed 's|github.com/||')
+            if [ -n "$STUB_REPO" ]; then
+              PLUGIN_SHORT=$(echo "$NAME" | sed 's/^uniswap-//')
+              TREE=$(curl -sSL --max-time 15 "https://api.github.com/repos/${STUB_REPO}/git/trees/main?recursive=1" 2>/dev/null)
+              SP=$(echo "$TREE" | jq -r ".tree[]? | select(.path | test(\"${PLUGIN_SHORT}.*SKILL\\.md$\"; \"i\")) | .path" 2>/dev/null | head -1)
+              [ -z "$SP" ] && SP=$(echo "$TREE" | jq -r '.tree[]? | select(.path | test("SKILL\\.md$"; "i")) | .path' 2>/dev/null | head -1)
+              [ -n "$SP" ] && SKILL_CONTENT=$(curl -sSL --max-time 10 "https://raw.githubusercontent.com/${STUB_REPO}/main/${SP}" 2>/dev/null || true)
+            fi
+          fi
+
+          if [ -z "$SKILL_CONTENT" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$SKILL_CONTENT" > /tmp/skill_content.txt
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      # AI Code Review is handled by plugin-ai-review.yml (same approval gate)
+
+      # ── Step 1: Generate SUMMARY + SKILL_SUMMARY ──
+      - name: Generate summaries
+        if: steps.skill.outputs.found == 'true'
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          NAME="${{ needs.detect.outputs.plugin_name }}"
+          PLUGIN_DIR="${{ needs.detect.outputs.plugin_dir }}"
+
+          python3 .github/scripts/gen-summary-prompt.py "$NAME" "$PLUGIN_DIR"
+
+          jq -n --rawfile prompt /tmp/prompt.txt \
+            '{model: "claude-sonnet-4-20250514", max_tokens: 2048, messages: [{role: "user", content: $prompt}]}' \
+            > /tmp/req.json
+
+          HTTP_CODE=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d @/tmp/req.json)
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            RESPONSE=$(jq -r '.content[0].text // ""' /tmp/resp.json)
+            echo "$RESPONSE" | sed -n '1,/---SEPARATOR---/p' | sed '/---SEPARATOR---/d' > "${PLUGIN_DIR}/SUMMARY.md"
+            echo "$RESPONSE" | sed -n '/---SEPARATOR---/,$p' | sed '1d' > "${PLUGIN_DIR}/SKILL_SUMMARY.md"
+            cp "${PLUGIN_DIR}/SUMMARY.md" /tmp/summary_md.txt
+            cp "${PLUGIN_DIR}/SKILL_SUMMARY.md" /tmp/skill_summary_md.txt
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Summary generation failed: HTTP $HTTP_CODE"
+            echo "done=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step 3: Inject pre-flight dependencies ──
+      - name: Inject pre-flight
+        if: steps.skill.outputs.found == 'true'
+        id: preflight
+        run: |
+          python3 .github/scripts/inject-preflight.py \
+            "${{ needs.detect.outputs.plugin_name }}" \
+            "${{ needs.detect.outputs.plugin_dir }}"
+          [ -f /tmp/preflight_injected.txt ] && echo "patched=true" >> "$GITHUB_OUTPUT" || echo "patched=false" >> "$GITHUB_OUTPUT"
+
+      # ── Push all changes to PR ──
+      - name: Push to PR branch
+        if: steps.generate.outputs.done == 'true' || steps.preflight.outputs.patched == 'true'
+        run: |
+          git config user.name "plugin-store-bot"
+          git config user.email "bot@plugin-store.local"
+          git add "${{ needs.detect.outputs.plugin_dir }}"
+          git diff --staged --quiet && echo "No changes" && exit 0
+          git commit -m "auto: summaries + pre-flight for ${{ needs.detect.outputs.plugin_name }}"
+          git push origin HEAD:refs/heads/${{ github.event.pull_request.head.ref }}
+
+      # ── Post combined report to PR ──
+      - name: Post report to PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const pluginName = '${{ needs.detect.outputs.plugin_name }}';
+
+            let summaryMd = '', skillSummaryMd = '', preflightMd = '';
+            try { summaryMd = fs.readFileSync('/tmp/summary_md.txt', 'utf8'); } catch(e) {}
+            try { skillSummaryMd = fs.readFileSync('/tmp/skill_summary_md.txt', 'utf8'); } catch(e) {}
+            try { preflightMd = fs.readFileSync('/tmp/preflight_injected.txt', 'utf8'); } catch(e) {}
+
+            const sections = [];
+            sections.push(`## Phase 4: Summary + Pre-flight for \`${pluginName}\``);
+            sections.push('', '> Review below. AI Code Review is in a separate check.', '', '---', '');
+            if (summaryMd) {
+              sections.push('<details>', '<summary><strong>SUMMARY.md</strong></summary>', '', summaryMd, '', '</details>', '');
+            }
+            if (skillSummaryMd) {
+              sections.push('<details>', '<summary><strong>SKILL_SUMMARY.md</strong></summary>', '', skillSummaryMd, '', '</details>', '');
+            }
+            if (preflightMd) {
+              sections.push('<details open>', '<summary><strong>Auto-injected Pre-flight</strong></summary>', '', '```markdown', preflightMd, '```', '', '</details>', '');
+            }
+            sections.push('---', '*Generated by Plugin Store CI after maintainer approval.*');
+
+            const body = sections.join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: ${{ github.event.pull_request.number }},
+            });
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('Phase 4:'));
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (existing) {
+              await github.rest.issues.updateComment({ ...params, comment_id: existing.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: ${{ github.event.pull_request.number }} });
+            }
+
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: ${{ github.event.pull_request.number }},
+                labels: ['summary-generated']
+              });
+            } catch(e) {}

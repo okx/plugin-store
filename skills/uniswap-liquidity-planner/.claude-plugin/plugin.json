@@ -1,0 +1,20 @@
+{
+  "name": "uniswap-liquidity-planner",
+  "description": "Plan and generate deep links for creating liquidity positions on Uniswap v2, v3, and v4",
+  "version": "0.2.0",
+  "author": {
+    "name": "Uniswap Labs",
+    "github": "wkoutre"
+  },
+  "license": "MIT",
+  "keywords": [
+    "uniswap",
+    "liquidity",
+    "defi",
+    "lp-position",
+    "concentrated-liquidity",
+    "deep-links",
+    "ethereum"
+  ],
+  "repository": "https://github.com/wkoutre"
+}

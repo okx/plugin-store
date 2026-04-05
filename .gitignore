@@ -1,12 +1,11 @@
 /target
+/cli/target
 official/core/target/
 .DS_Store
 .claude/
-docs/
 .idea/
 .agents/
 skills-lock.json
-skills/okx-*
 *.swp
 *.swo
 .env

@@ -1,0 +1,24 @@
+schema_version: 1
+name: uniswap-cca-deployer
+version: "1.0.0"
+description: "Deploy Continuous Clearing Auction (CCA) smart contracts using the Factory pattern with CREATE2 for consistent addresses"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - cca
+  - auction
+  - deployment
+  - create2
+  - smart-contracts
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-cca-deployer
+
+api_calls: []

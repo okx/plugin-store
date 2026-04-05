@@ -1,0 +1,25 @@
+schema_version: 1
+name: uniswap-liquidity-planner
+version: "0.2.0"
+description: "Plan and generate deep links for creating liquidity positions on Uniswap v2, v3, and v4"
+author:
+  name: "Uniswap Labs"
+  github: "wkoutre"
+license: MIT
+category: defi-protocol
+type: "dapp-official"
+tags:
+  - uniswap
+  - liquidity
+  - defi
+  - lp-position
+  - concentrated-liquidity
+  - deep-links
+  - ethereum
+
+components:
+  skill:
+    dir: skills/uniswap-liquidity-planner
+
+api_calls:
+  - "trade-api.gateway.uniswap.org"
