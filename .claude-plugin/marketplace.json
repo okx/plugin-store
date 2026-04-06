@@ -9,146 +9,77 @@
     {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
-      "source": "./skills/meme-trench-scanner",
-      "category": "trading-strategy",
-      "author": {
-        "name": "yz06276"
-      }
+      "source": "./skills/meme-trench-scanner"
     },
     {
       "name": "okx-buildx-hackathon-agent-track",
       "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
-      "source": "./skills/okx-buildx-hackathon-agent-track",
-      "category": "trading-strategy",
-      "author": {
-        "name": "OKX"
-      }
+      "source": "./skills/okx-buildx-hackathon-agent-track"
     },
     {
       "name": "plugin-store",
-      "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
-      "source": "./skills/plugin-store",
-      "category": "trading-strategy",
-      "author": {
-        "name": "OKX"
-      }
+      "description": "Plugin: plugin-store",
+      "source": "./skills/plugin-store"
     },
     {
       "name": "polymarket-agent-skills",
       "description": "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions",
-      "source": "./skills/polymarket-agent-skills",
-      "category": "trading-strategy",
-      "author": {
-        "name": "Polymarket"
-      }
+      "source": "./skills/polymarket-agent-skills"
     },
     {
       "name": "smart-money-signal-copy-trade",
       "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
-      "source": "./skills/smart-money-signal-copy-trade",
-      "category": "trading-strategy",
-      "author": {
-        "name": "yz06276"
-      }
-    },
-    {
-      "name": "test-rust-cli",
-      "description": "E2E test - Rust CLI querying ETH price via OnchainOS",
-      "source": "./skills/test-rust-cli",
-      "category": "utility",
-      "author": {
-        "name": "E2E Test"
-      }
+      "source": "./skills/smart-money-signal-copy-trade"
     },
     {
       "name": "top-rank-tokens-sniper",
       "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
-      "source": "./skills/top-rank-tokens-sniper",
-      "category": "trading-strategy",
-      "author": {
-        "name": "yz06276"
-      }
+      "source": "./skills/top-rank-tokens-sniper"
     },
     {
       "name": "uniswap-ai",
       "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
-      "source": "./skills/uniswap-ai",
-      "category": "trading-strategy",
-      "author": {
-        "name": "Uniswap"
-      }
+      "source": "./skills/uniswap-ai"
     },
     {
       "name": "uniswap-cca-configurator",
       "description": "Configure Continuous Clearing Auction (CCA) smart contract parameters for fair and transparent token distribution",
-      "source": "./skills/uniswap-cca-configurator",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-cca-configurator"
     },
     {
       "name": "uniswap-cca-deployer",
       "description": "Deploy Continuous Clearing Auction (CCA) smart contracts using the Factory pattern with CREATE2 for consistent addresses",
-      "source": "./skills/uniswap-cca-deployer",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-cca-deployer"
     },
     {
       "name": "uniswap-liquidity-planner",
       "description": "Plan and generate deep links for creating liquidity positions on Uniswap v2, v3, and v4",
-      "source": "./skills/uniswap-liquidity-planner",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-liquidity-planner"
     },
     {
       "name": "uniswap-pay-with-any-token",
       "description": "Pay HTTP 402 payment challenges using any token via Tempo CLI and Uniswap Trading API, supporting MPP and x402 protocols",
-      "source": "./skills/uniswap-pay-with-any-token",
-      "category": "trading-strategy",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-pay-with-any-token"
     },
     {
       "name": "uniswap-swap-integration",
       "description": "Integrate Uniswap swaps into frontends, backends, and smart contracts via Trading API, Universal Router SDK, or direct contract calls",
-      "source": "./skills/uniswap-swap-integration",
-      "category": "trading-strategy",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-swap-integration"
     },
     {
       "name": "uniswap-swap-planner",
       "description": "Plan token swaps and generate Uniswap deep links across all supported chains, with token discovery and research workflows",
-      "source": "./skills/uniswap-swap-planner",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-swap-planner"
     },
     {
       "name": "uniswap-v4-security-foundations",
       "description": "Security-first guide for building Uniswap v4 hooks covering vulnerabilities, audit requirements, and best practices",
-      "source": "./skills/uniswap-v4-security-foundations",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-v4-security-foundations"
     },
     {
       "name": "uniswap-viem-integration",
       "description": "Integrate EVM blockchains using viem and wagmi for TypeScript and JavaScript applications",
-      "source": "./skills/uniswap-viem-integration",
-      "category": "defi-protocol",
-      "author": {
-        "name": "Uniswap Labs"
-      }
+      "source": "./skills/uniswap-viem-integration"
     }
   ]
 }
