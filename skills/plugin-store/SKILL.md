@@ -14,13 +14,67 @@ A CLI marketplace for installing/uninstalling/updating Skills and MCP servers ac
 
 ## Pre-flight Checks
 
-> Read `_shared/preflight.md`. If that file does not exist, follow these steps manually.
-
 Run once per session before the first `plugin-store` command. Do not echo routine output to the user.
 
-1. **Check binary**: Run `plugin-store --version`. If not found, install from https://github.com/okx/plugin-store.
-2. **Install onchainos skills**: Run `npx skills add okx/onchainos-skills --yes --global` for sub-skills used by Skill Routing.
-3. **Do not auto-reinstall on failures.** Report errors and suggest `plugin-store self-update`.
+### 1. Check binary version
+
+```bash
+plugin-store --version 2>/dev/null || ~/.local/bin/plugin-store --version 2>/dev/null || ~/.cargo/bin/plugin-store --version 2>/dev/null
+```
+
+- If the reported version is **≥ `0.3.0`** (this skill's `metadata.version`): binary is current, skip to step 2.
+- If the binary is **missing or older**: run the installer.
+
+**macOS / Linux:**
+```bash
+curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/main/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/okx/plugin-store/main/main/install.ps1 | iex
+```
+
+**Offline fallback:** If the install script fails and a binary already exists locally, proceed with it. If not installed and the network is unreachable, stop and ask the user to check their connection.
+
+### 2. Check for Skill update (remote version check)
+
+Fetch the latest Skill version from GitHub (timeout 5 seconds, non-blocking):
+
+```bash
+curl -sSL --max-time 5 "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL.md" 2>/dev/null | head -20 | grep 'version:' | head -1
+```
+
+Compare the remote `metadata.version` with the local version (`0.3.0`).
+
+**If remote version is newer than local**, display this notice to the user:
+
+> 📦 Plugin Store Skill 有新版本可用（当前: 0.3.0, 最新: X.Y.Z）
+>
+> 是否更新？更新命令：
+> ```
+> plugin-store install plugin-store --agent claude-code --skill-only
+> ```
+> ⚠️ 注意：更新后需要**重启当前会话**，新版 Skill 才会在上下文中生效。
+
+Then **wait for the user's response**:
+- If user says yes / 确认 / 更新 → run the install command, then remind: "Skill 已更新，请重启当前会话（退出并重新进入）以加载新版本。"
+- If user says no / 跳过 / 以后再说 → continue with current version, do not ask again this session.
+- If the curl fails or times out → skip silently, continue with current version.
+
+**If versions match or remote is unreachable**, skip silently — do not print anything.
+
+### 3. Do not auto-reinstall on command failures
+
+Report errors and suggest `plugin-store self-update` or checking https://github.com/okx/plugin-store.
+
+### 4. Install onchainos-skills (silent, non-blocking)
+
+```bash
+npx skills add okx/onchainos-skills --yes 2>/dev/null || true
+```
+
+This installs sub-skills used by Skill Routing (`okx-dex-token`, `okx-dex-swap`, etc.). Do not block on failure.
 
 ---
 
@@ -303,9 +357,17 @@ Full guide: https://github.com/okx/plugin-store-community/blob/main/PLUGIN_DEVEL
 
 ## Skill Self-Update
 
-To update this skill: `npx skills add okx/plugin-store --skill plugin-store --yes --global`
+To update this skill to the latest version:
 
-To update the CLI binary: `plugin-store self-update`
+**macOS / Linux:**
+```bash
+plugin-store install plugin-store --agent claude-code --skill-only
+```
+
+**Or re-run the installer:**
+```bash
+curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/main/install.sh | sh
+```
 
 ---
 
