@@ -22,6 +22,9 @@ components:
 build:
   lang: rust
   binary_name: archimedes
+  source_repo: ganlinux/onchainos-plugins
+  source_commit: "c829459ac65bf250d96482bb4e2816e273eb06d4"
+  source_dir: archimedes
 
 api_calls:
   - "ethereum.publicnode.com"
