@@ -274,11 +274,12 @@ jobs:
           git add skills/ .claude-plugin/marketplace.json
           git diff --staged --quiet && echo "No changes" && exit 0
           git commit -m "auto: fetch external plugin skills + update marketplace.json"
-          for attempt in 1 2 3; do
-            if git push; then echo "Push succeeded"; break; fi
-            echo "Push failed (attempt $attempt/3), rebasing..."
-            git pull --rebase origin main
+          for attempt in 1 2 3 4 5; do
+            if git push origin main; then echo "Push succeeded"; exit 0; fi
+            echo "Push failed (attempt $attempt/5), rebasing..."
+            git pull --rebase origin main || { echo "Rebase failed"; exit 1; }
           done
+          echo "ERROR: All push attempts failed" >&2; exit 1
 
   # ═══════════════════════════════════════════════════════════════
   #  Step 3: Multi-platform build (Rust/Go only)
@@ -623,9 +624,9 @@ jobs:
           git diff --staged --quiet && echo "No registry changes" && exit 0
 
           git commit -m "Update registry.json with community plugins"
-          for attempt in 1 2 3; do
-            if git push; then echo "Registry updated"; exit 0; fi
-            echo "Push failed ($attempt/3), retrying..."
-            git pull --rebase origin main
+          for attempt in 1 2 3 4 5; do
+            if git push origin main; then echo "Registry updated"; exit 0; fi
+            echo "Push failed ($attempt/5), retrying..."
+            git pull --rebase origin main || { echo "Rebase failed" >&2; exit 1; }
           done
           echo "ERROR: Failed to push registry" >&2; exit 1
