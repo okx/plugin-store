@@ -25,7 +25,7 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add okx/plugin-store --skill plugin-store --yes --global
+npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Install archimedes binary (auto-injected)
@@ -40,7 +40,7 @@ if ! command -v archimedes >/dev/null 2>&1; then
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/archimedes@0.1.0/archimedes-${TARGET}" -o ~/.local/bin/archimedes
+  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/archimedes@0.1.0/archimedes-${TARGET}" -o ~/.local/bin/archimedes
   chmod +x ~/.local/bin/archimedes
 fi
 ```

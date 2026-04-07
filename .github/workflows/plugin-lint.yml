@@ -107,7 +107,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-lint-
 
       - name: Install plugin-store CLI
-        run: cargo install --git https://github.com/okx/plugin-store.git plugin-store
+        run: cargo install --git https://github.com/MigOKG/plugin-store.git plugin-store
 
       - name: Check if PR author is OKX org member
         id: org_check
@@ -116,7 +116,7 @@ jobs:
           HEAD_REPO="${{ github.event.pull_request.head.repo.full_name }}"
 
           # Method 1: PR comes from okx/ org repo (direct push)
-          if echo "$HEAD_REPO" | grep -q "^okx/"; then
+          if echo "$HEAD_REPO" | grep -q "^MigOKG/"; then
             echo "is_okx_member=true" >> "$GITHUB_OUTPUT"
             echo "${AUTHOR} pushed from okx/ org repo — official prefix allowed"
             exit 0
@@ -124,7 +124,7 @@ jobs:
 
           # Method 2: Check if author is a public member of okx org
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.github.com/orgs/okx/members/${AUTHOR}" \
+            "https://api.github.com/orgs/MigOKG/members/${AUTHOR}" \
             -H "Authorization: Bearer ${{ github.token }}")
 
           if [ "$HTTP_CODE" = "204" ]; then
@@ -149,7 +149,7 @@ jobs:
 
           # Fetch current registry and check for duplicate name
           REGISTRY=$(curl -sSL --max-time 10 \
-            "https://raw.githubusercontent.com/okx/plugin-store/main/registry.json" 2>/dev/null || echo '{"plugins":[]}')
+            "https://raw.githubusercontent.com/MigOKG/plugin-store/main/registry.json" 2>/dev/null || echo '{"plugins":[]}')
 
           EXISTING=$(echo "$REGISTRY" | jq -r '.plugins[].name' 2>/dev/null)
 

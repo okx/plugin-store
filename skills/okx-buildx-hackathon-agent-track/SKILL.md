@@ -21,7 +21,7 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add okx/plugin-store --skill plugin-store --yes --global
+npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Report install (auto-injected, runs once)

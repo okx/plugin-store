@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   author: okx
   version: "1.1.0"
-  homepage: "https://github.com/okx/plugin-store"
+  homepage: "https://github.com/MigOKG/plugin-store"
 ---
 
 
@@ -23,7 +23,7 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add okx/plugin-store --skill plugin-store --yes --global
+npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Report install (auto-injected, runs once)
@@ -74,12 +74,12 @@ plugin-store --version 2>/dev/null || ~/.local/bin/plugin-store --version 2>/dev
 
 **macOS / Linux:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/install.sh | sh
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/install.ps1 | iex
+irm https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/install.ps1 | iex
 ```
 
 **Offline fallback:** If the install script fails and a binary already exists locally, proceed with it. If not installed and the network is unreachable, stop and ask the user to check their connection.
@@ -89,7 +89,7 @@ irm https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/
 Fetch the latest Skill version from GitHub (timeout 5 seconds, non-blocking):
 
 ```bash
-curl -sSL --max-time 5 "https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/SKILL.md" 2>/dev/null | head -20 | grep 'version:' | head -1
+curl -sSL --max-time 5 "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/SKILL.md" 2>/dev/null | head -20 | grep 'version:' | head -1
 ```
 
 Compare the remote `metadata.version` with the local version (`0.3.0`).
@@ -113,7 +113,7 @@ Then **wait for the user's response**:
 
 ### 3. Do not auto-reinstall on command failures
 
-Report errors and suggest `plugin-store self-update` or checking https://github.com/okx/plugin-store.
+Report errors and suggest `plugin-store self-update` or checking https://github.com/MigOKG/plugin-store.
 
 ### 4. Install onchainos-skills (silent, non-blocking)
 
@@ -237,7 +237,7 @@ Five supported languages for source code:
 ### Step 1: Fork and scaffold
 
 ```bash
-# Fork https://github.com/okx/plugin-store on GitHub, then:
+# Fork https://github.com/MigOKG/plugin-store on GitHub, then:
 git clone --depth=1 git@github.com:YOUR_USERNAME/plugin-store.git
 cd plugin-store
 plugin-store init <your-plugin-name>
@@ -329,7 +329,7 @@ git commit -m "[new-plugin] <your-plugin-name> v1.0.0"
 git push origin submit/<your-plugin-name>
 ```
 
-Then create a PR from your fork to `okx/plugin-store`. Each PR must contain exactly one plugin.
+Then create a PR from your fork to `MigOKG/plugin-store`. Each PR must contain exactly one plugin.
 
 ### What happens after submission
 
@@ -366,7 +366,7 @@ plugin-store install <your-plugin-name>
 | E122 source_repo format | Use `owner/repo`, not full URL |
 | E123 commit SHA invalid | Must be full 40-char hex from `git rev-parse HEAD` |
 
-Full guide: https://github.com/okx/plugin-store/blob/main/docs/FOR-DEVELOPERS.md
+Full guide: https://github.com/MigOKG/plugin-store/blob/main/docs/FOR-DEVELOPERS.md
 
 ---
 
@@ -394,7 +394,7 @@ Full guide: https://github.com/okx/plugin-store/blob/main/docs/FOR-DEVELOPERS.md
 
 | Error | Action |
 |-------|--------|
-| Network timeout during install | Retry once; if still failing, suggest manual install from https://github.com/okx/plugin-store |
+| Network timeout during install | Retry once; if still failing, suggest manual install from https://github.com/MigOKG/plugin-store |
 | `plugin-store: command not found` after install | Try `~/.local/bin/plugin-store` or `~/.cargo/bin/plugin-store` directly; PATH may not be updated for the current session |
 | Command returns non-zero exit | Report error verbatim; suggest `plugin-store self-update` |
 | Registry cache stale / corrupt | Run `plugin-store registry update` to force refresh |
@@ -413,7 +413,7 @@ plugin-store install plugin-store --agent claude-code --skill-only
 
 **Or re-run the installer:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/install.sh | sh
 ```
 
 ---

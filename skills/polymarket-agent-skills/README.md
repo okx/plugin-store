@@ -17,7 +17,7 @@ Polygon (primary), Ethereum, Arbitrum, Base, Optimism, BNB, Solana (bridge sourc
 ## Install
 
 ```bash
-npx skills add okx/plugin-store --skill polymarket-agent-skills
+npx skills add MigOKG/plugin-store --skill polymarket-agent-skills
 ```
 
 Or install via Claude Marketplace:
@@ -28,7 +28,7 @@ npx skills add Polymarket/agent-skills
 
 ## Source
 
-- Plugin Store entry: [okx/plugin-store](https://github.com/okx/plugin-store/tree/main/skills/polymarket-agent-skills)
+- Plugin Store entry: [MigOKG/plugin-store](https://github.com/MigOKG/plugin-store/tree/main/skills/polymarket-agent-skills)
 - Upstream repo: [Polymarket/agent-skills](https://github.com/Polymarket/agent-skills)
 
 ## License

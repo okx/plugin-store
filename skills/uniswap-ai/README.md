@@ -21,7 +21,7 @@ Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche, Celo, Blast, Zora, 
 ## Install
 
 ```bash
-npx skills add okx/plugin-store --skill uniswap-ai
+npx skills add MigOKG/plugin-store --skill uniswap-ai
 ```
 
 Or install via Claude Marketplace:
@@ -32,7 +32,7 @@ npx skills add Uniswap/uniswap-ai
 
 ## Source
 
-- Plugin Store entry: [okx/plugin-store](https://github.com/okx/plugin-store/tree/main/skills/uniswap-ai)
+- Plugin Store entry: [MigOKG/plugin-store](https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-ai)
 - Upstream repo: [Uniswap/uniswap-ai](https://github.com/Uniswap/uniswap-ai)
 
 ## License

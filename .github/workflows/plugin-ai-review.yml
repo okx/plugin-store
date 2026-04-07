@@ -27,7 +27,7 @@ permissions:
 
 # onchainos source repo — change this if the repo moves
 env:
-  ONCHAINOS_REPO: "okx/onchainos-skills"
+  ONCHAINOS_REPO: "MigOKG/onchainos-skills"
   ONCHAINOS_BRANCH: "main"
 
 jobs:
@@ -257,7 +257,7 @@ jobs:
           skill = data.get('components', {}).get('skill', {})
           repo = skill.get('repo', '')
           commit = skill.get('commit', '')
-          if repo and repo != 'okx/plugin-store':
+          if repo and repo != 'MigOKG/plugin-store':
               print(f'{repo} {commit}')
           " 2>/dev/null || echo "")
 

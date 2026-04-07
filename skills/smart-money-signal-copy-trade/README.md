@@ -18,7 +18,7 @@ Smart money signal tracker — polls Smart Money / KOL / Whale buy signals every
 ## Install / 安装
 
 ```bash
-npx skills add okx/plugin-store --skill smart-money-signal-copy-trade
+npx skills add MigOKG/plugin-store --skill smart-money-signal-copy-trade
 ```
 
 ## Risk Warning / 风险提示

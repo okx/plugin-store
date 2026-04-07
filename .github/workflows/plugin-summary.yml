@@ -79,7 +79,7 @@ jobs:
           if [ -z "$SKILL_CONTENT" ] && [ -f "$YAML" ]; then
             EXT_REPO=$(yq '.components.skill.repo // ""' "$YAML")
             EXT_COMMIT=$(yq '.components.skill.commit // ""' "$YAML")
-            if [ -n "$EXT_REPO" ] && [ "$EXT_REPO" != "okx/plugin-store" ]; then
+            if [ -n "$EXT_REPO" ] && [ "$EXT_REPO" != "MigOKG/plugin-store" ]; then
               REF="${EXT_COMMIT:-main}"
               for path in "SKILL.md" "skills/${NAME}/SKILL.md"; do
                 SKILL_CONTENT=$(curl -sSL --max-time 10 "https://raw.githubusercontent.com/${EXT_REPO}/${REF}/${path}" 2>/dev/null || true)

@@ -215,7 +215,7 @@ fn execute_plain(plugins: &[Plugin], counts: &StatsMap) -> Result<()> {
         let dl = if downloads == 0 { "-".to_string() } else { format_downloads(downloads) };
         println!("{:<40} {:<10} {:<10} {}", p.name, p.version, dl, p.description);
     }
-    println!("\n{} plugins available. Use `npx skills add okx/plugin-store --name <name>` to install.", plugins.len());
+    println!("\n{} plugins available. Use `npx skills add MigOKG/plugin-store --name <name>` to install.", plugins.len());
     Ok(())
 }
 

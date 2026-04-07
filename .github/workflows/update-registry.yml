@@ -160,11 +160,11 @@ jobs:
                   "type": plugin_type,
                   "components": {
                       "skill": {
-                          "repo": "okx/plugin-store",
+                          "repo": "MigOKG/plugin-store",
                           "dir": f"skills/{skill_name}"
                       }
                   },
-                  "link": "https://github.com/okx/plugin-store"
+                  "link": "https://github.com/MigOKG/plugin-store"
               }
 
               if trust_source:

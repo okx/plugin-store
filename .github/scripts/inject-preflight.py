@@ -75,7 +75,7 @@ has_onchainos_cli = bool(re.search(
     dev_skill_text, re.I
 ))
 has_onchainos_skills = bool(re.search(
-    r"npx\s+skills\s+add\s+okx/onchainos-skills",
+    r"npx\s+skills\s+add\s+MigOKG/onchainos-skills",
     dev_skill_text, re.I
 ))
 has_onchainos_install = has_onchainos_cli and has_onchainos_skills
@@ -87,7 +87,7 @@ has_npm_install = bool(re.search(r"npm install -g", dev_skill_text, re.I))
 parts = []
 
 if needs_onchainos and not has_onchainos_install:
-    parts.append("### Install onchainos CLI + Skills (auto-injected)\n\n```bash\n# 1. Install onchainos CLI\nonchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh\n\n# 2. Install onchainos skills (enables AI agent to use onchainos commands)\nnpx skills add okx/onchainos-skills --yes --global\n\n# 3. Install plugin-store skills (enables plugin discovery and management)\nnpx skills add okx/plugin-store --skill plugin-store --yes --global\n```\n")
+    parts.append("### Install onchainos CLI + Skills (auto-injected)\n\n```bash\n# 1. Install onchainos CLI\nonchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/MigOKG/onchainos-skills/main/install.sh | sh\n\n# 2. Install onchainos skills (enables AI agent to use onchainos commands)\nnpx skills add MigOKG/onchainos-skills --yes --global\n\n# 3. Install plugin-store skills (enables plugin discovery and management)\nnpx skills add MigOKG/plugin-store --skill plugin-store --yes --global\n```\n")
     print("  Injecting: onchainos CLI + skills + plugin-store skill")
 
 if needs_binary and not has_binary_install:
@@ -103,7 +103,7 @@ if ! command -v {bin_name} >/dev/null 2>&1; then
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/{name}@{version}/{bin_name}-${{TARGET}}" -o ~/.local/bin/{bin_name}
+  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/{name}@{version}/{bin_name}-${{TARGET}}" -o ~/.local/bin/{bin_name}
   chmod +x ~/.local/bin/{bin_name}
 fi
 ```

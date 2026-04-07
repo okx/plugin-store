@@ -55,7 +55,7 @@ When `SkillComponent.path` is absent, `SkillInstaller::discover_all()` fetches t
 
 ### Self-Update
 
-`plugin-store self-update` downloads the latest release binary from `okx/plugin-store` on GitHub, resolves the platform target via `utils::platform::current_target()`, and does an atomic rename-based replacement of the running executable with rollback on failure.
+`plugin-store self-update` downloads the latest release binary from `MigOKG/plugin-store` on GitHub, resolves the platform target via `utils::platform::current_target()`, and does an atomic rename-based replacement of the running executable with rollback on failure.
 
 ## Key Commands
 
@@ -63,7 +63,7 @@ When `SkillComponent.path` is absent, `SkillInstaller::discover_all()` fetches t
 plugin-store list                    # List all plugins
 plugin-store search <keyword>        # Search plugins
 plugin-store info <name>             # Show plugin details
-npx skills add okx/plugin-store --skill <name>  # Install via npx (recommended)
+npx skills add MigOKG/plugin-store --skill <name>  # Install via npx (recommended)
 plugin-store install <name> --agent claude-code --skill-only  # Install via CLI (alternative)
 plugin-store uninstall <name>        # Uninstall
 plugin-store update --all            # Update all installed plugins

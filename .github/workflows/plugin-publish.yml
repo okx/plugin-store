@@ -79,7 +79,7 @@ jobs:
             SKILL_COMMIT=$(yq '.components.skill.commit // ""' "$YAML")
 
             # External = has repo field AND it's not our own repo
-            if [ -n "$SKILL_REPO" ] && [ "$SKILL_REPO" != "okx/plugin-store" ]; then
+            if [ -n "$SKILL_REPO" ] && [ "$SKILL_REPO" != "MigOKG/plugin-store" ]; then
               ITEM=$(jq -n \
                 --arg name "$PLUGIN_NAME" \
                 --arg repo "$SKILL_REPO" \
@@ -480,7 +480,7 @@ jobs:
           if candidates:
               skill_md_path = candidates[0]
 
-          REPO = "okx/plugin-store"
+          REPO = "MigOKG/plugin-store"
           BASE = f"https://raw.githubusercontent.com/{REPO}/main"
           GUI  = f"https://github.com/{REPO}/tree/main"
 
@@ -534,7 +534,7 @@ jobs:
               else:
                   # Rust/Go: binary Release on plugin-store repo
                   entry["components"]["binary"] = {
-                      "repo": "okx/plugin-store",
+                      "repo": "MigOKG/plugin-store",
                       "asset_pattern": bin_name + "-{target}",
                       "checksums_asset": "checksums.txt",
                       "release_tag": f"plugins/{name}@{version}"

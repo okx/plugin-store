@@ -1,7 +1,7 @@
 pub const GITHUB_OWNER: &str = "okx";
 pub const CLI_REPO: &str = "plugin-store";
 pub const REGISTRY_REPO: &str = "plugin-store";
-pub const COMMUNITY_REPO: &str = "okx/plugin-store";
+pub const COMMUNITY_REPO: &str = "MigOKG/plugin-store";
 
 /// Full GitHub `owner/repo` path for the registry (and CLI binary) repo.
 pub fn registry_repo() -> String {

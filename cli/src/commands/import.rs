@@ -125,7 +125,7 @@ api_calls: []
     println!();
     println!("Creating submission...");
 
-    let community_repo = "okx/plugin-store";
+    let community_repo = "MigOKG/plugin-store";
 
     // Fork (idempotent — gh handles already-forked case)
     run_cmd("gh", &["repo", "fork", community_repo, "--clone=false"])?;
@@ -169,7 +169,7 @@ api_calls: []
     )?;
     std::fs::write(
         format!("{}/README.md", sub_dir),
-        format!("# {}\n\n{}\n\n## Install\n\n```bash\nnpx skills add okx/plugin-store --name {}\n```\n", name, description, name),
+        format!("# {}\n\n{}\n\n## Install\n\n```bash\nnpx skills add MigOKG/plugin-store --name {}\n```\n", name, description, name),
     )?;
 
     // Commit and push

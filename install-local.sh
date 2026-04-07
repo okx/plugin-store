@@ -5,7 +5,7 @@ set -e
 # plugin-store local installer (macOS / Linux)
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/install-local.sh | sh
+#   curl -sSL https://raw.githubusercontent.com/MigOKG/plugin-store/main/install-local.sh | sh
 #
 # Installs plugin-store + 4 official strategies into ~/.cargo/bin
 #
@@ -17,7 +17,7 @@ set -e
 #   - strategy-signal-tracker
 # ──────────────────────────────────────────────────────────────
 
-REPO="okx/plugin-store"
+REPO="MigOKG/plugin-store"
 INSTALL_DIR="$HOME/.cargo/bin"
 
 BINARIES="plugin-store"

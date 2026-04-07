@@ -21,23 +21,23 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/archimedes",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         },
         "binary": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "asset_pattern": "archimedes-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "plugins/archimedes@0.1.0"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/archimedes",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/archimedes",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/archimedes/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/archimedes/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/archimedes/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/archimedes/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/archimedes",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/archimedes",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SKILL_SUMMARY.md",
       "build": {
         "lang": "rust",
         "source_repo": "null",
@@ -61,17 +61,17 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/meme-trench-scanner",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/meme-trench-scanner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meme-trench-scanner/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/meme-trench-scanner",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -99,17 +99,17 @@
       "type": "official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/okx-buildx-hackathon-agent-track",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md"
     },
     {
       "name": "plugin-store",
@@ -127,11 +127,11 @@
       "type": "official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/plugin-store"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
+      "link": "https://github.com/MigOKG/plugin-store",
       "trust_source": "official",
       "risk_level": "starter",
       "extra": {
@@ -161,17 +161,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/polymarket-agent-skills",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
       "link": "https://github.com/Polymarket/agent-skills",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/polymarket-agent-skills",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md"
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/polymarket-agent-skills",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md"
     },
     {
       "name": "rust-cli-inspector",
@@ -189,23 +189,23 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/rust-cli-inspector",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         },
         "binary": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "asset_pattern": "rust-cli-inspector-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "plugins/rust-cli-inspector@1.0.0"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/rust-cli-inspector",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/rust-cli-inspector/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/rust-cli-inspector/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/rust-cli-inspector/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/rust-cli-inspector/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/rust-cli-inspector",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SKILL_SUMMARY.md",
       "build": {
         "lang": "rust",
         "source_repo": "null",
@@ -237,17 +237,17 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/smart-money-signal-copy-trade",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/smart-money-signal-copy-trade",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/smart-money-signal-copy-trade",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -273,17 +273,17 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/top-rank-tokens-sniper",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/top-rank-tokens-sniper",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/top-rank-tokens-sniper/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/top-rank-tokens-sniper",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -313,17 +313,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-ai",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
       "link": "https://github.com/Uniswap/uniswap-ai",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-ai",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md"
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-ai",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-cca-configurator",
@@ -344,17 +344,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-cca-configurator",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-configurator",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-configurator",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-cca-deployer",
@@ -376,17 +376,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-cca-deployer",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-deployer",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-deployer",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-liquidity-planner",
@@ -408,17 +408,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-liquidity-planner",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-liquidity-planner",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-liquidity-planner",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-pay-with-any-token",
@@ -440,17 +440,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-pay-with-any-token",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-swap-integration",
@@ -472,17 +472,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-swap-integration",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-integration",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-integration",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-swap-planner",
@@ -504,17 +504,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-swap-planner",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-planner",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-planner",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-v4-security-foundations",
@@ -536,17 +536,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-v4-security-foundations",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md"
     },
     {
       "name": "uniswap-viem-integration",
@@ -568,17 +568,17 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-viem-integration",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         }
       },
-      "link": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md"
+      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-viem-integration",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-viem-integration",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md"
     },
     {
       "name": "velodrome-v2",
@@ -600,23 +600,23 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "dir": "skills/velodrome-v2",
           "commit": "89422c0f2ab605df749ce0c92f78886976786a01"
         },
         "binary": {
-          "repo": "okx/plugin-store",
+          "repo": "MigOKG/plugin-store",
           "asset_pattern": "velodrome-v2-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "plugins/velodrome-v2@0.1.0"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "homepage": "https://github.com/okx/plugin-store/tree/main/skills/velodrome-v2",
-      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/velodrome-v2/README.md",
-      "skill_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/velodrome-v2/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/velodrome-v2/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/velodrome-v2/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
+      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/velodrome-v2",
+      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/README.md",
+      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SKILL.md",
+      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SUMMARY.md",
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SKILL_SUMMARY.md",
       "build": {
         "lang": "rust",
         "source_repo": "null",

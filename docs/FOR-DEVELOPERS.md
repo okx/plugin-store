@@ -2,7 +2,7 @@
 
 > Build plugins for the Plugin Store ecosystem and submit them for review.
 > By the end of this guide you will have a working plugin that users can install
-> via `npx skills add okx/plugin-store --skill <name>`.
+> via `npx skills add MigOKG/plugin-store --skill <name>`.
 
 ---
 
@@ -60,7 +60,7 @@ This walkthrough creates a minimal Skill-only plugin and submits it.
 ### Step 1: Fork and Clone
 
 ```bash
-gh repo fork okx/plugin-store --clone
+gh repo fork MigOKG/plugin-store --clone
 cd plugin-store
 ```
 
@@ -195,7 +195,7 @@ git commit -m "[new-plugin] my-plugin v1.0.0"
 git push origin submit/my-plugin
 ```
 
-Then open a Pull Request from your fork to `okx/plugin-store`. Use this title:
+Then open a Pull Request from your fork to `MigOKG/plugin-store`. Use this title:
 
 ```
 [new-plugin] my-plugin v1.0.0
@@ -858,7 +858,7 @@ OnchainOS will go through additional security review.
 After your PR is merged, users install via:
 
 ```bash
-npx skills add okx/plugin-store --skill my-plugin
+npx skills add MigOKG/plugin-store --skill my-plugin
 ```
 
 No plugin-store CLI installation is required on the user's end.
@@ -880,8 +880,8 @@ or Windows. Check the build logs in the GitHub Actions run for specific errors.
 
 **Where can I get help?**
 
-- Open an [issue](https://github.com/okx/plugin-store/issues) on GitHub
+- Open an [issue](https://github.com/MigOKG/plugin-store/issues) on GitHub
 - Look at existing plugins in `skills/` for working examples
 - Run the lint command locally before submitting -- it catches most issues
-- Check [GitHub Actions logs](https://github.com/okx/plugin-store/actions) if
+- Check [GitHub Actions logs](https://github.com/MigOKG/plugin-store/actions) if
   your PR checks fail

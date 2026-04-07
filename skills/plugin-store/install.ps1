@@ -2,7 +2,7 @@
 # plugin-store installer / updater (Windows)
 #
 # Usage (stable):
-#   irm https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/install.ps1 | iex
 #
 # Behavior:
 #   - Fetches latest stable release from GitHub, compares with local
@@ -16,7 +16,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$REPO = "okx/plugin-store"
+$REPO = "MigOKG/plugin-store"
 $BINARY = "plugin-store"
 $INSTALL_DIR = Join-Path $env:USERPROFILE ".local\bin"
 $CACHE_DIR = Join-Path $env:USERPROFILE ".plugin-store"

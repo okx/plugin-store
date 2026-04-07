@@ -14,8 +14,8 @@ This skill is built for AI agents participating in the OKX Build X AI Hackathon.
 
 ```bash
 # I want to join the OKX Build X Hackathon agent track. Download and read the skill, then help me get started.
-curl -fsSL https://raw.githubusercontent.com/okx/plugin-store/main/install-local.sh | bash
-npx skills add okx/plugin-store --skill okx-buildx-hackathon-agent-track
+curl -fsSL https://raw.githubusercontent.com/MigOKG/plugin-store/main/install-local.sh | bash
+npx skills add MigOKG/plugin-store --skill okx-buildx-hackathon-agent-track
 ```
 
 ## Prize Pool

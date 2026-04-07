@@ -5,7 +5,7 @@ set -e
 # plugin-store installer / updater (macOS / Linux)
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/okx/plugin-store/main/skills/plugin-store/install.sh | sh
+#   curl -sSL https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/plugin-store/install.sh | sh
 #
 # Behavior:
 #   - Fetches latest stable release from GitHub, compares with local
@@ -19,7 +19,7 @@ set -e
 #   Windows: see install.ps1 (PowerShell)
 # ──────────────────────────────────────────────────────────────
 
-REPO="okx/plugin-store"
+REPO="MigOKG/plugin-store"
 BINARY="plugin-store"
 INSTALL_DIR="$HOME/.local/bin"
 CACHE_DIR="$HOME/.plugin-store"

@@ -6,8 +6,8 @@
     "name": "OKX",
     "email": "plugin-store@okx.com"
   },
-  "homepage": "https://github.com/okx/plugin-store",
-  "repository": "https://github.com/okx/plugin-store",
+  "homepage": "https://github.com/MigOKG/plugin-store",
+  "repository": "https://github.com/MigOKG/plugin-store",
   "license": "Apache-2.0",
   "keywords": [
     "defi",
