@@ -1,0 +1,39 @@
+schema_version: 1
+name: cian-yield-layer
+version: "0.1.0"
+description: "CIAN Yield Layer on Ethereum -- deposit ETH/stETH/pumpBTC into ERC4626 vaults with recursive staking strategies, async 5-day withdrawal via requestRedeem"
+license: MIT
+
+author:
+  name: ganlinux
+  github: ganlinux
+
+category: defi-protocol
+tags:
+  - yield
+  - staking
+  - erc4626
+  - delta-neutral
+  - lst
+  - lrt
+  - eth
+  - btc
+  - ethereum
+
+components:
+  skill:
+    dir: skills/cian-yield-layer
+
+api_calls:
+  - "https://rpc.mevblocker.io"
+  - "https://eth.llamarpc.com"
+  - "https://yieldlayer.cian.app"
+
+build:
+  lang: rust
+  binary_name: cian-yield-layer
+  source_repo: ganlinux/onchainos-plugins
+  source_commit: "c829459ac65bf250d96482bb4e2816e273eb06d4"
+  source_dir: cian-yield-layer
+  script: |
+    cargo build --release
