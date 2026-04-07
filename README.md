@@ -13,7 +13,7 @@ Discover, install, and build AI agent plugins for DeFi, trading, and Web3.
 ## Install Plugin Store
 
 ```bash
-npx skills add okx/plugin-store --skill plugin-store
+npx skills add MigOKG/plugin-store --skill plugin-store
 ```
 
 This installs the Plugin Store skill into your AI agent, enabling plugin discovery and management.
@@ -22,7 +22,7 @@ This installs the Plugin Store skill into your AI agent, enabling plugin discove
 
 ```bash
 # Install a specific plugin
-npx skills add okx/plugin-store --skill <plugin-name>
+npx skills add MigOKG/plugin-store --skill <plugin-name>
 ```
 
 ---
