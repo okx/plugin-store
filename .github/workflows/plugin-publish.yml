@@ -291,14 +291,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
         include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
           - target: x86_64-apple-darwin
             os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -337,16 +361,36 @@ jobs:
             case "$LANG" in
               rust)
                 rustup target add ${{ matrix.target }} 2>/dev/null || true
-                cargo build --release --target ${{ matrix.target }}
-                cp "target/${{ matrix.target }}/release/${BIN}" "/tmp/${BIN}-${{ matrix.target }}"
+                if [ "${{ matrix.cross }}" = "true" ]; then
+                  cargo install cross --git https://github.com/cross-rs/cross 2>/dev/null || true
+                  cross build --release --target ${{ matrix.target }}
+                else
+                  cargo build --release --target ${{ matrix.target }}
+                fi
+                # Handle Windows .exe extension
+                if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+                  cp "target/${{ matrix.target }}/release/${BIN}.exe" "/tmp/${BIN}-${{ matrix.target }}.exe"
+                else
+                  cp "target/${{ matrix.target }}/release/${BIN}" "/tmp/${BIN}-${{ matrix.target }}"
+                fi
                 ;;
               go)
                 case "${{ matrix.target }}" in
-                  x86_64-unknown-linux-gnu) GOOS=linux; GOARCH=amd64 ;;
-                  aarch64-apple-darwin)     GOOS=darwin; GOARCH=arm64 ;;
-                  x86_64-apple-darwin)      GOOS=darwin; GOARCH=amd64 ;;
+                  x86_64-unknown-linux-gnu)    GOOS=linux;   GOARCH=amd64 ;;
+                  i686-unknown-linux-gnu)      GOOS=linux;   GOARCH=386 ;;
+                  aarch64-unknown-linux-gnu)   GOOS=linux;   GOARCH=arm64 ;;
+                  armv7-unknown-linux-gnueabihf) GOOS=linux; GOARCH=arm; GOARM=7 ;;
+                  aarch64-apple-darwin)        GOOS=darwin;  GOARCH=arm64 ;;
+                  x86_64-apple-darwin)         GOOS=darwin;  GOARCH=amd64 ;;
+                  x86_64-pc-windows-msvc)      GOOS=windows; GOARCH=amd64 ;;
+                  i686-pc-windows-msvc)        GOOS=windows; GOARCH=386 ;;
+                  aarch64-pc-windows-msvc)     GOOS=windows; GOARCH=arm64 ;;
                 esac
-                CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
+                if [ "$GOOS" = "windows" ]; then
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}.exe" -ldflags="-s -w" .
+                else
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
+                fi
                 ;;
             esac
             cd /tmp
@@ -355,7 +399,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.target }}
-          path: /tmp/*-${{ matrix.target }}
+          path: |
+            /tmp/*-${{ matrix.target }}
+            /tmp/*-${{ matrix.target }}.exe
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════
@@ -405,8 +451,14 @@ jobs:
               sha256sum ${BIN}-* > checksums.txt
 
               TAG="plugins/${NAME}@${VERSION}"
-              TITLE="${NAME} v${VERSION} (community)"
-              NOTES="Source: $(echo "$PLUGIN" | jq -r '.source_repo')@$(echo "$PLUGIN" | jq -r '.source_commit')"
+              TITLE="${NAME} v${VERSION}"
+              SRC_REPO=$(echo "$PLUGIN" | jq -r '.source_repo // empty')
+              SRC_COMMIT=$(echo "$PLUGIN" | jq -r '.source_commit // empty')
+              if [ -n "$SRC_REPO" ] && [ -n "$SRC_COMMIT" ]; then
+                NOTES="Source: [${SRC_REPO}@${SRC_COMMIT:0:7}](https://github.com/${SRC_REPO}/tree/${SRC_COMMIT})"
+              else
+                NOTES="Built from source code in \`skills/${NAME}/\`"
+              fi
 
               # Release on THIS repo (community), not plugin-store
               # If release exists, delete it first then recreate (ensures clean assets)

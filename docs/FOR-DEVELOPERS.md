@@ -15,7 +15,7 @@
 5. [Writing SKILL.md](#5-writing-skillmd)
 6. [Submitting Plugins with Source Code (Binary)](#6-submitting-plugins-with-source-code-binary)
 7. [Three Submission Modes](#7-three-submission-modes)
-8. [OnChain OS Integration](#8-onchainos-integration)
+8. [Onchain OS Integration](#8-onchainos-integration)
 9. [Review Process](#9-review-process)
 10. [Risk Levels](#10-risk-levels)
 11. [Rules & Restrictions](#11-rules--restrictions)
@@ -38,12 +38,12 @@ the Skill tells the AI agent what tools are available and when to use them.
 ```
 Type A: Skill-Only (most common, any developer)
 ────────────────────────────────────────────────
-  SKILL.md → instructs AI → calls onchainos CLI
+  SKILL.md → instructs AI → calls CLI tools / APIs
                            + queries external data (free)
 
 Type B: Skill + Binary (any developer, source code compiled by our CI)
 ────────────────────────────────────────────────
-  SKILL.md → instructs AI → calls onchainos CLI
+  SKILL.md → instructs AI → calls CLI tools / APIs
                            + calls your binary tools
                            + queries external data (free)
 
@@ -58,7 +58,7 @@ or anything else that benefits from AI-agent orchestration.
 
 | I want to... | Type |
 |--------------|------|
-| Use AI agents to accomplish specific tasks via natural language, e.g. invoke onchainos commands to create strategies | Skill-Only |
+| Use AI agents to accomplish specific tasks via natural language, e.g. invoke CLI tools to create trading strategies | Skill-Only |
 | Build a CLI tool alongside a Skill | Skill + Binary (submit source code, we compile) |
 
 ### Supported Languages for Binary Plugins
@@ -85,11 +85,11 @@ or anything else that benefits from AI-agent orchestration.
 
 - **Git** and a **GitHub account**
 - **onchainos CLI** installed (recommended for testing your commands):
-  ```bash
+  ```
   npx skills add okx/onchainos-skills
   ```
   After installation, if `onchainos` is not found, add it to your PATH:
-  ```bash
+  ```
   export PATH="$HOME/.local/bin:$PATH"
   ```
 - Basic understanding of the domain your Plugin covers
@@ -100,11 +100,11 @@ or anything else that benefits from AI-agent orchestration.
 
 ### Key Rules
 
-1. **All on-chain write operations should use onchainos CLI.** This includes
+1. **On-chain write operations can use onchainos CLI or any other approach.** Onchain OS provides
    wallet signing, transaction broadcasting, swap execution, contract calls, and
    token approvals. You are free to query external data sources (third-party APIs,
    market data providers, analytics services, etc.).
-2. OnChain OS is **optional**. Plugins can freely use any on-chain technology.
+2. Onchain OS is **optional**. Plugins can freely use any on-chain technology.
    Non-blockchain Plugins do not need it at all.
 
 ---
@@ -117,7 +117,7 @@ This walkthrough creates a minimal Skill-only Plugin and submits it.
 
 First, install the GitHub CLI if you don't have it:
 
-```bash
+```
 # macOS
 brew install gh
 
@@ -130,7 +130,7 @@ winget install --id GitHub.cli
 
 Then authenticate and fork:
 
-```bash
+```
 gh auth login
 gh repo fork okx/plugin-store --clone
 cd plugin-store
@@ -138,13 +138,13 @@ cd plugin-store
 
 ### Step 2: Create Your Plugin Directory
 
-```bash
+```
 mkdir -p skills/my-plugin
 ```
 
 ### Step 3: Create plugin.yaml
 
-```bash
+```
 cat > skills/my-plugin/plugin.yaml << 'EOF'
 schema_version: 1
 name: my-plugin
@@ -169,7 +169,9 @@ EOF
 
 ### Step 4: Create .claude-plugin/plugin.json
 
-```bash
+This file allows Claude to recognize your Plugin as a Skill. Without it, the AI agent cannot discover or install your Plugin.
+
+```
 mkdir -p skills/my-plugin/.claude-plugin
 cat > skills/my-plugin/.claude-plugin/plugin.json << 'EOF'
 {
@@ -189,8 +191,9 @@ EOF
 
 ### Step 5: Create SKILL.md
 
-```bash
-cat > skills/my-plugin/SKILL.md << 'SKILLEOF'
+Create `skills/my-plugin/SKILL.md` with the following content:
+
+```markdown
 ---
 name: my-plugin
 description: "What my plugin does in one sentence"
@@ -217,19 +220,11 @@ Before using this skill, ensure:
 
 ### Command Name
 
-```bash
-# The command the AI agent should run
-example-command --flag value
-```
+`example-command --flag value`
 
 **When to use**: Describe when the AI agent should invoke this command.
 **Output**: Describe what the command returns.
-**Example**:
-
-```bash
-example-command --flag "real-value"
-# Expected output: ...
-```
+**Example**: `example-command --flag "real-value"`
 
 ## Error Handling
 
@@ -240,14 +235,13 @@ example-command --flag "real-value"
 ## Security Notices
 
 - This plugin is read-only and does not perform transactions.
-SKILLEOF
 ```
 
 ### Step 6: Validate Locally
 
-```bash
+```
 cd /path/to/plugin-store
-cargo run --manifest-path cli/Cargo.toml -- lint skills/my-plugin
+plugin-store lint skills/my-plugin
 ```
 
 If everything passes:
@@ -260,7 +254,7 @@ Linting skills/my-plugin...
 
 ### Step 7: Submit a Pull Request
 
-```bash
+```
 git checkout -b submit/my-plugin
 git add skills/my-plugin
 git commit -m "[new-plugin] my-plugin v1.0.0"
@@ -337,7 +331,11 @@ This file follows the [Claude Skill architecture](https://docs.anthropic.com/en/
 
 ### plugin.yaml Reference
 
-#### Minimal Example (Skill-Only, Direct Submission)
+Examples organized by submission mode. Choose the one that matches your use case.
+
+#### Mode A: Skill-Only (no source code)
+
+The simplest form — just a SKILL.md that orchestrates existing CLI tools and commands.
 
 ```yaml
 schema_version: 1
@@ -352,7 +350,6 @@ category: analytics
 tags:
   - price
   - solana
-  - analytics
 
 components:
   skill:
@@ -361,67 +358,9 @@ components:
 api_calls: []
 ```
 
-#### External Repo Example (Mode B)
+#### Mode A: Skill + Source Code (compiled binary, local source)
 
-When your source code lives in your own GitHub repo, use `repo` and `commit`
-instead of `dir`:
-
-```yaml
-schema_version: 1
-name: my-trading-bot
-version: "1.0.0"
-description: "Automated trading bot with safety checks"
-author:
-  name: "Your Name"
-  github: "your-github-username"
-license: MIT
-category: trading-strategy
-tags:
-  - trading
-  - solana
-
-components:
-  skill:
-    repo: "your-username/my-trading-bot"
-    commit: "d2aa628e063d780c370b0ec075a43df4859be951"
-
-api_calls: []
-```
-
-#### Binary Plugin Example (Skill + Compiled CLI)
-
-```yaml
-schema_version: 1
-name: defi-yield-optimizer
-version: "1.0.0"
-description: "Optimize DeFi yield across protocols with custom analytics"
-author:
-  name: "DeFi Builder"
-  github: "defi-builder"
-license: MIT
-category: defi-protocol
-tags:
-  - defi
-  - yield
-
-components:
-  skill:
-    dir: "."
-
-build:
-  lang: rust
-  source_repo: "defi-builder/yield-optimizer"
-  source_commit: "a1b2c3d4e5f6789012345678901234567890abcd"
-  source_dir: "."
-  binary_name: defi-yield
-
-api_calls:
-  - "api.defillama.com"
-```
-
-#### Binary Plugin with Local Source (no external repo)
-
-If your source code is directly in the plugin directory (not in a separate repo), omit `source_repo` and `source_commit`:
+Source code lives directly in the plugin directory. CI compiles from here — no external repo needed.
 
 ```yaml
 schema_version: 1
@@ -442,13 +381,11 @@ components:
     dir: "."
 
 build:
-  lang: rust
-  binary_name: my-rust-tool
+  lang: rust            # rust | go | typescript | node | python
+  binary_name: my-tool  # compiled output name
 
 api_calls: []
 ```
-
-In this case, CI compiles directly from `skills/my-rust-tool/` — your `Cargo.toml`, `src/main.rs`, etc. must be in the plugin directory alongside `SKILL.md` and `plugin.yaml`.
 
 Directory structure:
 ```
@@ -462,6 +399,49 @@ skills/my-rust-tool/
 │   └── main.rs
 └── LICENSE
 ```
+
+#### Mode B: External Repository (source code in your own repo)
+
+Your source code stays in your own GitHub repo, pinned to a specific commit. Only `plugin.yaml` and metadata live in the plugin-store repo.
+
+```yaml
+schema_version: 1
+name: defi-yield-optimizer
+version: "1.0.0"
+description: "Optimize DeFi yield across protocols with custom analytics"
+author:
+  name: "DeFi Builder"
+  github: "defi-builder"
+license: MIT
+category: defi-protocol
+tags:
+  - defi
+  - yield
+
+components:
+  skill:
+    repo: "defi-builder/yield-optimizer"
+    commit: "a1b2c3d4e5f6789012345678901234567890abcd"
+
+build:
+  lang: rust
+  source_repo: "defi-builder/yield-optimizer"
+  source_commit: "a1b2c3d4e5f6789012345678901234567890abcd"
+  binary_name: defi-yield
+
+api_calls:
+  - "api.defillama.com"
+```
+
+#### Mode C: Marketplace Import
+
+Auto-generated by the CLI when importing from an existing Claude marketplace Plugin:
+
+```
+plugin-store import <github-url>
+```
+
+This creates the plugin.yaml automatically — see [Mode C details](#mode-c----marketplace-import) below.
 
 #### Field-by-Field Reference
 
@@ -494,7 +474,7 @@ skills/my-rust-tool/
 
 - **Allowed**: `solana-price-checker`, `defi-yield-optimizer`, `nft-tracker`
 - **Forbidden**: `OKX-Plugin` (uppercase), `my_plugin` (underscores), `a` (too short)
-- **Reserved prefixes**: `okx-`, `official-`, `plugin-store-` -- only OKX org members may use `okx-`
+- **Reserved prefix**: only OKX org members may use the `okx-` prefix
 
 ---
 
@@ -502,19 +482,19 @@ skills/my-rust-tool/
 
 SKILL.md is the **single entry point** of your Plugin. It teaches the AI agent
 what your Plugin does and how to use it. For Skill-only Plugins, it orchestrates
-onchainos commands. For Binary Plugins, it also orchestrates your custom tools.
+commands and tools. For Binary Plugins, it also orchestrates your custom tools.
 
 ```
 Skill-Only Plugin:
-  SKILL.md → onchainos commands
+  SKILL.md → commands / tools
 
 Binary Plugin:
-  SKILL.md → onchainos commands
+  SKILL.md → commands / tools
            + your binary tools (calculate_yield, find_route, ...)
            + your binary commands (my-tool start, my-tool status, ...)
 ```
 
-### Template (Skill-Only)
+### SKILL.md Template (Skill-Only)
 
 ```markdown
 ---
@@ -589,7 +569,7 @@ onchainos token search --query SOL --chain solana
 - For security scanning -> use `okx-security` skill
 ```
 
-### Template (Binary Plugin)
+### SKILL.md Template (Binary Plugin)
 
 If your Plugin includes a binary, the SKILL.md must tell the AI agent about
 **both** onchainos commands and your custom binary tools:
@@ -662,8 +642,7 @@ Find the optimal swap route to enter a DeFi position.
 
 ### SKILL.md as the Orchestrator
 
-Your SKILL.md tells the AI agent how to use **both** onchainos commands and your
-custom binary tools:
+Your SKILL.md tells the AI agent how to use your Plugin's commands and tools:
 
 ```markdown
 ## Commands
@@ -671,11 +650,11 @@ custom binary tools:
 ### Check Yield (uses your binary tool)
 Call binary tool `calculate_yield` with pool address and chain.
 
-### Execute Deposit (uses onchainos + your binary)
+### Execute Deposit (uses CLI tools + your binary)
 1. Call binary tool `find_best_route` for the chosen pool
-2. Run `onchainos swap quote --from USDC --to POOL_TOKEN`
+2. Query swap quote for the target token
 3. **Ask user to confirm** amount and expected yield
-4. Run `onchainos swap swap ...` to execute
+4. Execute the swap
 5. Call binary tool `monitor_position` to start tracking
 ```
 
@@ -703,7 +682,7 @@ Call binary tool `calculate_yield` with pool address and chain.
 2. **Always include error handling** -- the AI agent needs to know what to do when things fail
 3. **Use skill routing** -- tell the AI when to defer to other skills
 4. **Include pre-flight checks** -- dependency installation commands so the AI agent can set up from scratch
-5. **Do not duplicate onchainos capabilities** -- orchestrate existing commands, do not replace them
+5. **Do not duplicate existing tool capabilities** -- orchestrate, do not replace
 
 ### Good vs Bad Examples
 
@@ -757,7 +736,7 @@ The commit SHA is the content fingerprint: same SHA = same code, guaranteed.
 Your source code must be pushed to GitHub **before** you can get a valid commit
 SHA. The workflow is:
 
-```bash
+```
 # 1. In your source code repo -- develop and push your code first
 cd your-source-repo
 git add . && git commit -m "v1.0.0"
@@ -1002,7 +981,7 @@ Output size: ~KB (source install)
 
 Before submitting, verify your code compiles with the exact command our CI uses:
 
-```bash
+```
 # Rust
 cd your-tool && cargo build --release
 # Verify: target/release/your-tool exists
@@ -1051,29 +1030,52 @@ If these commands fail locally, our CI will also fail.
 Everything lives inside `skills/<name>/` in the plugin-store repo. This is the
 simplest approach and recommended for most Plugins.
 
+**Skill-Only Plugin:**
+
 ```
 skills/my-plugin/
 ├── .claude-plugin/
 │   └── plugin.json   # Required
 ├── plugin.yaml       # Required
 ├── SKILL.md          # Required
-├── scripts/          # Optional
-├── assets/           # Optional
+├── scripts/          # Optional -- Python/shell scripts
+├── assets/           # Optional -- HTML, images
 ├── LICENSE
 └── README.md
 ```
 
-plugin.yaml uses `components.skill.dir`:
+**Plugin with source code (e.g. Rust CLI):**
+
+```
+skills/my-rust-tool/
+├── .claude-plugin/
+│   └── plugin.json   # Required
+├── plugin.yaml       # Required (with build section, no source_repo needed)
+├── SKILL.md          # Required
+├── Cargo.toml        # Build config (or go.mod, package.json, pyproject.toml)
+├── Cargo.lock
+├── src/
+│   └── main.rs       # Source code -- CI compiles directly from this directory
+├── LICENSE
+└── README.md
+```
+
+plugin.yaml uses `components.skill.dir` and optionally a `build` section:
 
 ```yaml
 components:
   skill:
     dir: "."
+
+# For binary Plugins (omit source_repo to use local source):
+build:
+  lang: rust            # rust | go | typescript | node | python
+  binary_name: my-tool  # compiled output name
 ```
 
-**When to use**: You are comfortable putting all source code directly in the
-plugin-store repo. Works well for Skill-only Plugins and Plugins with small
-scripts.
+**When to use**: You want everything in one place. Works for Skill-only Plugins,
+Plugins with scripts, and Plugins with compiled source code. CI compiles directly
+from the plugin directory — no external repo needed.
 
 ### Mode B -- External Repository
 
@@ -1099,7 +1101,7 @@ components:
 The commit must be a **full 40-character SHA** (not a short SHA or branch name).
 Get it with:
 
-```bash
+```
 cd your-source-repo
 git push origin main
 git rev-parse HEAD
@@ -1115,7 +1117,7 @@ Plugins like `meme-trench-scanner` and `smart-money-signal-copy-trade`.
 If you already have a Claude marketplace-compatible repo, auto-generate the
 submission:
 
-```bash
+```
 plugin-store import your-username/my-plugin
 ```
 
@@ -1130,19 +1132,19 @@ cross-list it in the Plugin Store with minimal effort.
 
 ---
 
-## 8. OnChain OS Integration
+## 8. Onchain OS Integration
 
-### What Is OnChain OS?
+### What Is Onchain OS?
 
-[OnChain OS](https://github.com/okx/onchainos-skills) is the Agentic Wallet CLI
-that provides secure, sandboxed blockchain operations -- wallet signing,
+[Onchain OS](https://github.com/okx/onchainos-skills) embeds the Agentic Wallet CLI,
+providing secure, sandboxed blockchain operations -- wallet signing,
 transaction broadcasting, swap execution, contract calls, and more. It uses TEE
 (Trusted Execution Environment) signing so private keys never leave the secure
 enclave.
 
-### When to Use OnChain OS
+### When to Use Onchain OS
 
-Use OnChain OS when your Plugin performs any on-chain write operation:
+Use Onchain OS when your Plugin performs any on-chain write operation:
 
 - Wallet signing
 - Transaction broadcasting
@@ -1150,13 +1152,13 @@ Use OnChain OS when your Plugin performs any on-chain write operation:
 - Contract calls
 - Token approvals
 
-### Is OnChain OS Required?
+### Is Onchain OS Required?
 
-**No. OnChain OS is optional.** Plugins can freely use any on-chain technology — OnChain OS, third-party wallets, direct RPC calls, or any other approach.
+**No. Onchain OS is optional.** Plugins can freely use any on-chain technology — Onchain OS, third-party wallets, direct RPC calls, or any other approach.
 
-For non-blockchain Plugins (analytics, utilities, developer tools, etc.), OnChain OS is simply not applicable.
+For non-blockchain Plugins (analytics, utilities, developer tools, etc.), Onchain OS is simply not applicable.
 
-### OnChain OS Command Reference
+### Onchain OS Command Reference
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -1175,15 +1177,15 @@ For non-blockchain Plugins (analytics, utilities, developer tools, etc.), OnChai
 For the full subcommand list, run `onchainos <command> --help` or see the
 [onchainos documentation](https://github.com/okx/onchainos-skills).
 
-### Installing OnChain OS
+### Installing Onchain OS
 
-```bash
+```
 npx skills add okx/onchainos-skills
 ```
 
 If `onchainos` is not found after installation, add it to your PATH:
 
-```bash
+```
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -1206,14 +1208,14 @@ If your Plugin has a `build` section, CI clones your source repo at the pinned
 commit SHA, compiles the code, and verifies the binary runs. Build failures
 block the PR.
 
-### Phase 3: AI Code Review (Automatic, ~2 Minutes)
+### Phase 3: AI Code Review (Manual Trigger, ~2 Minutes)
 
 An AI reviewer reads your Plugin and generates an 8-section report covering
 security, compliance, and quality. The report is posted as a collapsible PR
 comment. This stage is **advisory only** -- it does not block merge, but human
 reviewers will read the report.
 
-### Phase 4: Summary and Pre-flight (Automatic)
+### Phase 4: Summary and Pre-flight (Manual Trigger)
 
 A summary of all previous phases is generated. The pre-flight step auto-injects
 the following into the test environment:
@@ -1232,7 +1234,7 @@ correctness, security, and quality. They check that the Plugin makes sense,
 API calls are accurately declared, SKILL.md is well-written, and there are no
 security concerns.
 
-### Top 10 Rejection Reasons
+### Common Rejection Reasons
 
 | # | Reason | How to Avoid |
 |---|--------|-------------|
@@ -1240,7 +1242,7 @@ security concerns.
 | 2 | Version mismatch between `plugin.yaml` and `SKILL.md` | Keep `version` identical in both files |
 | 3 | Hardcoded API keys or credentials | Use environment variables, never commit secrets |
 | 4 | No risk disclaimer for trading Plugins | Add a disclaimer section in SKILL.md for any Plugin that moves assets |
-| 5 | Direct wallet operations without OnChain OS | Use `onchainos wallet` / `onchainos swap` for on-chain writes |
+| 5 | Direct wallet operations without Onchain OS | Use `onchainos wallet` / `onchainos swap` for on-chain writes |
 | 6 | Missing LICENSE file | Add a LICENSE file with an SPDX-compatible license |
 | 7 | Unpinned dependencies | Pin all dependency versions; use lockfiles |
 | 8 | Category mismatch | Choose the category that most accurately describes your Plugin |
@@ -1253,7 +1255,7 @@ security concerns.
 |------|---------|-----|
 | E001 | plugin.yaml not found | Ensure plugin.yaml is at the root of your plugin directory |
 | E031 | Invalid name format | Lowercase letters, numbers, and hyphens only |
-| E033 | Reserved prefix | Do not start your name with `okx-`, `official-`, or `plugin-store-` |
+| E033 | Reserved prefix | Only OKX org members may use the `okx-` prefix |
 | E035 | Invalid version | Use semantic versioning: `1.0.0`, not `1.0` or `v1.0.0` |
 | E041 | Missing LICENSE | Add a LICENSE file |
 | E052 | Missing SKILL.md | Ensure SKILL.md exists in the directory specified by `components.skill.dir` |
@@ -1286,7 +1288,7 @@ Copy this into your PR description:
 - [ ] (If trading plugin) Risk disclaimer is included
 - [ ] (If trading plugin) Dry-run / paper-trade mode is supported
 - [ ] (If binary plugin) Source code compiles locally with CI-equivalent command
-- [ ] Local lint passes: `cargo run --manifest-path cli/Cargo.toml -- lint skills/my-plugin`
+- [ ] Local lint passes: `plugin-store lint skills/my-plugin`
 ```
 
 ---
@@ -1348,7 +1350,7 @@ The following will result in immediate rejection regardless of risk level:
 ### What You CANNOT Do
 
 - Submit pre-compiled binaries (.exe, .dll, .so, etc.) -- must submit source code
-- Use reserved name prefixes (`okx-`, `official-`, `plugin-store-`)
+- Use the reserved `okx-` prefix (OKX org members only)
 - Include prompt injection patterns in SKILL.md
 - Exceed file size limits (200KB per file, 5MB total)
 
@@ -1356,84 +1358,47 @@ The following will result in immediate rejection regardless of risk level:
 
 ## 12. FAQ
 
-**How long does the review take?**
+1. **How long does the review take?**
+   Automated checks complete in under 5 minutes. Human review typically takes 1-3 business days.
 
-Automated checks complete in under 5 minutes. Human review typically takes
-1-3 business days.
+2. **Can I update my Plugin after it is published?**
+   Yes. Modify your files, bump `version` in both `plugin.yaml` and `SKILL.md`, and submit a new PR with the title `[update] my-plugin v1.1.0`.
 
-**Can I update my Plugin after it is published?**
+3. **What are the Plugin naming rules?**
+   Lowercase letters, numbers, and hyphens only. Between 2 and 40 characters. No consecutive hyphens. No underscores. The `okx-` prefix is reserved for OKX organization members.
 
-Yes. Modify your files, bump `version` in both `plugin.yaml` and `SKILL.md`,
-and submit a new PR with the title `[update] my-plugin v1.1.0`.
+4. **Can I use any programming language?**
+   For binary Plugins: Rust, Go, TypeScript (Bun), Node.js (Bun), and Python. For Skill-only Plugins, you can include scripts in any language (Python and shell are common) -- they run as part of the AI agent workflow, not compiled by CI.
 
-**What are the Plugin naming rules?**
+5. **Do I have to use Onchain OS?**
+   No. Onchain OS is optional. Plugins can freely use any on-chain technology.
 
-Lowercase letters, numbers, and hyphens only. Between 2 and 40 characters.
-No consecutive hyphens. No underscores. The `okx-` prefix is reserved for OKX
-organization members.
+6. **How do users install my Plugin?**
+   After your PR is merged: `npx skills add okx/plugin-store --skill my-plugin`. No plugin-store CLI installation is required on the user's end.
 
-**Can I use any programming language?**
+7. **What if the AI review flags something?**
+   The AI review is advisory only and does not block your PR. However, human reviewers will read the AI report. Addressing flagged issues speeds up approval.
 
-For binary Plugins, supported languages are Rust, Go, TypeScript (Bun),
-Node.js (Bun), and Python. For Skill-only Plugins, you can include scripts in
-any language (Python and shell scripts are common) -- they run as part of the
-AI agent workflow, not compiled by CI.
+8. **My local lint passes but the GitHub check fails. Why?**
+   Ensure you are running the latest version of the plugin-store CLI. Also confirm your PR only modifies files within `skills/your-plugin-name/`.
 
-**Do I have to use OnChain OS?**
+9. **The build failed in CI but compiles locally. Why?**
+   CI compiles on Ubuntu Linux. Ensure your code builds on Linux, not just macOS or Windows. Check the build logs in the GitHub Actions run for specific errors.
 
-No. OnChain OS is optional. Plugins can freely use any on-chain technology.
+10. **What does error E122 "source_repo is not valid" mean?**
+    `build.source_repo` must be in `owner/repo` format (e.g. `your-username/my-server`). Do not include `https://github.com/` or `.git`.
 
-**How do users install my Plugin?**
+11. **What does error E123 "must be a full 40-character hex SHA" mean?**
+    `build.source_commit` must be the full commit hash, not a short SHA or branch name. Run `git rev-parse HEAD` to get the full 40-character hash.
 
-After your PR is merged, users install via:
+12. **What does error E120 "must also include a Skill component" mean?**
+    Every Plugin with a `build` section must also have a SKILL.md. The Skill is the entry point -- it tells the AI agent how to use your binary.
 
-```bash
-npx skills add okx/plugin-store --skill my-plugin
-```
+13. **What does error E130 "pre-compiled binary file is not allowed" mean?**
+    You submitted a compiled file (.exe, .dll, .so, .wasm, etc.). Remove it -- we compile from your source code, you don't submit binaries.
 
-No plugin-store CLI installation is required on the user's end.
-
-**What if the AI review flags something?**
-
-The AI review is advisory only and does not block your PR. However, human
-reviewers will read the AI report. Addressing flagged issues speeds up approval.
-
-**My local lint passes but the GitHub check fails. Why?**
-
-Ensure you are running the latest version of the plugin-store CLI. Also confirm
-your PR only modifies files within `skills/your-plugin-name/`.
-
-**The build failed in CI but compiles locally. Why?**
-
-CI compiles on Ubuntu Linux. Ensure your code builds on Linux, not just macOS
-or Windows. Check the build logs in the GitHub Actions run for specific errors.
-
-**What does error E122 "source_repo is not valid" mean?**
-
-`build.source_repo` must be in `owner/repo` format (e.g. `your-username/my-server`).
-Do not include `https://github.com/` or `.git`.
-
-**What does error E123 "must be a full 40-character hex SHA" mean?**
-
-`build.source_commit` must be the full commit hash, not a short SHA or branch
-name. Run `git rev-parse HEAD` in your source repo to get the full 40-character
-hash.
-
-**What does error E120 "must also include a Skill component" mean?**
-
-Every Plugin with a `build` section must also have a SKILL.md. The Skill is
-the entry point -- it tells the AI agent how to use your binary.
-
-**What does error E130 "pre-compiled binary file is not allowed" mean?**
-
-You submitted a compiled file (.exe, .dll, .so, .wasm, etc.) in your submission
-directory. Remove it -- we compile from your source code, you don't submit binaries.
-
-**What does error E110/E111 "requires a build section" mean?**
-
-You declared a Binary component but did not include a `build` section. We need
-to know where your source code is so we can compile it. Add `build.lang`,
-`build.source_repo`, and `build.source_commit`.
+14. **What does error E110/E111 "requires a build section" mean?**
+    You declared a Binary component but did not include a `build` section. Add `build.lang`, `build.source_repo`, and `build.source_commit`.
 
 ---
 
