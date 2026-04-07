@@ -11,3 +11,4 @@ A Rust CLI tool that queries ETH price data via OnchainOS integration.
 - Support for Ethereum mainnet price queries
 - Lightweight utility for price monitoring
 
+
