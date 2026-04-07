@@ -3,6 +3,34 @@
   "stats_url": "https://plugin-store-dun.vercel.app",
   "plugins": [
     {
+      "name": "archimedes",
+      "version": "0.1.0",
+      "description": "Deposit and withdraw from Archimedes Finance V2 protected yield vaults (ERC4626) on Ethereum mainnet. Supports WETH and crvFRAX strategies via Convex and Aura.",
+      "author": {
+        "name": "ganlinux"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/archimedes"
+        }
+      },
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "meme-trench-scanner",
       "version": "1.0",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
