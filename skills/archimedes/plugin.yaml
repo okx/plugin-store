@@ -1,0 +1,29 @@
+schema_version: 1
+name: archimedes
+version: "0.1.0"
+description: "Deposit and withdraw from Archimedes Finance V2 protected yield vaults (ERC4626) on Ethereum mainnet. Supports WETH and crvFRAX strategies via Convex and Aura."
+author:
+  name: "ganlinux"
+  github: "ganlinux"
+license: MIT
+category: defi-protocol
+tags:
+  - yield
+  - vault
+  - erc4626
+  - ethereum
+  - convex
+  - aura
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: rust
+  binary_name: archimedes
+
+api_calls:
+  - "ethereum.publicnode.com"
+  - "ethereum-rpc.publicnode.com"
+  - "rpc.mevblocker.io"

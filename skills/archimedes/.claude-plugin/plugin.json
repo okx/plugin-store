@@ -1,0 +1,13 @@
+{
+  "name": "archimedes",
+  "description": "Deposit and withdraw from Archimedes Finance V2 protected yield vaults (ERC4626) on Ethereum mainnet. Supports WETH and crvFRAX strategies via Convex and Aura.",
+  "version": "0.1.0",
+  "author": {
+    "name": "ganlinux",
+    "github": "ganlinux"
+  },
+  "homepage": "https://github.com/ganlinux/onchainos-plugins/tree/main/archimedes",
+  "repository": "https://github.com/ganlinux/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["yield", "vault", "erc4626", "ethereum", "convex", "aura", "defi"]
+}
