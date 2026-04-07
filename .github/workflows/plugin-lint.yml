@@ -124,7 +124,7 @@ jobs:
 
           # Method 2: Check if author is a public member of okx org
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.github.com/orgs/MigOKG/members/${AUTHOR}" \
+            "https://api.github.com/orgs/okx/members/${AUTHOR}" \
             -H "Authorization: Bearer ${{ github.token }}")
 
           if [ "$HTTP_CODE" = "204" ]; then

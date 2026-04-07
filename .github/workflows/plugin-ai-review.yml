@@ -27,7 +27,7 @@ permissions:
 
 # onchainos source repo — change this if the repo moves
 env:
-  ONCHAINOS_REPO: "MigOKG/onchainos-skills"
+  ONCHAINOS_REPO: "okx/onchainos-skills"
   ONCHAINOS_BRANCH: "main"
 
 jobs:
