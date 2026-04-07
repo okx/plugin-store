@@ -1,0 +1,39 @@
+{
+  "plugin": "swell-restaking",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "swell-restaking get-rates",
+      "status": "pass",
+      "output_summary": "1 rswETH = 1.0691 ETH, total ETH deposited 147006, total supply 14169"
+    },
+    {
+      "cmd": "swell-restaking get-positions --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.00196 rswETH (~0.002100 ETH value)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "swell-restaking stake --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 0.0005",
+      "mode": "live",
+      "tx_hash": "0xf5ba43d039f226cc3fef6913ed77955e9a55ca6d327574932a355c41e30205ab",
+      "on_chain_status": 1,
+      "block": 24826055
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

@@ -1,0 +1,42 @@
+{
+  "plugin": "aerodrome-amm",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "aerodrome-amm pools --token-a WETH --token-b USDC",
+      "status": "pass",
+      "output_summary": "Found volatile pool 0xcdac0d6c and stable pool 0x35480296 for WETH/USDC with healthy reserves"
+    },
+    {
+      "cmd": "aerodrome-amm quote --token-in WETH --token-out USDC --amount-in 50000000000000",
+      "status": "pass",
+      "output_summary": "Best quote via stable pool: 50000000000000 wei WETH -> 105666 USDC (6 decimals)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "aerodrome-amm swap --token-in WETH --token-out USDC --amount-in 50000000000000 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "output_summary": "Dry-run swap succeeded: amountIn=50000000000000 WETH, amountOutMin=105137 USDC"
+    },
+    {
+      "cmd": "swap USDC\u2192WETH 0.1",
+      "mode": "live",
+      "tx_hash": "0xcae3466a781df5494e67f4a8c9e3982f7536c245baf72804bff2ff04f4448fe5",
+      "on_chain_status": 1,
+      "block_number": "0x2a52378",
+      "output_summary": "Live swap confirmed: 0.0005 WETH -> ~1.049 USDC via stable pool 0x3548029694fbb241d45fb24ba0cd9c9d4e745f16; Router 0xcf77a3ba",
+      "block": 44378002
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "First swap attempt returned txHash:pending because wallet had no WETH; manually wrapped 0.0005 ETH to WETH first (tx: 0x68db8316f3d655a46bb16f86780bf4c8bc4292a5c95c0fb60f982ebc7a9864b9)"
+  ],
+  "verdict": "pass"
+}

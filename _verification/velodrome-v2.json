@@ -1,0 +1,46 @@
+{
+  "plugin": "velodrome-v2",
+  "chain": "optimism",
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "wallet_eth_balance": "0.001488384158282883 ETH",
+  "wallet_eth_usd": "~$3.15",
+  "wallet_op_balance": "36.521008292737597652 OP",
+  "wallet_op_usd": "~$4.02",
+  "compile": "pass",
+  "cargo_audit": "not_installed",
+  "commands": [
+    {
+      "cmd": "pools --token-a WETH --token-b USDC",
+      "status": "pass",
+      "output_summary": "2 pools returned: volatile 0xf4f2657ae744354baca871e56775e5083f7276ab and stable 0x9da396b1406b4aae76ff703d74ec79468d5e9f59"
+    },
+    {
+      "cmd": "quote --token-in WETH --token-out USDC --amount-in 50000000000000",
+      "status": "pass",
+      "output_summary": "Best route: volatile pool, amountOut=105331 USDC atoms"
+    },
+    {
+      "cmd": "quote --token-in USDC --token-out DAI --amount-in 1000000 --stable true",
+      "status": "pass",
+      "output_summary": "Stable pool 0x18dfa55c90eaa86df688c5e9c55183e7eee44395, amountOut=994334909673231890"
+    },
+    {
+      "cmd": "positions --owner 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "No LP positions found for wallet"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "swap --token-in OP --token-out WETH --amount-in 8000000000000000 --slippage 2.0",
+      "mode": "live",
+      "tx_hash": "0x11c9819f339524d91d26d1acee29fae56e231a1c4e48325047dd4938aa3935d7",
+      "on_chain_status": 1,
+      "block": 150010462,
+      "amount_usd": "~$0.00088 (0.008 OP @ $0.11)"
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

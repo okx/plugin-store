@@ -1,0 +1,44 @@
+{
+  "plugin": "morpho",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "morpho --chain 8453 vaults --asset USDC",
+      "status": "pass",
+      "output_summary": "Returned 37 MetaMorpho USDC vaults on Base including Yearn OG USDC (4.25% APY, $2.7M TVL)"
+    },
+    {
+      "cmd": "morpho --chain 8453 markets --asset USDC",
+      "status": "pass",
+      "output_summary": "Returned 40 Morpho Blue USDC markets on Base"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "morpho --chain 8453 --dry-run supply --vault 0xc1256Ae5FF1cf2719D4937aDb3bbCCab2E00A2Ca --asset USDC --amount 0.01",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "output_summary": "Dry-run supply succeeded: approve + deposit(10000 raw USDC) calldata generated for Gauntlet Prime vault"
+    },
+    {
+      "cmd": "supply USDC 0.1 Muscadine vault",
+      "mode": "live",
+      "approve_tx_hash": "0x2708270bca9522702914cd356b39cabd9a70a90ff555845e74b3b353132d3f73",
+      "tx_hash": "0xbf329b6376ed6bffc67f228f23200fa762a26c69a75028d5488fdee3aa96a9e9",
+      "on_chain_status": 1,
+      "block_number": "0x2a523a6",
+      "output_summary": "Live supply confirmed: approve + deposit 0.1 USDC (100000 raw) into Gauntlet Prime USDC vault 0xc1256Ae5FF1cf2719D4937aDb3bbCCab2E00A2Ca on Base",
+      "block": 44378057
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "--chain flag must be placed before subcommand (global flag syntax)",
+    "Asset symbol resolves as UNKNOWN in output (cosmetic only, address is correct)"
+  ],
+  "verdict": "pass"
+}

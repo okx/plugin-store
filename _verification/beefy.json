@@ -1,0 +1,45 @@
+{
+  "plugin": "beefy",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "beefy vaults --chain 8453 --limit 5",
+      "status": "pass",
+      "output_summary": "Listed 5 active Base vaults including aerodrome, morpho platforms with APYs 1.81%-9.73%"
+    },
+    {
+      "cmd": "beefy apy --chain 8453 --vault morpho-base-gauntlet-prime-usdc",
+      "status": "pass",
+      "output_summary": "Vault morpho-base-gauntlet-prime-usdc active with 3.39% APY"
+    },
+    {
+      "cmd": "beefy positions --chain 8453 --wallet 0x87fb0647...",
+      "status": "pass",
+      "output_summary": "No active Beefy positions found for wallet"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "beefy deposit --vault morpho-base-gauntlet-prime-usdc --amount 0.01 --chain 8453 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "output_summary": "Dry-run deposit succeeded: approve + deposit calldata generated for 0.01 USDC into moo vault 0xCCB979..."
+    },
+    {
+      "cmd": "deposit WETH 0.00005 morpho-seamless-weth",
+      "mode": "live",
+      "tx_hash": "0x2e399cea5fa3c293321af04ae7a0739056c56fbc0a695aa06c4d3e6bd42c26a4",
+      "on_chain_status": 1,
+      "block_number": "0x2a52393",
+      "output_summary": "Live deposit confirmed: 0.1 USDC deposited into mooToken vault 0xCCB979379754d605FB4819A3e394D2e4087fC70e (Gauntlet Prime USDC, 3.39% APY)",
+      "block": 44378041
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

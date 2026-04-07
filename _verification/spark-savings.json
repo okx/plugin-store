@@ -1,0 +1,39 @@
+{
+  "plugin": "spark-savings",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "spark-savings --chain 1 apy",
+      "status": "pass",
+      "output_summary": "SSR APY 3.75%, DSR APY 1.25%, 1 sUSDS = 1.0924 USDS"
+    },
+    {
+      "cmd": "spark-savings --chain 1 markets",
+      "status": "pass",
+      "output_summary": "sDAI TVL $192M, sUSDS total supply 5.75B, combined TVL $6.28B"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "spark-savings --chain 1 --dry-run deposit --amount 100",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "deposit --amount 1 USDS",
+      "mode": "live",
+      "tx_hash": "0xbf349adf7f3ad34f8d23398a709f6ce2234b8ea685f256725f60badd061d2775",
+      "on_chain_status": 1,
+      "block": 24826093
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

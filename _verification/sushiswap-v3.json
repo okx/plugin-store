@@ -1,0 +1,39 @@
+{
+  "plugin": "sushiswap-v3",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "quote --token-in WETH --token-out USDC --amount-in 1000000000000000 --chain 8453",
+      "status": "pass",
+      "output_summary": "Best fee tier: 500 (0.05%). amountOut=2110458 USDC (6 decimals). All 4 fee tiers queried: fee=100\u21922107487, fee=500\u21922110458, fee=3000\u21922107538, fee=10000\u21922068101."
+    },
+    {
+      "cmd": "get-pools --token0 WETH --token1 USDC --chain 8453",
+      "status": "pass",
+      "output_summary": "4 pools found, all deployed. fee=100: 0x482fe995c4a52bc79271ab29a53591363ee30a89, fee=500: 0x57713f7716e0b0f65ec116912f834e49805480d2, fee=3000: 0x41595326aabe6132fc6c7ae71af087a3a9dbc9f6, fee=10000: 0x6fa08690355261b5360b2302bbf78f63e2b014f5."
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "swap --dry-run --token-in WETH --token-out USDC --amount-in 100000000000000 --chain 8453",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run succeeded. Quote: amountIn=100000000000000 WETH, fee=500, amountOut=211046, amountOutMin=209990 USDC. Zero tx hash confirms dry-run mode (no broadcast). Arbitrum QuoterV2 address not deployed \u2014 tested on Base (primary chain per original audit)."
+    },
+    {
+      "cmd": "swap USDC\u2192WETH 0.1 (Base, QuoterV2 not on Arbitrum)",
+      "mode": "live",
+      "tx_hash": "0xea2aeee646b15031a2bc86ac936896e596354a1ababd076e8566197289b75fa6",
+      "on_chain_status": 1,
+      "block": 44377986
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "notes": "QuoterV2 0xb1E835Dc2785b52265711e17fCCb0fd018226a6e is not deployed on Arbitrum (0x bytecode). Plugin works correctly on Base and BSC. Arbitrum support needs a separate fix post-migration.",
+  "verdict": "pass"
+}

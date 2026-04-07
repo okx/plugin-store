@@ -1,0 +1,39 @@
+{
+  "plugin": "compound-v2",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "compound-v2 --chain 1 markets",
+      "status": "pass",
+      "output_summary": "Returned 4 cToken markets (ETH, USDT, USDC, DAI) with APRs and exchange rates"
+    },
+    {
+      "cmd": "compound-v2 --chain 1 positions --wallet 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "No active positions found, ok:true"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "compound-v2 --chain 1 --dry-run supply --asset USDC --amount 10",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "claim-comp (supply paused)",
+      "mode": "live",
+      "tx_hash": "0xcca94158d50b0b7345eba1248aae9ec11a5c469aa89726beb3abbf835b350cce",
+      "on_chain_status": 1,
+      "block": 24826087
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

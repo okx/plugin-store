@@ -1,0 +1,38 @@
+{
+  "plugin": "curve",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "curve --chain 42161 get-pools --limit 5",
+      "status": "ok",
+      "note": "5 pools returned including USDC/USDT and USD-BTC-ETH"
+    },
+    {
+      "cmd": "curve --chain 42161 quote --token-in USDC --token-out USDT --amount 1000",
+      "status": "ok",
+      "note": "1000 USDC -> 999 USDT via Curve.fi USDC/USDT pool"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "curve --chain 42161 --dry-run swap --token-in USDC --token-out USDT --amount 1000",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; calldata generated for pool exchange"
+    },
+    {
+      "cmd": "swap USDC.e\u2192USDT 0.1",
+      "mode": "live",
+      "tx_hash": "0x4df9fa0bc9d508526169dcdd2f692cfd159c1d668c776230ddbfb37fa18c5fbd",
+      "on_chain_status": 1,
+      "block": 449907304
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

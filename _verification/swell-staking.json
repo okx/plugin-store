@@ -1,0 +1,39 @@
+{
+  "plugin": "swell-staking",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "swell-staking rates",
+      "status": "pass",
+      "output_summary": "swETH: 1 swETH = 1.1192 ETH; rswETH: 1 rswETH = 1.0691 ETH"
+    },
+    {
+      "cmd": "swell-staking positions --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.000938 swETH (~0.00105 ETH) and 0.001964 rswETH (~0.00210 ETH)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "swell-staking stake --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 0.0005",
+      "mode": "live",
+      "tx_hash": "0xad1812fe6b38160accde840c8373717ffe13d1f6937860e57f438aedc095e878",
+      "on_chain_status": 1,
+      "block": 24826040
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

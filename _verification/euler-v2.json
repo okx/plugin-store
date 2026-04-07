@@ -1,0 +1,43 @@
+{
+  "plugin": "euler-v2",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "euler-v2 --chain 42161 markets",
+      "status": "ok",
+      "note": "Multiple vaults returned including USDC, WETH, stEUR"
+    },
+    {
+      "cmd": "euler-v2 --chain 42161 markets --asset USDC",
+      "status": "ok",
+      "note": "USDC vault found: 0x0a1ecc5... with TVL 52596 USDC"
+    },
+    {
+      "cmd": "euler-v2 --chain 42161 positions",
+      "status": "ok",
+      "note": "0 positions found"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "euler-v2 --chain 42161 --dry-run supply --vault 0x0a1ecc5fe8c9be3c809844fcbe615b46a869b899 --amount 0.001",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; approve+deposit(ERC4626) calldata generated"
+    },
+    {
+      "cmd": "supply USDC 0.1 (Base, Arbitrum vaults undiscovered)",
+      "mode": "live",
+      "tx_hash": "0x2e579455174c1e0a8a571b7eb3a1b279087616a1425f7e71250b00e67be3ae0b",
+      "on_chain_status": 1,
+      "block": 44377832
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

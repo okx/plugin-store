@@ -1,0 +1,38 @@
+{
+  "plugin": "camelot-v3",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "camelot-v3 quote --token-in WETH --token-out USDT --amount-in 1000000000000000 --chain 42161",
+      "status": "ok",
+      "note": "0.001 WETH -> 2.1103 USDT"
+    },
+    {
+      "cmd": "camelot-v3 positions --owner 0x87fb... --chain 42161",
+      "status": "ok",
+      "note": "0 positions found"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "camelot-v3 swap --token-in USDT --token-out WETH --amount-in 1000 --chain 42161 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; calldata generated for SwapRouter"
+    },
+    {
+      "cmd": "swap WETH\u2192USDC 0.0001",
+      "mode": "live",
+      "tx_hash": "0x219c034a24865ba6b7261f767f854ccf5171fbef8b0c6df29914c2509790da82",
+      "on_chain_status": 1,
+      "block": 449906784
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

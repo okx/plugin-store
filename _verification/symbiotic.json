@@ -1,0 +1,39 @@
+{
+  "plugin": "symbiotic",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "symbiotic vaults --limit 3",
+      "status": "pass",
+      "output_summary": "Listed 3 vaults: uniBTC ($98.3M TVL), wstETH ($61M TVL 2.38% APR), Bedrock-uniBTC ($n/a)"
+    },
+    {
+      "cmd": "symbiotic positions --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "1 active position: 0.00004 wstETH in Stakestone vault, APR 2.76%"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "symbiotic deposit --vault 0xC329400492c6ff2438472D4651Ad17389fCb843a --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "deposit --token wstETH --amount 0.0002",
+      "mode": "live",
+      "tx_hash": "0x44772f50d56e2510843179aac9e1fa237cd20b123d615bf503e2c6ceae5ec666",
+      "on_chain_status": 1,
+      "block": 24826076
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

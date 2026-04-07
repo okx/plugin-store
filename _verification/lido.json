@@ -1,0 +1,39 @@
+{
+  "plugin": "lido",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "lido get-apy",
+      "status": "pass",
+      "output_summary": "Current 7-day stETH APR: 2.41%"
+    },
+    {
+      "cmd": "lido balance --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.000012 stETH (12312249841641 wei)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "lido stake --amount-eth 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount-eth 0.0005",
+      "mode": "live",
+      "tx_hash": "0x218666cf8e6d62a6a0ac5179df1866444953af4e4b7e626968b5c5ed00ceebb9",
+      "on_chain_status": 1,
+      "block": 24826021
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

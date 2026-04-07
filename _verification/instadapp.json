@@ -1,0 +1,42 @@
+{
+  "plugin": "instadapp",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "instadapp vaults",
+      "status": "pass",
+      "output_summary": "Two vaults: iETH v1 (TVL 65.76 ETH, exchange 1.2006) and iETHv2 (TVL 90374 stETH, exchange 1.2060)"
+    },
+    {
+      "cmd": "instadapp rates",
+      "status": "pass",
+      "output_summary": "iETH cumulative yield 20.06%, iETHv2 cumulative yield 20.60%"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "instadapp deposit --vault v1 --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": false,
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Plugin does not support --dry-run flag for deposit command; write-op skipped"
+    },
+    {
+      "cmd": "deposit --vault v1 --amount 0.0005",
+      "mode": "live",
+      "tx_hash": "0x70fb96622fcac6cf29dc39f61f9a5ea17e791f64924fd2b2205cdf6d66c69d2a",
+      "on_chain_status": 1,
+      "block": 24826089
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "deposit command does not support --dry-run flag"
+  ],
+  "verdict": "pass"
+}

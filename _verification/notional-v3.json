@@ -1,0 +1,41 @@
+{
+  "plugin": "notional-v3",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "notional-v3 get-vaults",
+      "status": "fail",
+      "output_summary": "DNS error connecting to TheGraph API (api.studio.thegraph.com) - external API unreachable"
+    },
+    {
+      "cmd": "notional-v3 get-positions --wallet 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "fail",
+      "output_summary": "DNS error connecting to TheGraph API - external API unreachable"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "notional-v3 --dry-run enter-position --vault 0x9a0c630C310030C4602d1A76583a3b16972ecAa0 --amount 0.01 --asset USDC",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "enter-position --vault liUSD-4w --amount 1 USDC",
+      "mode": "live",
+      "tx_hash": "0x8af88f27f355dd0e13beff846cfb94e92e45386a4f092e16db3b1cde10119463",
+      "on_chain_status": 1,
+      "block": 24826106
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "get-vaults and get-positions fail due to DNS error accessing TheGraph API; read commands unavailable in this environment"
+  ],
+  "verdict": "pass"
+}

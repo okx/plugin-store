@@ -1,0 +1,31 @@
+{
+  "plugin": "relay",
+  "chain": "multi",
+  "chain_id": null,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "chains --filter bnb",
+      "type": "read",
+      "result": "pass",
+      "output": "BSC (chain 56) is active and supported"
+    },
+    {
+      "cmd": "currencies --chain 56 --limit 5",
+      "type": "read",
+      "result": "pass",
+      "output": "7 tokens on BSC: WBTC, BNB, WETH (x2), USDT, USDC, DAI — all verified"
+    },
+    {
+      "cmd": "quote --from-chain 56 --to-chain 1 --token ETH --amount 0.001 --from 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "type": "read",
+      "result": "pass",
+      "output": "Quote: 0.001 ETH BSC→ETH mainnet, fee=$0.108220, time=~6s, receive=0.000230872622440669 ETH, requestId=0xa8a68b02..."
+    }
+  ],
+  "write_ops": [],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

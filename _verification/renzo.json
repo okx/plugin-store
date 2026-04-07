@@ -1,0 +1,39 @@
+{
+  "plugin": "renzo",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "renzo balance --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.000976 ezETH and 0.0000123 stETH"
+    },
+    {
+      "cmd": "renzo get-apr",
+      "status": "pass",
+      "output_summary": "Renzo ezETH restaking APR: 2.6152%"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "renzo deposit-eth --amount-eth 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "deposit-eth --amount-eth 0.0005",
+      "mode": "live",
+      "tx_hash": "0x4dde88610260fb35a1b5f244ec746ae18212066f557f128cdf727eb4b1f033ee",
+      "on_chain_status": 1,
+      "block": 24826057
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

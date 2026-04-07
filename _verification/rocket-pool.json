@@ -1,0 +1,39 @@
+{
+  "plugin": "rocket-pool",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "rocket-pool rate",
+      "status": "pass",
+      "output_summary": "1 rETH = 1.160867 ETH"
+    },
+    {
+      "cmd": "rocket-pool apy",
+      "status": "pass",
+      "output_summary": "rETH APY 2.01%, 1 rETH = 1.160867 ETH"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "rocket-pool stake --amount 0.01 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 0.01",
+      "mode": "live",
+      "tx_hash": "0x89969541a82ac10a264c486f4e83fa926d5f6b3081b743ee27958468f44dac36",
+      "on_chain_status": 1,
+      "block": 24826024
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

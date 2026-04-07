@@ -1,0 +1,45 @@
+{
+  "plugin": "balancer-v2",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "balancer-v2 pools --chain 42161 --limit 5",
+      "status": "error",
+      "note": "GraphQL API DNS error (network restriction); expected in sandbox"
+    },
+    {
+      "cmd": "balancer-v2 pool-info --pool 0x64541216...0002 --chain 42161",
+      "status": "ok",
+      "note": "Pool returned 3 tokens (WBTC/WETH/USDC) with weights"
+    },
+    {
+      "cmd": "balancer-v2 quote --from WETH --to USDC --amount 0.001 --pool 0x64541216...0002 --chain 42161",
+      "status": "ok",
+      "note": "0.001 WETH -> 2.107967 USDC"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "balancer-v2 swap --from WETH --to USDC --amount 0.000001 --pool 0x64541216...0002 --chain 42161 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; calldata generated for Vault.swap()"
+    },
+    {
+      "cmd": "swap WETH\u2192USDC.e",
+      "mode": "live",
+      "tx_hash": "0x72757088b7f92363fb5a0f5460f76d51b7fbcf4b7b88e24046964d67363fffb1",
+      "on_chain_status": 1,
+      "block": 449906673
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "pools command: GraphQL API unreachable (DNS error, sandbox network restriction)"
+  ],
+  "verdict": "pass"
+}

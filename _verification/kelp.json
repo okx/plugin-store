@@ -1,0 +1,39 @@
+{
+  "plugin": "kelp",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "kelp apy",
+      "status": "pass",
+      "output_summary": "rsETH estimated APY 6.82%, price 1.0697 ETH ($2258.78 USD)"
+    },
+    {
+      "cmd": "kelp rates",
+      "status": "pass",
+      "output_summary": "1 rsETH = 1.06892 ETH, deposit rate 1 ETH -> 0.93552 rsETH"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "kelp stake --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 0.0005",
+      "mode": "live",
+      "tx_hash": "0xccf6716b5efaac4ae18bef026b921bf49eda412204f3ad0120c148b92c4d1569",
+      "on_chain_status": 1,
+      "block": 24826059
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

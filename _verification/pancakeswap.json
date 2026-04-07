@@ -1,0 +1,41 @@
+{
+  "plugin": "pancakeswap",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "pancakeswap quote --from 0x4200...WETH --to 0x8335...USDC --amount 0.001 --chain 8453",
+      "status": "pass",
+      "output_summary": "0.001 WETH -> 2.111414 USDC at 0.01% fee tier; rate: 2111.41 USDC/WETH"
+    },
+    {
+      "cmd": "pancakeswap pools --token0 WETH --token1 USDC --chain 8453",
+      "status": "pass",
+      "output_summary": "Found 4 WETH/USDC pools (0.01%, 0.05%, 0.25%, 1%) with active liquidity"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "pancakeswap swap --from WETH --to USDC --amount 0.0001 --chain 8453 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "output_summary": "Dry-run swap succeeded: 0.0001 WETH -> min 0.210089 USDC via SmartRouter 0x678A...; approve + exactInputSingle calldata generated"
+    },
+    {
+      "cmd": "swap USDC\u2192WETH 0.1",
+      "mode": "live",
+      "approve_tx_hash": "0xe9ba988a87c0b0f44dbbc17da4a422f5e45ba756bfead49425daea7c7e356ee0",
+      "tx_hash": "0x8bc352936ff50ef2a11d650913221f1b71bde09826eaca7327ebe4022889da65",
+      "on_chain_status": 1,
+      "block_number": "0x2a523e4",
+      "output_summary": "Live swap confirmed: 0.0005 WETH -> ~1.050 USDC via SmartRouter 0x678Aa4bF... at 0.01% fee tier on Base",
+      "block": 44378093
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

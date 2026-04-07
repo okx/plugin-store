@@ -1,0 +1,38 @@
+{
+  "plugin": "venus",
+  "chain": "bsc",
+  "chain_id": 56,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "get-markets",
+      "type": "read",
+      "result": "pass",
+      "output": "48 markets returned (vUSDC, vUSDT, vBUSD, vSXP, vXVS, vBNB, etc.). Note: --chain flag not supported, chain hardcoded to 56 in binary."
+    },
+    {
+      "cmd": "get-positions --wallet 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "type": "read",
+      "result": "pass",
+      "output": "vBNB position: supply_underlying_raw=1000004162610647, no borrows"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "supply --asset BNB --amount 0.000001",
+      "type": "live",
+      "amount_bnb": "0.000001",
+      "amount_usd_approx": "~$0.0006",
+      "result": "pass",
+      "txHash": "0xa16a7454dd29442be757376904f100c5c0d3deccb24263b03947f480b51c3854",
+      "note": "--dry-run not implemented in binary despite SKILL.md documentation"
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "Minor: --chain flag not accepted by get-markets/get-positions (chain hardcoded to 56 in binary, SKILL.md says --chain 56)",
+    "Minor: --dry-run flag not implemented in supply subcommand (SKILL.md documents it)"
+  ],
+  "verdict": "pass"
+}

@@ -1,0 +1,39 @@
+{
+  "plugin": "kamino-liquidity",
+  "chain": "solana",
+  "chain_id": 501,
+  "wallet": "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "kamino-liquidity vaults --chain 501 --limit 5",
+      "status": "pass",
+      "output_summary": "116 total vaults. Top 5 returned including: Re7 SOL (BHRQTK6W...), SOL (BRXLfFa5...), sol-test (9VqPY3VJ...) among others."
+    },
+    {
+      "cmd": "kamino-liquidity positions --chain 501",
+      "status": "pass",
+      "output_summary": "Wallet has 1 position: vault GEodMsAR... with 1.309833 total shares (0 staked, 1.309833 unstaked)."
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "kamino-liquidity deposit --vault BHRQTK6WTxC4PkCUWCC8xTQX8QjckdjhBkgkn9KmbzRt --amount 0.001 --chain 501 --dry-run",
+      "mode": "dry-run",
+      "status": "pass",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run succeeded. Serialized unsigned tx returned. Amount 0.001 SOL (~$0.08) exceeds $0.001 USD cap; dry-run only. Vault: Re7 SOL (BHRQTK6W...)."
+    },
+    {
+      "cmd": "deposit SOL 0.001 MEV Capital vault",
+      "mode": "live",
+      "tx_hash": "4DF8YLHAn3hBXmMVqhBKHMGyCe5bDWjxWWzsJYD4p3hxj6Yad8NejbAsih8nfddJR8fiTLPGx9KRoEqbeWQr6vGv",
+      "on_chain_status": 1,
+      "block": null
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

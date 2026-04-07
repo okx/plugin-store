@@ -1,0 +1,39 @@
+{
+  "plugin": "stakestone",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "stakestone get-rate",
+      "status": "pass",
+      "output_summary": "1 STONE = 1.063076 ETH, TVL 10051.65 ETH, withdrawal fee 0%"
+    },
+    {
+      "cmd": "stakestone get-position --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.000988 STONE (~0.001050 ETH), no pending withdrawals"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "stakestone stake --amount 0.001 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 0.0005",
+      "mode": "live",
+      "tx_hash": "0x8a4395af54219f40b25d75d5888cdd216b8181a69d1874d16d5322b55ab80f64",
+      "on_chain_status": 1,
+      "block": 24826061
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

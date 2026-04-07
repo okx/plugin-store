@@ -1,0 +1,37 @@
+{
+  "plugin": "lifi",
+  "chain": "multi",
+  "chain_id": null,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "get-chains",
+      "type": "read",
+      "result": "pass",
+      "output": "Returned EVM chains including Ethereum (1), Arbitrum (42161), Base (8453), BSC (56)"
+    },
+    {
+      "cmd": "get-tokens --chains 56 --symbol USDT",
+      "type": "read",
+      "result": "pass",
+      "output": "2 USDT tokens on BSC: 0x55d39...B3197955 (native USDT, $0.999933), Wormhole bridged USDT"
+    },
+    {
+      "cmd": "get-tools --chains 56",
+      "type": "read",
+      "result": "pass",
+      "output": "16 bridges including cBridge, AcrossV4, Allbridge, Squid, Mayan, StargateV2"
+    },
+    {
+      "cmd": "get-quote --from-chain 56 --to-chain 1 --from-token USDT --to-token USDT --amount 1000000000000000000",
+      "type": "read",
+      "result": "pass",
+      "output": "Quote returned: executionDuration=4s, LIFI Fixed Fee=$0.0025, Relayer fee=$0.0001, approvalAddress=0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
+    }
+  ],
+  "write_ops": [],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

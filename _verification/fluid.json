@@ -1,0 +1,38 @@
+{
+  "plugin": "fluid",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "fluid --chain 42161 markets",
+      "status": "ok",
+      "note": "4 markets returned; markets show Base chain context (resolver returns Base metadata for Arbitrum query \u2014 known quirk)"
+    },
+    {
+      "cmd": "fluid --chain 42161 positions",
+      "status": "ok",
+      "note": "No active lending positions found"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "fluid --chain 42161 --dry-run supply --ftoken fUSDC --amount 0.001",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; approve+deposit(ERC4626) calldata generated for Arbitrum fUSDC"
+    },
+    {
+      "cmd": "supply fWETH 0.0001",
+      "mode": "live",
+      "tx_hash": "0xca8cedf8164e6490590d2fc03c2b49a11ebfc7cbdad59a506b25f6216d51880c",
+      "on_chain_status": 1,
+      "block": 449908763
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

@@ -1,0 +1,38 @@
+{
+  "plugin": "gmx-v1",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "gmx-v1 get-prices --chain 42161",
+      "status": "ok",
+      "note": "38 tokens returned with USD min/max prices"
+    },
+    {
+      "cmd": "gmx-v1 get-positions --chain 42161",
+      "status": "ok",
+      "note": "1 open LONG position found on 0x70d9... market"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "gmx-v1 swap --chain 42161 --input-token 0xaf88d065... --input-amount 1000 --output-token 0x82aF49... --min-output 0 --dry-run",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; swap calldata generated for GMX V1 Router"
+    },
+    {
+      "cmd": "swap USDT\u2192USDC 0.1",
+      "mode": "live",
+      "tx_hash": "0x6855ebd00b4ca443597e74ee2c370d26a7513075ba68eb19e856e32180892cd6",
+      "on_chain_status": 1,
+      "block": 449908878
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

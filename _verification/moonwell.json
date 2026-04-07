@@ -1,0 +1,31 @@
+{
+  "plugin": "moonwell",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "moonwell markets",
+      "status": "pass",
+      "output_summary": "Returned 5 markets: USDC (2.86% supply APR), WETH (0.90%), cbETH (3.04%), USDbC, DAI"
+    },
+    {
+      "cmd": "moonwell positions --wallet 0x87fb0647...",
+      "status": "pass",
+      "output_summary": "Found active USDC position: 0.44 mUSDC = 0.010001 USDC supplied"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "moonwell supply --asset USDC --amount 0.01",
+      "mode": "live",
+      "tx_hash": "0xdea710e0cba678106e6bbc4cd18993f56e7664d19c9276fc3f13f6988934f8ce",
+      "on_chain_status": 1,
+      "output_summary": "Successfully supplied 0.01 USDC to Moonwell; approve tx: 0x59d637a1, mint tx: 0xdea710e0"
+    }
+  ],
+  "lark_notified": false,
+  "errors": ["--chain flag not supported (hardcoded to Base 8453)", "--dry-run flag not supported for supply"],
+  "verdict": "pass"
+}

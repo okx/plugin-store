@@ -1,0 +1,52 @@
+{
+  "plugin": "pancakeswap-v2",
+  "chain": "bsc",
+  "chain_id": 56,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "quote --token-in BNB --token-out USDT --amount-in 1000000000000000",
+      "type": "read",
+      "result": "pass",
+      "output": "Amount out: 599083627860341642, Slippage min: 596088209721039933"
+    },
+    {
+      "cmd": "get-pair --token-a BNB --token-b USDT",
+      "type": "read",
+      "result": "pass",
+      "output": "pair: 0x16b9a82891338f9ba80e2d6970fdda79d1eb0dae"
+    },
+    {
+      "cmd": "get-price --token-a BNB --token-b USDT",
+      "type": "read",
+      "result": "pass",
+      "output": "1 BNB = 600.585694 USDT"
+    },
+    {
+      "cmd": "get-reserves --token-a BNB --token-b USDT",
+      "type": "read",
+      "result": "pass",
+      "output": "BNB reserve: 28539373896131762531754, USDT reserve: 17140327766310785213656300"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "swap --token-in BNB --token-out USDT --amount-in 1000000000000000 --dry-run",
+      "type": "dry-run",
+      "result": "pass",
+      "output": "Calldata built, to: 0x87fb0647faabea33113eaf1d80d67acb1c491b90, txHash: 0x000...000"
+    },
+    {
+      "cmd": "swap --token-in BNB --token-out USDT --amount-in 1000000000000",
+      "type": "live",
+      "amount_bnb_wei": "1000000000000",
+      "amount_usd_approx": "<$0.001",
+      "result": "pass",
+      "txHash": "0x0379e4aefcd45dedf3467be8ec54ecbedd99175ac78a2acb8f2d366bab4a3279"
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

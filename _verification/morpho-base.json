@@ -1,0 +1,43 @@
+{
+  "plugin": "morpho-base",
+  "chain": "base",
+  "chain_id": 8453,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "morpho-base vaults --asset USDC",
+      "status": "pass",
+      "output_summary": "Returned 37 MetaMorpho USDC vaults on Base; Moonwell Flagship at 3.74% APY"
+    },
+    {
+      "cmd": "morpho-base positions",
+      "status": "pass",
+      "output_summary": "Active vault position: 0.050004 USDC in Moonwell Flagship USDC vault; no Blue market positions"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "morpho-base --dry-run supply --vault 0xc1256Ae5FF1cf2719D4937aDb3bbCCab2E00A2Ca --asset USDC --amount 0.01",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "output_summary": "Dry-run supply succeeded: approve + deposit(10000 raw USDC) calldata generated for Moonwell Flagship USDC vault"
+    },
+    {
+      "cmd": "supply USDC 0.1 Yearn OG vault",
+      "mode": "live",
+      "approve_tx_hash": "0x1ee3deb5daf399e106423c56af46aa72ec7003bbd3c17fba981587a795bd7402",
+      "tx_hash": "0xe074e63d5246968ce682d88d91d6d53cfc5c2c770620f6e28fa64c486efe3cb2",
+      "on_chain_status": 1,
+      "block_number": "0x2a523bf",
+      "output_summary": "Live supply confirmed: approve + deposit 0.1 USDC (100000 raw) into Moonwell Flagship USDC vault 0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183 on Base",
+      "block": 44378078
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "--from flag not accepted by positions subcommand (uses active wallet by default)"
+  ],
+  "verdict": "pass"
+}

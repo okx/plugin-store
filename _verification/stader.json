@@ -1,0 +1,39 @@
+{
+  "plugin": "stader",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "stader rates",
+      "status": "pass",
+      "output_summary": "1 ETHx = 1.086306 ETH, total staked 135449 ETH, vault healthy"
+    },
+    {
+      "cmd": "stader positions --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet holds 0.00101 ETHx (worth 0.00110 ETH), no pending withdrawals"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "stader --dry-run stake --amount 1000000000000000",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 500000000000000 (wei)",
+      "mode": "live",
+      "tx_hash": "0xf90b1e50936b0df67f6174e4b72d673e78ab6a46fa8bfa0e9da25cf12fa23277",
+      "on_chain_status": 1,
+      "block": 24826028
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

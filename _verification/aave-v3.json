@@ -1,0 +1,43 @@
+{
+  "plugin": "aave-v3",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "aave-v3 --chain 42161 reserves",
+      "status": "ok",
+      "note": "20 reserves returned"
+    },
+    {
+      "cmd": "aave-v3 --chain 42161 health-factor --from 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "ok",
+      "note": "healthFactor=inf, no positions"
+    },
+    {
+      "cmd": "aave-v3 --chain 42161 positions --from 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "ok",
+      "note": "no Aave positions found"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "aave-v3 --chain 42161 --dry-run supply --asset USDC --amount 0.001 --from 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "USDC balance only 0.11441 USDC; used dry-run; calldata generated correctly for approve+supply"
+    },
+    {
+      "cmd": "supply --chain 42161 --asset USDC --amount 0.1",
+      "mode": "live",
+      "tx_hash": "0x92b106d2013addff26f43bea49322990e854138339be9dec4c6ef07621973ec5",
+      "on_chain_status": 1,
+      "block": 449906379
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

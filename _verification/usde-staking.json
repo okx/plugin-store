@@ -1,0 +1,39 @@
+{
+  "plugin": "usde-staking",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "compile_error": null,
+  "commands": [
+    {
+      "cmd": "usde-staking get-rates",
+      "status": "pass",
+      "output_summary": "sUSDe APY 3.49%, 1 sUSDe = 1.226374 USDe, TVL $3.53B, cooldown 1 day"
+    },
+    {
+      "cmd": "usde-staking get-positions --address 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "status": "pass",
+      "output_summary": "Wallet has 2.055 USDe unstaked, 0.10 USDe in cooldown (5h35m remaining)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "usde-staking stake --amount 10 --dry-run",
+      "mode": "dry-run",
+      "calldata_valid": true,
+      "tx_hash": null,
+      "on_chain_status": null
+    },
+    {
+      "cmd": "stake --amount 1 USDe",
+      "mode": "live",
+      "tx_hash": "0xf2560d08b43f6a1746cd1ccfdc85ec77bf5b897ccd433bf096e388f79b3407ac",
+      "on_chain_status": 1,
+      "block": 24826097
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

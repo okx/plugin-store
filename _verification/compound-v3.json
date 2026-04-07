@@ -1,0 +1,38 @@
+{
+  "plugin": "compound-v3",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "compound-v3 --chain 42161 --market usdc get-markets",
+      "status": "ok",
+      "note": "totalSupply=20.3M USDC, utilization 64.81%, supplyAPR=2.33%"
+    },
+    {
+      "cmd": "compound-v3 --chain 42161 --market usdc get-position --wallet 0x87fb...",
+      "status": "ok",
+      "note": "no positions, is_borrow_collateralized=true"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "compound-v3 --chain 42161 --market usdc --dry-run supply --asset 0xaf88d065... --amount 1000 --from 0x87fb...",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; approve+supply calldata generated"
+    },
+    {
+      "cmd": "supply USDC 0.1",
+      "mode": "live",
+      "tx_hash": "0x6b3338c499b23d60be9b52daaece90bce6c377949278ba7624b000a26d536012",
+      "on_chain_status": 1,
+      "block": 449906926
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

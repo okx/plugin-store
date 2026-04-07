@@ -1,0 +1,38 @@
+{
+  "plugin": "dolomite",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "dolomite --chain 42161 markets",
+      "status": "ok",
+      "note": "Multiple markets returned including WETH, USDC, USDT, WBTC"
+    },
+    {
+      "cmd": "dolomite --chain 42161 positions",
+      "status": "ok",
+      "note": "2 supply positions found: 0.010002 USDT + 0.100006 USDC"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "dolomite --chain 42161 --dry-run deposit --asset USDC --amount 0.001",
+      "mode": "dry-run",
+      "tx_hash": null,
+      "on_chain_status": null,
+      "note": "Dry-run successful; approve+operate calldata generated for DolomiteMargin"
+    },
+    {
+      "cmd": "deposit WETH 0.0001",
+      "mode": "live",
+      "tx_hash": "0xda7b9746fb3a0044c4a437b2f6f3abbc1fe2a9258cdf7a5f136c66a1a87de906",
+      "on_chain_status": 1,
+      "block": 449907422
+    }
+  ],
+  "lark_notified": false,
+  "errors": [],
+  "verdict": "pass"
+}

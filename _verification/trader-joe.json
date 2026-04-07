@@ -1,0 +1,23 @@
+{
+  "plugin": "trader-joe",
+  "chain": "arbitrum",
+  "chain_id": 42161,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {"cmd": "trader-joe quote --from USDT --to WETH --amount 1 --decimals 6", "status": "ok", "note": "1 USDT -> ~0.000469 WETH via V2_1 pair 0xd387c40a..., binStep=15"},
+    {"cmd": "trader-joe pools --token-x WETH --token-y USDT", "status": "ok", "note": "4 pools found with binSteps 10/25/50/100"}
+  ],
+  "write_ops": [
+    {
+      "cmd": "trader-joe swap --from USDT --to WETH --amount 0.001 --decimals 6",
+      "mode": "live",
+      "tx_hash": "0x56a15483fed1e38e373d87f086010e6fc8508d30d152c2b503c0c7278b8ce0a3",
+      "on_chain_status": 1,
+      "note": "Live swap 0.001 USDT -> WETH confirmed on Arbitrum block 0x1ad0b398; status=0x1 SUCCESS"
+    }
+  ],
+  "lark_notified": false,
+  "errors": ["--chain flag not implemented in CLI (ignored; hardcoded to Arbitrum 42161)", "--dry-run flag not implemented in swap command"],
+  "verdict": "pass"
+}

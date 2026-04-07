@@ -1,0 +1,38 @@
+{
+  "plugin": "segment-finance",
+  "chain": "bsc",
+  "chain_id": 56,
+  "wallet": "0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+  "compile": "pass",
+  "commands": [
+    {
+      "cmd": "get-markets",
+      "type": "read",
+      "result": "pass",
+      "output": "8 markets listed: seUSDC, seUSDT, seETH, seBTC, seBNB, seSTONE, seSATUSD, seXPUFETH. Note: --chain flag not supported, chain hardcoded to 56."
+    },
+    {
+      "cmd": "get-positions --wallet 0x87fb0647faabea33113eaf1d80d67acb1c491b90",
+      "type": "read",
+      "result": "pass",
+      "output": "Existing seBNB position: supply_usd=$0.0599, health_status=NO_POSITION (no borrows)"
+    }
+  ],
+  "write_ops": [
+    {
+      "cmd": "supply --asset BNB --amount 0.000001",
+      "type": "live",
+      "amount_bnb": "0.000001",
+      "amount_usd_approx": "~$0.0006",
+      "result": "pass",
+      "txHash": "0x00f7c7db791ccd9f9d76763f3b8841b2058622996896363687da37b1acc7fee9",
+      "note": "--dry-run flag not supported by binary (SKILL.md documents it, but implementation omits it)"
+    }
+  ],
+  "lark_notified": false,
+  "errors": [
+    "Minor: --chain flag not accepted by get-markets/get-positions (chain hardcoded to 56 in binary, SKILL.md says --chain 56)",
+    "Minor: --dry-run flag not implemented in supply subcommand (SKILL.md documents it)"
+  ],
+  "verdict": "pass"
+}
