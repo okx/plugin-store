@@ -1,0 +1,32 @@
+schema_version: 1
+name: fenix-finance
+version: "0.1.0"
+description: "Fenix Finance V3 DEX on Blast — swap, add/remove liquidity, query LP positions (Algebra Integral V1, concentrated liquidity)"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - dex
+  - amm
+  - concentrated-liquidity
+  - algebra
+  - blast
+  - ve33
+license: MIT
+
+components:
+  skill:
+    dir: skills/fenix-finance
+
+build:
+  lang: rust
+  binary_name: fenix-finance
+  source_repo: ganlinux/onchainos-plugins
+  source_commit: "c829459ac65bf250d96482bb4e2816e273eb06d4"
+  source_dir: fenix-finance
+
+api_calls:
+  - "https://api.goldsky.com/api/public/project_clxadvm41bujy01ui2qalezdn/subgraphs/fenix-v3-dex/latest/gn"
+  - "https://rpc.blast.io"
+  - "https://blast-rpc.publicnode.com"
