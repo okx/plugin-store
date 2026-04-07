@@ -1,0 +1,24 @@
+schema_version: 1
+name: stakestone
+version: 0.1.0
+description: Stake ETH with StakeStone liquid staking protocol to receive STONE yield-bearing
+  tokens
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- staking
+- liquid-staking
+- stakestone
+- stone
+- ethereum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: stakestone
+api_calls:
+- ethereum.publicnode.com

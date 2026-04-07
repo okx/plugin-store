@@ -1,0 +1,27 @@
+schema_version: 1
+name: balancer-v2
+version: 0.1.0
+description: Balancer V2 DEX — swap tokens, query pools, add/remove liquidity on Arbitrum
+  and Ethereum
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- amm
+- swap
+- liquidity
+- balancer
+- arbitrum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: balancer-v2
+api_calls:
+- arbitrum-one-rpc.publicnode.com
+- ethereum.publicnode.com
+- api-v3.balancer.fi/graphql

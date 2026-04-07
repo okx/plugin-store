@@ -1,0 +1,17 @@
+{
+  "name": "frax-ether",
+  "description": "Frax Ether liquid staking \u2014 stake ETH to frxETH and frxETH to yield-bearing sfrxETH",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "liquid-staking",
+    "frxETH",
+    "sfrxETH",
+    "ERC-4626",
+    "frax"
+  ]
+}

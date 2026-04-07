@@ -1,0 +1,18 @@
+{
+  "name": "morpho",
+  "description": "Supply, borrow and earn yield on Morpho \u2014 a permissionless lending protocol",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "earn",
+    "morpho",
+    "collateral"
+  ]
+}

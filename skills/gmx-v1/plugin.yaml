@@ -1,0 +1,24 @@
+schema_version: 1
+name: gmx-v1
+version: 0.1.0
+description: Trade perpetuals, swap tokens, and manage GLP liquidity on GMX V1 (Arbitrum/Avalanche)
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- perpetual
+- dex
+- gmx
+- leverage
+- glp
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: gmx-v1
+api_calls:
+- arbitrum-api.gmxinfra.io
+- avalanche-api.gmxinfra.io

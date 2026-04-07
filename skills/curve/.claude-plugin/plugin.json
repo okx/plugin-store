@@ -1,0 +1,17 @@
+{
+  "name": "curve",
+  "description": "Curve DEX plugin \u2014 swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC.",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "swap",
+    "stablecoin",
+    "amm",
+    "liquidity"
+  ]
+}

@@ -1,0 +1,28 @@
+schema_version: 1
+name: notional-v3
+version: 0.1.0
+description: Notional Finance leveraged yield (Exponent) on Ethereum — enter and exit
+  fixed-rate leveraged positions backed by Morpho
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- yield
+- leveraged-yield
+- fixed-rate
+- defi
+- notional
+- morpho
+- ethereum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: notional-v3
+api_calls:
+- ethereum.publicnode.com
+- api.studio.thegraph.com/query/60626/notional-exponent/version/latest

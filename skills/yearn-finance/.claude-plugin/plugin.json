@@ -1,0 +1,17 @@
+{
+  "name": "yearn-finance",
+  "description": "Yearn Finance yVaults \u2014 deposit, withdraw, and track auto-compounding yield on Ethereum",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "yield",
+    "vault",
+    "erc4626",
+    "ethereum",
+    "stablecoin"
+  ]
+}

@@ -1,0 +1,29 @@
+schema_version: 1
+name: fluid
+version: 0.1.0
+description: 'Fluid Protocol — DEX + Lending integration. Supply/withdraw to ERC-4626
+  fTokens, swap via Fluid DEX. Chains: Base, Ethereum, Arbitrum.'
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- dex
+- defi
+- earn
+- fluid
+- instadapp
+- erc4626
+- amm
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: fluid
+api_calls:
+- base-rpc.publicnode.com
+- eth.llamarpc.com
+- arbitrum-one-rpc.publicnode.com

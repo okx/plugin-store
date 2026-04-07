@@ -1,0 +1,27 @@
+schema_version: 1
+name: compound-v3
+version: 0.1.0
+description: 'Compound V3 (Comet) lending plugin: supply collateral, borrow/repay
+  the base asset, and claim COMP rewards across Ethereum, Base, Arbitrum, and Polygon.'
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- defi
+- compound
+- comet
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: compound-v3
+api_calls:
+- ethereum.publicnode.com
+- base-rpc.publicnode.com
+- arb1.arbitrum.io/rpc
+- polygon-rpc.com

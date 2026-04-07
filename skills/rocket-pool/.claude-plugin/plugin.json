@@ -1,0 +1,17 @@
+{
+  "name": "rocket-pool",
+  "description": "Decentralised ETH liquid staking via Rocket Pool \u2014 stake ETH to receive rETH",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "liquid-staking",
+    "rocket-pool",
+    "reth",
+    "ethereum"
+  ]
+}

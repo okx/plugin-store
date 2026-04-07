@@ -1,6 +1,7 @@
 /target
 /cli/target
 official/core/target/
+skills/*/target/
 .DS_Store
 .claude/
 .idea/

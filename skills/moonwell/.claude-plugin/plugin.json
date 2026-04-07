@@ -1,0 +1,20 @@
+{
+  "name": "moonwell",
+  "description": "Moonwell Flagship (Compound V2 fork) \u2014 supply, borrow, redeem, and claim WELL rewards on Base, Optimism, and Moonbeam",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "compound-v2",
+    "mtoken",
+    "base",
+    "optimism",
+    "moonbeam",
+    "well-token"
+  ]
+}

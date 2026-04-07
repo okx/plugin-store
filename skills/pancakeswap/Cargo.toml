@@ -1,0 +1,19 @@
+[package]
+name = "pancakeswap"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "pancakeswap"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+alloy-sol-types = "0.8"
+alloy-primitives = "0.8"
+hex = "0.4"

@@ -1,0 +1,29 @@
+schema_version: 1
+name: lifi
+version: 0.1.0
+description: LI.FI/Jumper cross-chain bridge and swap aggregator supporting 79+ EVM
+  chains
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- bridge
+- swap
+- cross-chain
+- aggregator
+- evm
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: lifi
+api_calls:
+- li.quest/v1/chains
+- li.quest/v1/tokens
+- li.quest/v1/quote
+- li.quest/v1/status
+- li.quest/v1/tools
+- li.quest/v1/token

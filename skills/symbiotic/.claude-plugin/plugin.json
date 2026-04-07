@@ -1,0 +1,17 @@
+{
+  "name": "symbiotic",
+  "description": "Symbiotic restaking protocol \u2014 deposit collateral, check positions, and manage restaking vaults on Ethereum",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "restaking",
+    "ethereum",
+    "defi",
+    "lsd",
+    "wsteth"
+  ]
+}

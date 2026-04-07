@@ -1,0 +1,17 @@
+{
+  "name": "gmx-v1",
+  "description": "Trade perpetuals, swap tokens, and manage GLP liquidity on GMX V1 (Arbitrum/Avalanche)",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "perpetual",
+    "dex",
+    "gmx",
+    "leverage",
+    "glp"
+  ]
+}

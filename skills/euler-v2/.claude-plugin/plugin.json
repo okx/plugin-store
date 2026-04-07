@@ -1,0 +1,21 @@
+{
+  "name": "euler-v2",
+  "description": "Euler V2 \u2014 Modular ERC-4626 lending vaults (EVaults). Supply/withdraw assets, view positions, simulate borrow/repay. Chains: Base, Ethereum, Arbitrum, Avalanche, BSC.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "earn",
+    "euler",
+    "erc4626",
+    "evault",
+    "evc",
+    "modular"
+  ]
+}

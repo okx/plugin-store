@@ -1,0 +1,18 @@
+{
+  "name": "usde-staking",
+  "description": "Stake USDe to earn yield via Ethena sUSDe ERC-4626 vault on Ethereum mainnet",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "yield",
+    "usde",
+    "susde",
+    "ethena",
+    "erc-4626"
+  ]
+}

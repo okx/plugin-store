@@ -1,0 +1,17 @@
+{
+  "name": "camelot-v3",
+  "description": "Camelot V3 DEX on Arbitrum \u2014 swap tokens, get price quotes, and manage concentrated liquidity positions using the Algebra V1 protocol",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "arbitrum",
+    "concentrated-liquidity",
+    "algebra",
+    "camelot"
+  ]
+}

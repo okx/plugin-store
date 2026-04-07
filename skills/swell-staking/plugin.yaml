@@ -1,0 +1,26 @@
+schema_version: 1
+name: swell-staking
+version: 0.1.0
+description: Stake ETH with Swell Network to receive swETH or rswETH (EigenLayer restaking)
+  on Ethereum mainnet
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- staking
+- liquid-staking
+- restaking
+- swell
+- sweth
+- rsweth
+- eigenlayer
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: swell-staking
+api_calls:
+- ethereum.publicnode.com

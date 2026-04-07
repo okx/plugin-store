@@ -1,0 +1,29 @@
+schema_version: 1
+name: sushiswap-v3
+version: 0.1.0
+description: Swap tokens and manage concentrated liquidity positions on SushiSwap
+  V3 CLMM across 38+ EVM chains
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- clmm
+- sushiswap
+- concentrated-liquidity
+- evm
+- multi-chain
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: sushiswap-v3
+api_calls:
+- base-rpc.publicnode.com
+- eth-rpc.publicnode.com
+- arbitrum-one-rpc.publicnode.com
+- bsc-rpc.publicnode.com
+- polygon-bor-rpc.publicnode.com

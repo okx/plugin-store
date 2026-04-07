@@ -1,0 +1,25 @@
+schema_version: 1
+name: pancakeswap
+version: 0.1.0
+description: Swap tokens and manage liquidity on PancakeSwap V3
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+- dex
+- swap
+- liquidity
+- pancakeswap
+- bsc
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: pancakeswap
+api_calls:
+- bsc-rpc.publicnode.com
+- base-rpc.publicnode.com
+- api.studio.thegraph.com

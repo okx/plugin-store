@@ -1,0 +1,28 @@
+schema_version: 1
+name: pendle
+version: 0.1.0
+description: Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove
+  liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+- yield-trading
+- fixed-yield
+- pt
+- yt
+- liquidity
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: pendle
+api_calls:
+- api-v2.pendle.finance/core
+- cloudflare-eth.com
+- bsc-rpc.publicnode.com
+- base-rpc.publicnode.com
+- arb1.arbitrum.io/rpc

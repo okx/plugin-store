@@ -1,0 +1,25 @@
+schema_version: 1
+name: symbiotic
+version: 0.1.0
+description: Symbiotic restaking protocol — deposit collateral, check positions, and
+  manage restaking vaults on Ethereum
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- restaking
+- ethereum
+- defi
+- lsd
+- wsteth
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: symbiotic
+api_calls:
+- app.symbiotic.fi/api/v2/vaults
+- ethereum.publicnode.com

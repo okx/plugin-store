@@ -1,0 +1,17 @@
+{
+  "name": "venus",
+  "description": "Venus Core Pool lending and borrowing on BSC (BNB Chain). Compound V2 fork.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "bsc",
+    "compound-v2",
+    "venus"
+  ]
+}

@@ -1,0 +1,66 @@
+use anyhow::Context;
+use serde_json::{json, Value};
+
+use crate::config::get_chain_config;
+use crate::onchainos;
+use crate::rpc;
+
+/// Fetch and display the health factor and account summary for a user.
+pub async fn run(chain_id: u64, from: Option<&str>) -> anyhow::Result<Value> {
+    let cfg = get_chain_config(chain_id)?;
+
+    // Resolve user address
+    let user_addr = if let Some(addr) = from {
+        addr.to_string()
+    } else {
+        onchainos::wallet_address().context(
+            "No --from address specified and could not resolve active wallet.",
+        )?
+    };
+
+    // Resolve Pool address at runtime
+    let pool_addr = rpc::get_pool(cfg.pool_addresses_provider, cfg.rpc_url)
+        .await
+        .context("Failed to resolve Pool address from PoolAddressesProvider")?;
+
+    // Fetch account data
+    let data = rpc::get_user_account_data(&pool_addr, &user_addr, cfg.rpc_url)
+        .await
+        .context("Failed to fetch user account data")?;
+
+    let no_debt = data.is_infinite_health_factor();
+    let status = data.health_factor_status();
+
+    // Represent infinite health factor (no debt) as "∞" instead of a huge number
+    let hf_display = if no_debt {
+        "\u{221e}".to_string() // ∞
+    } else {
+        format!("{:.2}", data.health_factor_f64())
+    };
+
+    // Liquidation threshold as percentage
+    let liq_threshold_pct = data.current_liquidation_threshold as f64 / 100.0;
+    let ltv_pct = data.ltv as f64 / 100.0;
+
+    Ok(json!({
+        "ok": true,
+        "chain": cfg.name,
+        "chainId": chain_id,
+        "userAddress": user_addr,
+        "poolAddress": pool_addr,
+        "healthFactor": hf_display,
+        "no_debt": no_debt,
+        "healthFactorStatus": status,
+        "totalCollateralUSD": format!("{:.2}", data.total_collateral_usd()),
+        "totalDebtUSD": format!("{:.2}", data.total_debt_usd()),
+        "availableBorrowsUSD": format!("{:.2}", data.available_borrows_usd()),
+        "currentLiquidationThreshold": format!("{:.2}%", liq_threshold_pct),
+        "loanToValue": format!("{:.2}%", ltv_pct),
+        "raw": {
+            "healthFactorRaw": data.health_factor.to_string(),
+            "totalCollateralBase": data.total_collateral_base.to_string(),
+            "totalDebtBase": data.total_debt_base.to_string(),
+            "availableBorrowsBase": data.available_borrows_base.to_string()
+        }
+    }))
+}

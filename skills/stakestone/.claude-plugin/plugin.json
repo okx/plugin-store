@@ -1,0 +1,17 @@
+{
+  "name": "stakestone",
+  "description": "Stake ETH with StakeStone liquid staking protocol to receive STONE yield-bearing tokens",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "liquid-staking",
+    "stakestone",
+    "stone",
+    "ethereum"
+  ]
+}

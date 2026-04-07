@@ -1,0 +1,25 @@
+schema_version: 1
+name: camelot-v3
+version: 0.1.0
+description: Camelot V3 DEX on Arbitrum — swap tokens, get price quotes, and manage
+  concentrated liquidity positions using the Algebra V1 protocol
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- arbitrum
+- concentrated-liquidity
+- algebra
+- camelot
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: camelot-v3
+api_calls:
+- arbitrum-one-rpc.publicnode.com
+- arb1.arbitrum.io/rpc

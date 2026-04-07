@@ -1,0 +1,19 @@
+{
+  "name": "swell-restaking",
+  "description": "Stake ETH on Swell Network to receive rswETH (EigenLayer liquid restaking) on Ethereum mainnet. Query exchange rates and positions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "restaking",
+    "liquid-restaking",
+    "eigenlayer",
+    "swell",
+    "rsweth",
+    "ethereum",
+    "staking"
+  ]
+}

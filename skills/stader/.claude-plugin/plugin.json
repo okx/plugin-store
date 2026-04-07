@@ -1,0 +1,17 @@
+{
+  "name": "stader",
+  "description": "Stake ETH with Stader liquid staking to receive ETHx on Ethereum",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "liquid-staking",
+    "ethx",
+    "stader",
+    "ethereum"
+  ]
+}

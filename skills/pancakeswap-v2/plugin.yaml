@@ -1,0 +1,22 @@
+schema_version: 1
+name: pancakeswap-v2
+version: 0.1.0
+description: Swap tokens and manage liquidity on PancakeSwap V2 AMM (BSC)
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- amm
+- pancakeswap
+- uniswap-v2-fork
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: pancakeswap-v2
+api_calls:
+- bsc-rpc.publicnode.com

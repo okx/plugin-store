@@ -1,0 +1,17 @@
+{
+  "name": "jito",
+  "description": "Jito MEV-enhanced liquid staking on Solana \u2014 stake SOL to receive JitoSOL",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "liquid-staking",
+    "solana",
+    "jitosol",
+    "mev"
+  ]
+}

@@ -1,0 +1,24 @@
+schema_version: 1
+name: kamino-lend
+version: 0.1.0
+description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana
+  lending protocol
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- solana
+- kamino
+- defi
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: kamino-lend
+api_calls:
+- api.kamino.finance

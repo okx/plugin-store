@@ -1,0 +1,17 @@
+{
+  "name": "pendle",
+  "description": "Pendle Finance yield tokenization plugin \u2014 buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "yield-trading",
+    "fixed-yield",
+    "pt",
+    "yt",
+    "liquidity"
+  ]
+}

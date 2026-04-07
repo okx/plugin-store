@@ -1,0 +1,17 @@
+{
+  "name": "trader-joe",
+  "description": "Trader Joe Liquidity Book DEX on Arbitrum \u2014 swap tokens, get quotes, and explore pools using the bin-based LB protocol",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "swap",
+    "liquidity-book",
+    "arbitrum",
+    "concentrated-liquidity"
+  ]
+}

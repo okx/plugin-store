@@ -1,0 +1,17 @@
+{
+  "name": "compound-v3",
+  "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards across Ethereum, Base, Arbitrum, and Polygon.",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "compound",
+    "comet"
+  ]
+}

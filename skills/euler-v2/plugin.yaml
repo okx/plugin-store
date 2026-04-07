@@ -1,0 +1,33 @@
+schema_version: 1
+name: euler-v2
+version: 0.1.0
+description: 'Euler V2 — Modular ERC-4626 lending vaults (EVaults). Supply/withdraw
+  assets, view positions, simulate borrow/repay. Chains: Base, Ethereum, Arbitrum,
+  Avalanche, BSC.'
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- defi
+- earn
+- euler
+- erc4626
+- evault
+- evc
+- modular
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: euler-v2
+api_calls:
+- mainnet.base.org
+- eth.llamarpc.com
+- arbitrum-one-rpc.publicnode.com
+- api.avax.network/ext/bc/C/rpc
+- bsc-rpc.publicnode.com

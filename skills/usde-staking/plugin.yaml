@@ -1,0 +1,26 @@
+schema_version: 1
+name: usde-staking
+version: 0.1.0
+description: Stake USDe to earn yield via Ethena sUSDe ERC-4626 vault on Ethereum
+  mainnet
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- staking
+- yield
+- usde
+- susde
+- ethena
+- erc-4626
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: usde-staking
+api_calls:
+- app.ethena.fi
+- ethereum.publicnode.com

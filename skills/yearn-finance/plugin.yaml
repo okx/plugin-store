@@ -1,0 +1,25 @@
+schema_version: 1
+name: yearn-finance
+version: 0.1.0
+description: Yearn Finance yVaults — deposit, withdraw, and track auto-compounding
+  yield on Ethereum
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- yield
+- vault
+- erc4626
+- ethereum
+- stablecoin
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: yearn-finance
+api_calls:
+- ydaemon.yearn.fi
+- ethereum.publicnode.com
