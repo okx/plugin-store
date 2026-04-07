@@ -13,7 +13,7 @@
 ## 安装 Plugin Store
 
 ```bash
-npx skills add okx/plugin-store --skill plugin-store
+npx skills add MigOKG/plugin-store --skill plugin-store
 ```
 
 将 Plugin Store 技能安装到你的 AI 代理中，实现Plugin发现和管理功能。
@@ -22,7 +22,7 @@ npx skills add okx/plugin-store --skill plugin-store
 
 ```bash
 # 安装指定Plugin
-npx skills add okx/plugin-store --skill <plugin-name>
+npx skills add MigOKG/plugin-store --skill <plugin-name>
 ```
 
 ---
