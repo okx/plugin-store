@@ -312,6 +312,7 @@ jobs:
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
         run: |
+          WORKSPACE=$(pwd)
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
@@ -329,7 +330,7 @@ jobs:
               cd "/tmp/build-${NAME}" && git checkout "$COMMIT"
             else
               # Local source: copy from skills directory
-              cp -r "skills/${NAME}" "/tmp/build-${NAME}"
+              cp -r "$WORKSPACE/skills/${NAME}" "/tmp/build-${NAME}"
               cd "/tmp/build-${NAME}"
             fi
             [ -n "$DIR" ] && cd "$DIR"
