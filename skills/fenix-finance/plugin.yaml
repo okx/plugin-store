@@ -30,3 +30,4 @@ api_calls:
   - "https://api.goldsky.com/api/public/project_clxadvm41bujy01ui2qalezdn/subgraphs/fenix-v3-dex/latest/gn"
   - "https://rpc.blast.io"
   - "https://blast-rpc.publicnode.com"
+

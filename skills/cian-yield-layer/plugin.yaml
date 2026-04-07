@@ -37,3 +37,4 @@ build:
   source_dir: cian-yield-layer
   script: |
     cargo build --release
+
