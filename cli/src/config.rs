@@ -1,4 +1,4 @@
-pub const GITHUB_OWNER: &str = "okx";
+pub const GITHUB_OWNER: &str = "MigOKG";
 pub const CLI_REPO: &str = "plugin-store";
 pub const REGISTRY_REPO: &str = "plugin-store";
 pub const COMMUNITY_REPO: &str = "MigOKG/plugin-store";
