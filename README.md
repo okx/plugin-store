@@ -30,43 +30,11 @@ npx skills add okx/plugin-store --skill <plugin-name>
 
 ---
 
-## Browse by Category
-
-| Category | Plugins |
-|----------|---------|
-| Trading | uniswap-ai, uniswap-swap-planner, uniswap-swap-integration |
-| DeFi | uniswap-liquidity-planner, uniswap-pay-with-any-token, uniswap-cca-configurator, uniswap-cca-deployer |
-| Prediction | polymarket-agent-skills |
-| Dev Tools | uniswap-v4-security-foundations, uniswap-viem-integration, plugin-store |
-| Automated Trading | meme-trench-scanner, top-rank-tokens-sniper, smart-money-signal-copy-trade |
-| Other | okx-buildx-hackathon-agent-track |
-
-## Browse by Risk Level
-
-| Level | Meaning | Plugins |
-|-------|---------|---------|
-| 🟢 Starter | Safe to explore. Read-only queries, planning tools, and documentation. No transactions. | plugin-store, okx-buildx-hackathon-agent-track, uniswap-swap-planner, uniswap-liquidity-planner, uniswap-v4-security-foundations, uniswap-viem-integration |
-| 🟡 Standard | Executes transactions with user confirmation. Always asks before signing or sending. | uniswap-ai, uniswap-swap-integration, uniswap-pay-with-any-token, uniswap-cca-configurator, uniswap-cca-deployer, polymarket-agent-skills |
-| 🔴 Advanced | Automated trading strategies. Requires understanding of financial risks before use. | meme-trench-scanner, top-rank-tokens-sniper, smart-money-signal-copy-trade |
-
-## Trust Indicators
-
-| Badge | Source | Meaning |
-|-------|--------|---------|
-| 🟢 Official | plugin-store | Developed and maintained by OKX |
-| 🔵 Verified Partner | uniswap-\*, polymarket-\* | Published by the protocol team itself |
-| ⚪ Community | everything else | Community contribution; review before use |
-
----
-
 ## Documentation
 
-| You are... | English | 中文 |
-|------------|---------|------|
-| Plugin user | [FOR-USERS.md](docs/FOR-USERS.md) | [FOR-USERS-ZH.md](docs/FOR-USERS-ZH.md) |
-| Plugin developer | [FOR-DEVELOPERS.md](docs/FOR-DEVELOPERS.md) | [FOR-DEVELOPERS-ZH.md](docs/FOR-DEVELOPERS-ZH.md) |
-| OKX/Partner team | [FOR-PARTNERS.md](docs/FOR-PARTNERS.md) | [FOR-PARTNERS-ZH.md](docs/FOR-PARTNERS-ZH.md) |
-| Reviewing standards | [REVIEW-GUIDELINES.md](docs/REVIEW-GUIDELINES.md) | [REVIEW-GUIDELINES-ZH.md](docs/REVIEW-GUIDELINES-ZH.md) |
+| | English | 中文 |
+|---|---------|------|
+| Plugin Developer Guide | [FOR-DEVELOPERS.md](docs/FOR-DEVELOPERS.md) | [FOR-DEVELOPERS-ZH.md](docs/FOR-DEVELOPERS-ZH.md) |
 
 ## Contributing
 
