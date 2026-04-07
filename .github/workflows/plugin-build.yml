@@ -50,6 +50,13 @@ jobs:
         run: |
           CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
           PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+
+          # Validate plugin name (prevent injection via malicious folder names)
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "::error::Invalid plugin name: contains special characters"
+            exit 1
+          fi
+
           PLUGIN_DIR="skills/${PLUGIN_NAME}"
           echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
           echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
@@ -444,12 +451,17 @@ jobs:
     steps:
       - name: Post build report
         uses: actions/github-script@v7
+        env:
+          BUILD_LANG: ${{ needs.detect.outputs.build_lang }}
+          PLUGIN_NAME: ${{ needs.detect.outputs.plugin_name }}
+          SOURCE_REPO: ${{ needs.detect.outputs.source_repo }}
+          SOURCE_COMMIT: ${{ needs.detect.outputs.source_commit }}
         with:
           script: |
-            const lang = '${{ needs.detect.outputs.build_lang }}';
-            const pluginName = '${{ needs.detect.outputs.plugin_name }}';
-            const sourceRepo = '${{ needs.detect.outputs.source_repo }}';
-            const sourceCommit = '${{ needs.detect.outputs.source_commit }}';
+            const lang = process.env.BUILD_LANG;
+            const pluginName = process.env.PLUGIN_NAME;
+            const sourceRepo = process.env.SOURCE_REPO;
+            const sourceCommit = process.env.SOURCE_COMMIT;
 
             const results = {
               rust: '${{ needs.build-rust.result }}',

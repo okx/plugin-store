@@ -48,6 +48,13 @@ jobs:
         run: |
           CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
           PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+
+          # Validate plugin name (prevent injection via malicious folder names)
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "::error::Invalid plugin name: contains special characters"
+            exit 1
+          fi
+
           PLUGIN_DIR="skills/${PLUGIN_NAME}"
           echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
           echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
@@ -541,6 +548,14 @@ jobs:
       - name: Post review report
         if: always() && steps.build.outputs.skip != 'true'
         uses: actions/github-script@v7
+        env:
+          PLUGIN_NAME: ${{ steps.detect.outputs.plugin_name }}
+          SCORE: ${{ steps.ai_review.outputs.score }}
+          MERGE_REC: ${{ steps.ai_review.outputs.merge_rec }}
+          ONCHAINOS_AVAILABLE: ${{ steps.onchainos.outputs.available }}
+          ACTUAL_MODEL: ${{ steps.ai_review.outputs.actual_model }}
+          COST: ${{ steps.ai_review.outputs.cost }}
+          PROVIDER: ${{ steps.provider.outputs.provider }}
         with:
           script: |
             const fs = require('fs');
@@ -551,13 +566,13 @@ jobs:
               console.log('No review file:', e.message);
             }
 
-            const pluginName = '${{ steps.detect.outputs.plugin_name }}';
-            const score = '${{ steps.ai_review.outputs.score }}' || 'N/A';
-            const mergeRec = '${{ steps.ai_review.outputs.merge_rec }}' || 'manual';
-            const hasOnchainos = '${{ steps.onchainos.outputs.available }}' === 'true';
-            const actualModel = '${{ steps.ai_review.outputs.actual_model }}' || 'unknown';
-            const cost = '${{ steps.ai_review.outputs.cost }}' || 'unknown';
-            const provider = '${{ steps.provider.outputs.provider }}';
+            const pluginName = process.env.PLUGIN_NAME;
+            const score = process.env.SCORE || 'N/A';
+            const mergeRec = process.env.MERGE_REC || 'manual';
+            const hasOnchainos = process.env.ONCHAINOS_AVAILABLE === 'true';
+            const actualModel = process.env.ACTUAL_MODEL || 'unknown';
+            const cost = process.env.COST || 'unknown';
+            const provider = process.env.PROVIDER;
 
             let recIcon, recText;
             if (mergeRec === 'blocked') {

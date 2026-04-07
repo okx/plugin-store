@@ -33,6 +33,13 @@ jobs:
         run: |
           CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
           PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+
+          # Validate plugin name (prevent injection via malicious folder names)
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "::error::Invalid plugin name: contains special characters"
+            exit 1
+          fi
+
           echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
           echo "plugin_dir=skills/${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
 
@@ -162,10 +169,12 @@ jobs:
       - name: Post report to PR
         if: always()
         uses: actions/github-script@v7
+        env:
+          PLUGIN_NAME: ${{ needs.detect.outputs.plugin_name }}
         with:
           script: |
             const fs = require('fs');
-            const pluginName = '${{ needs.detect.outputs.plugin_name }}';
+            const pluginName = process.env.PLUGIN_NAME;
 
             let summaryMd = '', skillSummaryMd = '', preflightMd = '';
             try { summaryMd = fs.readFileSync('/tmp/summary_md.txt', 'utf8'); } catch(e) {}

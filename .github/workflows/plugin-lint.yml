@@ -44,6 +44,13 @@ jobs:
           fi
 
           PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
+
+          # Validate plugin name (prevent injection via malicious folder names)
+          if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
+            echo "::error::Invalid plugin name: contains special characters"
+            exit 1
+          fi
+
           PLUGIN_DIR="skills/${PLUGIN_NAME}"
 
           echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
@@ -184,10 +191,13 @@ jobs:
       - name: Add labels
         if: always()
         uses: actions/github-script@v7
+        env:
+          IS_NEW: ${{ needs.detect-plugin.outputs.is_new }}
+          LINT_EXIT_CODE: ${{ steps.lint.outputs.exit_code }}
         with:
           script: |
-            const isNew = '${{ needs.detect-plugin.outputs.is_new }}' === 'true';
-            const passed = '${{ steps.lint.outputs.exit_code }}' === '0';
+            const isNew = process.env.IS_NEW === 'true';
+            const passed = process.env.LINT_EXIT_CODE === '0';
             const prNumber = ${{ github.event.pull_request.number }};
 
             const typeLabel = isNew ? 'new-plugin' : 'plugin-update';
@@ -227,10 +237,13 @@ jobs:
       - name: Post lint report as PR comment
         if: always()
         uses: actions/github-script@v7
+        env:
+          LINT_OUTPUT: ${{ steps.lint.outputs.lint_output }}
+          LINT_EXIT_CODE: ${{ steps.lint.outputs.exit_code }}
         with:
           script: |
-            const output = `${{ steps.lint.outputs.lint_output }}`.replace(/`/g, '\\`');
-            const passed = '${{ steps.lint.outputs.exit_code }}' === '0';
+            const output = (process.env.LINT_OUTPUT || '').replace(/`/g, '\\`');
+            const passed = process.env.LINT_EXIT_CODE === '0';
             const icon = passed ? '✅' : '❌';
             const status = passed ? 'PASSED' : 'FAILED';
             const prNumber = ${{ github.event.pull_request.number }};
