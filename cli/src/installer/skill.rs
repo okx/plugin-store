@@ -139,7 +139,24 @@ impl SkillInstaller {
 
         let files: Vec<&String> = all_paths
             .iter()
-            .filter(|p| p.starts_with(&prefix))
+            .filter(|p| {
+                if !p.starts_with(&prefix) {
+                    return false;
+                }
+                let rel = &p[prefix.len()..];
+                let is_source = rel.starts_with("src/")
+                    || rel.starts_with("target/")
+                    || rel == "Cargo.toml"
+                    || rel == "Cargo.lock"
+                    || rel == "go.mod"
+                    || rel == "go.sum"
+                    || rel.ends_with(".rs")
+                    || rel.ends_with(".go")
+                    || rel.ends_with(".py")
+                    || rel.ends_with(".ts")
+                    || rel.ends_with(".js");
+                !is_source
+            })
             .collect();
 
         if files.is_empty() {
@@ -212,7 +229,23 @@ impl SkillInstaller {
                     if prefix.is_empty() {
                         *p == "SKILL.md" || p.starts_with("references/")
                     } else {
-                        p.starts_with(&prefix)
+                        if !p.starts_with(&prefix) {
+                            return false;
+                        }
+                        // Skip source code and build artifacts
+                        let rel = &p[prefix.len()..];
+                        let is_source = rel.starts_with("src/")
+                            || rel.starts_with("target/")
+                            || rel == "Cargo.toml"
+                            || rel == "Cargo.lock"
+                            || rel == "go.mod"
+                            || rel == "go.sum"
+                            || rel.ends_with(".rs")
+                            || rel.ends_with(".go")
+                            || rel.ends_with(".py")
+                            || rel.ends_with(".ts")
+                            || rel.ends_with(".js");
+                        !is_source
                     }
                 })
                 .cloned()
