@@ -1,0 +1,26 @@
+schema_version: 1
+name: velodrome-v2
+version: 0.1.0
+description: Swap tokens and manage classic AMM (volatile/stable) LP positions on
+  Velodrome V2 on Optimism
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- amm
+- velodrome
+- classic-amm
+- stable
+- volatile
+- optimism
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: velodrome-v2
+api_calls:
+- optimism-rpc.publicnode.com
