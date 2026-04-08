@@ -17,10 +17,8 @@ tags:
 
 components:
   skill:
-    dir: skills/across
-  binary:
     repo: skylavis-sky/onchainos-plugins
-    asset_pattern: "across-{version}-{target}.tar.gz"
+    commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
 
 build:
   lang: rust
