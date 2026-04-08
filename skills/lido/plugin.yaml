@@ -1,0 +1,24 @@
+schema_version: 1
+name: lido
+version: 0.1.0
+description: Stake ETH with Lido liquid staking protocol to receive stETH
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- staking
+- liquid-staking
+- lido
+- steth
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: lido
+api_calls:
+- eth-api.lido.fi
+- wq-api.lido.fi
+- ethereum.publicnode.com
