@@ -1,0 +1,10 @@
+{
+  "name": "flap",
+  "description": "Token launchpad on BSC: create standard or tax tokens with bonding curve, buy and sell tokens via Flap Protocol (flap.sh)",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/flap",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["bsc", "launchpad", "bonding-curve", "meme", "tax-token", "token-creation", "evm"]
+}

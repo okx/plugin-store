@@ -1,0 +1,35 @@
+schema_version: 1
+name: flap
+version: "0.1.0"
+description: "Token launchpad on BSC: create standard or tax tokens with bonding curve, buy and sell tokens via Flap Protocol (flap.sh)"
+author:
+  name: "skylavis-sky"
+  github: "skylavis-sky"
+category: defi-protocol
+tags:
+  - bsc
+  - launchpad
+  - bonding-curve
+  - meme
+  - tax-token
+  - token-creation
+  - evm
+license: MIT
+
+components:
+  skill:
+    dir: skills/flap
+
+build:
+  lang: rust
+  binary_name: flap
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: flap
+
+api_calls:
+  - "https://bsc-rpc.publicnode.com"
+  - "https://bsc-dataseed.binance.org"
+  - "https://funcs.flap.sh/api/upload"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
