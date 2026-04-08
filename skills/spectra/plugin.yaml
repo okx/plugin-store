@@ -1,0 +1,34 @@
+schema_version: 1
+name: spectra
+version: "0.1.0"
+description: "Spectra Finance yield tokenization plugin — deposit/redeem PT+YT, claim accrued yield, swap PT via Curve. Primary chain: Base (8453). Secondary: Arbitrum (42161), Ethereum (1)."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - yield-tokenization
+  - fixed-yield
+  - pt
+  - yt
+  - interest-rate-derivatives
+license: MIT
+
+components:
+  skill:
+    dir: skills/spectra
+
+build:
+  lang: rust
+  binary_name: spectra
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "df1e7d0036ccb440358198aff226b093ecc58840"
+  source_dir: spectra
+
+api_calls:
+  - "https://app.spectra.finance"
+  - "https://base-rpc.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://cloudflare-eth.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
