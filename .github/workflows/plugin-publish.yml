@@ -337,6 +337,7 @@ jobs:
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
         run: |
+          mkdir -p "${GITHUB_WORKSPACE}/build-output"
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do (
             set +e
             PLUGIN=$(echo "$ENCODED" | base64 -d)
@@ -351,12 +352,12 @@ jobs:
             echo "Building $NAME ($LANG) for ${{ matrix.target }}"
             if [ -n "$REPO" ] && [ "$REPO" != "null" ]; then
               # External repo: clone at pinned commit
-              git clone --depth=100 "https://github.com/${REPO}.git" "/tmp/build-${NAME}"
-              cd "/tmp/build-${NAME}" && git checkout "$COMMIT"
+              git clone --depth=100 "https://github.com/${REPO}.git" "${GITHUB_WORKSPACE}/build-src-${NAME}"
+              cd "${GITHUB_WORKSPACE}/build-src-${NAME}" && git checkout "$COMMIT"
             else
               # Local source: copy from skills directory
-              cp -r "skills/${NAME}" "/tmp/build-${NAME}"
-              cd "/tmp/build-${NAME}"
+              cp -r "skills/${NAME}" "${GITHUB_WORKSPACE}/build-src-${NAME}"
+              cd "${GITHUB_WORKSPACE}/build-src-${NAME}"
             fi
             [ -n "$DIR" ] && cd "$DIR"
 
@@ -371,8 +372,8 @@ jobs:
                 fi
                 # Copy binary (Windows adds .exe)
                 case "${{ matrix.target }}" in
-                  *windows*) cp "target/${{ matrix.target }}/release/${BIN}.exe" "/tmp/${BIN}-${{ matrix.target }}.exe" ;;
-                  *) cp "target/${{ matrix.target }}/release/${BIN}" "/tmp/${BIN}-${{ matrix.target }}" ;;
+                  *windows*) cp "target/${{ matrix.target }}/release/${BIN}.exe" "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}.exe" ;;
+                  *) cp "target/${{ matrix.target }}/release/${BIN}" "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}" ;;
                 esac
                 ;;
               go)
@@ -388,9 +389,9 @@ jobs:
                   aarch64-pc-windows-msvc)     GOOS=windows; GOARCH=arm64 ;;
                 esac
                 if [ "$GOOS" = "windows" ]; then
-                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}.exe" -ldflags="-s -w" .
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}.exe" -ldflags="-s -w" .
                 else
-                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
                 fi
                 ;;
             esac
@@ -401,11 +402,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.target }}
-          path: |
-            /tmp/*-${{ matrix.target }}
-            /tmp/*-${{ matrix.target }}.exe
-            ${{ runner.temp }}/*-${{ matrix.target }}
-            ${{ runner.temp }}/*-${{ matrix.target }}.exe
+          path: build-output/*-${{ matrix.target }}*
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════
@@ -426,31 +423,39 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          path: /tmp/all-artifacts
+          path: artifacts
           merge-multiple: true
+
+      - name: Debug artifacts
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find artifacts -type f | sort
+          echo "=== End ==="
 
       - name: Create releases
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          REPO_ROOT="$(pwd)"
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
             BIN=$(echo "$PLUGIN" | jq -r '.binary_name')
 
-            YAML_FILE="skills/${NAME}/plugin.yaml"
+            YAML_FILE="${REPO_ROOT}/skills/${NAME}/plugin.yaml"
             if [ ! -f "$YAML_FILE" ]; then
               echo "::warning::$YAML_FILE not found, skipping release for $NAME"
               continue
             fi
             VERSION=$(yq '.version' "$YAML_FILE")
 
-            mkdir -p "/tmp/release-${NAME}"
-            cp /tmp/all-artifacts/${BIN}-* "/tmp/release-${NAME}/" 2>/dev/null || true
-            chmod +x /tmp/release-${NAME}/* 2>/dev/null || true
+            RELEASE_DIR="${REPO_ROOT}/release-${NAME}"
+            mkdir -p "$RELEASE_DIR"
+            cp ${REPO_ROOT}/artifacts/${BIN}-* "$RELEASE_DIR/" 2>/dev/null || true
+            chmod +x "$RELEASE_DIR"/* 2>/dev/null || true
 
-            cd "/tmp/release-${NAME}"
+            cd "$RELEASE_DIR"
             if ls ${BIN}-* 1>/dev/null 2>&1; then
               sha256sum ${BIN}-* > checksums.txt
 
@@ -458,21 +463,20 @@ jobs:
               TITLE="${NAME} v${VERSION}"
               SRC_REPO=$(echo "$PLUGIN" | jq -r '.source_repo // empty')
               SRC_COMMIT=$(echo "$PLUGIN" | jq -r '.source_commit // empty')
-              AUTHOR=$(yq '.author.name // "Community"' "skills/${NAME}/plugin.yaml" 2>/dev/null || echo "Community")
-              AUTHOR_GH=$(yq '.author.github // ""' "skills/${NAME}/plugin.yaml" 2>/dev/null || echo "")
-              DESC=$(yq '.description // ""' "skills/${NAME}/plugin.yaml" 2>/dev/null || echo "")
+              AUTHOR=$(yq '.author.name // "Community"' "$YAML_FILE" 2>/dev/null || echo "Community")
+              AUTHOR_GH=$(yq '.author.github // ""' "$YAML_FILE" 2>/dev/null || echo "")
+              DESC=$(yq '.description // ""' "$YAML_FILE" 2>/dev/null || echo "")
               LANG=$(echo "$PLUGIN" | jq -r '.lang // "unknown"')
               PLATFORM_COUNT=$(ls ${BIN}-* 2>/dev/null | wc -l | tr -d ' ')
 
-              # Build release notes
-              NOTES_FILE="/tmp/release-notes-${NAME}.md"
+              NOTES_FILE="${REPO_ROOT}/release-notes-${NAME}.md"
               CONTRIBUTOR="${AUTHOR_GH:-$AUTHOR}"
               if [ -n "$SRC_REPO" ] && [ -n "$SRC_COMMIT" ]; then
                 SRC_LINE="Source: [${SRC_REPO}](https://github.com/${SRC_REPO}/tree/${SRC_COMMIT})"
               else
                 SRC_LINE="Source: skills/${NAME}/ (included in submission)"
               fi
-              printf '%s\n' "## What's Changed" "" "- **${NAME}** v${VERSION} -- ${DESC}" "- Language: ${LANG} | Platforms: ${PLATFORM_COUNT}" "- Install: npx skills add okx/plugin-store --skill ${NAME}" "- ${SRC_LINE}" "" "## New Contributors" "" "- **${CONTRIBUTOR}** made their first contribution" "" "## Contributors" "" "- **${CONTRIBUTOR}** " "" "---" "Published by OKX Plugin Store CI" > "$NOTES_FILE"
+              printf '%s\n' "## What's Changed" "" "- **${NAME}** v${VERSION} -- ${DESC}" "- Language: ${LANG} | Platforms: ${PLATFORM_COUNT}" "- Install: npx skills add okx/plugin-store --skill ${NAME}" "- ${SRC_LINE}" "" "## New Contributors" "" "- **${CONTRIBUTOR}** made their first contribution" "" "## Contributors" "" "- **${CONTRIBUTOR}**" "" "---" "Published by OKX Plugin Store CI" > "$NOTES_FILE"
 
               echo "Creating release: $TAG with ${PLATFORM_COUNT} binaries"
               gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
@@ -482,8 +486,11 @@ jobs:
                 --notes-file "$NOTES_FILE" \
                 ${BIN}-* checksums.txt 2>&1 && echo "Release created: $TAG" \
                 || echo "::warning::Release create failed for $TAG"
+            else
+              echo "::warning::No binaries found for $NAME in artifacts"
+              ls -la ${REPO_ROOT}/artifacts/ 2>/dev/null | head -20
             fi
-            cd /tmp
+            cd "$REPO_ROOT"
           done
 
   # ═══════════════════════════════════════════════════════════════
