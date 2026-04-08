@@ -77,6 +77,8 @@ fi
 
 ## Architecture
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/compound-v3 (binary built from commit `6882d08d`)
+
 - Read ops (`get-markets`, `get-position`) → direct `eth_call` via public RPC; no confirmation needed
 - Write ops (`supply`, `borrow`, `withdraw`, `repay`, `claim-rewards`) → after user confirmation, submits via `onchainos wallet contract-call`
 
@@ -96,6 +98,20 @@ fi
 | Polygon | 137 | usdc | 0xF25212E676D1F7F89Cd72fFEe66158f541246445 |
 
 Default chain: Base (8453). Default market: usdc.
+
+
+## Pre-flight Checks
+
+Before executing any write command, verify:
+
+1. **Binary installed**: `compound-v3 --version` — if not found, install the plugin via the OKX plugin store
+2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
+3. **Chain supported**: target chain must be one of Ethereum (1), Base (8453), Arbitrum (42161), Polygon (137)
+
+If the wallet is not connected, output:
+```
+Please connect your wallet first: run `onchainos wallet login`
+```
 
 ## Commands
 
