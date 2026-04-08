@@ -1,0 +1,34 @@
+schema_version: 1
+name: gearbox-v3
+version: "0.1.0"
+description: "Open and manage leveraged Credit Accounts on Gearbox V3 — Arbitrum and Ethereum"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - leverage
+  - credit-account
+  - borrowing
+  - defi
+  - gearbox
+  - collateral
+  - health-factor
+license: MIT
+
+components:
+  skill:
+    dir: skills/gearbox-v3
+
+build:
+  lang: rust
+  binary_name: gearbox-v3
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: gearbox-v3
+
+api_calls:
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://ethereum.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

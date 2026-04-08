@@ -1,0 +1,10 @@
+{
+  "name": "gearbox-v3",
+  "description": "Open and manage leveraged Credit Accounts on Gearbox V3 — Arbitrum and Ethereum",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/gearbox-v3",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["leverage", "credit-account", "borrowing", "defi", "gearbox", "collateral", "health-factor"]
+}
