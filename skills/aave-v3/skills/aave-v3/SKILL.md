@@ -83,6 +83,8 @@ fi
 
 ## Overview
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/aave-v3 (binary built from commit `6882d08d`)
+
 Aave V3 is the leading decentralized lending protocol with over $43B TVL. This skill lets users supply assets to earn yield, borrow against collateral, manage health factors, and monitor positions — all via the `aave-v3` binary and `onchainos` CLI.
 
 **Supported chains:**
