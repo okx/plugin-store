@@ -1,0 +1,23 @@
+{
+  "name": "spark-savings",
+  "description": "Earn the Sky Savings Rate (SSR) on USDS/DAI via Spark sUSDS/sDAI savings vaults \u2014 ERC-4626 on Ethereum, PSM3-powered on Base/Arbitrum/Optimism",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "savings",
+    "yield",
+    "stablecoin",
+    "defi",
+    "maker",
+    "sky",
+    "dai",
+    "usds",
+    "sdai",
+    "susds",
+    "erc4626"
+  ]
+}
