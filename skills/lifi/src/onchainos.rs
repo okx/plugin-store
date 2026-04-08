@@ -101,20 +101,21 @@ pub fn extract_tx_hash(result: &Value) -> String {
 
 /// ERC-20 approve via wallet contract-call.
 /// Encodes approve(address spender, uint256 amount) calldata manually.
+/// Pass `force = true` (i.e. the caller's `--confirm` flag) to broadcast.
 pub async fn erc20_approve(
     chain_id: u64,
     token_addr: &str,
     spender: &str,
     amount: u128,
     from: Option<&str>,
-    dry_run: bool,
+    force: bool,
 ) -> Result<Value> {
     // approve(address,uint256) selector = 0x095ea7b3
     let spender_clean = spender.trim_start_matches("0x");
     let spender_padded = format!("{:0>64}", spender_clean);
     let amount_hex = format!("{:064x}", amount);
     let calldata = format!("0x095ea7b3{}{}", spender_padded, amount_hex);
-    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run, false).await
+    wallet_contract_call(chain_id, token_addr, &calldata, from, None, false, force).await
 }
 
 /// Read ERC-20 allowance via eth_call.

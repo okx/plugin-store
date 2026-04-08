@@ -15,6 +15,9 @@ struct Cli {
     /// Simulate without broadcasting
     #[arg(long)]
     dry_run: bool,
+    /// Confirm and broadcast the transaction (required for write operations)
+    #[arg(long)]
+    confirm: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -109,6 +112,7 @@ async fn main() {
     let cli = Cli::parse();
     let chain_id = cli.chain;
     let dry_run = cli.dry_run;
+    let confirm = cli.confirm;
 
     let result = match cli.command {
         Commands::GetChains => commands::get_chains::execute().await,
@@ -148,7 +152,7 @@ async fn main() {
             from,
         } => {
             let src_chain = from_chain.unwrap_or(chain_id);
-            commands::swap::execute(src_chain, to_chain, &from_token, &to_token, &amount, slippage, from.as_deref(), dry_run).await
+            commands::swap::execute(src_chain, to_chain, &from_token, &to_token, &amount, slippage, from.as_deref(), dry_run, confirm).await
         }
     };
 

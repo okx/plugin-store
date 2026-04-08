@@ -38,6 +38,7 @@ pub async fn execute(
     slippage: f64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> Result<Value> {
     // dry_run early return — show what would be sent
     if dry_run {
@@ -82,7 +83,41 @@ pub async fn execute(
         }));
     }
 
-    // Resolve wallet address (after dry_run guard)
+    // Preview gate: fetch quote and show details without broadcasting unless --confirm
+    if !confirm {
+        let placeholder = "0x87fb0647faabea33113eaf1d80d67acb1c491b90";
+        let wallet_addr = from.unwrap_or(placeholder);
+        let quote_resp = api::get_quote(from_chain, to_chain, from_token, to_token, amount, wallet_addr, slippage).await;
+        if let Ok(ref quote) = quote_resp {
+            return Ok(serde_json::json!({
+                "ok": true,
+                "preview": true,
+                "message": "Transaction preview — add --confirm to broadcast",
+                "fromChain": from_chain,
+                "toChain": to_chain,
+                "fromToken": quote["action"]["fromToken"]["symbol"],
+                "toToken": quote["action"]["toToken"]["symbol"],
+                "fromAmount": quote["estimate"]["fromAmount"],
+                "toAmount": quote["estimate"]["toAmount"],
+                "tool": quote["toolDetails"]["key"],
+                "toolName": quote["toolDetails"]["name"],
+                "feeCosts": quote["estimate"]["feeCosts"],
+                "gasCosts": quote["estimate"]["gasCosts"]
+            }));
+        }
+        return Ok(serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Transaction preview — add --confirm to broadcast (quote fetch failed)",
+            "fromChain": from_chain,
+            "toChain": to_chain,
+            "fromToken": from_token,
+            "toToken": to_token,
+            "amount": amount
+        }));
+    }
+
+    // Resolve wallet address (after dry_run and confirm guards)
     let wallet = if let Some(f) = from {
         f.to_string()
     } else {
@@ -135,7 +170,7 @@ pub async fn execute(
                 approval_address,
                 u128::MAX,
                 Some(&wallet),
-                false,
+                confirm,
             ).await?;
 
             let approve_hash = onchainos::extract_tx_hash(&approve_result);
@@ -157,7 +192,7 @@ pub async fn execute(
         Some(&wallet),
         amt,
         false,
-        true, // --force required for all LI.FI bridge/swap txs
+        confirm,
     ).await?;
 
     let tx_hash = onchainos::extract_tx_hash(&result);
