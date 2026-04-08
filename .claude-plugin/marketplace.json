@@ -70,15 +70,6 @@
       }
     },
     {
-      "name": "eigencloud",
-      "description": "Restake LSTs and EIGEN on EigenLayer (EigenCloud) on Ethereum mainnet. Deposit into strategies, delegate to operators, queue withdrawals, and check positions.",
-      "source": "./skills/eigencloud",
-      "category": "defi-protocol",
-      "author": {
-        "name": "GeoGu360"
-      }
-    },
-    {
       "name": "etherfi",
       "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY",
       "source": "./skills/etherfi",
@@ -248,6 +239,11 @@
       "author": {
         "name": "skylavis-sky"
       }
+    },
+    {
+      "name": "pancakeswap",
+      "description": "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain and Base",
+      "source": "./skills/pancakeswap"
     },
     {
       "name": "plugin-store",
