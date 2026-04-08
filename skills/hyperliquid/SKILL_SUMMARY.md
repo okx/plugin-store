@@ -2,20 +2,18 @@
 # hyperliquid -- Skill Summary
 
 ## Overview
-This skill enables trading perpetual futures on Hyperliquid, a high-performance on-chain derivatives exchange built on its own L1 blockchain. It provides read-only position monitoring and market data access, plus authenticated order placement and cancellation through cryptographic signing. All operations use USDC margin and settle on Hyperliquid L1 with CEX-like speed but full on-chain transparency.
+This skill enables trading perpetual futures on Hyperliquid, a high-performance on-chain derivatives exchange built on its own L1 blockchain. Users can check positions, get market prices, place leveraged long/short orders, and cancel existing orders across 100+ perpetual markets including BTC, ETH, SOL and other major cryptocurrencies. All positions are settled in USDC with full on-chain execution while maintaining CEX-like speed and user experience.
 
 ## Usage
-Run `hyperliquid positions` to check your current positions and `hyperliquid prices` for market data. For trading, use `hyperliquid order` without `--confirm` to preview, then add `--confirm` to execute after cryptographic signing.
+Run `hyperliquid positions` to check your current perpetual positions, `hyperliquid prices` for market data, and use `hyperliquid order` with `--confirm` to place trades. All write operations use a two-step preview-then-confirm flow for safety.
 
 ## Commands
-| Command | Purpose |
-|---------|---------|
-| `hyperliquid positions` | View open positions, PnL, and margin usage |
-| `hyperliquid positions --address <addr>` | Check positions for specific address |
-| `hyperliquid prices` | Get all market mid prices |
-| `hyperliquid prices --market <coin>` | Get price for specific market |
-| `hyperliquid order --coin <coin> --side <buy/sell> --size <amount> --type <market/limit>` | Place perpetual order (add `--confirm` to execute) |
-| `hyperliquid cancel --coin <coin> --order-id <id>` | Cancel open order (add `--confirm` to execute) |
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `positions` | Check open perpetual positions and PnL | `hyperliquid positions --show-orders` |
+| `prices` | Get current market mid prices | `hyperliquid prices --market BTC` |
+| `order` | Place market or limit perpetual orders | `hyperliquid order --coin BTC --side buy --size 0.01 --type market --confirm` |
+| `cancel` | Cancel open orders by ID | `hyperliquid cancel --coin BTC --order-id 91490942 --confirm` |
 
 ## Triggers
-Activate when users want to trade perpetuals on Hyperliquid, check their derivative positions, get perp market prices, or manage leveraged long/short positions on Hyperliquid L1. Also trigger for phrases like "Hyperliquid perps", "HL order", or mentions of trading specific coins with leverage on Hyperliquid.
+Activate when users mention trading perpetuals, opening leveraged positions, or checking prices on Hyperliquid - phrases like "Hyperliquid perps", "HL long BTC", "trade on Hyperliquid", or "check my Hyperliquid positions". Also trigger for general perpetual trading requests when context suggests derivatives rather than spot trading.
