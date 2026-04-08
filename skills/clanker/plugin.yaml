@@ -1,0 +1,34 @@
+schema_version: 1
+name: clanker
+version: "0.1.0"
+description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - token-launch
+  - meme
+  - erc20
+  - uniswap-v4
+  - base
+license: MIT
+
+components:
+  skill:
+    dir: skills/clanker
+
+build:
+  lang: rust
+  binary_name: clanker
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: clanker
+
+api_calls:
+  - "https://clanker.world/api"
+  - "https://base-rpc.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://basescan.org"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
