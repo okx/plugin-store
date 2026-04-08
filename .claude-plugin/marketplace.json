@@ -133,6 +133,15 @@
       }
     },
     {
+      "name": "gmx-v2",
+      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions",
+      "source": "./skills/gmx-v2",
+      "category": "trading-strategy",
+      "author": {
+        "name": "skylavis-sky"
+      }
+    },
+    {
       "name": "hyperliquid",
       "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
       "source": "./skills/hyperliquid",
@@ -212,11 +221,6 @@
       "author": {
         "name": "yz06276"
       }
-    },
-    {
-      "name": "meteora",
-      "description": "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, and executing swaps on Solana",
-      "source": "./skills/meteora"
     },
     {
       "name": "moonwell",
