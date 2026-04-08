@@ -62,26 +62,13 @@ pub fn resolve_wallet(chain_id: u64, dry_run: bool) -> anyhow::Result<String> {
 }
 
 /// Submit a contract call via `onchainos wallet contract-call`.
-/// --force is always appended for write operations.
+/// Pass `force = true` (i.e. the user's `--confirm` flag) to append `--force`.
 pub fn wallet_contract_call(
     chain_id: u64,
     to: &str,
     input_data: &str,
     force: bool,
-    dry_run: bool,
 ) -> anyhow::Result<Value> {
-    if dry_run {
-        let cmd_str = format!(
-            "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
-            chain_id, to, input_data
-        );
-        eprintln!("[dry-run] {}", cmd_str);
-        return Ok(serde_json::json!({
-            "ok": true,
-            "dryRun": true,
-            "simulatedCommand": cmd_str
-        }));
-    }
     let mut cmd = base_cmd();
     cmd.args([
         "wallet",

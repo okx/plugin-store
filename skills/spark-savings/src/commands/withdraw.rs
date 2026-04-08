@@ -120,7 +120,7 @@ pub async fn run(
                 "token": cfg.susds,
                 "spender": psm3,
                 "simulatedCommand": format!(
-                    "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
+                    "onchainos wallet contract-call --chain {} --to {} --input-data {}",
                     chain_id, cfg.susds, approve_calldata
                 )
             }));
@@ -129,7 +129,7 @@ pub async fn run(
                 "action": "swapExactIn (sUSDS→USDS)",
                 "contract": psm3,
                 "simulatedCommand": format!(
-                    "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
+                    "onchainos wallet contract-call --chain {} --to {} --input-data {}",
                     chain_id, withdraw_target, withdraw_calldata
                 )
             }));
@@ -139,7 +139,7 @@ pub async fn run(
                 "action": "redeem",
                 "contract": cfg.susds,
                 "simulatedCommand": format!(
-                    "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
+                    "onchainos wallet contract-call --chain {} --to {} --input-data {}",
                     chain_id, withdraw_target, withdraw_calldata
                 )
             }));

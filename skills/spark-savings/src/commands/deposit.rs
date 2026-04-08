@@ -74,7 +74,7 @@ pub async fn run(
                     "token": cfg.usds,
                     "spender": approve_target,
                     "simulatedCommand": format!(
-                        "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
+                        "onchainos wallet contract-call --chain {} --to {} --input-data {}",
                         chain_id, cfg.usds, approve_calldata
                     )
                 },
@@ -83,7 +83,7 @@ pub async fn run(
                     "action": if cfg.use_psm3 { "swapExactIn (USDS→sUSDS)" } else { "deposit" },
                     "contract": deposit_target,
                     "simulatedCommand": format!(
-                        "onchainos wallet contract-call --chain {} --to {} --input-data {} --force",
+                        "onchainos wallet contract-call --chain {} --to {} --input-data {}",
                         chain_id, deposit_target, deposit_calldata
                     )
                 }
