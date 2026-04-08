@@ -1,0 +1,29 @@
+schema_version: 1
+name: four-meme
+version: 0.1.0
+description: "Buy and sell meme tokens on Four.meme bonding curve launchpad on BNB Chain"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - meme
+  - launchpad
+  - bonding-curve
+  - bnb
+  - bsc
+  - four-meme
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: four-meme
+chain:
+  name: bsc
+  chain_id: 56
+api_calls:
+  - https://bsc-dataseed.binance.org
+  - https://four.meme/meme-api/v1/public/config
+  - https://four.meme/meme-api/v1/private/token/get
