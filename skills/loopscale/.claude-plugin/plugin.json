@@ -1,0 +1,10 @@
+{
+  "name": "loopscale",
+  "description": "Lend, borrow, and manage positions on Loopscale — Solana order-book credit protocol. Trigger phrases: loopscale lend, loopscale borrow, loopscale deposit, loopscale vault, loopscale repay, loopscale withdraw, solana lending loopscale, loopscale position, borrow USDC loopscale, deposit SOL loopscale.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/loopscale",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["lending", "borrowing", "solana", "loopscale", "vault", "defi"]
+}

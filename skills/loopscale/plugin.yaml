@@ -1,0 +1,41 @@
+schema_version: 1
+name: loopscale
+version: "0.1.0"
+description: "Loopscale Solana order-book lending — lend, borrow, repay, and manage vault positions on Solana"
+author:
+  name: "skylavis-sky"
+  github: "skylavis-sky"
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - solana
+  - loopscale
+  - vault
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: skills/loopscale
+
+build:
+  lang: rust
+  binary_name: loopscale
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: loopscale
+
+api_calls:
+  - "https://tars.loopscale.com"
+  - "https://tars.loopscale.com/v1/markets/lending_vaults/deposits"
+  - "https://tars.loopscale.com/v1/markets/lending_vaults/deposit"
+  - "https://tars.loopscale.com/v1/markets/lending_vaults/withdraw"
+  - "https://tars.loopscale.com/v1/markets/loans/info"
+  - "https://tars.loopscale.com/v1/markets/quote"
+  - "https://tars.loopscale.com/v1/markets/quote/max"
+  - "https://tars.loopscale.com/v1/markets/creditbook/create"
+  - "https://tars.loopscale.com/v1/markets/creditbook/borrow"
+  - "https://tars.loopscale.com/v1/markets/creditbook/repay"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
