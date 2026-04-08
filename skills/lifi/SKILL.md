@@ -138,10 +138,13 @@ lifi [--chain <SRC_CHAIN_ID>] swap --to-chain <ID> --from-token <TOKEN> --to-tok
 
 **Flow:**
 1. Without `--confirm`: fetches quote, shows preview (amounts, fees, bridge), does NOT broadcast
-2. User reviews and adds `--confirm` to execute
-3. If ERC-20 token: checks existing allowance; sends `approve` tx if needed
-4. Submits bridge/swap tx via `onchainos wallet contract-call` to LiFiDiamond
-5. Returns txHash and LI.FI explorer link
+2. User reviews quote — verify amounts, fees, and bridge route before confirming
+3. Add `--confirm` to execute; if ERC-20 token, sends `approve` tx first (exact amount only)
+4. Validates target contract is LiFiDiamond (`0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`) before broadcasting
+5. Submits bridge/swap tx via `onchainos wallet contract-call` to LiFiDiamond
+6. Returns txHash
+
+> **Security tip**: For large amounts, run `onchainos security tx-scan --chain <id> --to <contract> --data <calldata>` on the preview calldata before confirming.
 
 **Examples:**
 ```

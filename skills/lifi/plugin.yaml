@@ -30,7 +30,7 @@ api_calls:
 - ethereum.publicnode.com
 - base-rpc.publicnode.com
 - arbitrum-one-rpc.publicnode.com
-- polygon-bsc-rpc.publicnode.com
+- polygon-mainnet-rpc.publicnode.com
 - optimism-rpc.publicnode.com
 - bsc-rpc.publicnode.com
 - avalanche-c-chain-rpc.publicnode.com

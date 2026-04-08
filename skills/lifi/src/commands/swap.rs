@@ -11,7 +11,7 @@ fn rpc_url(chain_id: u64) -> &'static str {
         1 => "https://ethereum.publicnode.com",
         8453 => "https://base-rpc.publicnode.com",
         42161 => "https://arbitrum-one-rpc.publicnode.com",
-        137 => "https://polygon-bsc-rpc.publicnode.com",
+        137 => "https://polygon-mainnet-rpc.publicnode.com",
         10 => "https://optimism-rpc.publicnode.com",
         56 => "https://bsc-rpc.publicnode.com",
         43114 => "https://avalanche-c-chain-rpc.publicnode.com",
@@ -130,8 +130,16 @@ pub async fn execute(
     let tx_req = &quote["transactionRequest"];
     let calldata = tx_req["data"].as_str()
         .ok_or_else(|| anyhow::anyhow!("No transactionRequest.data in quote response"))?;
-    let to_addr = tx_req["to"].as_str()
-        .unwrap_or(LIFI_DIAMOND);
+    let to_addr = tx_req["to"].as_str().unwrap_or(LIFI_DIAMOND);
+
+    // Validate that the target contract is the expected LiFiDiamond address
+    if !to_addr.eq_ignore_ascii_case(LIFI_DIAMOND) {
+        anyhow::bail!(
+            "Security check failed: LI.FI API returned unexpected contract address '{}'. \
+             Expected LiFiDiamond ({}). Aborting to protect your funds.",
+            to_addr, LIFI_DIAMOND
+        );
+    }
 
     // Parse native ETH value from hex
     let value_hex = tx_req["value"].as_str().unwrap_or("0x0");
@@ -163,14 +171,15 @@ pub async fn execute(
         ).await;
 
         if current_allowance < required_amount {
-            // Approve exact swap amount only (not unlimited)
+            // Approve exact swap amount only (not unlimited).
+            // Do NOT pass --force for approve — let onchainos do its own risk check independently.
             let approve_result = onchainos::erc20_approve(
                 from_chain,
                 from_token_addr,
                 approval_address,
                 required_amount,
                 Some(&wallet),
-                confirm,
+                false,
             ).await?;
 
             let approve_hash = onchainos::extract_tx_hash(&approve_result);
