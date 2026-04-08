@@ -15,6 +15,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let rpc = cfg.rpc_url;
@@ -53,7 +54,7 @@ pub async fn run(
             shares, wallet_clean, wallet_clean
         );
         let result = onchainos::wallet_contract_call(
-            chain_id, &vault_addr, &calldata, from, None, dry_run
+            chain_id, &vault_addr, &calldata, from, None, dry_run, confirm
         ).await?;
         let tx = onchainos::extract_tx_hash(&result).to_string();
 
@@ -88,7 +89,7 @@ pub async fn run(
             raw_amount, wallet_clean, wallet_clean
         );
         let result = onchainos::wallet_contract_call(
-            chain_id, &vault_addr, &calldata, from, None, dry_run
+            chain_id, &vault_addr, &calldata, from, None, dry_run, confirm
         ).await?;
         let tx = onchainos::extract_tx_hash(&result).to_string();
 

@@ -19,6 +19,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     if !dry_run {
         anyhow::bail!(

@@ -38,6 +38,7 @@ pub async fn wallet_contract_call(
     _from: Option<&str>,
     amt_wei: Option<u128>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
     let mut args = vec![
@@ -65,7 +66,9 @@ pub async fn wallet_contract_call(
         }));
     }
 
-    args.push("--force".to_string());
+    if confirm {
+        args.push("--force".to_string());
+    }
 
     let output = tokio::process::Command::new("onchainos")
         .args(&args)
@@ -95,11 +98,12 @@ pub async fn erc20_approve(
     amount: u128,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<Value> {
     let spender_clean = spender.trim_start_matches("0x").to_lowercase();
     let calldata = format!(
         "0x095ea7b3{:0>64}{:064x}",
         spender_clean, amount
     );
-    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run).await
+    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run, confirm).await
 }

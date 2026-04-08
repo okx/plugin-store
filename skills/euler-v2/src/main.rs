@@ -20,6 +20,10 @@ struct Cli {
     #[arg(long)]
     dry_run: bool,
 
+    /// Broadcast the transaction on-chain (omit for preview)
+    #[arg(long)]
+    confirm: bool,
+
     /// Wallet address (defaults to active onchainos wallet)
     #[arg(long)]
     from: Option<String>,
@@ -98,6 +102,7 @@ async fn main() {
     let cli = Cli::parse();
     let chain_id = cli.chain;
     let dry_run = cli.dry_run;
+    let confirm = cli.confirm;
     let from = cli.from.as_deref();
 
     let result = match cli.command {
@@ -105,19 +110,19 @@ async fn main() {
             commands::markets::run(chain_id, asset.as_deref()).await
         }
         Commands::Positions => {
-            commands::positions::run(chain_id, from, dry_run).await
+            commands::positions::run(chain_id, from, dry_run, confirm).await
         }
         Commands::Supply { vault, amount } => {
-            commands::supply::run(&vault, &amount, chain_id, from, dry_run).await
+            commands::supply::run(&vault, &amount, chain_id, from, dry_run, confirm).await
         }
         Commands::Withdraw { vault, amount, all } => {
-            commands::withdraw::run(&vault, amount.as_deref(), all, chain_id, from, dry_run).await
+            commands::withdraw::run(&vault, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
         }
         Commands::Borrow { vault, amount } => {
-            commands::borrow::run(&vault, &amount, chain_id, from, dry_run).await
+            commands::borrow::run(&vault, &amount, chain_id, from, dry_run, confirm).await
         }
         Commands::Repay { vault, amount, all } => {
-            commands::repay::run(&vault, amount.as_deref(), all, chain_id, from, dry_run).await
+            commands::repay::run(&vault, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
         }
     };
 

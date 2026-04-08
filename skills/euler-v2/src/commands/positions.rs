@@ -3,7 +3,9 @@ use crate::onchainos;
 use crate::rpc;
 
 /// View user's Euler V2 supply and borrow positions across known vaults.
-pub async fn run(chain_id: u64, from: Option<&str>, dry_run: bool) -> anyhow::Result<()> {
+pub async fn run(chain_id: u64, from: Option<&str>, dry_run: bool,
+    confirm: bool
+) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let rpc = cfg.rpc_url;
 

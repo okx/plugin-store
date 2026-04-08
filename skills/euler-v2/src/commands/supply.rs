@@ -15,6 +15,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let rpc = cfg.rpc_url;
@@ -57,7 +58,7 @@ pub async fn run(
     );
     eprintln!("[euler-v2] Step 1/2: Approving vault to spend {} {}...", amount, asset_symbol);
     let approve_result = onchainos::wallet_contract_call(
-        chain_id, &underlying_addr, &approve_calldata, from, None, dry_run
+        chain_id, &underlying_addr, &approve_calldata, from, None, dry_run, confirm
     ).await?;
     let approve_tx = onchainos::extract_tx_hash(&approve_result).to_string();
 
@@ -74,7 +75,7 @@ pub async fn run(
     );
     eprintln!("[euler-v2] Step 2/2: Depositing {} {} into EVault {}...", amount, asset_symbol, vault_addr);
     let deposit_result = onchainos::wallet_contract_call(
-        chain_id, &vault_addr, &deposit_calldata, from, None, dry_run
+        chain_id, &vault_addr, &deposit_calldata, from, None, dry_run, confirm
     ).await?;
     let deposit_tx = onchainos::extract_tx_hash(&deposit_result).to_string();
 
