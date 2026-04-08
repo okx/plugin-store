@@ -1,0 +1,17 @@
+{
+  "name": "renzo",
+  "description": "Renzo EigenLayer liquid restaking \u2014 deposit ETH or stETH to receive ezETH and earn restaking rewards",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "restaking",
+    "eigenlayer",
+    "liquid-restaking",
+    "ezeth",
+    "ethereum"
+  ]
+}
