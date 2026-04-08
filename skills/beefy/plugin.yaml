@@ -1,0 +1,30 @@
+schema_version: 1
+name: beefy
+version: 0.1.0
+description: Beefy Finance yield optimizer - deposit into auto-compounding vaults
+  on Base, BSC, and other EVM chains
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- yield
+- vault
+- erc4626
+- auto-compound
+- defi
+- earn
+- base
+- bsc
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: beefy
+api_calls:
+- api.beefy.finance
+- base-rpc.publicnode.com
+- bsc-rpc.publicnode.com
+- ethereum.publicnode.com
