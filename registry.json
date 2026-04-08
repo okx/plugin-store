@@ -307,6 +307,33 @@
       }
     },
     {
+      "name": "four-meme",
+      "version": "0.1.0",
+      "description": "Buy and sell meme tokens on Four.meme bonding curve launchpad on BNB Chain",
+      "author": {
+        "name": "GeoGu360"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/four-meme"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "frax-ether",
       "version": "0.1.0",
       "description": "Frax Ether liquid staking — stake ETH to frxETH and frxETH to yield-bearing sfrxETH",
