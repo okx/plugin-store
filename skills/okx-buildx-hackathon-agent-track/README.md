@@ -1,6 +1,6 @@
 # OKX Build X AI Hackathon — Agent Track
 
-![Build X Hackathon](skills/okx-buildx-hackathon-agent-track/assets/cover.png)
+![Build X Hackathon](assets/cover.png)
 
 **[Build X Hackathon](https://web3.okx.com/xlayer/build-x-hackathon)**
 

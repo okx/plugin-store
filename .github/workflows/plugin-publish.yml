@@ -292,14 +292,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-apple-darwin, x86_64-apple-darwin]
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabihf
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
         include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
           - target: x86_64-apple-darwin
             os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -310,11 +334,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build plugins
+        shell: bash
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
         run: |
-          WORKSPACE=$(pwd)
-          echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
+          mkdir -p "${GITHUB_WORKSPACE}/build-output"
+          echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do (
+            set +e
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
             LANG=$(echo "$PLUGIN" | jq -r '.lang')
@@ -327,37 +353,57 @@ jobs:
             echo "Building $NAME ($LANG) for ${{ matrix.target }}"
             if [ -n "$REPO" ] && [ "$REPO" != "null" ]; then
               # External repo: clone at pinned commit
-              git clone --depth=100 "https://github.com/${REPO}.git" "/tmp/build-${NAME}"
-              cd "/tmp/build-${NAME}" && git checkout "$COMMIT"
+              git clone --depth=100 "https://github.com/${REPO}.git" "${GITHUB_WORKSPACE}/build-src-${NAME}"
+              cd "${GITHUB_WORKSPACE}/build-src-${NAME}" && git checkout "$COMMIT"
             else
               # Local source: copy from skills directory
-              cp -r "$WORKSPACE/skills/${NAME}" "/tmp/build-${NAME}"
-              cd "/tmp/build-${NAME}"
+              cp -r "skills/${NAME}" "${GITHUB_WORKSPACE}/build-src-${NAME}"
+              cd "${GITHUB_WORKSPACE}/build-src-${NAME}"
             fi
             [ -n "$DIR" ] && cd "$DIR"
 
             case "$LANG" in
               rust)
                 rustup target add ${{ matrix.target }} 2>/dev/null || true
-                cargo build --release --target ${{ matrix.target }}
-                cp "target/${{ matrix.target }}/release/${BIN}" "/tmp/${BIN}-${{ matrix.target }}"
+                if [ "${{ matrix.cross }}" = "true" ]; then
+                  cargo install cross --git https://github.com/cross-rs/cross 2>/dev/null || true
+                  cross build --release --target ${{ matrix.target }}
+                else
+                  cargo build --release --target ${{ matrix.target }}
+                fi
+                # Copy binary (Windows adds .exe)
+                case "${{ matrix.target }}" in
+                  *windows*) cp "target/${{ matrix.target }}/release/${BIN}.exe" "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}.exe" ;;
+                  *) cp "target/${{ matrix.target }}/release/${BIN}" "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}" ;;
+                esac
                 ;;
               go)
                 case "${{ matrix.target }}" in
-                  x86_64-unknown-linux-gnu) GOOS=linux; GOARCH=amd64 ;;
-                  aarch64-apple-darwin)     GOOS=darwin; GOARCH=arm64 ;;
-                  x86_64-apple-darwin)      GOOS=darwin; GOARCH=amd64 ;;
+                  x86_64-unknown-linux-gnu)    GOOS=linux;   GOARCH=amd64 ;;
+                  i686-unknown-linux-gnu)      GOOS=linux;   GOARCH=386 ;;
+                  aarch64-unknown-linux-gnu)   GOOS=linux;   GOARCH=arm64 ;;
+                  armv7-unknown-linux-gnueabihf) GOOS=linux; GOARCH=arm; GOARM=7 ;;
+                  aarch64-apple-darwin)        GOOS=darwin;  GOARCH=arm64 ;;
+                  x86_64-apple-darwin)         GOOS=darwin;  GOARCH=amd64 ;;
+                  x86_64-pc-windows-msvc)      GOOS=windows; GOARCH=amd64 ;;
+                  i686-pc-windows-msvc)        GOOS=windows; GOARCH=386 ;;
+                  aarch64-pc-windows-msvc)     GOOS=windows; GOARCH=arm64 ;;
                 esac
-                CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "/tmp/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
+                if [ "$GOOS" = "windows" ]; then
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}.exe" -ldflags="-s -w" .
+                else
+                  CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "${GITHUB_WORKSPACE}/build-output/${BIN}-${{ matrix.target }}" -ldflags="-s -w" .
+                fi
                 ;;
             esac
             cd /tmp
+          ) || echo "::warning::Build failed for plugin, continuing with others"
           done
 
       - uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.target }}
-          path: /tmp/*-${{ matrix.target }}
+          path: build-output/*-${{ matrix.target }}*
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════
@@ -378,51 +424,74 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          path: /tmp/all-artifacts
+          path: artifacts
           merge-multiple: true
+
+      - name: Debug artifacts
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find artifacts -type f | sort
+          echo "=== End ==="
 
       - name: Create releases
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          WORKSPACE=$(pwd)
+          REPO_ROOT="$(pwd)"
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
             BIN=$(echo "$PLUGIN" | jq -r '.binary_name')
 
-            YAML_FILE="${WORKSPACE}/skills/${NAME}/plugin.yaml"
+            YAML_FILE="${REPO_ROOT}/skills/${NAME}/plugin.yaml"
             if [ ! -f "$YAML_FILE" ]; then
               echo "::warning::$YAML_FILE not found, skipping release for $NAME"
               continue
             fi
             VERSION=$(yq '.version' "$YAML_FILE")
 
-            mkdir -p "/tmp/release-${NAME}"
-            cp /tmp/all-artifacts/${BIN}-* "/tmp/release-${NAME}/" 2>/dev/null || true
-            chmod +x /tmp/release-${NAME}/* 2>/dev/null || true
+            RELEASE_DIR="${REPO_ROOT}/release-${NAME}"
+            mkdir -p "$RELEASE_DIR"
+            cp ${REPO_ROOT}/artifacts/${BIN}-* "$RELEASE_DIR/" 2>/dev/null || true
+            chmod +x "$RELEASE_DIR"/* 2>/dev/null || true
 
-            cd "/tmp/release-${NAME}"
+            cd "$RELEASE_DIR"
             if ls ${BIN}-* 1>/dev/null 2>&1; then
               sha256sum ${BIN}-* > checksums.txt
 
               TAG="plugins/${NAME}@${VERSION}"
-              TITLE="${NAME} v${VERSION} (community)"
-              NOTES="Source: $(echo "$PLUGIN" | jq -r '.source_repo')@$(echo "$PLUGIN" | jq -r '.source_commit')"
+              TITLE="${NAME} v${VERSION}"
+              SRC_REPO=$(echo "$PLUGIN" | jq -r '.source_repo // empty')
+              SRC_COMMIT=$(echo "$PLUGIN" | jq -r '.source_commit // empty')
+              AUTHOR=$(yq '.author.name // "Community"' "$YAML_FILE" 2>/dev/null || echo "Community")
+              AUTHOR_GH=$(yq '.author.github // ""' "$YAML_FILE" 2>/dev/null || echo "")
+              DESC=$(yq '.description // ""' "$YAML_FILE" 2>/dev/null || echo "")
+              LANG=$(echo "$PLUGIN" | jq -r '.lang // "unknown"')
+              PLATFORM_COUNT=$(ls ${BIN}-* 2>/dev/null | wc -l | tr -d ' ')
 
-              # Release on THIS repo (community), not plugin-store
-              # If release exists, delete it first then recreate (ensures clean assets)
-              echo "Creating release: $TAG with $(ls ${BIN}-* | wc -l) binaries"
+              NOTES_FILE="${REPO_ROOT}/release-notes-${NAME}.md"
+              CONTRIBUTOR="${AUTHOR_GH:-$AUTHOR}"
+              if [ -n "$SRC_REPO" ] && [ -n "$SRC_COMMIT" ]; then
+                SRC_LINE="Source: [${SRC_REPO}](https://github.com/${SRC_REPO}/tree/${SRC_COMMIT})"
+              else
+                SRC_LINE="Source: skills/${NAME}/ (included in submission)"
+              fi
+              printf '%s\n' "## What's Changed" "" "- **${NAME}** v${VERSION} -- ${DESC}" "- Language: ${LANG} | Platforms: ${PLATFORM_COUNT}" "- Install: npx skills add MigOKG/plugin-store --skill ${NAME}" "- ${SRC_LINE}" "" "## New Contributors" "" "- **${CONTRIBUTOR}** made their first contribution" "" "## Contributors" "" "- **${CONTRIBUTOR}**" "" "---" "Published by OKX Plugin Store CI" > "$NOTES_FILE"
+
+              echo "Creating release: $TAG with ${PLATFORM_COUNT} binaries"
               gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
               gh release create "$TAG" \
                 --repo "${{ github.repository }}" \
                 --title "$TITLE" \
-                --notes "$NOTES" \
+                --notes-file "$NOTES_FILE" \
                 ${BIN}-* checksums.txt 2>&1 && echo "Release created: $TAG" \
                 || echo "::warning::Release create failed for $TAG"
+            else
+              echo "::warning::No binaries found for $NAME in artifacts"
+              ls -la ${REPO_ROOT}/artifacts/ 2>/dev/null | head -20
             fi
-            cd /tmp
+            cd "$REPO_ROOT"
           done
 
   # ═══════════════════════════════════════════════════════════════

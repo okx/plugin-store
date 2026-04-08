@@ -992,7 +992,15 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base",
+          "xlayer"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "plugin-store",
@@ -1054,7 +1062,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "relay",
@@ -1192,7 +1207,7 @@
     },
     {
       "name": "rust-cli-inspector",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Rust CLI querying ETH price via OnchainOS",
       "author": {
         "name": "OKX"
@@ -1487,7 +1502,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "uniswap-cca-configurator",
@@ -1518,7 +1540,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "uniswap-cca-deployer",
@@ -1550,7 +1579,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "uniswap-liquidity-planner",
@@ -1582,7 +1618,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "uniswap-pay-with-any-token",
@@ -1614,7 +1657,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "uniswap-swap-integration",
@@ -1646,7 +1696,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "uniswap-swap-planner",
@@ -1678,7 +1735,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "uniswap-v4-security-foundations",
@@ -1710,7 +1774,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "uniswap-viem-integration",
@@ -1742,7 +1813,14 @@
       "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/README.md",
       "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL.md",
       "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md"
+      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     },
     {
       "name": "velodrome-v2",

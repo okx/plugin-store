@@ -1,0 +1,1 @@
+/Users/mig/Downloads/plugin\ store\ workspace/plugin-store/skills/test-rust-cli/target/release/test-rust-cli: /Users/mig/Downloads/plugin\ store\ workspace/plugin-store/skills/test-rust-cli/src/main.rs

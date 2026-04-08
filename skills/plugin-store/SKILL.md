@@ -184,6 +184,7 @@ Parse the output and present it to the user as a clean table (name, category, do
 |---|---------|-------------|
 | 12 | `plugin-store init <name>` | Scaffold a new plugin (creates plugin.yaml, SKILL.md, LICENSE, etc.) |
 | 13 | `plugin-store lint <path>` | Validate a plugin before submission (30+ checks) |
+| 14 | `plugin-store import <github-url>` | Import an existing Claude marketplace Plugin into plugin-store format (Mode C) |
 
 ---
 

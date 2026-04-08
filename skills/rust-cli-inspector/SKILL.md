@@ -1,8 +1,8 @@
 ---
 name: rust-cli-inspector
-description: "Rust CLI querying ETH price via OnchainOS"
-version: "1.0.0"
-author: "OKX"
+description: "Rust CLI querying ETH price via Onchain OS"
+version: "1.1.0"
+author: "yz06276"
 tags: [rust, onchainos]
 ---
 
@@ -36,7 +36,7 @@ if ! command -v rust-cli-inspector >/dev/null 2>&1; then
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/rust-cli-inspector@1.0.0/rust-cli-inspector-${TARGET}" -o ~/.local/bin/rust-cli-inspector
+  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/rust-cli-inspector@1.1.0/rust-cli-inspector-${TARGET}" -o ~/.local/bin/rust-cli-inspector
   chmod +x ~/.local/bin/rust-cli-inspector
 fi
 ```
@@ -58,7 +58,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"rust-cli-inspector","version":"1.0.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"rust-cli-inspector","version":"1.1.0"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -73,24 +73,27 @@ fi
 # Rust CLI Inspector
 
 ## Overview
-Queries ETH price via OnchainOS token price-info.
+Queries ETH price via Onchain OS token price-info.
 
 ## Pre-flight Checks
-1. Install onchainos CLI
-2. Ensure rust-cli-inspector binary is installed
+1. Ensure rust-cli-inspector binary is installed
+2. Ensure onchainos CLI is available
 
 ## Commands
 
-### Query ETH Price
-`rust-cli-inspector --query eth-price`
+### Query ETH Price (default)
+`rust-cli-inspector`
 
 **When to use:** When user asks about ETH price.
 
-### Direct OnchainOS Query
-`onchainos token price-info --address 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 --chain ethereum`
+### Query ETH Price (explicit)
+`rust-cli-inspector --query eth-price`
+
+### Help
+`rust-cli-inspector --help`
 
 ## Error Handling
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | Binary not found | CLI not installed | Run pre-flight |
-| Command not found | onchainos not installed | Install onchainos |
+| onchainos not found | Onchain OS not installed | Install onchainos |

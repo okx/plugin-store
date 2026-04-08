@@ -1,10 +1,10 @@
 schema_version: 1
 name: rust-cli-inspector
-version: "1.0.0"
-description: "Rust CLI querying ETH price via OnchainOS"
+version: "1.1.0"
+description: "Rust CLI querying ETH price via Onchain OS"
 author:
-  name: "OKX"
-  github: "okx"
+  name: "yz06276"
+  github: "yz06276"
 license: MIT
 category: utility
 tags: [rust, onchainos, eth]
