@@ -386,12 +386,13 @@ jobs:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          WORKSPACE=$(pwd)
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
             PLUGIN=$(echo "$ENCODED" | base64 -d)
             NAME=$(echo "$PLUGIN" | jq -r '.name')
             BIN=$(echo "$PLUGIN" | jq -r '.binary_name')
 
-            YAML_FILE="skills/${NAME}/plugin.yaml"
+            YAML_FILE="${WORKSPACE}/skills/${NAME}/plugin.yaml"
             if [ ! -f "$YAML_FILE" ]; then
               echo "::warning::$YAML_FILE not found, skipping release for $NAME"
               continue
