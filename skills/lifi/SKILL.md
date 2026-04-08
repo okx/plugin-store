@@ -122,7 +122,7 @@ lifi get-tools [--chains <chain_ids>]
 
 **Usage:**
 ```
-lifi [--chain <SRC_CHAIN_ID>] swap --to-chain <ID> --from-token <TOKEN> --to-token <TOKEN> --amount <RAW_AMOUNT> [--slippage <SLIPPAGE>] [--from <WALLET>] [--dry-run] [--confirm]
+lifi [--chain <SRC_CHAIN_ID>] swap --to-chain <ID> --from-token <TOKEN> --to-token <TOKEN> --amount <RAW_AMOUNT> [--slippage <SLIPPAGE>] [--from <WALLET>] [--dry-run] [--confirm] [--force]
 ```
 
 **Parameters:**
@@ -135,14 +135,16 @@ lifi [--chain <SRC_CHAIN_ID>] swap --to-chain <ID> --from-token <TOKEN> --to-tok
 - `--from` — sender wallet address (resolved from onchainos if omitted)
 - `--dry-run` — show calldata only, no wallet queries
 - `--confirm` — broadcast the transaction (required to execute)
+- `--force` — bypass onchainos risk warnings; only add after reviewing the warning message
 
 **Flow:**
 1. Without `--confirm`: fetches quote, shows preview (amounts, fees, bridge), does NOT broadcast
 2. User reviews quote — verify amounts, fees, and bridge route before confirming
 3. Add `--confirm` to execute; if ERC-20 token, sends `approve` tx first (exact amount only)
 4. Validates target contract is LiFiDiamond (`0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE`) before broadcasting
-5. Submits bridge/swap tx via `onchainos wallet contract-call` to LiFiDiamond
-6. Returns txHash
+5. Submits bridge/swap tx via `onchainos wallet contract-call`; onchainos runs its own risk checks
+6. If onchainos returns a risk warning, the call fails — re-run with `--force` only after reviewing
+7. Returns txHash
 
 > **Security tip**: For large amounts, run `onchainos security tx-scan --chain <id> --to <contract> --data <calldata>` on the preview calldata before confirming.
 
@@ -153,6 +155,9 @@ lifi --chain 8453 swap --to-chain 42161 --from-token USDC --to-token USDC --amou
 
 # Step 2: Execute after user confirms
 lifi --chain 8453 swap --to-chain 42161 --from-token USDC --to-token USDC --amount 5000000 --confirm
+
+# Step 3: If onchainos raises a risk warning, add --force to override after reviewing
+lifi --chain 8453 swap --to-chain 42161 --from-token USDC --to-token USDC --amount 5000000 --confirm --force
 
 # Dry-run (shows calldata, uses zero address)
 lifi --chain 8453 swap --to-chain 42161 --from-token USDC --to-token USDC --amount 5000000 --dry-run

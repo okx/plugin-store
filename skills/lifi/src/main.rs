@@ -18,6 +18,9 @@ struct Cli {
     /// Confirm and broadcast the transaction (required for write operations)
     #[arg(long)]
     confirm: bool,
+    /// Bypass onchainos risk warnings (use only after reviewing the warning)
+    #[arg(long)]
+    force: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -113,6 +116,7 @@ async fn main() {
     let chain_id = cli.chain;
     let dry_run = cli.dry_run;
     let confirm = cli.confirm;
+    let force = cli.force;
 
     let result = match cli.command {
         Commands::GetChains => commands::get_chains::execute().await,
@@ -152,7 +156,7 @@ async fn main() {
             from,
         } => {
             let src_chain = from_chain.unwrap_or(chain_id);
-            commands::swap::execute(src_chain, to_chain, &from_token, &to_token, &amount, slippage, from.as_deref(), dry_run, confirm).await
+            commands::swap::execute(src_chain, to_chain, &from_token, &to_token, &amount, slippage, from.as_deref(), dry_run, confirm, force).await
         }
     };
 

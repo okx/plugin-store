@@ -49,6 +49,7 @@ pub async fn execute(
     from: Option<&str>,
     dry_run: bool,
     confirm: bool,
+    force: bool,
 ) -> Result<Value> {
     // dry_run early return — show what would be sent
     if dry_run {
@@ -200,39 +201,21 @@ pub async fn execute(
     }
 
     // Step 3: Submit bridge/swap tx
-    // First attempt without --force to surface onchainos risk warnings.
-    // If onchainos signals a confirming/warning state (ok: false with no fatal error),
-    // surface the message and retry with --force since user already passed --confirm.
+    // Pass --force only when the user explicitly passed --force to lifi.
+    // Without --force, onchainos will run its own risk checks; if it returns a
+    // risk warning the call will fail and the user must re-run with --force after
+    // reviewing the warning. Never auto-escalate silently.
     let amt = if value_wei > 0 { Some(value_wei) } else { None };
 
-    let result = match onchainos::wallet_contract_call(
+    let result = onchainos::wallet_contract_call(
         from_chain,
         to_addr,
         calldata,
         Some(&wallet),
         amt,
         false,
-        false, // no --force on first attempt
-    ).await {
-        Ok(r) if r["ok"].as_bool() == Some(false) => {
-            // onchainos returned a risk warning — surface it, then retry with --force
-            let msg = r["message"].as_str()
-                .or_else(|| r["error"].as_str())
-                .unwrap_or("onchainos risk check triggered");
-            eprintln!("onchainos warning: {}", msg);
-            onchainos::wallet_contract_call(
-                from_chain,
-                to_addr,
-                calldata,
-                Some(&wallet),
-                amt,
-                false,
-                true, // user already confirmed — escalate
-            ).await?
-        }
-        Ok(r) => r,
-        Err(e) => return Err(e),
-    };
+        force, // user must pass --force explicitly to bypass onchainos risk checks
+    ).await?;
 
     let tx_hash = onchainos::extract_tx_hash(&result);
 
