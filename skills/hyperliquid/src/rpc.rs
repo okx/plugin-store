@@ -52,6 +52,20 @@ pub async fn erc20_balance(token: &str, owner: &str, rpc: &str) -> anyhow::Resul
     Ok(val)
 }
 
+/// Query ERC-2612 nonces(address) → u64 (permit nonce for signing).
+pub async fn usdc_permit_nonce(token: &str, owner: &str, rpc: &str) -> anyhow::Result<u64> {
+    // nonces(address) selector: 0x7ecebe00
+    let data = format!("0x7ecebe00{}", pad_address(owner));
+    let hex = eth_call(rpc, token, &data).await?;
+    let trimmed = hex.trim_start_matches("0x");
+    if trimmed.is_empty() {
+        return Ok(0);
+    }
+    let val = u64::from_str_radix(&trimmed[trimmed.len().saturating_sub(16)..], 16)
+        .unwrap_or(0);
+    Ok(val)
+}
+
 /// Query ERC-20 allowance(owner, spender) → u128.
 pub async fn erc20_allowance(
     token: &str,

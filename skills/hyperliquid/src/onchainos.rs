@@ -34,25 +34,27 @@ pub fn wallet_contract_call(
         chain_id.to_string(),
         "--to".to_string(),
         to.to_string(),
-        "--data".to_string(),
+        "--input-data".to_string(),
         calldata.to_string(),
     ];
     if let Some(v) = value_wei {
-        args.push("--value".to_string());
+        args.push("--amt".to_string());
         args.push(v.to_string());
     }
     if confirm {
-        args.push("--confirm".to_string());
         args.push("--force".to_string());
     }
 
     let output = Command::new("onchainos").args(&args).output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
+        // onchainos returns error as JSON to stdout; stderr is usually empty
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("onchainos wallet contract-call failed: {}", stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos wallet contract-call failed: {}", detail.trim());
     }
-    let result: Value = serde_json::from_slice(&output.stdout)
-        .unwrap_or_else(|_| serde_json::json!({"raw": String::from_utf8_lossy(&output.stdout).to_string()}));
+    let result: Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|_| serde_json::json!({"raw": stdout.to_string()}));
     Ok(result)
 }
 
@@ -82,6 +84,45 @@ pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
         }
     }
     anyhow::bail!("Could not resolve wallet address for chain {}", chain_id)
+}
+
+/// Sign an EIP-712 typed data message via onchainos and return the hex signature.
+/// Returns 65-byte hex signature (0x-prefixed, r+s+v).
+pub fn onchainos_sign_eip712(typed_data: &serde_json::Value, wallet: &str) -> anyhow::Result<String> {
+    let message_str = serde_json::to_string(typed_data)?;
+    let output = Command::new("onchainos")
+        .args([
+            "wallet",
+            "sign-message",
+            "--type",
+            "eip712",
+            "--message",
+            &message_str,
+            "--chain",
+            "42161",
+            "--from",
+            wallet,
+        ])
+        .output()?;
+
+    // onchainos outputs JSON to stdout
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos sign-message failed: {}", detail);
+    }
+
+    let result: serde_json::Value = serde_json::from_str(stdout.trim())
+        .map_err(|e| anyhow::anyhow!("Failed to parse sign-message output: {} — raw: {}", e, stdout))?;
+
+    // onchainos returns {"ok":true,"data":{"signature":"0x..."}} or {"signature":"0x..."}
+    let sig = result["data"]["signature"]
+        .as_str()
+        .or_else(|| result["signature"].as_str())
+        .ok_or_else(|| anyhow::anyhow!("No signature in sign-message response: {}", stdout))?;
+
+    Ok(sig.to_string())
 }
 
 /// Sign a Hyperliquid L1 action via onchainos and submit it.
