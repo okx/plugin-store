@@ -1,0 +1,19 @@
+{
+  "name": "aerodrome-amm",
+  "description": "Swap tokens and manage classic AMM (volatile/stable) LP positions on Aerodrome Finance on Base",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "amm",
+    "aerodrome",
+    "classic-amm",
+    "stable",
+    "volatile",
+    "base"
+  ]
+}
