@@ -77,6 +77,9 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         args.amount0_desired, args.amount1_desired
     );
     println!("Please confirm the add-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
+    if args.amount0_min == 0 || args.amount1_min == 0 {
+        println!("WARNING: amount0_min or amount1_min is 0 — no slippage protection. Consider setting --amount0-min and --amount1-min to at least 0.5% below desired amounts.");
+    }
 
     // --- 3. Approve token0 for NonfungiblePositionManager if needed ---
     if !args.dry_run {

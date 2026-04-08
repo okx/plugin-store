@@ -24,8 +24,10 @@ build:
   binary_name: sushiswap-v3
 
 api_calls:
-  - "https://base-rpc.publicnode.com"
   - "https://eth-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"
   - "https://arbitrum-one-rpc.publicnode.com"
   - "https://bsc-rpc.publicnode.com"
   - "https://polygon-bor-rpc.publicnode.com"
+  - "https://optimism-rpc.publicnode.com"
+  - "https://avalanche-c-chain-rpc.publicnode.com"
