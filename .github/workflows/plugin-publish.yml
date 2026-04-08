@@ -19,6 +19,13 @@ on:
     branches: [main]
     paths:
       - 'skills/**'
+  workflow_dispatch:
+    inputs:
+      rebuild_all:
+        description: 'Rebuild ALL plugins missing releases (backfill mode)'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
@@ -49,6 +56,19 @@ jobs:
       - name: Detect changed plugins
         id: detect
         run: |
+          # workflow_dispatch with rebuild_all: treat ALL plugins as changed
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.rebuild_all }}" = "true" ]; then
+            PLUGINS=$(ls -d skills/*/plugin.yaml 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u | tr '\n' ' ' | sed 's/ $//')
+            if [ -z "$PLUGINS" ]; then
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "changed_plugins=${PLUGINS}" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Rebuild-all mode: ${PLUGINS}"
+            exit 0
+          fi
+
           CHANGED=$(git diff --name-only HEAD~1...HEAD -- 'skills/' || true)
           if [ -z "$CHANGED" ]; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
@@ -100,18 +120,24 @@ jobs:
           fi
 
       # ── Detect build plugins (Rust/Go only) ────────────────────
+      # Only build plugins that changed in THIS push (not all untagged plugins).
+      # This prevents one broken plugin from blocking all future publishes.
+      # To backfill missing releases, use the manual workflow_dispatch trigger.
       - name: Detect build plugins
         id: build_info
         if: steps.detect.outputs.has_changes == 'true'
+        env:
+          CHANGED_PLUGINS: ${{ steps.detect.outputs.changed_plugins }}
         run: |
           BUILD_PLUGINS="[]"
 
-          # Check existing releases on THIS repo (community)
+          # Check existing releases on THIS repo
           EXISTING_TAGS=$(gh release list --limit 100 --json tagName --jq '.[].tagName' 2>/dev/null || echo "")
 
-          for YAML in skills/*/plugin.yaml; do
+          # Only iterate over plugins that changed in this push
+          for PLUGIN_NAME in $CHANGED_PLUGINS; do
+            YAML="skills/${PLUGIN_NAME}/plugin.yaml"
             [ -f "$YAML" ] || continue
-            PLUGIN_NAME=$(basename "$(dirname "$YAML")")
             [ "$PLUGIN_NAME" = "_example-plugin" ] && continue
 
             BUILD_LANG=$(yq '.build.lang // ""' "$YAML")
@@ -397,7 +423,7 @@ jobs:
                 ;;
             esac
             cd /tmp
-          ) || echo "::warning::Build failed for plugin, continuing with others"
+          ) || echo "::warning::Build failed for ${NAME} (${{ matrix.target }}), continuing with others"
           done
 
       - uses: actions/upload-artifact@v4
