@@ -23,6 +23,7 @@ pub async fn run(
     all: bool,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<Value> {
     let cfg = get_chain_config(chain_id)?;
 
@@ -157,6 +158,34 @@ pub async fn run(
         }));
     }
 
+    // Preview gate: show details without broadcasting unless --confirm is passed
+    if !confirm && !dry_run {
+        let withdraw_target = if cfg.use_psm3 {
+            cfg.psm3.unwrap().to_string()
+        } else {
+            cfg.susds.to_string()
+        };
+        return Ok(json!({
+            "ok": true,
+            "preview": true,
+            "chain": cfg.name,
+            "chainId": chain_id,
+            "wallet": wallet,
+            "sUSDS_balance": format!("{:.6}", balance_human),
+            "sUSDS_toRedeem": format!("{:.6}", shares_human),
+            "estimatedUSDS": format!("{:.6}", preview_human),
+            "message": "Transaction preview — add --confirm to broadcast",
+            "steps": if cfg.use_psm3 {
+                json!([
+                    { "step": 1, "action": "approve sUSDS → PSM3", "token": cfg.susds },
+                    { "step": 2, "action": "swapExactIn (sUSDS→USDS)", "contract": withdraw_target }
+                ])
+            } else {
+                json!([{ "step": 1, "action": "redeem", "contract": withdraw_target }])
+            }
+        }));
+    }
+
     // Execute withdraw
     let withdraw_calldata = build_withdraw_calldata(cfg, shares_to_redeem, &wallet);
     let withdraw_target = if cfg.use_psm3 {
@@ -170,7 +199,7 @@ pub async fn run(
         let psm3 = cfg.psm3.unwrap();
         let approve_calldata = onchainos::encode_approve(psm3, shares_to_redeem);
         let approve_result =
-            onchainos::wallet_contract_call(chain_id, cfg.susds, &approve_calldata, false)
+            onchainos::wallet_contract_call(chain_id, cfg.susds, &approve_calldata, confirm)
                 .context("sUSDS approve failed")?;
         let approve_tx = onchainos::extract_tx_hash(&approve_result);
 
@@ -179,7 +208,7 @@ pub async fn run(
         }
 
         let withdraw_result =
-            onchainos::wallet_contract_call(chain_id, &withdraw_target, &withdraw_calldata, false)
+            onchainos::wallet_contract_call(chain_id, &withdraw_target, &withdraw_calldata, confirm)
                 .context("Withdraw swap failed")?;
         let withdraw_tx = onchainos::extract_tx_hash(&withdraw_result);
 
@@ -187,7 +216,7 @@ pub async fn run(
     } else {
         // Ethereum ERC-4626: no approve needed
         let withdraw_result =
-            onchainos::wallet_contract_call(chain_id, &withdraw_target, &withdraw_calldata, false)
+            onchainos::wallet_contract_call(chain_id, &withdraw_target, &withdraw_calldata, confirm)
                 .context("Redeem failed")?;
         let withdraw_tx = onchainos::extract_tx_hash(&withdraw_result);
         (None, withdraw_tx)

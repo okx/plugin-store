@@ -19,6 +19,7 @@ pub async fn run(
     amount: f64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<Value> {
     let cfg = get_chain_config(chain_id)?;
 
@@ -92,10 +93,29 @@ pub async fn run(
 
     let (approve_target, deposit_calldata, deposit_target) = build_calldata(cfg, amount_minimal, &wallet);
 
+    // Preview gate: show calldata without broadcasting unless --confirm is passed
+    if !confirm && !dry_run {
+        let approve_calldata = onchainos::encode_approve(&approve_target, amount_minimal);
+        return Ok(json!({
+            "ok": true,
+            "preview": true,
+            "chain": cfg.name,
+            "chainId": chain_id,
+            "wallet": wallet,
+            "amountUSDS": format!("{:.6}", amount),
+            "estimatedSUSDS": format!("{:.6}", preview_human),
+            "message": "Transaction preview — add --confirm to broadcast",
+            "steps": [
+                { "step": 1, "action": "approve", "token": cfg.usds, "spender": approve_target },
+                { "step": 2, "action": if cfg.use_psm3 { "swapExactIn" } else { "deposit" }, "contract": deposit_target }
+            ]
+        }));
+    }
+
     // Step 1: approve
     let approve_calldata = onchainos::encode_approve(&approve_target, amount_minimal);
     let approve_result =
-        onchainos::wallet_contract_call(chain_id, cfg.usds, &approve_calldata, false)
+        onchainos::wallet_contract_call(chain_id, cfg.usds, &approve_calldata, confirm)
             .context("ERC-20 approve failed")?;
     let approve_tx = onchainos::extract_tx_hash(&approve_result);
 
@@ -106,7 +126,7 @@ pub async fn run(
 
     // Step 2: deposit / swap
     let deposit_result =
-        onchainos::wallet_contract_call(chain_id, &deposit_target, &deposit_calldata, false)
+        onchainos::wallet_contract_call(chain_id, &deposit_target, &deposit_calldata, confirm)
             .context("Deposit/swap failed")?;
     let deposit_tx = onchainos::extract_tx_hash(&deposit_result);
 

@@ -23,6 +23,9 @@ struct Cli {
     /// Simulate without broadcasting (dry run)
     #[arg(long, global = true, default_value = "false")]
     dry_run: bool,
+    /// Confirm and broadcast the transaction (required for write operations)
+    #[arg(long, global = true, default_value = "false")]
+    confirm: bool,
 }
 
 #[derive(Subcommand)]
@@ -57,12 +60,15 @@ async fn main() {
     let chain = cli.chain;
     let from = cli.from.as_deref();
 
+    let confirm = cli.confirm;
     let result = match cli.command {
         Commands::Apy {} => commands::apy::run(chain).await,
         Commands::Balance {} => commands::balance::run(chain, from, dry_run).await,
-        Commands::Deposit { amount } => commands::deposit::run(chain, amount, from, dry_run).await,
+        Commands::Deposit { amount } => {
+            commands::deposit::run(chain, amount, from, dry_run, confirm).await
+        }
         Commands::Withdraw { amount, all } => {
-            commands::withdraw::run(chain, amount, all, from, dry_run).await
+            commands::withdraw::run(chain, amount, all, from, dry_run, confirm).await
         }
         Commands::Markets {} => commands::markets::run(chain).await,
     };
