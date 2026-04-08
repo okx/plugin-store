@@ -1,13 +1,13 @@
 # aave-v3
-Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol.
+A comprehensive DeFi skill for lending, borrowing, and managing positions on Aave V3, the leading decentralized liquidity protocol with over $43B TVL.
 
 ## Highlights
-- Supply assets to earn yield on Ethereum, Polygon, Arbitrum, and Base
+- Supply crypto assets to earn yield across Ethereum, Polygon, Arbitrum, and Base
 - Borrow against collateral with variable interest rates
-- Real-time health factor monitoring to prevent liquidations
-- Enable/disable collateral and efficiency mode (E-Mode) for optimized borrowing
-- Claim accrued rewards from lending and borrowing activities
-- Complete position management with detailed reserves and APY information
-- Safety-first approach with dry-run simulations before all transactions
-- Automatic ERC-20 approval handling for seamless user experience
+- Monitor health factors and liquidation risk in real-time
+- Manage collateral settings and enable efficiency mode for correlated assets
+- Withdraw supplied assets and repay loans with flexible amounts
+- View current positions and market interest rates
+- Claim accrued rewards from the Aave ecosystem
+- Automatic safety checks with dry-run simulation before executing transactions
 
