@@ -2,12 +2,12 @@
 A Compound V3 (Comet) lending plugin for supplying collateral, borrowing/repaying base assets, and claiming COMP rewards across Ethereum, Base, Arbitrum, and Polygon.
 
 ## Highlights
-- Multi-chain support (Ethereum, Base, Arbitrum, Polygon)
-- Supply collateral and borrow base assets (USDC markets)
+- Supply collateral and borrow USDC across 4 major networks (Ethereum, Base, Arbitrum, Polygon)
 - Automatic debt repayment when supplying base assets
-- Claim COMP rewards from lending activities
-- Position monitoring with real-time market data
-- Dry-run mode for previewing transactions before execution
-- Built-in safety checks to prevent transaction failures
-- Direct integration with onchainos wallet for secure execution
+- Built-in overflow protection for repay operations
+- Dry-run mode for previewing all transactions before execution
+- COMP rewards claiming via CometRewards contract
+- Direct on-chain data queries with no intermediary APIs
+- Comprehensive pre-flight checks and collateralization validation
+- Seamless integration with onchainos wallet infrastructure
 
