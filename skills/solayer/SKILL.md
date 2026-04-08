@@ -90,7 +90,7 @@ All write operations are routed through `onchainos` CLI and require user confirm
 
 Before running any command:
 
-1. **Binary installed**: run `solayer --version`. If not found, reinstall the plugin via `npx skills add okx/plugin-store --skill solayer`
+1. **Binary installed**: run `solayer --version`. If not found, reinstall the plugin via `npx skills add MigOKG/plugin-store --skill solayer`
 2. **onchainos available**: run `onchainos --version`. If not found, reinstall the onchainos CLI from the official release page.
 3. **Wallet connected**: run `onchainos wallet balance` to confirm your wallet is active
 
