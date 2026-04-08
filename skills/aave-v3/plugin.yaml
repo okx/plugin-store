@@ -32,3 +32,5 @@ api_calls:
   - "https://polygon.llamarpc.com"
   - "https://arbitrum.llamarpc.com"
   - "https://base.llamarpc.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
