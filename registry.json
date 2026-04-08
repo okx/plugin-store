@@ -389,6 +389,33 @@
       }
     },
     {
+      "name": "gmx-v2",
+      "version": "0.1.0",
+      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "trading"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/gmx-v2"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
       "name": "hyperliquid",
       "version": "0.1.0",
       "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
