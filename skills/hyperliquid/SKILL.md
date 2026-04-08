@@ -118,6 +118,40 @@ Use this plugin when the user says (in any language):
 
 ---
 
+## One-time Setup: Register API Wallet
+
+> **Required before placing any order, close, or TP/SL.**
+
+onchainos uses an AA (account abstraction) wallet. When signing Hyperliquid L1 actions,
+the underlying EOA signer address differs from your onchainos wallet address. Hyperliquid
+must know this mapping before it will accept your orders.
+
+**Steps (one time only):**
+
+1. Run the following to find your onchainos signer address:
+   ```bash
+   # Place any order preview (no --confirm) and check the "User" in any HL error response,
+   # or run a dry-run and note the recovered address from exchange errors.
+   hyperliquid order --coin ETH --side buy --size 0.001 --confirm --dry-run
+   ```
+   The HL exchange will return an error like:
+   `"User or API Wallet 0xYOUR_SIGNER_ADDRESS does not exist."`
+   That `0xYOUR_SIGNER_ADDRESS` is your actual HL signer.
+
+2. Go to **https://app.hyperliquid.xyz** → **Settings** → **API Wallets**
+
+3. Click **Add API Wallet** and enter `0xYOUR_SIGNER_ADDRESS`
+
+4. Sign the approval with your connected wallet
+
+After this one-time step, all `order`, `close`, `tpsl`, and `cancel` commands will work.
+
+> **Note:** This is only needed if you are using onchainos with an AA (smart contract) wallet.
+> If your onchainos wallet is a plain EOA, the signer and account addresses are the same
+> and no extra setup is required.
+
+---
+
 ## Pre-flight Checks
 
 ```bash
