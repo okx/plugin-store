@@ -19,6 +19,16 @@ fn rpc_url(chain_id: u64) -> &'static str {
     }
 }
 
+/// Chain-specific wait time after an approval tx, based on avg block time.
+fn approval_wait_secs(chain_id: u64) -> u64 {
+    match chain_id {
+        8453 | 42161 | 10 => 3,  // Base, Arbitrum, Optimism — ~2s blocks
+        137 | 56 | 43114 => 6,   // Polygon, BSC, Avalanche — ~2-3s blocks
+        1 => 20,                  // Ethereum — ~12s blocks, wait for 1-2 confirms
+        _ => 10,
+    }
+}
+
 fn is_native_token(address: &str) -> bool {
     address.eq_ignore_ascii_case(ETH_ADDRESS)
         || address.eq_ignore_ascii_case(ETH_ADDRESS2)
@@ -141,10 +151,10 @@ pub async fn execute(
         );
     }
 
-    // Parse native ETH value from hex
+    // Parse native ETH value from hex — use u128 to avoid overflow on large values
     let value_hex = tx_req["value"].as_str().unwrap_or("0x0");
     let value_clean = value_hex.trim_start_matches("0x");
-    let value_wei = u64::from_str_radix(value_clean, 16).unwrap_or(0);
+    let value_wei = u128::from_str_radix(value_clean, 16).unwrap_or(0);
 
     // Approval address from estimate (may differ from LiFiDiamond on some routes)
     let approval_address = quote["estimate"]["approvalAddress"]
@@ -171,8 +181,6 @@ pub async fn execute(
         ).await;
 
         if current_allowance < required_amount {
-            // Approve exact swap amount only (not unlimited).
-            // Do NOT pass --force for approve — let onchainos do its own risk check independently.
             let approve_result = onchainos::erc20_approve(
                 from_chain,
                 from_token_addr,
@@ -185,24 +193,46 @@ pub async fn execute(
             let approve_hash = onchainos::extract_tx_hash(&approve_result);
             eprintln!("Approve tx: {}", approve_hash);
 
-            // Wait for approve to confirm before submitting main tx
-            tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+            // Wait for approve to confirm — use chain-specific block time
+            let wait_secs = approval_wait_secs(from_chain);
+            tokio::time::sleep(std::time::Duration::from_secs(wait_secs)).await;
         }
     }
 
     // Step 3: Submit bridge/swap tx
-    // All LI.FI txs go through LiFiDiamond — use --force for DEX/bridge ops
+    // First attempt without --force to surface onchainos risk warnings.
+    // If onchainos signals a confirming/warning state (ok: false with no fatal error),
+    // surface the message and retry with --force since user already passed --confirm.
     let amt = if value_wei > 0 { Some(value_wei) } else { None };
 
-    let result = onchainos::wallet_contract_call(
+    let result = match onchainos::wallet_contract_call(
         from_chain,
         to_addr,
         calldata,
         Some(&wallet),
         amt,
         false,
-        confirm,
-    ).await?;
+        false, // no --force on first attempt
+    ).await {
+        Ok(r) if r["ok"].as_bool() == Some(false) => {
+            // onchainos returned a risk warning — surface it, then retry with --force
+            let msg = r["message"].as_str()
+                .or_else(|| r["error"].as_str())
+                .unwrap_or("onchainos risk check triggered");
+            eprintln!("onchainos warning: {}", msg);
+            onchainos::wallet_contract_call(
+                from_chain,
+                to_addr,
+                calldata,
+                Some(&wallet),
+                amt,
+                false,
+                true, // user already confirmed — escalate
+            ).await?
+        }
+        Ok(r) => r,
+        Err(e) => return Err(e),
+    };
 
     let tx_hash = onchainos::extract_tx_hash(&result);
 

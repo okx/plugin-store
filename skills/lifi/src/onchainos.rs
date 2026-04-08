@@ -39,7 +39,7 @@ pub async fn wallet_contract_call(
     to: &str,
     input_data: &str,
     from: Option<&str>,
-    amt: Option<u64>, // wei value (for native ETH sends)
+    amt: Option<u128>, // wei value (for native ETH sends)
     dry_run: bool,
     force: bool,
 ) -> Result<Value> {
