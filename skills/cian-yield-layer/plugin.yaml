@@ -22,7 +22,7 @@ tags:
 
 components:
   skill:
-    dir: skills/cian-yield-layer
+    dir: "."
 
 api_calls:
   - "https://rpc.mevblocker.io"

@@ -17,7 +17,7 @@ license: MIT
 
 components:
   skill:
-    dir: skills/fenix-finance
+    dir: "."
 
 build:
   lang: rust
