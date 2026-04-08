@@ -1,0 +1,19 @@
+{
+  "name": "instadapp",
+  "description": "Instadapp Lite Vaults \u2014 deposit ETH, withdraw, and track yield on Ethereum via iETH and iETHv2 vaults",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "yield",
+    "vault",
+    "eth",
+    "steth",
+    "ethereum",
+    "instadapp",
+    "lite"
+  ]
+}
