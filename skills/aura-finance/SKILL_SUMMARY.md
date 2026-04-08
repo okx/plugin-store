@@ -2,21 +2,21 @@
 # aura-finance -- Skill Summary
 
 ## Overview
-This plugin integrates with Aura Finance, the Balancer equivalent of Convex Finance, allowing users to deposit Balancer Pool Tokens (BPT) into Aura pools to earn boosted BAL and AURA rewards. It supports the complete Aura workflow including staking BPT, claiming rewards, locking AURA as vlAURA for governance participation, and managing expired locks. All write operations require user confirmation and use a secure two-transaction flow for token approvals.
+This skill enables interaction with Aura Finance, a protocol that boosts Balancer yields by depositing Balancer Pool Tokens (BPT) into gauges and distributing enhanced BAL and AURA rewards to depositors. It supports depositing BPT, claiming rewards, locking AURA for governance (vlAURA), and managing positions across Ethereum mainnet pools.
 
 ## Usage
-First use `get-pools` to find available Aura pools, then `get-position` to check your current balances. For staking, you must already hold BPT tokens from Balancer before using the `deposit` command.
+Install the plugin and use commands like `aura-finance get-pools` to browse available pools, `aura-finance deposit` to stake BPT, and `aura-finance claim-rewards` to harvest yields. All write operations require user confirmation before executing transactions.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
 | `get-pools` | List Aura-supported Balancer pools with TVL data |
 | `get-position` | Check vlAURA balance, liquid tokens, and pool positions |
-| `deposit` | Deposit BPT into Aura pools (requires BPT balance) |
-| `withdraw` | Withdraw staked BPT from Aura pools |
+| `deposit` | Deposit BPT into Aura pools (2-tx: approve + deposit) |
+| `withdraw` | Withdraw staked BPT from pools |
 | `claim-rewards` | Claim pending BAL and AURA rewards |
 | `lock-aura` | Lock AURA as vlAURA for 16 weeks (irreversible) |
 | `unlock-aura` | Process expired vlAURA locks to retrieve AURA |
 
 ## Triggers
-Activate this skill when users want to stake Balancer LP tokens for boosted rewards, manage Aura Finance positions, or work with vlAURA governance tokens. Trigger phrases include "aura finance deposit", "claim aura rewards", "lock aura", "vlAURA", and "balancer boosted yield".
+Activate when users want to enhance Balancer yields through Aura Finance, including phrases like "aura finance deposit", "aura rewards", "claim aura", "lock aura", "vlAURA", or "balancer boosted yield aura". Also trigger for managing existing Aura positions or exploring available pools.

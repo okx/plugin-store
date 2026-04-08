@@ -16,7 +16,8 @@ tags:
   - defi
 components:
   skill:
-    dir: skills/aura-finance
+    repo: skylavis-sky/onchainos-plugins
+    commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
 build:
   lang: rust
   binary_name: aura-finance
