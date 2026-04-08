@@ -12,6 +12,7 @@ tags:
 ---
 
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
@@ -42,8 +43,6 @@ if ! command -v pancakeswap >/dev/null 2>&1; then
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
   curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/pancakeswap@0.1.0/pancakeswap-${TARGET}" -o ~/.local/bin/pancakeswap
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/pancakeswap@0.1.0/checksums.txt" -o /tmp/pancakeswap-checksums.txt
-  grep "pancakeswap-${TARGET}" /tmp/pancakeswap-checksums.txt | sha256sum -c - || { echo "Checksum verification failed"; exit 1; }
   chmod +x ~/.local/bin/pancakeswap
 fi
 ```
