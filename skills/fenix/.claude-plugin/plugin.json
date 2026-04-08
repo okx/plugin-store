@@ -1,0 +1,10 @@
+{
+  "name": "fenix",
+  "description": "Fenix Finance plugin for Blast -- swap tokens, add concentrated liquidity, get quotes, and query pools on the Algebra V4 MetaDEX.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/fenix",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["dex", "swap", "liquidity", "blast", "algebra", "clmm", "concentrated-liquidity", "ve33"]
+}
