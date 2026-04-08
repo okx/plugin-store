@@ -1,10 +1,19 @@
 ---
 name: eigencloud
-description: "Restake LSTs and EIGEN on EigenLayer (EigenCloud) on Ethereum mainnet (chain 1). Check restaking positions, list strategies with TVL, deposit stETH/rETH/cbETH/ETHx/EIGEN into strategies, delegate to AVS operators, and queue withdrawals. Trigger phrases: restake on EigenLayer, deposit stETH EigenLayer, check EigenLayer position, EigenCloud restaking, delegate to EigenLayer operator, queue EigenLayer withdrawal, EigenLayer TVL, EigenLayer strategies."
-license: MIT
-metadata:
-  author: GeoGu360
-  version: "0.1.0"
+version: 0.1.0
+description: "Restake LSTs and EIGEN on EigenLayer (EigenCloud) on Ethereum mainnet. Deposit into strategies, delegate to operators, queue withdrawals, and check positions."
+chains:
+  - ethereum
+category: defi-protocol
+tags:
+  - restaking
+  - eigenlayer
+  - eigencloud
+  - ethereum
+  - lst
+  - staking
+  - avs
+author: GeoGu360
 ---
 
 # EigenCloud (EigenLayer) Restaking Plugin

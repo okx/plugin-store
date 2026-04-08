@@ -1,0 +1,19 @@
+{
+  "name": "eigencloud",
+  "description": "Restake LSTs and EIGEN on EigenLayer (EigenCloud) on Ethereum mainnet. Deposit into strategies, delegate to operators, queue withdrawals, and check positions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "restaking",
+    "eigenlayer",
+    "eigencloud",
+    "ethereum",
+    "lst",
+    "staking",
+    "avs"
+  ]
+}
