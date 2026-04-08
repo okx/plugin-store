@@ -1,0 +1,18 @@
+{
+  "name": "sushiswap-v3",
+  "description": "Swap tokens and manage concentrated liquidity positions on SushiSwap V3 CLMM across 38+ EVM chains",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "clmm",
+    "sushiswap",
+    "concentrated-liquidity",
+    "evm",
+    "multi-chain"
+  ]
+}
