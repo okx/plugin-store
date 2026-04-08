@@ -1,0 +1,10 @@
+{
+  "name": "mayan",
+  "description": "Mayan cross-chain swap. Bridge and swap tokens between Solana (501), Ethereum (1), Arbitrum (42161), Base (8453), Optimism (10), Polygon (137), BSC (56), and Avalanche (43114) using Swift, MCTP, and Wormhole routes.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/mayan",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "Apache-2.0",
+  "keywords": ["bridge", "cross-chain", "solana", "ethereum", "arbitrum", "base"]
+}
