@@ -1,0 +1,38 @@
+schema_version: 1
+name: lido-v2
+version: "0.1.0"
+description: "Lido liquid staking plugin — stake ETH for stETH, wrap/unwrap wstETH, request and claim ETH withdrawals"
+author:
+  name: "skylavis-sky"
+  github: "skylavis-sky"
+category: defi-protocol
+tags:
+  - staking
+  - liquid-staking
+  - ethereum
+  - steth
+  - wsteth
+license: MIT
+
+components:
+  skill:
+    dir: skills/lido-v2
+
+build:
+  lang: rust
+  binary_name: lido
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: lido
+
+api_calls:
+  - "https://eth-api.lido.fi/v1/protocol/steth/apr/sma"
+  - "https://eth-api.lido.fi/v1/protocol/steth/apr/last"
+  - "https://wq-api.lido.fi/v2/request-time"
+  - "https://ethereum.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://base-rpc.publicnode.com"
+  - "https://mainnet.optimism.io"
+  - "https://docs.lido.fi/deployed-contracts/"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

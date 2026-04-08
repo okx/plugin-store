@@ -1,0 +1,10 @@
+{
+  "name": "lido-v2",
+  "description": "Lido liquid staking plugin — stake ETH to get stETH, wrap/unwrap wstETH, request and claim ETH withdrawals. Trigger phrases: stake ETH lido, lido staking, stake to lido, lido liquid staking, lido stETH, convert stETH to wstETH, wrap stETH, unwrap wstETH, request lido withdrawal, claim lido ETH, lido withdraw.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/lido",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["staking", "liquid-staking", "ethereum", "steth", "wsteth"]
+}
