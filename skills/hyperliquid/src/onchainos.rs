@@ -2,6 +2,60 @@ use std::process::Command;
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
 
+/// Execute an EVM contract call via onchainos wallet contract-call.
+/// chain_id: the EVM chain (e.g. 42161 for Arbitrum).
+/// to: contract address.
+/// calldata: hex-encoded calldata (0x-prefixed).
+/// value_wei: optional ETH value to send.
+/// confirm: if false, preview only; if true, broadcast.
+pub fn wallet_contract_call(
+    chain_id: u64,
+    to: &str,
+    calldata: &str,
+    value_wei: Option<u128>,
+    confirm: bool,
+    dry_run: bool,
+) -> anyhow::Result<Value> {
+    if dry_run {
+        return Ok(serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "chain": chain_id,
+            "to": to,
+            "data": calldata,
+            "note": "Dry run — not submitted"
+        }));
+    }
+
+    let mut args = vec![
+        "wallet".to_string(),
+        "contract-call".to_string(),
+        "--chain".to_string(),
+        chain_id.to_string(),
+        "--to".to_string(),
+        to.to_string(),
+        "--data".to_string(),
+        calldata.to_string(),
+    ];
+    if let Some(v) = value_wei {
+        args.push("--value".to_string());
+        args.push(v.to_string());
+    }
+    if confirm {
+        args.push("--confirm".to_string());
+        args.push("--force".to_string());
+    }
+
+    let output = Command::new("onchainos").args(&args).output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("onchainos wallet contract-call failed: {}", stderr);
+    }
+    let result: Value = serde_json::from_slice(&output.stdout)
+        .unwrap_or_else(|_| serde_json::json!({"raw": String::from_utf8_lossy(&output.stdout).to_string()}));
+    Ok(result)
+}
+
 /// Resolve the wallet address from the onchainos CLI.
 /// For Hyperliquid, we query EVM addresses (HyperEVM chain_id=999).
 /// Falls back to the first EVM address if chain_id 999 is not listed.

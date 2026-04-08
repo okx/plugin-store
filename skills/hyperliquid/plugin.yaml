@@ -20,3 +20,4 @@ build:
   binary_name: hyperliquid
 api_calls:
   - "https://api.hyperliquid.xyz"
+  - "https://arbitrum-one-rpc.publicnode.com"

@@ -360,6 +360,52 @@ hyperliquid cancel \
 
 ---
 
+### 5. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
+
+Deposits USDC from your Arbitrum wallet into your Hyperliquid account via the official bridge contract.
+
+```bash
+# Preview (no broadcast)
+hyperliquid deposit --amount 100
+
+# Broadcast
+hyperliquid deposit --amount 100 --confirm
+
+# Dry run (shows calldata only, no RPC calls)
+hyperliquid deposit --amount 100 --dry-run
+```
+
+**Output:**
+```json
+{
+  "ok": true,
+  "action": "deposit",
+  "wallet": "0x...",
+  "amount_usd": 100.0,
+  "usdc_units": 100000000,
+  "bridge": "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+  "approveTxHash": "0x...",
+  "depositTxHash": "0x...",
+  "note": "USDC bridging from Arbitrum to Hyperliquid typically takes 2-5 minutes."
+}
+```
+
+**Display:** `amount_usd`, `depositTxHash` (abbreviated), `note`.
+
+**Flow:**
+1. Resolve wallet address on Arbitrum (chain ID 42161)
+2. Check USDC balance on Arbitrum — error if insufficient
+3. Check current bridge allowance
+4. If allowance insufficient: approve exact USDC amount to bridge (requires `--confirm`)
+5. Call `deposit(address,uint64)` on bridge contract (requires `--confirm`)
+6. Bridge credits your HL account within 2–5 minutes
+
+**Prerequisites:**
+- USDC on Arbitrum (chain ID 42161) — check with `onchainos wallet balance --chain 42161`
+- ETH on Arbitrum for gas (~$0.01)
+
+---
+
 ## Supported Markets
 
 Hyperliquid supports 100+ perpetual markets. Common examples:

@@ -2,11 +2,13 @@ mod api;
 mod commands;
 mod config;
 mod onchainos;
+mod rpc;
 mod signing;
 
 use clap::{Parser, Subcommand};
 use commands::{
     cancel::CancelArgs,
+    deposit::DepositArgs,
     order::OrderArgs,
     positions::PositionsArgs,
     prices::PricesArgs,
@@ -16,7 +18,7 @@ use commands::{
 #[command(
     name = "hyperliquid",
     version,
-    about = "Hyperliquid on-chain perpetuals DEX plugin — trade perps, check positions, get prices"
+    about = "Hyperliquid on-chain perpetuals DEX plugin — trade perps, check positions, get prices, deposit USDC"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -33,6 +35,8 @@ enum Commands {
     Order(OrderArgs),
     /// Cancel an open order by order ID (requires --confirm to execute)
     Cancel(CancelArgs),
+    /// Deposit USDC from Arbitrum to Hyperliquid via the official bridge
+    Deposit(DepositArgs),
 }
 
 #[tokio::main]
@@ -43,5 +47,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::Prices(args) => commands::prices::run(args).await,
         Commands::Order(args) => commands::order::run(args).await,
         Commands::Cancel(args) => commands::cancel::run(args).await,
+        Commands::Deposit(args) => commands::deposit::run(args).await,
     }
 }
