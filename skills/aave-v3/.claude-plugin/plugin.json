@@ -1,0 +1,10 @@
+{
+  "name": "aave-v3",
+  "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/aave-v3",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["lending", "borrowing", "defi", "earn", "aave", "collateral", "health-factor"]
+}
