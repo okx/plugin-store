@@ -13,7 +13,6 @@ pub fn wallet_contract_call(
     to: &str,
     calldata: &str,
     value_wei: Option<u128>,
-    confirm: bool,
     dry_run: bool,
 ) -> anyhow::Result<Value> {
     if dry_run {
@@ -41,9 +40,8 @@ pub fn wallet_contract_call(
         args.push("--amt".to_string());
         args.push(v.to_string());
     }
-    if confirm {
-        args.push("--force".to_string());
-    }
+    // Note: --force is intentionally omitted — onchainos handles its own confirmation.
+    // The plugin's --confirm flag already gates whether this call is made at all.
 
     let output = Command::new("onchainos").args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);

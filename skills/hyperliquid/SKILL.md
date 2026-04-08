@@ -446,7 +446,7 @@ hyperliquid cancel \
 
 ---
 
-### 8. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
+### 7. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
 
 Deposits USDC from your Arbitrum wallet into your Hyperliquid account via the official bridge contract.
 

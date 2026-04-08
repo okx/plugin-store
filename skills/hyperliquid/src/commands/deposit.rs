@@ -192,7 +192,6 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         HL_BRIDGE_ARBITRUM,
         &calldata,
         None,
-        true,
         false,
     )?;
 
