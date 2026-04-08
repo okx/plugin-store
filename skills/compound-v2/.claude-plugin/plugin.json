@@ -1,0 +1,18 @@
+{
+  "name": "compound-v2",
+  "description": "Compound V2 classic cToken lending plugin: supply assets, redeem cTokens, view positions, claim COMP rewards. Supports ETH, USDT, USDC, DAI on Ethereum mainnet.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "compound",
+    "ctoken",
+    "ethereum"
+  ]
+}
