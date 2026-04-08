@@ -87,6 +87,8 @@ Do NOT use for: buying/selling Clanker tokens (use a DEX skill), non-Clanker tok
 
 ## Architecture
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/clanker (binary built from commit `6882d08d`)
+
 - Read ops (`list-tokens`, `search-tokens`, `token-info`) → Clanker REST API or `onchainos token info`; no confirmation needed
 - Write ops (`deploy-token`, `claim-rewards`) → after user confirmation, submits via `onchainos wallet contract-call` or Clanker REST API
 - `claim-rewards` uses `--force` flag internally — the binary broadcasts immediately once invoked; **agent confirmation is the sole safety gate** before calling this command
@@ -109,6 +111,20 @@ Do NOT use for: buying/selling Clanker tokens (use a DEX skill), non-Clanker tok
 | Claim LP rewards | `claim-rewards --token-address <addr>` | Write |
 
 ---
+
+
+## Pre-flight Checks
+
+Before executing any write command, verify:
+
+1. **Binary installed**: `clanker --version` — if not found, install the plugin via the OKX plugin store
+2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
+3. **Chain supported**: target chain must be one of Base (8453), Arbitrum (42161)
+
+If the wallet is not connected, output:
+```
+Please connect your wallet first: run `onchainos wallet login`
+```
 
 ## Commands
 
