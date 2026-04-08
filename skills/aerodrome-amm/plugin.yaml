@@ -1,0 +1,26 @@
+schema_version: 1
+name: aerodrome-amm
+version: 0.1.0
+description: Swap tokens and manage classic AMM (volatile/stable) LP positions on
+  Aerodrome Finance on Base
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- dex
+- amm
+- aerodrome
+- classic-amm
+- stable
+- volatile
+- base
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: aerodrome-amm
+api_calls:
+- base-rpc.publicnode.com
