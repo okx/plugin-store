@@ -2,21 +2,21 @@
 # curve -- Skill Summary
 
 ## Overview
-The curve plugin enables interaction with Curve Finance, a specialized DEX for stablecoin trading and liquidity provision. It supports swapping, liquidity management, pool queries, and APY tracking across Ethereum, Arbitrum, Base, Polygon, and BSC networks.
+The curve plugin enables interaction with Curve Finance, a specialized DEX for stablecoin trading and liquidity provision. It supports swapping stablecoins with minimal slippage, adding/removing liquidity from pools, querying pool data and APY rates, and managing LP positions across five major chains (Ethereum, Arbitrum, Base, Polygon, BSC). All write operations include safety checks and require user confirmation.
 
 ## Usage
-Install the plugin via OKX plugin store, ensure onchainos wallet is connected, then use natural language commands like "swap USDC for DAI on Curve" or "add liquidity to Curve 3pool".
+Install the plugin via the OKX plugin store, ensure your wallet is connected with `onchainos wallet login`, then use commands like `curve get-pools` to browse pools or `curve swap` to execute trades. Always preview transactions with `--dry-run` before confirming.
 
 ## Commands
-| Command | Purpose |
-|---------|---------|
-| `curve get-pools` | List available Curve pools with TVL and APY |
-| `curve get-pool-info` | Get detailed information about a specific pool |
-| `curve get-balances` | Check LP token balances for connected wallet |
-| `curve quote` | Get swap quotes with price impact and slippage |
-| `curve swap` | Execute stablecoin swaps on Curve |
-| `curve add-liquidity` | Add liquidity to Curve pools |
-| `curve remove-liquidity` | Remove liquidity from Curve pools |
+| Command | Description |
+|---------|-------------|
+| `get-pools` | List Curve pools with TVL and APY data |
+| `get-pool-info` | Get detailed information about a specific pool |
+| `get-balances` | Check LP token balances in wallet |
+| `quote` | Get swap quote with price impact and slippage |
+| `swap` | Execute token swap on Curve |
+| `add-liquidity` | Add liquidity to a Curve pool |
+| `remove-liquidity` | Remove liquidity from a Curve pool |
 
 ## Triggers
-Activate this skill when users mention Curve-specific operations like "swap on Curve", "Curve pool APY", "add liquidity Curve", or when they need stablecoin trading with minimal slippage and fees.
+Activate this skill when users want to swap stablecoins, manage Curve liquidity positions, or query Curve pool data. Trigger phrases include "swap on Curve", "Curve pool APY", "add liquidity Curve", "remove liquidity Curve", and "Curve pools".
