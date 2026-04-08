@@ -18,6 +18,7 @@ tags:
 
 
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
