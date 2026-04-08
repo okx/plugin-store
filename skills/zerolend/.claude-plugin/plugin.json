@@ -1,0 +1,10 @@
+{
+  "name": "zerolend",
+  "description": "Supply, borrow, repay, and withdraw on ZeroLend — an Aave V3 fork on zkSync Era, Linea, and Blast. Trigger phrases: zerolend supply, zerolend borrow, zerolend repay, zerolend deposit, zerolend withdraw, lend on zerolend, borrow on linea, borrow on blast, zerolend position, zerolend health factor.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/zerolend",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["zerolend", "lending", "aave-fork", "zksync", "linea", "blast", "defi"]
+}
