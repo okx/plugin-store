@@ -1,7 +1,7 @@
 schema_version: 1
 name: hyperliquid
 version: "0.1.0"
-description: "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders, cancel orders"
+description: "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC"
 author:
   name: GeoGu360
   github: GeoGu360
@@ -20,3 +20,5 @@ build:
   binary_name: hyperliquid
 api_calls:
   - "https://api.hyperliquid.xyz"
+  - "https://api.hyperliquid-testnet.xyz"
+  - "https://arbitrum-one-rpc.publicnode.com"

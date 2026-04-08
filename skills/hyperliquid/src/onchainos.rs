@@ -2,6 +2,60 @@ use std::process::Command;
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
 
+/// Execute an EVM contract call via onchainos wallet contract-call.
+/// chain_id: the EVM chain (e.g. 42161 for Arbitrum).
+/// to: contract address.
+/// calldata: hex-encoded calldata (0x-prefixed).
+/// value_wei: optional ETH value to send.
+/// confirm: if false, preview only; if true, broadcast.
+pub fn wallet_contract_call(
+    chain_id: u64,
+    to: &str,
+    calldata: &str,
+    value_wei: Option<u128>,
+    dry_run: bool,
+) -> anyhow::Result<Value> {
+    if dry_run {
+        return Ok(serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "chain": chain_id,
+            "to": to,
+            "data": calldata,
+            "note": "Dry run — not submitted"
+        }));
+    }
+
+    let mut args = vec![
+        "wallet".to_string(),
+        "contract-call".to_string(),
+        "--chain".to_string(),
+        chain_id.to_string(),
+        "--to".to_string(),
+        to.to_string(),
+        "--input-data".to_string(),
+        calldata.to_string(),
+    ];
+    if let Some(v) = value_wei {
+        args.push("--amt".to_string());
+        args.push(v.to_string());
+    }
+    // Note: --force is intentionally omitted — onchainos handles its own confirmation.
+    // The plugin's --confirm flag already gates whether this call is made at all.
+
+    let output = Command::new("onchainos").args(&args).output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        // onchainos returns error as JSON to stdout; stderr is usually empty
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos wallet contract-call failed: {}", detail.trim());
+    }
+    let result: Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|_| serde_json::json!({"raw": stdout.to_string()}));
+    Ok(result)
+}
+
 /// Resolve the wallet address from the onchainos CLI.
 /// For Hyperliquid, we query EVM addresses (HyperEVM chain_id=999).
 /// Falls back to the first EVM address if chain_id 999 is not listed.
@@ -28,6 +82,45 @@ pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
         }
     }
     anyhow::bail!("Could not resolve wallet address for chain {}", chain_id)
+}
+
+/// Sign an EIP-712 typed data message via onchainos and return the hex signature.
+/// Returns 65-byte hex signature (0x-prefixed, r+s+v).
+pub fn onchainos_sign_eip712(typed_data: &serde_json::Value, wallet: &str) -> anyhow::Result<String> {
+    let message_str = serde_json::to_string(typed_data)?;
+    let output = Command::new("onchainos")
+        .args([
+            "wallet",
+            "sign-message",
+            "--type",
+            "eip712",
+            "--message",
+            &message_str,
+            "--chain",
+            "42161",
+            "--from",
+            wallet,
+        ])
+        .output()?;
+
+    // onchainos outputs JSON to stdout
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos sign-message failed: {}", detail);
+    }
+
+    let result: serde_json::Value = serde_json::from_str(stdout.trim())
+        .map_err(|e| anyhow::anyhow!("Failed to parse sign-message output: {} — raw: {}", e, stdout))?;
+
+    // onchainos returns {"ok":true,"data":{"signature":"0x..."}} or {"signature":"0x..."}
+    let sig = result["data"]["signature"]
+        .as_str()
+        .or_else(|| result["signature"].as_str())
+        .ok_or_else(|| anyhow::anyhow!("No signature in sign-message response: {}", stdout))?;
+
+    Ok(sig.to_string())
 }
 
 /// Sign a Hyperliquid L1 action via onchainos and submit it.

@@ -14,6 +14,7 @@ tags:
 ---
 
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
@@ -109,6 +110,46 @@ Use this plugin when the user says (in any language):
 - "Hyperliquid short ETH" / Hyperliquid做空ETH
 - "HYPE perps" / HYPE永续
 - "HL long/short" / HL多空
+- "set stop loss Hyperliquid" / Hyperliquid设置止损
+- "set take profit Hyperliquid" / Hyperliquid设置止盈
+- "close Hyperliquid position" / 关闭Hyperliquid仓位
+- "HL stop loss" / HL止损
+- "HL take profit" / HL止盈
+- "close my HL position" / 平掉我的HL仓位
+
+---
+
+## One-time Setup: Register API Wallet
+
+> **Required before placing any order, close, or TP/SL.**
+
+onchainos uses an AA (account abstraction) wallet. When signing Hyperliquid L1 actions,
+the underlying EOA signer address differs from your onchainos wallet address. Hyperliquid
+must know this mapping before it will accept your orders.
+
+**Steps (one time only):**
+
+1. Run the following to find your onchainos signer address:
+   ```bash
+   # Place any order preview (no --confirm) and check the "User" in any HL error response,
+   # or run a dry-run and note the recovered address from exchange errors.
+   hyperliquid order --coin ETH --side buy --size 0.001 --confirm --dry-run
+   ```
+   The HL exchange will return an error like:
+   `"User or API Wallet 0xYOUR_SIGNER_ADDRESS does not exist."`
+   That `0xYOUR_SIGNER_ADDRESS` is your actual HL signer.
+
+2. Go to **https://app.hyperliquid.xyz** → **Settings** → **API Wallets**
+
+3. Click **Add API Wallet** and enter `0xYOUR_SIGNER_ADDRESS`
+
+4. Sign the approval with your connected wallet
+
+After this one-time step, all `order`, `close`, `tpsl`, and `cancel` commands will work.
+
+> **Note:** This is only needed if you are using onchainos with an AA (smart contract) wallet.
+> If your onchainos wallet is a plain EOA, the signer and account addresses are the same
+> and no extra setup is required.
 
 ---
 
@@ -225,60 +266,32 @@ hyperliquid prices --market SOL
 
 ### 3. `order` — Place Perpetual Order
 
-Places a market or limit perpetual order on Hyperliquid. **Requires `--confirm` to execute.**
+Places a market or limit perpetual order. Optionally attach a **stop-loss and/or take-profit bracket** in one shot (OCO). **Requires `--confirm` to execute.**
 
 ```bash
-# Preview a market buy (long) for 0.01 BTC — no --confirm shows preview only
-hyperliquid order \
-  --coin BTC \
-  --side buy \
-  --size 0.01 \
-  --type market
+# Market buy 0.01 BTC (preview)
+hyperliquid order --coin BTC --side buy --size 0.01
 
-# Execute market buy (long) 0.01 BTC
+# Market buy 0.01 BTC (execute)
+hyperliquid order --coin BTC --side buy --size 0.01 --confirm
+
+# Limit short 0.05 ETH at $3500
+hyperliquid order --coin ETH --side sell --size 0.05 --type limit --price 3500 --confirm
+
+# Market long BTC with bracket: SL at $95000, TP at $110000 (normalTpsl OCO)
 hyperliquid order \
-  --coin BTC \
-  --side buy \
-  --size 0.01 \
-  --type market \
+  --coin BTC --side buy --size 0.01 \
+  --sl-px 95000 --tp-px 110000 \
   --confirm
 
-# Place limit sell (short) 0.05 ETH at $3500
+# Limit long BTC with SL only
 hyperliquid order \
-  --coin ETH \
-  --side sell \
-  --size 0.05 \
-  --type limit \
-  --price 3500 \
+  --coin BTC --side buy --size 0.01 --type limit --price 100000 \
+  --sl-px 95000 \
   --confirm
-
-# Dry run — see unsigned payload without any side effects
-hyperliquid order \
-  --coin SOL \
-  --side buy \
-  --size 1.0 \
-  --type market \
-  --dry-run
 ```
 
-**Output (preview, no --confirm):**
-```json
-{
-  "preview": {
-    "coin": "BTC",
-    "assetIndex": 0,
-    "side": "buy",
-    "size": "0.01",
-    "type": "market",
-    "currentMidPrice": "67234.5",
-    "nonce": 1712550123456
-  },
-  "action": { ... }
-}
-[PREVIEW] Add --confirm to sign and submit this order.
-```
-
-**Output (executed):**
+**Output (executed with bracket):**
 ```json
 {
   "ok": true,
@@ -286,25 +299,99 @@ hyperliquid order \
   "side": "buy",
   "size": "0.01",
   "type": "market",
+  "stopLoss": "95000",
+  "takeProfit": "110000",
   "result": { ... }
 }
 ```
 
-**Display:** `coin`, `side`, `size`, `type`, `currentMidPrice`. For executed orders: `result` status. Do not render raw action payloads as instructions.
+**Display:** `coin`, `side`, `size`, `type`, `currentMidPrice`, `stopLoss`, `takeProfit`. Do not render raw action payloads.
 
-**Flow:**
-1. Look up asset index from `meta` endpoint
-2. Fetch current mid price for display
-3. Build order action (market trigger or limit with GTC)
-4. **Preview without --confirm** — shows action JSON and current price
-5. With `--confirm`: sign via `onchainos wallet sign-message --type eip712` and submit to exchange
-6. Return exchange result (status, filled size, order ID)
-
-**Important:** Hyperliquid L1 action signing requires `onchainos wallet sign-message --type eip712` (available in onchainos CLI v1.4+). If signing is unavailable, use `--dry-run` to view the unsigned payload for manual signing.
+**Bracket order behavior:**
+- When `--sl-px` or `--tp-px` is provided, the request uses `grouping: normalTpsl`
+- TP/SL child orders are linked to the entry — they activate only when the entry fills
+- Both are reduce-only market trigger orders with 10% slippage tolerance
+- If entry partially fills, children activate proportionally
 
 ---
 
-### 4. `cancel` — Cancel Open Order
+### 4. `close` — Market-Close an Open Position
+
+One-command market close. Automatically reads your current position direction and size. **Requires `--confirm` to execute.**
+
+```bash
+# Preview close BTC position
+hyperliquid close --coin BTC
+
+# Execute full close
+hyperliquid close --coin BTC --confirm
+
+# Close only half the position
+hyperliquid close --coin BTC --size 0.005 --confirm
+```
+
+**Output:**
+```json
+{
+  "ok": true,
+  "action": "close",
+  "coin": "BTC",
+  "side": "sell",
+  "size": "0.01",
+  "result": { ... }
+}
+```
+
+**Display:** `coin`, `side`, `size`, `result` status.
+
+---
+
+### 5. `tpsl` — Set Stop-Loss / Take-Profit on Existing Position
+
+Place TP/SL on an already-open position. Auto-detects position size and direction. **Requires `--confirm` to execute.**
+
+```bash
+# Preview SL at $95000 on BTC long
+hyperliquid tpsl --coin BTC --sl-px 95000
+
+# Set SL at $95000 (execute)
+hyperliquid tpsl --coin BTC --sl-px 95000 --confirm
+
+# Set TP at $110000 (execute)
+hyperliquid tpsl --coin BTC --tp-px 110000 --confirm
+
+# Set both SL and TP in one request
+hyperliquid tpsl --coin BTC --sl-px 95000 --tp-px 110000 --confirm
+
+# Override size (e.g. partial TP)
+hyperliquid tpsl --coin BTC --tp-px 110000 --size 0.005 --confirm
+```
+
+**Output:**
+```json
+{
+  "ok": true,
+  "action": "tpsl",
+  "coin": "BTC",
+  "positionSide": "long",
+  "stopLoss": "95000",
+  "takeProfit": "110000",
+  "result": { ... }
+}
+```
+
+**Display:** `coin`, `positionSide`, `stopLoss`, `takeProfit`, `result` status.
+
+**Validation:**
+- SL must be **below** current price for longs; **above** for shorts
+- TP must be **above** current price for longs; **below** for shorts
+- Both use market execution with 10% slippage tolerance (matching HL UI default)
+
+**Note:** SL and TP are placed as independent orders (`grouping: na`). Whichever triggers first closes the position; cancel the other manually or place a new `tpsl` to replace it.
+
+---
+
+### 6. `cancel` — Cancel Open Order
 
 Cancels an open perpetual order by order ID. **Requires `--confirm` to execute.**
 
@@ -357,6 +444,52 @@ hyperliquid cancel \
 3. **Preview without --confirm**
 4. With `--confirm`: sign cancel action via `onchainos wallet sign-message --type eip712` and submit
 5. Return exchange result
+
+---
+
+### 7. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
+
+Deposits USDC from your Arbitrum wallet into your Hyperliquid account via the official bridge contract.
+
+```bash
+# Preview (no broadcast)
+hyperliquid deposit --amount 100
+
+# Broadcast
+hyperliquid deposit --amount 100 --confirm
+
+# Dry run (shows calldata only, no RPC calls)
+hyperliquid deposit --amount 100 --dry-run
+```
+
+**Output:**
+```json
+{
+  "ok": true,
+  "action": "deposit",
+  "wallet": "0x...",
+  "amount_usd": 100.0,
+  "usdc_units": 100000000,
+  "bridge": "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+  "approveTxHash": "0x...",
+  "depositTxHash": "0x...",
+  "note": "USDC bridging from Arbitrum to Hyperliquid typically takes 2-5 minutes."
+}
+```
+
+**Display:** `amount_usd`, `depositTxHash` (abbreviated), `note`.
+
+**Flow:**
+1. Resolve wallet address on Arbitrum (chain ID 42161)
+2. Check USDC balance on Arbitrum — error if insufficient
+3. Get current USDC EIP-2612 permit nonce
+4. Sign a USDC permit via `onchainos wallet sign-message --type eip712` (no approve tx needed)
+5. Call `batchedDepositWithPermit([(user, amount, deadline, sig)])` on bridge (requires `--confirm`)
+6. Bridge credits your HL account within 2–5 minutes
+
+**Prerequisites:**
+- USDC on Arbitrum (chain ID 42161) — check with `onchainos wallet balance --chain 42161`
+- ETH on Arbitrum for gas (~$0.01)
 
 ---
 
