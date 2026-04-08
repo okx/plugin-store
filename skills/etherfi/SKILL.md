@@ -17,24 +17,33 @@ tags:
 ---
 
 
-## Pre-flight Dependencies (auto-injected by Plugin Store CI)
+## Pre-flight Dependencies
 
 > Run once per session before first use. These checks ensure required tools are installed.
 
-### Install onchainos CLI + Skills (auto-injected)
+### Install onchainos CLI + Skills
 
 ```bash
-# 1. Install onchainos CLI
-onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh
+# 1. Install onchainos CLI (checksum-verified)
+if ! onchainos --version 2>/dev/null; then
+  INSTALLER_URL="https://raw.githubusercontent.com/okx/onchainos-skills/v1.0.0/install.sh"
+  CHECKSUM_URL="https://raw.githubusercontent.com/okx/onchainos-skills/v1.0.0/install.sh.sha256"
+  curl -fsSL "$INSTALLER_URL" -o /tmp/onchainos-install.sh
+  curl -fsSL "$CHECKSUM_URL" -o /tmp/onchainos-install.sh.sha256
+  # Verify SHA256 before executing
+  (cd /tmp && shasum -a 256 -c onchainos-install.sh.sha256)
+  sh /tmp/onchainos-install.sh
+  rm -f /tmp/onchainos-install.sh /tmp/onchainos-install.sh.sha256
+fi
 
 # 2. Install onchainos skills (enables AI agent to use onchainos commands)
-npx skills add okx/onchainos-skills --yes --global
+npx skills add okx/onchainos-skills@1.0.0 --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
+npx skills add MigOKG/plugin-store@1.0.0 --skill plugin-store --yes --global
 ```
 
-### Install etherfi binary (auto-injected)
+### Install etherfi binary
 
 ```bash
 if ! command -v etherfi >/dev/null 2>&1; then
@@ -46,30 +55,15 @@ if ! command -v etherfi >/dev/null 2>&1; then
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
   esac
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/etherfi@0.1.0/etherfi-${TARGET}" -o ~/.local/bin/etherfi
+  RELEASE_BASE="https://github.com/MigOKG/plugin-store/releases/download/plugins/etherfi@0.1.0"
+  curl -fsSL "${RELEASE_BASE}/etherfi-${TARGET}" -o /tmp/etherfi-bin
+  curl -fsSL "${RELEASE_BASE}/etherfi-${TARGET}.sha256" -o /tmp/etherfi-bin.sha256
+  # Verify checksum before installing
+  (cd /tmp && shasum -a 256 -c etherfi-bin.sha256)
+  mkdir -p ~/.local/bin
+  mv /tmp/etherfi-bin ~/.local/bin/etherfi
   chmod +x ~/.local/bin/etherfi
-fi
-```
-
-### Report install (auto-injected, runs once)
-
-```bash
-REPORT_FLAG="$HOME/.plugin-store/reported/etherfi"
-if [ ! -f "$REPORT_FLAG" ]; then
-  mkdir -p "$HOME/.plugin-store/reported"
-  DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
-  DEV_ID=$(echo -n "$DEV_RAW" | shasum -a 256 | head -c 32)
-  _K=$(echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | base64 -d 2>/dev/null || echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | openssl base64 -d)
-  HMAC_SIG=$(echo -n "${_K}${DEV_ID}" | shasum -a 256 | head -c 8)
-  DIV_ID="${DEV_ID}${HMAC_SIG}"
-  unset _K
-  curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
-    -H "Content-Type: application/json" \
-    -d '{"name":"etherfi","version":"0.1.0"}' >/dev/null 2>&1 || true
-  curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
-    -H "Content-Type: application/json" \
-    -d '{"pluginName":"etherfi","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
-  touch "$REPORT_FLAG"
+  rm -f /tmp/etherfi-bin.sha256
 fi
 ```
 
@@ -206,7 +200,7 @@ etherfi wrap --amount 1.0 --dry-run
 **Flow:**
 1. Parse eETH amount to wei
 2. Resolve wallet; check eETH balance is sufficient
-3. Check eETH allowance for weETH contract; approve `u128::MAX` if needed (3-second delay)
+3. Check eETH allowance for weETH contract; approve `u128::MAX` if needed — **displays an explicit warning about unlimited approval before proceeding** (3-second delay)
 4. **Requires `--confirm`** for each step (approve + wrap)
 5. Call weETH.deposit via `onchainos wallet contract-call` (selector `0x6e553f65`)
 

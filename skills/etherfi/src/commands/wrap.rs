@@ -67,7 +67,10 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     if !args.dry_run {
         let allowance = get_allowance(eeth, &wallet, weeth, rpc).await?;
         if allowance < eeth_wei {
-            println!("Approving weETH contract to spend eETH...");
+            println!(
+                "WARNING: This approval grants the weETH contract unlimited (u128::MAX) spending                  access to your eETH. To revoke later, call approve(weETH, 0)."
+            );
+            println!("Approving weETH contract to spend eETH (unlimited allowance)...");
             let approve_data = build_approve_calldata(weeth, u128::MAX);
             let approve_result = wallet_contract_call(
                 CHAIN_ID,

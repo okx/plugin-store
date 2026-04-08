@@ -83,7 +83,7 @@ pub async fn wallet_contract_call(
             to,
             "--input-data",
             input_data,
-            "--value",
+            "--amt",
             &value_str,
         ])
         .output()?;
