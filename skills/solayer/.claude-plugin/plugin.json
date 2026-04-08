@@ -1,0 +1,16 @@
+{
+  "name": "solayer",
+  "description": "Solayer liquid restaking on Solana \u2014 stake SOL to receive sSOL and earn restaking rewards",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "solana",
+    "liquid-staking",
+    "restaking",
+    "ssol"
+  ]
+}

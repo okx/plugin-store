@@ -1,0 +1,26 @@
+schema_version: 1
+name: solayer
+version: 0.1.0
+description: Solayer liquid restaking on Solana — stake SOL to receive sSOL and earn
+  restaking rewards
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+- solana
+- liquid-staking
+- restaking
+- ssol
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: solayer
+api_calls:
+- app.solayer.org
+- app.solayer.org/api/info
+- app.solayer.org/api/partner/restake/ssol
+- api.mainnet-beta.solana.com
