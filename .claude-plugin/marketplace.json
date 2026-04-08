@@ -16,6 +16,15 @@
       }
     },
     {
+      "name": "lido",
+      "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
+      "source": "./skills/lido",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "source": "./skills/meme-trench-scanner",
@@ -70,6 +79,15 @@
       }
     },
     {
+      "name": "solayer",
+      "description": "Solayer liquid restaking on Solana — stake SOL to receive sSOL and earn restaking rewards",
+      "source": "./skills/solayer",
+      "category": "defi-protocol",
+      "author": {
+        "name": "skylavis-sky"
+      }
+    },
+    {
       "name": "spark-savings",
       "description": "Earn the Sky Savings Rate (SSR) on USDS/DAI via Spark sUSDS/sDAI savings vaults — ERC-4626 on Ethereum, PSM3-powered on Base/Arbitrum/Optimism",
       "source": "./skills/spark-savings",
@@ -77,11 +95,6 @@
       "author": {
         "name": "GeoGu360"
       }
-    },
-    {
-      "name": "spark-savings",
-      "description": "Plugin: spark-savings",
-      "source": "./skills/spark-savings"
     },
     {
       "name": "top-rank-tokens-sniper",
