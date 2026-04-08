@@ -1,0 +1,16 @@
+{
+  "name": "kamino-liquidity",
+  "description": "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to earn yield, withdraw shares, and track positions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "solana",
+    "yield",
+    "liquidity",
+    "kamino"
+  ]
+}
