@@ -1,13 +1,13 @@
 # exactly-protocol
-Fixed-rate and floating-rate lending protocol offering maturity-based pools and variable-rate lending on Optimism and Ethereum.
+Fixed-rate and floating-rate lending protocol enabling deposits at fixed APY locked until maturity, plus variable rate pools on Optimism and Ethereum.
 
 ## Highlights
 - Fixed-rate lending with maturity-based pools for predictable returns
-- Floating-rate variable pools following ERC-4626 standard
-- Multi-chain support on Optimism (primary) and Ethereum Mainnet
-- Explicit collateral management - deposits don't auto-enable as collateral
+- Floating-rate pools using ERC-4626 standard for flexible deposits
+- Deployed on Optimism (primary, lower gas) and Ethereum Mainnet
+- Supports WETH, USDC, OP, wstETH, and WBTC markets
+- Explicit collateral enabling required before borrowing (unlike Aave)
+- Weekly maturity timestamps aligned to Thursday UTC boundaries
 - Early withdrawal penalties for fixed deposits before maturity
-- Support for major assets: WETH, USDC, WBTC, wstETH, OP
-- Comprehensive position management and market data retrieval
-- Dry-run capability for all operations before execution
+- Zero-slippage fixed-rate borrowing with penalty fees after maturity
 

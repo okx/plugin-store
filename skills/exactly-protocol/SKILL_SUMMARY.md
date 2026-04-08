@@ -2,23 +2,21 @@
 # exactly-protocol -- Skill Summary
 
 ## Overview
-The Exactly Protocol skill enables interaction with a decentralized lending protocol that offers both fixed-rate, fixed-term lending via maturity-based pools and variable-rate floating pools. Unlike traditional lending protocols, Exactly requires explicit collateral enablement through `enter-market` commands before borrowing against deposited assets. The protocol is deployed on Optimism (primary, lower gas) and Ethereum Mainnet, supporting major DeFi assets with predictable fixed-rate returns and flexible floating-rate options.
+This skill provides access to Exactly Protocol, a decentralized lending platform offering both fixed-rate deposits with guaranteed APY until maturity and floating-rate pools for flexible lending. Unlike traditional protocols, Exactly requires explicit collateral enablement before borrowing and uses weekly-aligned maturity timestamps for fixed-rate positions. The protocol operates on Optimism (primary) and Ethereum Mainnet with support for major assets like WETH, USDC, and wstETH.
 
 ## Usage
-Install the plugin and use commands like `exactly-protocol get-markets` to view available lending pools, `exactly-protocol deposit` for lending, and `exactly-protocol borrow` for borrowing. Always run commands with `--dry-run` first to preview transactions before execution.
+Install the plugin, connect your wallet via onchainos, then use commands like `exactly-protocol get-markets` to view available lending opportunities. Always run commands with `--dry-run` first and confirm transactions before execution.
 
 ## Commands
 | Command | Purpose |
 |---------|---------|
-| `get-markets` | List all available markets, rates, and maturities |
-| `get-position` | View user's lending/borrowing positions |
-| `deposit` | Lend assets at fixed or floating rates |
-| `withdraw` | Withdraw deposited assets (with early penalty for fixed) |
-| `borrow` | Borrow assets at fixed or floating rates |
+| `get-markets` | List all available markets and current rates |
+| `get-position` | View your lending/borrowing positions |
+| `deposit` | Lend assets at floating or fixed rates (with --maturity) |
+| `borrow` | Borrow assets at floating or fixed rates |
 | `repay` | Repay outstanding borrows |
-| `enter-market` | Enable deposited asset as collateral |
-| `--dry-run` | Preview any transaction before execution |
-| `--chain` | Specify chain (10 for Optimism, 1 for Ethereum) |
+| `withdraw` | Withdraw deposited assets |
+| `enter-market` | Enable an asset as collateral for borrowing |
 
 ## Triggers
-Activate this skill when users want to lend or borrow at fixed rates with known maturity dates, or when they mention "exactly protocol," "fixed rate lending," "maturity deposits," or need predictable DeFi returns with explicit collateral management.
+Activate this skill when users mention "exactly protocol", "fixed rate lending", "lend at fixed APY", "exactly borrow", "exactly deposit", "fixed maturity", or want predictable lending returns with locked rates until specific dates.
