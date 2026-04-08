@@ -1,0 +1,30 @@
+schema_version: 1
+name: aura-finance
+version: "0.1.0"
+description: "Aura Finance Balancer yield plugin — deposit BPT, claim rewards, lock AURA for vlAURA"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+license: MIT
+category: defi-protocol
+tags:
+  - yield
+  - balancer
+  - aura
+  - vlAURA
+  - ethereum
+  - defi
+components:
+  skill:
+    dir: skills/aura-finance
+build:
+  lang: rust
+  binary_name: aura-finance
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: aura-finance
+api_calls:
+  - "https://api.balancer.fi"
+  - "https://ethereum.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
