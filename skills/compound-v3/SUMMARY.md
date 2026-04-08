@@ -1,13 +1,13 @@
 # compound-v3
-A comprehensive lending plugin for Compound V3 (Comet) protocol supporting supply, borrow, repay operations and COMP rewards across Ethereum, Base, Arbitrum, and Polygon.
+A Compound V3 (Comet) lending plugin for supplying collateral, borrowing/repaying base assets, and claiming COMP rewards across Ethereum, Base, Arbitrum, and Polygon.
 
 ## Highlights
-- Multi-chain support across Ethereum, Base, Arbitrum, and Polygon networks
-- Complete lending operations: supply collateral, borrow base assets, and repay debt
-- Automatic debt repayment when supplying base assets to existing borrow positions
-- COMP rewards claiming functionality via CometRewards contract
-- Built-in safety checks including collateralization requirements and overflow protection
-- Dry-run mode for previewing all operations before execution
-- Real-time market data including utilization rates, APRs, and total supply/borrow amounts
-- Position management with detailed balance and collateralization status tracking
+- Multi-chain support (Ethereum, Base, Arbitrum, Polygon)
+- Supply collateral and borrow base assets (USDC markets)
+- Automatic debt repayment when supplying base assets
+- Claim COMP rewards from lending activities
+- Position monitoring with real-time market data
+- Dry-run mode for previewing transactions before execution
+- Built-in safety checks to prevent transaction failures
+- Direct integration with onchainos wallet for secure execution
 
