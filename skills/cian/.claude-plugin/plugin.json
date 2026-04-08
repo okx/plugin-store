@@ -1,0 +1,10 @@
+{
+  "name": "cian",
+  "description": "CIAN Yield Layer -- multi-chain ERC4626 yield vaults for ETH/BTC LST assets on Ethereum, Arbitrum, BSC, and Mantle",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/cian",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "Apache-2.0",
+  "keywords": ["yield", "evm", "multi-chain", "delta-neutral", "erc4626", "lst", "btc", "ethereum", "arbitrum", "bsc"]
+}
