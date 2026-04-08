@@ -83,34 +83,46 @@ pub async fn run(args: SwapArgs) -> Result<()> {
     let wallet_addr = crate::onchainos::get_wallet_address().await
         .unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
 
+    // Preview gate: without --confirm (or with --dry-run), show intent and stop.
+    if args.dry_run || !args.confirm {
+        let approve_calldata = crate::calldata::encode_approve(cfg.smart_router, amount_in)?;
+        let swap_calldata = crate::calldata::encode_exact_input_single(
+            &from_addr,
+            &to_addr,
+            best_fee,
+            &wallet_addr,
+            amount_in,
+            amount_out_minimum,
+        )?;
+        println!("\nPreview (no transactions broadcast — add --confirm to execute):");
+        println!("  Step 1 approve: onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, from_addr, approve_calldata);
+        println!("  Step 2 swap:    onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, cfg.smart_router, swap_calldata);
+        return Ok(());
+    }
+
     // Step 1: Approve SmartRouter to spend tokenIn (skip if allowance already sufficient)
     println!("\nStep 1: Approving SmartRouter to spend {}...", symbol_in);
-    eprintln!("WARNING: Approving {} {} to {} -- approving exact amount only. Use --dry-run to preview.", amount_in, symbol_in, cfg.smart_router);
     let approve_calldata = crate::calldata::encode_approve(cfg.smart_router, amount_in)?;
 
-    if args.dry_run {
-        println!("  [dry-run] onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, from_addr, approve_calldata);
+    // Check existing allowance to avoid unnecessary approve (prevents nonce conflicts)
+    let allowance = crate::rpc::get_allowance(&from_addr, &wallet_addr, cfg.smart_router, cfg.rpc_url)
+        .await.unwrap_or(0);
+    if allowance >= amount_in {
+        println!("  Allowance already sufficient ({}), skipping approve.", allowance);
     } else {
-        // Check existing allowance to avoid unnecessary approve (prevents nonce conflicts)
-        let allowance = crate::rpc::get_allowance(&from_addr, &wallet_addr, cfg.smart_router, cfg.rpc_url)
-            .await.unwrap_or(0);
-        if allowance >= amount_in {
-            println!("  Allowance already sufficient ({}), skipping approve.", allowance);
-        } else {
-            let approve_result = crate::onchainos::wallet_contract_call(
-                args.chain,
-                &from_addr,
-                &approve_calldata,
-                None,
-                None,
-                args.dry_run,
-                args.confirm,
-            ).await?;
-            let approve_tx = crate::onchainos::extract_tx_hash(&approve_result);
-            println!("  Approve tx: {}", approve_tx);
-            // Wait for approve to be processed before submitting swap
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-        }
+        let approve_result = crate::onchainos::wallet_contract_call(
+            args.chain,
+            &from_addr,
+            &approve_calldata,
+            None,
+            None,
+            false,
+            true,
+        ).await?;
+        let approve_tx = crate::onchainos::extract_tx_hash(&approve_result);
+        println!("  Approve tx: {}", approve_tx);
+        // Wait for approve to be processed before submitting swap
+        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     }
 
     // Step 2: Execute swap via SmartRouter.exactInputSingle
@@ -126,20 +138,14 @@ pub async fn run(args: SwapArgs) -> Result<()> {
         amount_out_minimum,
     )?;
 
-    if args.dry_run {
-        println!("  [dry-run] onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, cfg.smart_router, swap_calldata);
-        println!("\nDry-run complete. No transactions submitted.");
-        return Ok(());
-    }
-
     let swap_result = crate::onchainos::wallet_contract_call(
         args.chain,
         cfg.smart_router,
         &swap_calldata,
         None,
         None,
-        args.dry_run,
-        args.confirm,
+        false,
+        true,
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&swap_result);
