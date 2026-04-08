@@ -83,7 +83,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         let allowance0 = get_allowance(&token0, &recipient, nfpm, &rpc).await?;
         if allowance0 < args.amount0_desired {
             println!("Approving token0 ({}) for NonfungiblePositionManager...", token0);
-            let approve_data = build_approve_calldata(nfpm, u128::MAX);
+            let approve_data = build_approve_calldata(nfpm, args.amount0_desired);
             let res =
                 wallet_contract_call(args.chain, &token0, &approve_data, None, None, true, false).await?;
             println!("Approve token0 tx: {}", extract_tx_hash(&res));
@@ -94,7 +94,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         let allowance1 = get_allowance(&token1, &recipient, nfpm, &rpc).await?;
         if allowance1 < args.amount1_desired {
             println!("Approving token1 ({}) for NonfungiblePositionManager...", token1);
-            let approve_data = build_approve_calldata(nfpm, u128::MAX);
+            let approve_data = build_approve_calldata(nfpm, args.amount1_desired);
             let res =
                 wallet_contract_call(args.chain, &token1, &approve_data, None, None, true, false).await?;
             println!("Approve token1 tx: {}", extract_tx_hash(&res));
