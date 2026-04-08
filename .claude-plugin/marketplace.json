@@ -160,6 +160,15 @@
       }
     },
     {
+      "name": "lifi",
+      "description": "LI.FI/Jumper cross-chain bridge and swap aggregator supporting 79+ EVM chains",
+      "source": "./skills/lifi",
+      "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "source": "./skills/meme-trench-scanner",
