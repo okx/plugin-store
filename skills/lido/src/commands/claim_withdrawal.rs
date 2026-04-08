@@ -106,7 +106,8 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
         &claim_calldata,
         Some(&wallet),
         None,
-        false,
+        args.confirm,
+        args.dry_run,
     )
     .await?;
 

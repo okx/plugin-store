@@ -87,7 +87,8 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
         &calldata,
         Some(&wallet),
         Some(amount_wei),
-        false,
+        args.confirm,
+        args.dry_run,
     )
     .await?;
 

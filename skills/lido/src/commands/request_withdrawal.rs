@@ -73,6 +73,12 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if !args.confirm {
+        println!("=== Transaction Preview (NOT broadcast) ===");
+        println!("Add --confirm to execute this transaction.");
+        return Ok(());
+    }
+
     // Step 1: Approve
     println!("Step 1/2: Approving stETH spend...");
     let approve_result = onchainos::wallet_contract_call(
@@ -81,7 +87,8 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         &approve_calldata,
         Some(&wallet),
         None,
-        false,
+        args.confirm,
+        args.dry_run,
     )
     .await?;
     let approve_tx = onchainos::extract_tx_hash(&approve_result);
@@ -95,7 +102,8 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         &request_calldata,
         Some(&wallet),
         None,
-        false,
+        args.confirm,
+        args.dry_run,
     )
     .await?;
     let request_tx = onchainos::extract_tx_hash(&request_result);
