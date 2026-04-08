@@ -91,6 +91,8 @@ Do NOT use for: same-chain swaps, non-bridge operations, Across Protocol bridges
 
 ## Architecture
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/debridge (binary built from commit `6882d08d`)
+
 - Read ops (get-quote, get-status, get-chains) -> direct HTTP calls to deBridge DLN REST API; no wallet interaction
 - Write ops (bridge) -> after user confirmation, submits via `onchainos wallet contract-call`; EVM uses calldata from API; Solana converts hex tx to base58
 - Write commands use `--force` flag internally — the binary broadcasts immediately once invoked; **agent confirmation is the sole safety gate** before calling any write command
@@ -118,6 +120,20 @@ Do NOT use for: same-chain swaps, non-bridge operations, Across Protocol bridges
 5. Return txHash and orderId; check status with get-status
 
 ---
+
+
+## Pre-flight Checks
+
+Before executing any write command, verify:
+
+1. **Binary installed**: `debridge --version` — if not found, install the plugin via the OKX plugin store
+2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
+3. **Chain supported**: target chain must be one of Ethereum (1), Arbitrum (42161), Base (8453), BNB Chain (56), Polygon (137), Optimism (10), Solana (501)
+
+If the wallet is not connected, output:
+```
+Please connect your wallet first: run `onchainos wallet login`
+```
 
 ## Commands
 
