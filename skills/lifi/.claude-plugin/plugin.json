@@ -1,0 +1,17 @@
+{
+  "name": "lifi",
+  "description": "LI.FI/Jumper cross-chain bridge and swap aggregator supporting 79+ EVM chains",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bridge",
+    "swap",
+    "cross-chain",
+    "aggregator",
+    "evm"
+  ]
+}
