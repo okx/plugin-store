@@ -2,10 +2,10 @@
 # pancakeswap -- Skill Summary
 
 ## Overview
-This skill enables token swapping and concentrated liquidity management on PancakeSwap V3, the leading decentralized exchange on BNB Chain and Base. It provides comprehensive functionality for trading tokens, adding/removing liquidity positions, getting real-time quotes, and managing V3 NFT positions through PancakeSwap's SmartRouter and NonfungiblePositionManager contracts.
+The PancakeSwap skill enables token swapping and concentrated liquidity management on PancakeSwap V3, supporting both BNB Chain (BSC) and Base networks. It provides comprehensive DEX functionality including real-time price quotes, token swaps via SmartRouter, liquidity pool discovery, LP position management, and automated best-price routing across multiple fee tiers. The skill integrates with OKX wallet infrastructure for secure transaction execution and includes safety features like slippage protection and mandatory user confirmations for all write operations.
 
 ## Usage
-Install the plugin via OKX plugin store, connect your wallet with `onchainos wallet login`, then use commands like `pancakeswap swap`, `pancakeswap add-liquidity`, or `pancakeswap quote` to interact with PancakeSwap V3.
+Connect your wallet using `onchainos wallet login`, then use trigger phrases like "swap on pancakeswap", "add liquidity", or "my positions" to interact with the DEX. All write operations require explicit user confirmation before broadcasting transactions.
 
 ## Commands
 | Command | Description |
@@ -18,4 +18,4 @@ Install the plugin via OKX plugin store, connect your wallet with `onchainos wal
 | `remove-liquidity` | Remove liquidity and collect tokens |
 
 ## Triggers
-Activate when users mention PancakeSwap operations like "swap on pancake", "add liquidity pancakeswap", "PCS swap", "pancakeswap pool", or "PancakeSwap V3". Also trigger for general DEX activities on supported chains when PancakeSwap is the preferred platform.
+Activate this skill when users want to trade tokens, provide liquidity, or manage LP positions on PancakeSwap V3. Trigger phrases include "pancakeswap", "swap on pancake", "add liquidity pancakeswap", and "my pancakeswap LP".
