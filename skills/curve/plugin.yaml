@@ -1,0 +1,36 @@
+schema_version: 1
+name: curve
+version: "0.1.0"
+description: "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - dex
+  - swap
+  - stablecoin
+  - amm
+  - liquidity
+license: MIT
+
+components:
+  skill:
+    dir: skills/curve
+
+build:
+  lang: rust
+  binary_name: curve
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: curve
+
+api_calls:
+  - "https://api.curve.finance/api/getPools"
+  - "https://ethereum.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://base-rpc.publicnode.com"
+  - "https://polygon-rpc.com"
+  - "https://bsc-rpc.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
