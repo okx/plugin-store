@@ -108,7 +108,11 @@
     {
       "name": "four-meme",
       "description": "Buy and sell meme tokens on Four.meme bonding curve launchpad on BNB Chain",
-      "source": "./skills/four-meme"
+      "source": "./skills/four-meme",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
       "name": "frax-ether",
@@ -120,14 +124,18 @@
       }
     },
     {
-      "name": "gearbox-v3",
-      "description": "Open and manage leveraged Credit Accounts on Gearbox V3 — Arbitrum and Ethereum",
-      "source": "./skills/gearbox-v3"
-    },
-    {
       "name": "gmx-v1",
       "description": "Trade perpetuals, swap tokens, and manage GLP liquidity on GMX V1 (Arbitrum/Avalanche)",
       "source": "./skills/gmx-v1",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
+      "name": "hyperliquid",
+      "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+      "source": "./skills/hyperliquid",
       "category": "trading-strategy",
       "author": {
         "name": "GeoGu360"
@@ -309,6 +317,15 @@
       "description": "Segment Finance lending and borrowing on BNB Chain (BSC). Compound V2 fork with seToken markets.",
       "source": "./skills/segment-finance",
       "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
+      "name": "sky-lending",
+      "description": "Sky Lending (MakerDAO CDP) — deposit collateral, borrow DAI/USDS stablecoins on Ethereum",
+      "source": "./skills/sky-lending",
+      "category": "defi-protocol",
       "author": {
         "name": "GeoGu360"
       }
