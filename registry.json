@@ -362,6 +362,38 @@
       }
     },
     {
+      "name": "hyperliquid",
+      "version": "0.1.0",
+      "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+      "author": {
+        "name": "GeoGu360"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "ethereum",
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/hyperliquid"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
       "name": "instadapp",
       "version": "0.1.0",
       "description": "Instadapp Lite Vaults — deposit ETH, withdraw, and track yield on Ethereum via iETH and iETHv2 vaults",

@@ -124,6 +124,15 @@
       }
     },
     {
+      "name": "hyperliquid",
+      "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+      "source": "./skills/hyperliquid",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
       "name": "instadapp",
       "description": "Instadapp Lite Vaults — deposit ETH, withdraw, and track yield on Ethereum via iETH and iETHv2 vaults",
       "source": "./skills/instadapp",
