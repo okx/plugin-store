@@ -1,0 +1,23 @@
+schema_version: 1
+name: kairos-floor-score
+version: "1.0.0"
+description: "Institutional-grade ML trade scoring for AI trading agents. GBDT model + regime detection + microstructure analysis + confluence scoring. GO/REDUCE/REJECT recommendations."
+author:
+  name: "Valisthea"
+  github: "Valisthea"
+license: MIT
+category: trading-strategy
+type: community-developer
+tags:
+  - trading
+  - ml
+  - scoring
+  - onchainos
+  - xlayer
+
+components:
+  skill:
+    repo: "Valisthea/kairos-floor-score"
+    commit: "2cf14a97042542a5cdeeb3e8f5a9aac4de5834ff"
+
+api_calls: []
