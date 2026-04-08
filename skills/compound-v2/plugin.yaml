@@ -1,0 +1,25 @@
+schema_version: 1
+name: compound-v2
+version: 0.1.0
+description: 'Compound V2 classic cToken lending plugin: supply assets, redeem cTokens,
+  view positions, claim COMP rewards. Supports ETH, USDT, USDC, DAI on Ethereum mainnet.'
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- defi
+- compound
+- ctoken
+- ethereum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: compound-v2
+api_calls:
+- ethereum.publicnode.com
