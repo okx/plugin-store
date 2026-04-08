@@ -1,13 +1,13 @@
 # archimedes-v1
-Archimedes Finance leveraged yield protocol on Ethereum enabling up to 10x leveraged OUSD positions using USDC, USDT, or DAI.
+Archimedes Finance leveraged yield protocol enabling up to 10x leveraged OUSD positions using USDC, USDT, or DAI on Ethereum.
 
 ## Highlights
-- Up to 10x leveraged exposure to OUSD (Origin Dollar) yield
-- Supports USDC, USDT, and DAI as collateral tokens
-- ERC-721 NFT position tokens for tradeable leverage positions
-- Built-in slippage protection and safety checks
-- Dry-run simulation before executing transactions
-- Real-time protocol liquidity and parameter monitoring
-- Automatic origination fee handling in ARCH tokens
-- Position unwinding with minimum return guarantees
+- Open leveraged positions with up to 10x multiplier on OUSD yield
+- Support for USDC, USDT, and DAI as deposit tokens
+- NFT-based position management with ERC-721 PositionTokens
+- Built-in slippage protection and dry-run simulation
+- Real-time protocol liquidity and parameter checking
+- Automated ARCH token fee handling from deposits or wallet
+- Position closing with minimum return guarantees
+- Comprehensive portfolio viewing and position tracking
 
