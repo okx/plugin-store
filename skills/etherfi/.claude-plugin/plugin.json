@@ -1,0 +1,19 @@
+{
+  "name": "etherfi",
+  "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "liquid-staking",
+    "restaking",
+    "eigenlayer",
+    "eeth",
+    "weeth",
+    "ethereum",
+    "erc4626"
+  ]
+}
