@@ -1,0 +1,10 @@
+{
+  "name": "across",
+  "description": "Across Protocol cross-chain bridge — bridge tokens between Ethereum, Arbitrum, Base, Optimism, Polygon",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/across",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "Apache-2.0",
+  "keywords": ["bridge", "cross-chain", "ethereum", "arbitrum", "base", "optimism"]
+}

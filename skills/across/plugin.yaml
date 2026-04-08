@@ -1,0 +1,35 @@
+schema_version: 1
+name: across
+version: "0.1.0"
+description: "Across Protocol cross-chain bridge — bridge tokens between Ethereum, Arbitrum, Base, Optimism, Polygon"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+license: Apache-2.0
+category: defi-protocol
+tags:
+  - bridge
+  - cross-chain
+  - ethereum
+  - arbitrum
+  - base
+  - optimism
+
+components:
+  skill:
+    dir: skills/across
+  binary:
+    repo: skylavis-sky/onchainos-plugins
+    asset_pattern: "across-{version}-{target}.tar.gz"
+
+build:
+  lang: rust
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: across
+  binary_name: across
+
+api_calls:
+  - app.across.to
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
