@@ -1,0 +1,20 @@
+{
+  "name": "dolomite",
+  "description": "Dolomite \u2014 Isolated lending markets on EVM chains. Supply/withdraw assets, view positions, simulate borrow/repay. Chains: Arbitrum (42161), Mantle, Berachain.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "earn",
+    "dolomite",
+    "isolated-lending",
+    "margin",
+    "arbitrum"
+  ]
+}
