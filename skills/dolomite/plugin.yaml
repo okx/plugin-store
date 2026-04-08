@@ -1,0 +1,29 @@
+schema_version: 1
+name: dolomite
+version: 0.1.0
+description: 'Dolomite — Isolated lending markets on EVM chains. Supply/withdraw assets,
+  view positions, simulate borrow/repay. Chains: Arbitrum (42161), Mantle, Berachain.'
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- defi
+- earn
+- dolomite
+- isolated-lending
+- margin
+- arbitrum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: dolomite
+api_calls:
+- arbitrum-one-rpc.publicnode.com
+- rpc.mantle.xyz
+- rpc.berachain.com
