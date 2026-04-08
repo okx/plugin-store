@@ -27,3 +27,10 @@ api_calls:
 - li.quest/v1/status
 - li.quest/v1/tools
 - li.quest/v1/token
+- ethereum.publicnode.com
+- base-rpc.publicnode.com
+- arbitrum-one-rpc.publicnode.com
+- polygon-bsc-rpc.publicnode.com
+- optimism-rpc.publicnode.com
+- bsc-rpc.publicnode.com
+- avalanche-c-chain-rpc.publicnode.com

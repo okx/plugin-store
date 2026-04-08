@@ -163,12 +163,12 @@ pub async fn execute(
         ).await;
 
         if current_allowance < required_amount {
-            // Send approve with unlimited allowance (u128::MAX)
+            // Approve exact swap amount only (not unlimited)
             let approve_result = onchainos::erc20_approve(
                 from_chain,
                 from_token_addr,
                 approval_address,
-                u128::MAX,
+                required_amount,
                 Some(&wallet),
                 confirm,
             ).await?;
