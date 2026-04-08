@@ -1,13 +1,13 @@
 # debridge
-Cross-chain bridge for swapping tokens between EVM chains (Ethereum, Arbitrum, Base, Optimism, BSC, Polygon) and Solana via deBridge DLN.
+Cross-chain bridge plugin for token swaps across EVM chains and Solana using deBridge DLN.
 
 ## Highlights
-- Cross-chain token swaps across 8+ supported chains including Solana
-- Real-time quotes with estimated fees and fill times
-- Support for native tokens (ETH, SOL) and ERC-20/SPL tokens
+- Cross-chain token swaps between EVM chains (Ethereum, Arbitrum, Base, Optimism, BSC, Polygon) and Solana
+- Real-time quotes with estimated fees and fill times (~10 seconds)
+- Native token support (ETH, SOL) and ERC-20/SPL tokens including USDC
 - Automatic ERC-20 allowance checking and approval handling
-- Order status tracking throughout the bridge process
-- Direct integration with deBridge Decentralized Liquidity Network (DLN)
-- Secure transaction preview with dry-run capabilities
-- Sub-minute transaction settlement for most routes
+- Order status tracking and monitoring capabilities
+- Decentralized Liquidity Network (DLN) powered bridging
+- Support for custom recipient addresses on destination chains
+- Dry-run mode for transaction preview before execution
 
