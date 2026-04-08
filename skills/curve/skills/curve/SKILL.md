@@ -88,6 +88,8 @@ fi
 
 ## Architecture
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/curve (binary built from commit `6882d08d`)
+
 - Read ops (`get-pools`, `get-pool-info`, `get-balances`, `quote`) → direct `eth_call` via public RPC; no confirmation needed
 - Write ops (`swap`, `add-liquidity`, `remove-liquidity`) → after user confirmation, submits via `onchainos wallet contract-call`
 - Write commands use `--force` flag internally — the binary broadcasts immediately once invoked; **agent confirmation is the sole safety gate** before calling any write command
@@ -108,6 +110,20 @@ fi
 | Base | 8453 | CurveRouterNG 0x4f37A9d1... |
 | Polygon | 137 | CurveRouterNG 0x0DCDED35... |
 | BSC | 56 | CurveRouterNG 0xA72C85C2... |
+
+
+## Pre-flight Checks
+
+Before executing any write command, verify:
+
+1. **Binary installed**: `curve --version` — if not found, install the plugin via the OKX plugin store
+2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
+3. **Chain supported**: target chain must be one of Ethereum (1), Arbitrum (42161), Base (8453), Polygon (137), BSC (56)
+
+If the wallet is not connected, output:
+```
+Please connect your wallet first: run `onchainos wallet login`
+```
 
 ## Command Routing
 
