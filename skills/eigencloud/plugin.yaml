@@ -1,0 +1,28 @@
+schema_version: 1
+name: eigencloud
+version: 0.1.0
+description: Restake LSTs and ETH on EigenLayer (EigenCloud) on Ethereum mainnet. Deposit into strategies, delegate to operators, queue withdrawals, and check positions.
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - restaking
+  - eigenlayer
+  - eigencloud
+  - ethereum
+  - lst
+  - staking
+  - avs
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: eigencloud
+chain:
+  name: ethereum
+  chain_id: 1
+api_calls:
+  - https://ethereum-rpc.publicnode.com
