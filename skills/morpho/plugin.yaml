@@ -1,0 +1,35 @@
+schema_version: 1
+name: morpho
+version: "0.1.0"
+description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - defi
+  - earn
+  - morpho
+  - collateral
+license: MIT
+
+components:
+  skill:
+    dir: skills/morpho
+
+build:
+  lang: rust
+  binary_name: morpho
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: morpho
+
+api_calls:
+  - "https://blue-api.morpho.org/graphql"
+  - "https://eth.llamarpc.com"
+  - "https://mainnet.base.org"
+  - "https://api.merkl.xyz"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
