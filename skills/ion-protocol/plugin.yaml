@@ -1,0 +1,30 @@
+schema_version: 1
+name: ion-protocol
+version: "0.1.0"
+description: "Ion Protocol CDP lending plugin for LRT/LST collateral on Ethereum Mainnet"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+license: MIT
+category: defi-protocol
+tags:
+  - lending
+  - cdp
+  - lrt
+  - lst
+  - ethereum
+  - collateral
+  - defi
+components:
+  skill:
+    dir: skills/ion-protocol
+build:
+  lang: rust
+  binary_name: ion-protocol
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: ion-protocol
+api_calls:
+  - "https://ethereum.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

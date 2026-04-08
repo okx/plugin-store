@@ -1,0 +1,10 @@
+{
+  "name": "ion-protocol",
+  "description": "Ion Protocol CDP lending plugin for LRT/LST collateral on Ethereum Mainnet",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/ion-protocol",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["lending", "cdp", "lrt", "lst", "ethereum", "collateral", "defi"]
+}
