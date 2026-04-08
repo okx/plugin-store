@@ -117,11 +117,11 @@ async fn main() {
         }
         Commands::Supply { asset, amount, from } => {
             let amount: f64 = amount.parse().expect("amount must be a valid number");
-            commands::supply::run(cli.chain, asset, amount, from, cli.dry_run).await
+            commands::supply::run(cli.chain, asset, amount, from, cli.dry_run, cli.confirm).await
         }
         Commands::Redeem { asset, ctoken_amount, from } => {
             let ctoken_amount: f64 = ctoken_amount.parse().expect("ctoken_amount must be a valid number");
-            commands::redeem::run(cli.chain, asset, ctoken_amount, from, cli.dry_run).await
+            commands::redeem::run(cli.chain, asset, ctoken_amount, from, cli.dry_run, cli.confirm).await
         }
         Commands::Borrow { asset, amount, from } => {
             let amount: f64 = amount.parse().expect("amount must be a valid number");
@@ -132,7 +132,7 @@ async fn main() {
             commands::repay::run(cli.chain, asset, amount, from, cli.dry_run).await
         }
         Commands::ClaimComp { from } => {
-            commands::claim_comp::run(cli.chain, from, cli.dry_run).await
+            commands::claim_comp::run(cli.chain, from, cli.dry_run, cli.confirm).await
         }
     };
 

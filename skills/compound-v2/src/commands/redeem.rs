@@ -12,6 +12,7 @@ pub async fn run(
     ctoken_amount: f64,
     from: Option<String>,
     dry_run: bool,
+    confirm: bool,
 ) -> Result<Value> {
     if chain_id != 1 {
         anyhow::bail!("Compound V2 is only supported on Ethereum mainnet (chain 1). Got chain {}.", chain_id);
@@ -75,7 +76,7 @@ pub async fn run(
         );
     }
 
-    let result = wallet_contract_call(chain_id, market.ctoken, &calldata, Some(&wallet), None, false).await?;
+    let result = wallet_contract_call(chain_id, market.ctoken, &calldata, Some(&wallet), None, false, confirm).await?;
     let tx_hash = extract_tx_hash(&result);
 
     // Read updated balance
