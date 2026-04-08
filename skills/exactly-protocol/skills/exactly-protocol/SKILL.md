@@ -138,6 +138,8 @@ Passing an invalid maturity timestamp will cause the contract call to revert.
 
 ## Pre-flight Checks
 
+**Source code**: https://github.com/skylavis-sky/onchainos-plugins/tree/main/exactly-protocol (binary built from commit `6882d08d`)
+
 Before executing any command:
 1. **Binary installed**: `exactly-protocol --version` - if not found, install plugin
 2. **Wallet connected**: `onchainos wallet status` - confirm logged in
