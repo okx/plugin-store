@@ -116,8 +116,8 @@ pub async fn run(args: SwapArgs) -> Result<()> {
             &approve_calldata,
             None,
             None,
-            false,
-            true,
+            args.dry_run,
+            args.confirm,
         ).await?;
         let approve_tx = crate::onchainos::extract_tx_hash(&approve_result);
         println!("  Approve tx: {}", approve_tx);
@@ -144,8 +144,8 @@ pub async fn run(args: SwapArgs) -> Result<()> {
         &swap_calldata,
         None,
         None,
-        false,
-        true,
+        args.dry_run,
+        args.confirm,
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&swap_result);
