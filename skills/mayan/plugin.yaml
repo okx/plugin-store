@@ -27,6 +27,7 @@ build:
   binary_name: mayan
   source_repo: skylavis-sky/onchainos-plugins
   source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: mayan
 
 api_calls:
   - "https://price-api.mayan.finance"
