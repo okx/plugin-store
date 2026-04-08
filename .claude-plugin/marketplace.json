@@ -61,6 +61,15 @@
       }
     },
     {
+      "name": "renzo",
+      "description": "Renzo EigenLayer liquid restaking — deposit ETH or stETH to receive ezETH and earn restaking rewards",
+      "source": "./skills/renzo",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
       "name": "rust-cli-inspector",
       "description": "Rust CLI querying ETH price via OnchainOS",
       "source": "./skills/rust-cli-inspector",
