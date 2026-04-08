@@ -1,0 +1,19 @@
+{
+  "name": "hyperliquid",
+  "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "perps",
+    "perpetuals",
+    "dex",
+    "hyperliquid",
+    "derivatives",
+    "trading",
+    "leverage"
+  ]
+}
