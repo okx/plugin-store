@@ -33,6 +33,20 @@ Do NOT use for: PancakeSwap V2 AMM swaps (use pancakeswap-v2 skill), concentrate
 
 
 
+
+## Pre-flight Checks
+
+Before executing any write command, verify:
+
+1. **Binary installed**: `pancakeswap --version` — if not found, install the plugin via the OKX plugin store
+2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
+3. **Chain supported**: target chain must be one of BNB Chain (56), Ethereum (1), Base (8453)
+
+If the wallet is not connected, output:
+```
+Please connect your wallet first: run `onchainos wallet login`
+```
+
 ## Commands
 
 ### `quote` — Get swap quote (read-only)
