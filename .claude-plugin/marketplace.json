@@ -16,15 +16,6 @@
       }
     },
     {
-      "name": "lido",
-      "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
-      "source": "./skills/lido",
-      "category": "defi-protocol",
-      "author": {
-        "name": "GeoGu360"
-      }
-    },
-    {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "source": "./skills/meme-trench-scanner",
@@ -86,6 +77,11 @@
       "author": {
         "name": "GeoGu360"
       }
+    },
+    {
+      "name": "spark-savings",
+      "description": "Plugin: spark-savings",
+      "source": "./skills/spark-savings"
     },
     {
       "name": "top-rank-tokens-sniper",
