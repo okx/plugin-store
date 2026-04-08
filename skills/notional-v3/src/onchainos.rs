@@ -107,7 +107,7 @@ pub async fn erc20_approve(
     let spender_padded = format!("{:0>64}", &spender[2..]);
     let amount_hex = format!("{:064x}", amount);
     let calldata = format!("0x095ea7b3{}{}", spender_padded, amount_hex);
-    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run).await
+    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run, confirm).await
 }
 
 /// Extract txHash from onchainos response.
