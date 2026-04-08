@@ -1,0 +1,19 @@
+{
+  "name": "sky-lending",
+  "description": "Sky Lending (MakerDAO CDP) — deposit collateral, borrow DAI/USDS stablecoins on Ethereum",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "cdp",
+    "dai",
+    "makerdao",
+    "sky",
+    "stablecoin",
+    "collateral"
+  ]
+}
