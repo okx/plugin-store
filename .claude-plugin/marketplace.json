@@ -25,6 +25,15 @@
       }
     },
     {
+      "name": "balancer-v2",
+      "description": "Balancer V2 DEX — swap tokens, query pools, add/remove liquidity on Arbitrum and Ethereum",
+      "source": "./skills/balancer-v2",
+      "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
+    },
+    {
       "name": "lido",
       "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
       "source": "./skills/lido",

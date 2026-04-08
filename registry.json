@@ -58,6 +58,34 @@
       }
     },
     {
+      "name": "balancer-v2",
+      "version": "0.1.0",
+      "description": "Balancer V2 DEX — swap tokens, query pools, add/remove liquidity on Arbitrum and Ethereum",
+      "author": {
+        "name": "GeoGu360"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/balancer-v2"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "lido",
       "version": "0.1.0",
       "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
