@@ -1,0 +1,20 @@
+{
+  "name": "fluid",
+  "description": "Fluid Protocol \u2014 DEX + Lending integration. Supply/withdraw to ERC-4626 fTokens, swap via Fluid DEX. Chains: Base, Ethereum, Arbitrum.",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "dex",
+    "defi",
+    "earn",
+    "fluid",
+    "instadapp",
+    "erc4626",
+    "amm"
+  ]
+}
