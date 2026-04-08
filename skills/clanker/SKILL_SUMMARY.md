@@ -2,19 +2,19 @@
 # clanker -- Skill Summary
 
 ## Overview
-The clanker skill provides comprehensive token management for the Clanker protocol, enabling users to deploy new ERC-20 tokens on Base and Arbitrum networks, search and discover existing tokens by creator, and claim liquidity provider fee rewards. It integrates with the OKX OnChainOS wallet system and includes built-in security scanning to protect users from malicious tokens.
+The clanker skill enables deployment and management of ERC-20 tokens through the Clanker protocol on Base and Arbitrum networks. It provides comprehensive token lifecycle management including deployment, discovery, monitoring, and reward claiming functionality with built-in security features and dry-run capabilities for safe operations.
 
 ## Usage
-Install the plugin via OKX plugin store, connect your wallet with `onchainos wallet login`, then use trigger phrases like "deploy token on Clanker", "search tokens by creator", or "claim my LP rewards". Write operations require user confirmation before execution.
+Install the plugin via OKX plugin store, connect your wallet with `onchainos wallet login`, then use natural language commands like "deploy token on Base" or "claim my Clanker rewards". For deployments, you'll need a Clanker partner API key.
 
 ## Commands
-| Command | Description | Type |
-|---------|-------------|------|
-| `list-tokens` | List recently deployed tokens with pagination | Read |
-| `search-tokens` | Search tokens by creator address or username | Read |
-| `token-info` | Get token details, price, and market cap | Read |
-| `deploy-token` | Deploy new ERC-20 token (requires API key) | Write |
-| `claim-rewards` | Claim LP fee rewards for token creators | Write |
+| Command | Purpose |
+|---------|---------|
+| `list-tokens` | List recently deployed tokens with pagination |
+| `search-tokens --query <creator>` | Search tokens by creator address or username |
+| `token-info --address <addr>` | Get token metadata and current price |
+| `deploy-token --name X --symbol Y --api-key K` | Deploy new ERC-20 token via Clanker |
+| `claim-rewards --token-address <addr>` | Claim LP fee rewards for owned tokens |
 
 ## Triggers
-Activate when users want to launch new tokens, discover existing Clanker tokens by creator, check token information, or claim creator rewards from LP fees. Also triggered by phrases mentioning Base/Arbitrum token deployment or Clanker protocol interactions.
+Activate when users want to deploy tokens ("launch token on Clanker", "create ERC-20 on Base"), search for existing tokens by creator, or claim rewards from their deployed tokens. Also triggers for general Clanker token discovery and monitoring requests.
