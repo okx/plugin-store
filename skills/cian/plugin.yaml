@@ -1,0 +1,39 @@
+schema_version: 1
+name: cian
+version: "0.1.0"
+description: "CIAN Yield Layer -- multi-chain ERC4626 yield vaults for ETH/BTC LST assets on Ethereum, Arbitrum, BSC, and Mantle"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - yield
+  - evm
+  - multi-chain
+  - delta-neutral
+  - erc4626
+  - lst
+  - btc
+  - ethereum
+  - arbitrum
+  - bsc
+license: Apache-2.0
+
+components:
+  skill:
+    dir: skills/cian
+
+build:
+  lang: rust
+  binary_name: cian
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: cian
+
+api_calls:
+  - "https://1rpc.io/eth"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://bsc-rpc.publicnode.com"
+  - "https://rpc.mantle.xyz"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
