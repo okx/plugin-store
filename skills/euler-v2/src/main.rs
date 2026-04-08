@@ -53,6 +53,10 @@ enum Commands {
         /// Human-readable amount to supply (e.g. 10 or 0.001)
         #[arg(long)]
         amount: String,
+
+        /// Minimum shares to receive (slippage protection, raw 18-dec units; default: 0 = no check)
+        #[arg(long, default_value = "0")]
+        min_shares: String,
     },
 
     /// Withdraw underlying assets from an EVault
@@ -68,6 +72,10 @@ enum Commands {
         /// Withdraw entire balance (redeem all shares)
         #[arg(long)]
         all: bool,
+
+        /// Minimum assets to receive (slippage protection, human-readable; default: 0 = no check)
+        #[arg(long, default_value = "0")]
+        min_assets: String,
     },
 
     /// Borrow assets from an EVault (dry-run only — liquidation risk)
@@ -112,11 +120,11 @@ async fn main() {
         Commands::Positions => {
             commands::positions::run(chain_id, from, dry_run, confirm).await
         }
-        Commands::Supply { vault, amount } => {
-            commands::supply::run(&vault, &amount, chain_id, from, dry_run, confirm).await
+        Commands::Supply { vault, amount, min_shares } => {
+            commands::supply::run(&vault, &amount, &min_shares, chain_id, from, dry_run, confirm).await
         }
-        Commands::Withdraw { vault, amount, all } => {
-            commands::withdraw::run(&vault, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
+        Commands::Withdraw { vault, amount, all, min_assets } => {
+            commands::withdraw::run(&vault, amount.as_deref(), all, &min_assets, chain_id, from, dry_run, confirm).await
         }
         Commands::Borrow { vault, amount } => {
             commands::borrow::run(&vault, &amount, chain_id, from, dry_run, confirm).await

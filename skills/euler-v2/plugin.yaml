@@ -26,7 +26,7 @@ build:
   lang: rust
   binary_name: euler-v2
 api_calls:
-- mainnet.base.org
+- base-rpc.publicnode.com
 - eth.llamarpc.com
 - arbitrum-one-rpc.publicnode.com
 - api.avax.network/ext/bc/C/rpc

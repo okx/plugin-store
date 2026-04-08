@@ -12,6 +12,7 @@ pub async fn run(
     vault_input: &str,
     amount: Option<&str>,
     all: bool,
+    min_assets: &str,
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
@@ -33,6 +34,9 @@ pub async fn run(
     let asset_symbol = rpc::erc20_symbol(&underlying_addr, rpc).await.unwrap_or_else(|_| "TOKEN".to_string());
     let wallet_clean = wallet.trim_start_matches("0x").to_lowercase();
 
+    // Parse min_assets slippage threshold (same decimals as underlying asset)
+    let min_assets_raw = rpc::parse_amount(min_assets, decimals).unwrap_or(0);
+
     if all {
         // redeem all shares
         let shares = rpc::vault_balance_of(&vault_addr, &wallet, rpc).await.unwrap_or(0);
@@ -42,6 +46,19 @@ pub async fn run(
 
         let supplied_assets = rpc::vault_convert_to_assets(&vault_addr, shares, rpc).await.unwrap_or(shares);
         let display_amount = rpc::format_amount(supplied_assets, decimals);
+
+        // Slippage protection for redeem_all
+        if min_assets_raw > 0 {
+            let expected_assets = rpc::preview_redeem(&vault_addr, shares, rpc).await
+                .unwrap_or(0);
+            if expected_assets < min_assets_raw {
+                anyhow::bail!(
+                    "Slippage too high: expected {} {} (raw), minimum {}. Lower --min-assets or wait.",
+                    expected_assets, asset_symbol, min_assets_raw
+                );
+            }
+            eprintln!("[euler-v2] Slippage check OK: {} assets expected, min {}", expected_assets, min_assets_raw);
+        }
 
         eprintln!(
             "[euler-v2] Withdrawing all ({} shares ≈ {} {}) from vault {} on {}",
@@ -67,6 +84,7 @@ pub async fn run(
             "underlyingAddress": underlying_addr,
             "shares": shares.to_string(),
             "estimatedAssets": display_amount,
+            "minAssets": min_assets,
             "receiver": wallet,
             "chain": cfg.name,
             "chainId": chain_id,
@@ -77,6 +95,14 @@ pub async fn run(
     } else {
         let amt_str = amount.ok_or_else(|| anyhow::anyhow!("Provide --amount <n> or use --all"))?;
         let raw_amount = rpc::parse_amount(amt_str, decimals)?;
+
+        // Slippage protection for withdraw_exact
+        if min_assets_raw > 0 && raw_amount < min_assets_raw {
+            anyhow::bail!(
+                "Requested amount {} {} < --min-assets {}. Increase --amount or lower --min-assets.",
+                rpc::format_amount(raw_amount, decimals), asset_symbol, rpc::format_amount(min_assets_raw, decimals)
+            );
+        }
 
         eprintln!(
             "[euler-v2] Withdrawing {} {} from vault {} on {}",
@@ -102,6 +128,7 @@ pub async fn run(
             "underlyingAddress": underlying_addr,
             "amount": amt_str,
             "rawAmount": raw_amount.to_string(),
+            "minAssets": min_assets,
             "receiver": wallet,
             "chain": cfg.name,
             "chainId": chain_id,

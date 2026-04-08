@@ -147,6 +147,20 @@ pub async fn factory_get_vaults(factory: &str, start: u64, end: u64, rpc_url: &s
     Ok(addrs)
 }
 
+/// previewDeposit(uint256 assets) -> uint256 shares  selector: 0xef8b30f7
+pub async fn preview_deposit(vault: &str, assets: u128, rpc_url: &str) -> anyhow::Result<u128> {
+    let data = format!("0xef8b30f7{:064x}", assets);
+    let hex = eth_call(vault, &data, rpc_url).await?;
+    parse_u128_from_hex(&hex)
+}
+
+/// previewRedeem(uint256 shares) -> uint256 assets  selector: 0x4cdad506
+pub async fn preview_redeem(vault: &str, shares: u128, rpc_url: &str) -> anyhow::Result<u128> {
+    let data = format!("0x4cdad506{:064x}", shares);
+    let hex = eth_call(vault, &data, rpc_url).await?;
+    parse_u128_from_hex(&hex)
+}
+
 /// Parse a u128 from a 32-byte hex eth_call result.
 pub fn parse_u128_from_hex(hex: &str) -> anyhow::Result<u128> {
     let hex_clean = hex.trim_start_matches("0x");

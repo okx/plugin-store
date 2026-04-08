@@ -12,6 +12,7 @@ use crate::rpc;
 pub async fn run(
     vault_input: &str,
     amount: &str,
+    min_shares: &str,
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
@@ -43,6 +44,20 @@ pub async fn run(
             rpc::format_amount(user_balance, decimals),
             amount
         );
+    }
+
+    // Slippage protection: verify expected shares >= min_shares
+    let min_shares_raw = rpc::parse_amount(min_shares, 18).unwrap_or(0);
+    if min_shares_raw > 0 {
+        let expected_shares = rpc::preview_deposit(&vault_addr, raw_amount, rpc).await
+            .unwrap_or(0);
+        if expected_shares < min_shares_raw {
+            anyhow::bail!(
+                "Slippage too high: expected {} shares (raw), minimum {}. Increase --amount or lower --min-shares.",
+                expected_shares, min_shares_raw
+            );
+        }
+        eprintln!("[euler-v2] Slippage check OK: {} shares expected, min {}", expected_shares, min_shares_raw);
     }
 
     eprintln!(
@@ -87,6 +102,7 @@ pub async fn run(
         "underlyingAddress": underlying_addr,
         "amount": amount,
         "rawAmount": raw_amount.to_string(),
+        "minShares": min_shares,
         "receiver": wallet,
         "chain": cfg.name,
         "chainId": chain_id,
