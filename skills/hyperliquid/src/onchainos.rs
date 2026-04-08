@@ -1,0 +1,170 @@
+use std::process::Command;
+use serde_json::Value;
+use sha3::{Digest, Keccak256};
+
+/// Resolve the wallet address from the onchainos CLI.
+/// For Hyperliquid, we query EVM addresses (HyperEVM chain_id=999).
+/// Falls back to the first EVM address if chain_id 999 is not listed.
+pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
+    let output = Command::new("onchainos")
+        .args(["wallet", "addresses"])
+        .output()?;
+    let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
+    let chain_id_str = chain_id.to_string();
+    if let Some(evm_list) = json["data"]["evm"].as_array() {
+        // Try to find exact chain match
+        for entry in evm_list {
+            if entry["chainIndex"].as_str() == Some(&chain_id_str) {
+                if let Some(addr) = entry["address"].as_str() {
+                    return Ok(addr.to_string());
+                }
+            }
+        }
+        // Fallback: use first EVM address (Hyperliquid uses same key as Ethereum)
+        if let Some(first) = evm_list.first() {
+            if let Some(addr) = first["address"].as_str() {
+                return Ok(addr.to_string());
+            }
+        }
+    }
+    anyhow::bail!("Could not resolve wallet address for chain {}", chain_id)
+}
+
+/// Sign a Hyperliquid L1 action via onchainos and submit it.
+///
+/// Uses `onchainos wallet sign-message --type eip712` with the Hyperliquid
+/// EIP-712 typed data structure for L1 action signing.
+///
+/// dry_run: if true, returns the unsigned preview payload without submitting.
+/// confirm: if false (no --confirm flag), returns the preview payload for review.
+///          if true, proceeds to sign and submit.
+pub fn onchainos_hl_sign(
+    action: &Value,
+    nonce: u64,
+    wallet: &str,
+    confirm: bool,
+    dry_run: bool,
+) -> anyhow::Result<Value> {
+    if dry_run {
+        return Ok(serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "action": action,
+            "nonce": nonce,
+            "note": "Dry run - not signed or submitted"
+        }));
+    }
+
+    if !confirm {
+        return Ok(serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "action": action,
+            "nonce": nonce,
+            "note": "Preview only - add --confirm to sign and submit"
+        }));
+    }
+
+    // Build Hyperliquid EIP-712 typed data for L1 action signing.
+    // Hyperliquid L1 uses a phantom agent pattern: sign an Agent struct
+    // that commits to the connection ID = keccak256(msgpack(action) + nonce_be + 0x00).
+    // This matches the official HL Python SDK action_hash() function.
+    let action_bytes = rmp_serde::to_vec(action)
+        .map_err(|e| anyhow::anyhow!("msgpack encode failed: {}", e))?;
+    let nonce_be = nonce.to_be_bytes();
+    let mut hash_input = Vec::with_capacity(action_bytes.len() + 9);
+    hash_input.extend_from_slice(&action_bytes);
+    hash_input.extend_from_slice(&nonce_be);
+    hash_input.push(0x00u8);
+    let mut hasher = Keccak256::new();
+    hasher.update(&hash_input);
+    let digest = hasher.finalize();
+    let connection_id = format!("0x{}", hex::encode(digest));
+    let eip712_message = serde_json::json!({
+        "domain": {
+            "name": "Exchange",
+            "version": "1",
+            "chainId": 1337,
+            "verifyingContract": "0x0000000000000000000000000000000000000000"
+        },
+        "types": {
+            "EIP712Domain": [
+                { "name": "name",              "type": "string"  },
+                { "name": "version",           "type": "string"  },
+                { "name": "chainId",           "type": "uint256" },
+                { "name": "verifyingContract", "type": "address" }
+            ],
+            "Agent": [
+                { "name": "source",       "type": "string"  },
+                { "name": "connectionId", "type": "bytes32" }
+            ]
+        },
+        "primaryType": "Agent",
+        "message": {
+            "source":       "a",
+            "connectionId": connection_id
+        }
+    });
+
+    let eip712_str = serde_json::to_string(&eip712_message)?;
+
+    let output = Command::new("onchainos")
+        .args([
+            "wallet",
+            "sign-message",
+            "--type",
+            "eip712",
+            "--message",
+            &eip712_str,
+            "--chain",
+            "1",
+            "--from",
+            wallet,
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!(
+            "onchainos sign-message failed: {}. \
+             Ensure onchainos CLI is configured with a valid wallet. \
+             Use --dry-run to preview the unsigned payload.",
+            stderr
+        );
+    }
+
+    // Parse the signature from onchainos output
+    let sign_result: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| anyhow::anyhow!("Failed to parse sign-message output: {}", e))?;
+
+    let signature = sign_result["data"]["signature"]
+        .as_str()
+        .or_else(|| sign_result["signature"].as_str())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "No signature in sign-message response: {}",
+                serde_json::to_string(&sign_result).unwrap_or_default()
+            )
+        })?;
+
+    // Parse r, s, v from the 65-byte hex signature (no external crate needed)
+    let sig_hex = signature.trim_start_matches("0x");
+    if sig_hex.len() != 130 {
+        anyhow::bail!(
+            "Expected 130-char hex signature (65 bytes), got {} chars",
+            sig_hex.len()
+        );
+    }
+    let r = format!("0x{}", &sig_hex[0..64]);
+    let s = format!("0x{}", &sig_hex[64..128]);
+    let v: u64 = u64::from_str_radix(&sig_hex[128..130], 16)
+        .map_err(|e| anyhow::anyhow!("Failed to parse v byte: {}", e))?;
+
+    // Build the final Hyperliquid exchange request body
+    Ok(serde_json::json!({
+        "action":       action,
+        "nonce":        nonce,
+        "signature":    { "r": r, "s": s, "v": v },
+        "vaultAddress": null
+    }))
+}

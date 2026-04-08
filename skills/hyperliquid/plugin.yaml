@@ -1,0 +1,22 @@
+schema_version: 1
+name: hyperliquid
+version: "0.1.0"
+description: "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders, cancel orders"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - perpetuals
+  - trading
+  - hyperliquid
+  - derivatives
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: hyperliquid
+api_calls:
+  - "https://api.hyperliquid.xyz"
