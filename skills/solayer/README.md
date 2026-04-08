@@ -2,6 +2,12 @@
 
 Solayer liquid restaking on Solana. Stake SOL to receive sSOL and earn restaking rewards via the Solayer restaking protocol.
 
+## Installation
+
+```bash
+npx skills add MigOKG/plugin-store --skill solayer
+```
+
 ## Commands
 
 | Command | Description |
@@ -19,3 +25,4 @@ Solayer liquid restaking on Solana. Stake SOL to receive sSOL and earn restaking
 
 - Restaking Program: `sSo1iU21jBrU9VaJ8PJib1MtorefUV4fzC9GURa2KNn`
 - sSOL Mint: `sSo14endRuUbvQaJS3dq36Q829a3A6BEfoeeRGJywEh`
+
