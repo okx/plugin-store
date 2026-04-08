@@ -1,0 +1,25 @@
+schema_version: 1
+name: segment-finance
+version: 0.1.0
+description: Segment Finance lending and borrowing on BNB Chain (BSC). Compound V2
+  fork with seToken markets.
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- lending
+- borrowing
+- bsc
+- bnb-chain
+- compound-v2
+- segment-finance
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: segment-finance
+api_calls:
+- bsc-rpc.publicnode.com
