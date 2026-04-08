@@ -76,7 +76,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
 
     // Step 1: Approve token0 for NPM
     println!("\nStep 1: Approving {} for NonfungiblePositionManager...", sym0);
-    let approve0_calldata = crate::calldata::encode_approve_max(cfg.npm)?;
+    eprintln!("WARNING: Approving {} {} to {} -- approving exact amount only. Use --dry-run to preview.", amount0_desired, sym0, cfg.npm);
+    let approve0_calldata = crate::calldata::encode_approve(cfg.npm, amount0_desired)?;
 
     if args.dry_run {
         println!("  [dry-run] onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, token0, approve0_calldata);
@@ -89,7 +90,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
 
     // Step 2: Approve token1 for NPM
     println!("\nStep 2: Approving {} for NonfungiblePositionManager...", sym1);
-    let approve1_calldata = crate::calldata::encode_approve_max(cfg.npm)?;
+    eprintln!("WARNING: Approving {} {} to {} -- approving exact amount only. Use --dry-run to preview.", amount1_desired, sym1, cfg.npm);
+    let approve1_calldata = crate::calldata::encode_approve(cfg.npm, amount1_desired)?;
 
     if args.dry_run {
         println!("  [dry-run] onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, token1, approve1_calldata);

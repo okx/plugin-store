@@ -85,7 +85,8 @@ pub async fn run(args: SwapArgs) -> Result<()> {
 
     // Step 1: Approve SmartRouter to spend tokenIn (skip if allowance already sufficient)
     println!("\nStep 1: Approving SmartRouter to spend {}...", symbol_in);
-    let approve_calldata = crate::calldata::encode_approve_max(cfg.smart_router)?;
+    eprintln!("WARNING: Approving {} {} to {} -- approving exact amount only. Use --dry-run to preview.", amount_in, symbol_in, cfg.smart_router);
+    let approve_calldata = crate::calldata::encode_approve(cfg.smart_router, amount_in)?;
 
     if args.dry_run {
         println!("  [dry-run] onchainos wallet contract-call --chain {} --to {} --input-data {}", args.chain, from_addr, approve_calldata);
