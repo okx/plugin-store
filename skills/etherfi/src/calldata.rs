@@ -1,33 +1,22 @@
-use crate::config::{pad_address, pad_u256};
+use crate::config::{pad_u256, pad_address};
 
-/// Build calldata for LiquidityPool.deposit(address _referral)
-/// Selector: 0x5340a0d5 (keccak256("deposit(address)")[0..4])
-/// ETH value is passed as the native msg.value, not ABI-encoded.
-/// The _referral address is set to the zero address (no referral).
-///
-/// ABI layout:
-///   [0..4]   selector 0x5340a0d5
-///   [4..36]  _referral (address, padded to 32 bytes)
+/// Build calldata for LiquidityPool.deposit()
+/// Selector: 0xd0e30db0 (keccak256("deposit()")[0..4])
+/// ETH value is passed as the native msg.value — no ABI arguments.
+/// The ether.fi LiquidityPool accepts plain deposit() with no referral param.
 pub fn build_deposit_calldata() -> String {
-    // No referral: pass zero address
-    let referral = pad_address("0x0000000000000000000000000000000000000000");
-    format!("0x5340a0d5{}", referral)
+    "0xd0e30db0".to_string()
 }
 
-/// Build calldata for weETH.deposit(uint256 assets, address receiver)
-/// This is the ERC-4626 deposit: wraps eETH → weETH.
-/// Selector: 0x6e553f65 (keccak256("deposit(uint256,address)")[0..4])
+/// Build calldata for weETH.wrap(uint256 _eETHAmount)
+/// Wraps eETH → weETH on the ether.fi weETH contract.
+/// Selector: 0xea598cb0 (keccak256("wrap(uint256)")[0..4])
 ///
 /// ABI layout:
-///   [0..4]    selector 0x6e553f65
-///   [4..36]   assets (uint256 = eETH amount in wei)
-///   [36..68]  receiver (address, padded to 32 bytes)
-pub fn build_wrap_calldata(assets: u128, receiver: &str) -> String {
-    format!(
-        "0x6e553f65{}{}",
-        pad_u256(assets),
-        pad_address(receiver),
-    )
+///   [0..4]   selector 0xea598cb0
+///   [4..36]  _eETHAmount (uint256 = eETH amount in wei)
+pub fn build_wrap_calldata(assets: u128, _receiver: &str) -> String {
+    format!("0xea598cb0{}", pad_u256(assets))
 }
 
 /// Build calldata for weETH.redeem(uint256 shares, address receiver, address owner)
