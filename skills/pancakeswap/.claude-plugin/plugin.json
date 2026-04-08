@@ -1,0 +1,10 @@
+{
+  "name": "pancakeswap",
+  "description": "Swap tokens and manage liquidity on PancakeSwap V3",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/pancakeswap",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["dex", "swap", "liquidity", "pancakeswap", "bsc"]
+}
