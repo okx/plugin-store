@@ -1,0 +1,23 @@
+schema_version: 1
+name: relay
+version: 0.1.0
+description: Cross-chain bridge and swap via Relay protocol — supports 74+ EVM chains
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+- bridge
+- cross-chain
+- relay
+- evm
+- defi
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: relay
+api_calls:
+- api.relay.link

@@ -1,0 +1,17 @@
+{
+  "name": "relay",
+  "description": "Cross-chain bridge and swap via Relay protocol \u2014 supports 74+ EVM chains",
+  "version": "0.1.0",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bridge",
+    "cross-chain",
+    "relay",
+    "evm",
+    "defi"
+  ]
+}
