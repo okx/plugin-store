@@ -11,39 +11,22 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "dex",
-        "amm",
-        "aerodrome",
-        "classic-amm",
-        "stable",
-        "volatile",
-        "base"
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/aerodrome-amm",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "aerodrome-amm-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/aerodrome-amm@0.1.0"
+          "dir": "skills/aerodrome-amm"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/aerodrome-amm",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/aerodrome-amm",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/aerodrome-amm/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/aerodrome-amm/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/aerodrome-amm/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/aerodrome-amm/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "aerodrome-amm"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -55,39 +38,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "yield",
-        "vault",
-        "erc4626",
-        "ethereum",
-        "convex",
-        "aura"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/archimedes",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "archimedes-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/archimedes@0.1.0"
+          "dir": "skills/archimedes"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/archimedes",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/archimedes/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "ganlinux/onchainos-plugins",
-        "source_commit": "c829459ac65bf250d96482bb4e2816e273eb06d4",
-        "binary_name": "archimedes"
-      },
       "extra": {
         "chains": [
           "ethereum",
@@ -106,38 +66,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "dex",
-        "amm",
-        "swap",
-        "liquidity",
-        "balancer",
-        "arbitrum"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/balancer-v2",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "balancer-v2-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/balancer-v2@0.1.0"
+          "dir": "skills/balancer-v2"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/balancer-v2",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/balancer-v2",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/balancer-v2/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/balancer-v2/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/balancer-v2/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/balancer-v2/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "balancer-v2"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -149,40 +94,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "yield",
-        "vault",
-        "erc4626",
-        "auto-compound",
-        "defi",
-        "earn",
-        "base",
-        "bsc"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/beefy",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "beefy-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/beefy@0.1.0"
+          "dir": "skills/beefy"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/beefy",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/beefy",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/beefy/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/beefy/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/beefy/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/beefy/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "beefy"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -193,84 +121,21 @@
         "name": "GeoGu360"
       },
       "category": "defi-protocol",
-      "tags": [
-        "dex",
-        "arbitrum",
-        "concentrated-liquidity",
-        "algebra",
-        "camelot"
-      ],
+      "tags": [],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/camelot-v3",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "camelot-v3-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/camelot-v3@0.1.0"
+          "dir": "skills/camelot-v3"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/camelot-v3",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/camelot-v3",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/camelot-v3/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/camelot-v3/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/camelot-v3/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/camelot-v3/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "camelot-v3"
-      }
-    },
-    {
-      "name": "cian-yield-layer",
-      "version": "0.1.0",
-      "description": "CIAN Yield Layer on Ethereum -- deposit ETH/stETH/pumpBTC into ERC4626 vaults with recursive staking strategies, async 5-day withdrawal via requestRedeem",
-      "author": {
-        "name": "ganlinux"
-      },
-      "category": "defi-protocol",
-      "tags": [
-        "yield",
-        "staking",
-        "erc4626",
-        "delta-neutral",
-        "lst",
-        "lrt",
-        "eth",
-        "btc",
-        "ethereum"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "MigOKG/plugin-store",
-          "dir": "skills/cian-yield-layer",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "cian-yield-layer-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/cian-yield-layer@0.1.0"
-        }
-      },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/cian-yield-layer",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/cian-yield-layer",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/cian-yield-layer/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/cian-yield-layer/skills/cian-yield-layer/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/cian-yield-layer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/cian-yield-layer/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "ganlinux/onchainos-plugins",
-        "source_commit": "c829459ac65bf250d96482bb4e2816e273eb06d4",
-        "binary_name": "cian-yield-layer"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -282,38 +147,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "lending",
-        "borrowing",
-        "defi",
-        "compound",
-        "ctoken",
         "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/compound-v2",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "compound-v2-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/compound-v2@0.1.0"
+          "dir": "skills/compound-v2"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/compound-v2",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/compound-v2",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/compound-v2/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/compound-v2/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/compound-v2/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/compound-v2/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "compound-v2"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -324,84 +174,21 @@
         "name": "GeoGu360"
       },
       "category": "defi-protocol",
-      "tags": [
-        "lending",
-        "borrowing",
-        "defi",
-        "earn",
-        "dolomite",
-        "isolated-lending",
-        "margin",
-        "arbitrum"
-      ],
+      "tags": [],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/dolomite",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "dolomite-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/dolomite@0.1.0"
+          "dir": "skills/dolomite"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/dolomite",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/dolomite",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/dolomite/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/dolomite/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/dolomite/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/dolomite/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "dolomite"
-      }
-    },
-    {
-      "name": "fenix-finance",
-      "version": "0.1.0",
-      "description": "Fenix Finance V3 DEX on Blast — swap, add/remove liquidity, query LP positions (Algebra Integral V1, concentrated liquidity)",
-      "author": {
-        "name": "skylavis-sky"
-      },
-      "category": "defi-protocol",
-      "tags": [
-        "dex",
-        "amm",
-        "concentrated-liquidity",
-        "algebra",
-        "blast",
-        "ve33"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "MigOKG/plugin-store",
-          "dir": "skills/fenix-finance",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "fenix-finance-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/fenix-finance@0.1.0"
-        }
-      },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/fenix-finance",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/fenix-finance",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fenix-finance/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fenix-finance/skills/fenix-finance/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fenix-finance/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fenix-finance/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "ganlinux/onchainos-plugins",
-        "source_commit": "c829459ac65bf250d96482bb4e2816e273eb06d4",
-        "binary_name": "fenix-finance"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -413,40 +200,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "lending",
-        "dex",
-        "defi",
-        "earn",
-        "fluid",
-        "instadapp",
-        "erc4626",
-        "amm"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/fluid",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "fluid-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/fluid@0.1.0"
+          "dir": "skills/fluid"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/fluid",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/fluid",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fluid/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fluid/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fluid/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/fluid/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "fluid"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -458,37 +228,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "liquid-staking",
-        "frxETH",
-        "sfrxETH",
-        "ERC-4626",
-        "frax"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/frax-ether",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "frax-ether-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/frax-ether@0.1.0"
+          "dir": "skills/frax-ether"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/frax-ether",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/frax-ether",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/frax-ether/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/frax-ether/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/frax-ether/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/frax-ether/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "frax-ether"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -500,37 +256,22 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "perpetual",
-        "dex",
-        "gmx",
-        "leverage",
-        "glp"
+        "trading"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/gmx-v1",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "gmx-v1-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/gmx-v1@0.1.0"
+          "dir": "skills/gmx-v1"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/gmx-v1",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/gmx-v1",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/gmx-v1/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/gmx-v1/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/gmx-v1/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/gmx-v1/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "gmx-v1"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
       }
     },
     {
@@ -542,39 +283,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "yield",
-        "vault",
-        "eth",
-        "steth",
-        "ethereum",
-        "instadapp",
-        "lite"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/instadapp",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "instadapp-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/instadapp@0.1.0"
+          "dir": "skills/instadapp"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/instadapp",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/instadapp",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/instadapp/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/instadapp/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/instadapp/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/instadapp/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "instadapp"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -586,37 +311,24 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "staking",
-        "liquid-staking",
         "solana",
-        "jitosol",
-        "mev"
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/jito",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "jito-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/jito@0.1.0"
+          "dir": "skills/jito"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/jito",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/jito",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/jito/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/jito/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/jito/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/jito/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "jito"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -628,37 +340,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "lending",
-        "borrowing",
-        "solana",
-        "kamino",
-        "defi"
+        "solana"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/kamino-lend",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "kamino-lend-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/kamino-lend@0.1.0"
+          "dir": "skills/kamino-lend"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/kamino-lend",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/kamino-lend",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-lend/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-lend/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-lend/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-lend/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "kamino-lend"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -670,36 +368,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "solana",
-        "yield",
-        "liquidity",
-        "kamino"
+        "solana"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/kamino-liquidity",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "kamino-liquidity-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/kamino-liquidity@0.1.0"
+          "dir": "skills/kamino-liquidity"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/kamino-liquidity",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/kamino-liquidity",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-liquidity/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-liquidity/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-liquidity/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kamino-liquidity/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "kamino-liquidity"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -711,38 +396,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "restaking",
-        "liquid-restaking",
-        "eigenlayer",
-        "rseth",
-        "lrt",
-        "kelpdao"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/kelp",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "kelp-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/kelp@0.1.0"
+          "dir": "skills/kelp"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/kelp",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/kelp",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kelp/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kelp/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kelp/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/kelp/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "kelp"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -754,37 +424,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "staking",
-        "liquid-staking",
-        "lido",
-        "steth"
+        "ethereum",
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/lido",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "lido-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/lido@0.1.0"
+          "dir": "skills/lido"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/lido",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/lido/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/lido/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/lido/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/lido/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "lido"
-      },
       "extra": {
         "chains": [
           "ethereum",
@@ -796,7 +446,7 @@
     },
     {
       "name": "meme-trench-scanner",
-      "version": "1.0.0",
+      "version": "1.0",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "author": {
         "name": "yz06276"
@@ -804,23 +454,21 @@
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "onchainos",
-        "trading-bot"
+        "trading",
+        "signal",
+        "scanner",
+        "sniper",
+        "defi",
+        "memepump"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/meme-trench-scanner",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/meme-trench-scanner"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/meme-trench-scanner",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/meme-trench-scanner/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -838,41 +486,21 @@
         "name": "GeoGu360"
       },
       "category": "defi-protocol",
-      "tags": [
-        "lending",
-        "borrowing",
-        "compound-v2",
-        "mtoken",
-        "base",
-        "optimism",
-        "moonbeam",
-        "well-token"
-      ],
+      "tags": [],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/moonwell",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "moonwell-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/moonwell@0.1.0"
+          "dir": "skills/moonwell"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/moonwell",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/moonwell",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/moonwell/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/moonwell/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/moonwell/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/moonwell/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "moonwell"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -883,40 +511,21 @@
         "name": "skylavis-sky"
       },
       "category": "defi-protocol",
-      "tags": [
-        "lending",
-        "borrowing",
-        "defi",
-        "earn",
-        "morpho",
-        "base",
-        "collateral"
-      ],
+      "tags": [],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/morpho-base",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "morpho-base-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/morpho-base@0.1.0"
+          "dir": "skills/morpho-base"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/morpho-base",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/morpho-base",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/morpho-base/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/morpho-base/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/morpho-base/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/morpho-base/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "morpho-base"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -928,40 +537,22 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "lending",
-        "yield",
-        "leveraged-yield",
-        "fixed-rate",
-        "defi",
-        "notional",
-        "morpho",
         "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/notional-v3",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "notional-v3-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/notional-v3@0.1.0"
+          "dir": "skills/notional-v3"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/notional-v3",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/notional-v3",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/notional-v3/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/notional-v3/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/notional-v3/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/notional-v3/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "notional-v3"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -973,26 +564,19 @@
       },
       "category": "utility",
       "tags": [
-        "hackathon",
-        "xlayer",
-        "onchainos",
-        "uniswap",
-        "moltbook"
+        "trading",
+        "defi",
+        "ranking",
+        "hackathon"
       ],
       "type": "official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/okx-buildx-hackathon-agent-track"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/okx-buildx-hackathon-agent-track",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/okx-buildx-hackathon-agent-track/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base",
@@ -1042,27 +626,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "polymarket",
-        "prediction-market",
-        "trading",
-        "polygon",
-        "gasless",
-        "bridge"
+        "trading"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/polymarket-agent-skills",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/polymarket-agent-skills"
         }
       },
-      "link": "https://github.com/Polymarket/agent-skills",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/polymarket-agent-skills",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/polymarket-agent-skills/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1080,37 +653,23 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "bridge",
-        "cross-chain",
-        "relay",
-        "evm",
-        "defi"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/relay",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "relay-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/relay@0.1.0"
+          "dir": "skills/relay"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/relay",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/relay",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/relay/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/relay/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/relay/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/relay/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "relay"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -1122,38 +681,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "restaking",
-        "eigenlayer",
-        "liquid-restaking",
-        "ezeth",
-        "ethereum"
+        "ethereum",
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/renzo",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "renzo-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/renzo@0.1.0"
+          "dir": "skills/renzo"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/renzo",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/renzo/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/renzo/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/renzo/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/renzo/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "renzo"
-      },
       "extra": {
         "chains": [
           "ethereum",
@@ -1172,81 +710,44 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "staking",
-        "liquid-staking",
-        "rocket-pool",
-        "reth",
-        "ethereum"
+        "ethereum",
+        "trading"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/rocket-pool",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "rocket-pool-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/rocket-pool@0.1.0"
+          "dir": "skills/rocket-pool"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/rocket-pool",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/rocket-pool",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rocket-pool/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rocket-pool/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rocket-pool/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rocket-pool/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "rocket-pool"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "high"
       }
     },
     {
       "name": "rust-cli-inspector",
       "version": "1.1.0",
-      "description": "Rust CLI querying ETH price via OnchainOS",
+      "description": "Rust CLI querying ETH price via Onchain OS",
       "author": {
-        "name": "OKX"
+        "name": "yz06276"
       },
       "category": "utility",
-      "tags": [
-        "rust",
-        "onchainos",
-        "eth"
-      ],
+      "tags": [],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/rust-cli-inspector",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "rust-cli-inspector-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/rust-cli-inspector@1.0.0"
+          "dir": "skills/rust-cli-inspector"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/rust-cli-inspector",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/rust-cli-inspector/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "rust-cli-inspector"
-      },
       "extra": {
         "chains": [
-          "ethereum",
           "base"
         ],
         "protocols": [],
@@ -1262,43 +763,27 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "lending",
-        "borrowing",
-        "bsc",
-        "bnb-chain",
-        "compound-v2",
-        "segment-finance"
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/segment-finance",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "segment-finance-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/segment-finance@0.1.0"
+          "dir": "skills/segment-finance"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/segment-finance",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/segment-finance",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/segment-finance/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/segment-finance/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/segment-finance/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/segment-finance/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "segment-finance"
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
       "name": "smart-money-signal-copy-trade",
-      "version": "1.0.0",
+      "version": "1.0",
       "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
       "author": {
         "name": "yz06276"
@@ -1306,23 +791,19 @@
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "onchainos",
-        "trading-bot"
+        "trading",
+        "signal",
+        "sniper",
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/smart-money-signal-copy-trade",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/smart-money-signal-copy-trade"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/smart-money-signal-copy-trade",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/smart-money-signal-copy-trade/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -1342,36 +823,16 @@
       "category": "defi-protocol",
       "tags": [
         "solana",
-        "liquid-staking",
-        "restaking",
-        "ssol"
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/solayer",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "solayer-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/solayer@0.1.0"
+          "dir": "skills/solayer"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/solayer",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/solayer/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/solayer/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/solayer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/solayer/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "solayer"
-      },
       "extra": {
         "chains": [
           "solana",
@@ -1390,43 +851,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "savings",
-        "yield",
-        "stablecoin",
-        "defi",
-        "maker",
-        "sky",
-        "usds",
-        "sdai",
-        "susds",
-        "erc4626"
+        "ethereum",
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/spark-savings",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "spark-savings-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/spark-savings@0.1.0"
+          "dir": "skills/spark-savings"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/spark-savings",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/spark-savings/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/spark-savings/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/spark-savings/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/spark-savings/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "spark-savings"
-      },
       "extra": {
         "chains": [
           "ethereum",
@@ -1438,7 +873,7 @@
     },
     {
       "name": "top-rank-tokens-sniper",
-      "version": "1.0.0",
+      "version": "1.0",
       "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
       "author": {
         "name": "yz06276"
@@ -1446,23 +881,21 @@
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "onchainos",
-        "trading-bot"
+        "trading",
+        "signal",
+        "scanner",
+        "sniper",
+        "defi",
+        "ranking"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/top-rank-tokens-sniper",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/top-rank-tokens-sniper"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/top-rank-tokens-sniper",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/top-rank-tokens-sniper/SKILL_SUMMARY.md",
       "extra": {
         "chains": [
           "solana",
@@ -1481,28 +914,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
         "trading",
-        "hooks",
-        "v2",
-        "v3",
-        "v4",
-        "multi-chain"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-ai",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-ai"
         }
       },
-      "link": "https://github.com/Uniswap/uniswap-ai",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-ai",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-ai/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1520,27 +942,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "cca",
-        "auction",
-        "token-distribution",
-        "smart-contracts",
-        "ethereum"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-cca-configurator",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-cca-configurator"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-configurator",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-configurator/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1558,28 +969,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "cca",
-        "auction",
-        "deployment",
-        "create2",
-        "smart-contracts",
-        "ethereum"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-cca-deployer",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-cca-deployer"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-cca-deployer",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-cca-deployer/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1597,28 +996,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "liquidity",
-        "defi",
-        "lp-position",
-        "concentrated-liquidity",
-        "deep-links",
-        "ethereum"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-liquidity-planner",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-liquidity-planner"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-liquidity-planner",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-liquidity-planner/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1636,28 +1023,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "payments",
-        "x402",
-        "mpp",
-        "tempo",
-        "defi",
-        "ethereum"
+        "trading",
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-pay-with-any-token",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-pay-with-any-token"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-pay-with-any-token",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-pay-with-any-token/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1675,28 +1051,17 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "swap",
-        "defi",
-        "trading-api",
-        "universal-router",
-        "permit2",
-        "ethereum"
+        "trading",
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-swap-integration",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-swap-integration"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-integration",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-integration/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1714,28 +1079,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "uniswap",
-        "swap",
-        "defi",
-        "token-discovery",
-        "deep-links",
-        "ethereum",
-        "multichain"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-swap-planner",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-swap-planner"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-swap-planner",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-swap-planner/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1753,28 +1106,16 @@
       },
       "category": "security",
       "tags": [
-        "uniswap",
-        "v4-hooks",
-        "security",
-        "smart-contracts",
-        "audit",
-        "solidity",
-        "ethereum"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-v4-security-foundations",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-v4-security-foundations"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-v4-security-foundations",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-v4-security-foundations/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1792,28 +1133,16 @@
       },
       "category": "utility",
       "tags": [
-        "viem",
-        "wagmi",
-        "ethereum",
-        "evm",
-        "blockchain",
-        "typescript",
-        "smart-contracts"
+        "defi"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/uniswap-viem-integration",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
+          "dir": "skills/uniswap-viem-integration"
         }
       },
-      "link": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/uniswap-viem-integration",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/uniswap-viem-integration/SKILL_SUMMARY.md",
+      "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
           "base"
@@ -1831,40 +1160,16 @@
       },
       "category": "defi-protocol",
       "tags": [
-        "dex",
-        "amm",
-        "velodrome",
-        "classic-amm",
-        "stable",
-        "volatile",
-        "optimism"
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
           "repo": "MigOKG/plugin-store",
-          "dir": "skills/velodrome-v2",
-          "commit": "bce5f5ce00a26c0ec10da016167b97c755e2d203"
-        },
-        "binary": {
-          "repo": "MigOKG/plugin-store",
-          "asset_pattern": "velodrome-v2-{target}",
-          "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/velodrome-v2@0.1.0"
+          "dir": "skills/velodrome-v2"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
-      "homepage": "https://github.com/MigOKG/plugin-store/tree/main/skills/velodrome-v2",
-      "readme_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/README.md",
-      "skill_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SKILL.md",
-      "summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SUMMARY.md",
-      "skill_summary_url": "https://raw.githubusercontent.com/MigOKG/plugin-store/main/skills/velodrome-v2/SKILL_SUMMARY.md",
-      "build": {
-        "lang": "rust",
-        "source_repo": "null",
-        "source_commit": "null",
-        "binary_name": "velodrome-v2"
-      },
       "extra": {
         "chains": [
           "base"
