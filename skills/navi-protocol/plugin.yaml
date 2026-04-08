@@ -1,0 +1,27 @@
+schema_version: 1
+name: navi-protocol
+version: 0.1.0
+description: "Lend and borrow on NAVI Protocol — leading lending protocol on Sui"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - sui
+  - navi
+  - defi
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: navi-protocol
+chain:
+  name: sui
+  chain_id: 784
+api_calls:
+  - https://fullnode.mainnet.sui.io
+  - https://open-api.naviprotocol.io

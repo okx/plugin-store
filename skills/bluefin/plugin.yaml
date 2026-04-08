@@ -1,0 +1,35 @@
+schema_version: 1
+name: bluefin
+version: 0.1.0
+description: "Trade spot and perpetuals on Bluefin DEX on Sui — list markets, check positions, get quotes, open/close perp positions"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - dex
+  - perps
+  - spot
+  - sui
+  - bluefin
+  - perpetuals
+  - derivatives
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: bluefin
+chain:
+  name: sui
+  chain_id: sui-mainnet
+api_calls:
+  - "https://dapi.api.sui-prod.bluefin.io/exchangeInfo"
+  - "https://dapi.api.sui-prod.bluefin.io/ticker"
+  - "https://dapi.api.sui-prod.bluefin.io/marketData"
+  - "https://dapi.api.sui-prod.bluefin.io/marketData/symbols"
+  - "https://dapi.api.sui-prod.bluefin.io/userPosition"
+  - "https://dapi.api.sui-prod.bluefin.io/account"
+  - "https://dapi.api.sui-prod.bluefin.io/orderbook"
+  - "https://dapi.api.sui-prod.bluefin.io/fundingRate"
