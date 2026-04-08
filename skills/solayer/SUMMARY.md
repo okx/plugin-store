@@ -1,13 +1,13 @@
 # solayer
-Solana liquid staking protocol that lets you stake SOL to receive sSOL and earn restaking rewards.
+Solayer liquid restaking on Solana — stake SOL to receive sSOL and earn restaking rewards.
 
 ## Highlights
-- Liquid staking on Solana with sSOL tokens
-- Earn restaking rewards while maintaining liquidity
+- Liquid staking on Solana with sSOL receipt tokens
+- Earn restaking rewards through Solayer protocol
 - Real-time APY and exchange rate monitoring
-- Check your sSOL positions and SOL equivalent value
-- Simple one-command staking operations
-- Integration with Jupiter DEX for optimal routing
-- Support for Solana mainnet
-- Secure transaction handling with user confirmation
+- Check sSOL positions and SOL equivalent value
+- Stake SOL to receive sSOL with transaction preview
+- Secure write operations via onchainos CLI integration
+- Support for Solana mainnet with key contract addresses
+- Built-in safety measures with user confirmation required for transactions
 
