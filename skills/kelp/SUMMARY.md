@@ -1,13 +1,13 @@
 # kelp
-A Kelp DAO liquid restaking plugin for staking ETH/LSTs to receive rsETH tokens on EigenLayer.
+Kelp DAO rsETH liquid restaking plugin for staking ETH/LSTs to receive rsETH tokens on EigenLayer.
 
 ## Highlights
-- Query current rsETH staking APY from CoinGecko and on-chain data
-- Get real-time rsETH/ETH exchange rates from LRTOracle
-- Check rsETH balance and underlying ETH value across multiple chains
-- Stake ETH to receive rsETH via LRTDepositPool with confirmation flow
-- Initiate rsETH withdrawals through LRTWithdrawalManager
-- Support for Ethereum mainnet and bridged chains (Base, Arbitrum)
-- Built-in safety checks and dry-run capabilities for transactions
-- Integration with onchainos wallet for secure transaction execution
+- Stake ETH or LSTs (stETH, ETHx, sfrxETH) to receive rsETH liquid restaking tokens
+- Query current rsETH staking yield and APY from EigenLayer restaking rewards
+- Get real-time rsETH/ETH exchange rates from on-chain LRTOracle
+- View rsETH balance and underlying ETH value across supported chains
+- Initiate ETH deposits via LRTDepositPool with transaction preview
+- Withdraw rsETH back to ETH through LRTWithdrawalManager queue system
+- Support for Ethereum mainnet (full functionality) and bridged chains (Base, Arbitrum)
+- Built-in safety with dry-run mode and user confirmation for all write operations
 

@@ -58,7 +58,8 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     let rate = rate_wei as f64 / 1e18;
 
     // Calculate expected rETH output: rETH = ETH / rate
-    let expected_reth = args.amount / rate;
+    let amount: f64 = args.amount.parse().expect("amount must be a valid number");
+    let expected_reth = amount / rate;
 
     // deposit() calldata — no parameters, just the 4-byte selector
     let calldata = format!("0x{}", config::SEL_DEPOSIT);

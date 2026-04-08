@@ -1231,7 +1231,7 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/meme-trench-scanner",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1403,7 +1403,7 @@
       "type": "official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/okx-buildx-hackathon-agent-track",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1465,7 +1465,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/polymarket-agent-skills",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1619,12 +1619,12 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/rust-cli-inspector",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         },
         "binary": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "asset_pattern": "rust-cli-inspector-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "plugins/rust-cli-inspector@1.1.0"
@@ -1709,7 +1709,7 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/smart-money-signal-copy-trade",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1833,7 +1833,7 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/top-rank-tokens-sniper",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1873,7 +1873,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-ai",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1904,7 +1904,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-configurator",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1936,7 +1936,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-deployer",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -1968,7 +1968,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-liquidity-planner",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2000,7 +2000,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-pay-with-any-token",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2032,7 +2032,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-integration",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2064,7 +2064,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-planner",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2096,7 +2096,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-v4-security-foundations",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2128,7 +2128,7 @@
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-viem-integration",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         }
@@ -2160,12 +2160,12 @@
       "type": "community-developer",
       "components": {
         "skill": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "dir": "skills/velodrome-v2",
           "commit": "6df4a4e92186db8f38f1c62198ea7cb5905aba7e"
         },
         "binary": {
-          "repo": "MigOKG/plugin-store",
+          "repo": "okx/plugin-store",
           "asset_pattern": "velodrome-v2-{target}",
           "checksums_asset": "checksums.txt",
           "release_tag": "plugins/velodrome-v2@0.1.0"

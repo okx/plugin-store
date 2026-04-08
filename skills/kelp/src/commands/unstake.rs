@@ -51,7 +51,8 @@ pub async fn run(args: UnstakeArgs) -> anyhow::Result<()> {
         },
         Err(_) => 1.0,
     };
-    let expected_eth = args.amount * price_eth;
+    let amount: f64 = args.amount.parse().expect("amount must be a valid number");
+    let expected_eth = amount * price_eth;
 
     // Build calldata: initiateWithdrawal(address asset, uint256 rsEthAmount)
     // asset = ETH sentinel address
