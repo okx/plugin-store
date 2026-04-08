@@ -1,0 +1,10 @@
+{
+  "name": "archimedes-v1",
+  "description": "Archimedes Finance leveraged yield protocol on Ethereum -- open up to 10x leveraged OUSD positions using USDC, USDT, or DAI",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/archimedes",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["leverage", "yield", "lending", "defi", "ethereum", "ousd", "nft-position", "curve"]
+}
