@@ -1,0 +1,10 @@
+{
+  "name": "exactly-protocol",
+  "description": "Fixed-rate and floating-rate lending on Exactly Protocol (Optimism, Ethereum). Deposit at fixed APY locked until maturity, or supply to variable pools.",
+  "version": "1.0.0",
+  "author": {"name": "skylavis-sky", "github": "skylavis-sky"},
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/exactly-protocol",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["lending", "borrowing", "fixed-rate", "defi", "earn", "optimism", "exactly", "collateral"]
+}

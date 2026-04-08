@@ -1,0 +1,35 @@
+schema_version: 1
+name: exactly-protocol
+version: "0.1.0"
+description: "Fixed-rate and floating-rate lending on Exactly Protocol (Optimism, Ethereum). Deposit at fixed APY locked until maturity, or supply to variable pools."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - fixed-rate
+  - defi
+  - earn
+  - optimism
+  - exactly
+  - collateral
+license: MIT
+
+components:
+  skill:
+    dir: skills/exactly-protocol
+
+build:
+  lang: rust
+  binary_name: exactly-protocol
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+  source_dir: exactly-protocol
+
+api_calls:
+  - "https://mainnet.optimism.io"
+  - "https://ethereum.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
