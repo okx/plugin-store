@@ -1,22 +1,19 @@
-
-# pancakeswap-v2 -- Skill Summary
+# pancakeswap-v2 — Skill Summary
 
 ## Overview
-This skill enables interaction with PancakeSwap V2, the constant-product (xyk) automated market maker on BSC and Base networks. It provides comprehensive functionality for token swapping, liquidity provision/removal, price quoting, and pool information retrieval, with built-in safety features like slippage protection and user confirmation workflows for all write operations.
-
-## Usage
-Use natural language commands like "swap 100 USDT for CAKE on PancakeSwap V2" or "add liquidity to CAKE/BNB pool" and the skill will route to appropriate commands. All write operations require user confirmation after displaying preview details.
+This skill enables swapping tokens and providing full-range liquidity on PancakeSwap V2 (xyk AMM) on BSC and Base. It supports token swaps, adding/removing liquidity, and querying pair and LP data.
 
 ## Commands
-| Command | Purpose |
-|---------|---------|
-| `quote` | Get expected swap output amounts |
-| `swap` | Execute token swaps with slippage protection |
-| `add-liquidity` | Provide liquidity to earn trading fees |
-| `remove-liquidity` | Withdraw liquidity and LP tokens |
-| `get-pair` | Look up pair contract addresses |
-| `get-reserves` | Check current pool reserves and ratios |
-| `lp-balance` | View LP token balances for specific pairs |
+
+| Command | Description |
+|---------|-------------|
+| `quote` | Get expected swap output and price impact (read-only) |
+| `swap` | Swap tokens via PancakeSwap V2 router |
+| `add-liquidity` | Add liquidity to a V2 pair and receive LP tokens |
+| `remove-liquidity` | Remove liquidity by burning LP tokens |
+| `get-pair` | Look up pair contract address for two tokens (read-only) |
+| `get-reserves` | Get current reserves for a V2 pair (read-only) |
+| `lp-balance` | Check LP token balance for a wallet (read-only) |
 
 ## Triggers
-Activate when users mention PancakeSwap V2 operations like "pancake swap", "pcs v2", "add liquidity pancakeswap", or want to trade/provide liquidity on BSC/Base AMM pools. Do not use for PancakeSwap V3 or concentrated liquidity operations.
+Activate when users want to swap on PancakeSwap V2, add/remove liquidity on PancakeSwap, check pair reserves, or view LP balances. Also triggered by: "swap on pancakeswap v2", "pancake swap", "pcs v2 swap", "add liquidity pancakeswap", "remove liquidity pancake", "pancake amm", "pancakeswap v2 quote".
