@@ -1,20 +1,13 @@
 # pendle
+Pendle Finance yield tokenization plugin for buying/selling PT & YT tokens, managing liquidity, and minting/redeeming yield token pairs.
 
-Pendle Finance yield tokenization across Ethereum, Arbitrum, BSC, and Base.
+## Highlights
+- Buy and sell Principal Tokens (PT) for fixed yield exposure
+- Trade Yield Tokens (YT) for floating yield speculation
+- Add and remove single-token liquidity to Pendle AMM pools
+- Mint PT+YT pairs from underlying assets to tokenize yield
+- Redeem PT+YT pairs back to underlying tokens
+- Support for Ethereum, Arbitrum, BSC, and Base networks
+- Real-time market data and position tracking
+- Automated ERC-20 approval handling with dry-run previews
 
-**Category**: defi-protocol  
-**Author**: skylavis-sky  
-**License**: MIT
-
-## Commands
-
-- `list-markets` / `get-market` — market data and APY
-- `buy-pt` / `sell-pt` — trade Principal Tokens (fixed yield)
-- `buy-yt` / `sell-yt` — trade Yield Tokens (variable yield)
-- `add-liquidity` / `remove-liquidity` — AMM liquidity
-- `mint` / `redeem` — PT+YT from underlying
-- `get-positions` — view current positions
-
-## Source
-
-[skylavis-sky/onchainos-plugins/pendle](https://github.com/skylavis-sky/onchainos-plugins/tree/main/pendle)
