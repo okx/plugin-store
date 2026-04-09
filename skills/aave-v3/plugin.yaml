@@ -1,0 +1,31 @@
+schema_version: 1
+name: aave-v3
+version: "0.1.0"
+description: "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - defi
+  - earn
+  - aave
+  - collateral
+  - health-factor
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: aave-v3
+
+api_calls:
+  - "https://ethereum.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"

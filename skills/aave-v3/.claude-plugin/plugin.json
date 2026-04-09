@@ -1,0 +1,5 @@
+{
+  "name": "aave-v3",
+  "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
+  "version": "0.1.0"
+}
