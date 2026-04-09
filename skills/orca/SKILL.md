@@ -8,6 +8,7 @@ metadata:
 ---
 
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
@@ -22,7 +23,7 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
+npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Install orca binary (auto-injected)
@@ -40,7 +41,7 @@ if ! command -v orca >/dev/null 2>&1; then
     mingw*_x86_64|msys*_x86_64|cygwin*_x86_64) TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/orca@0.1.0/orca-${TARGET}${EXT}" -o ~/.local/bin/orca${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/orca@0.1.0/orca-${TARGET}${EXT}" -o ~/.local/bin/orca${EXT}
   chmod +x ~/.local/bin/orca${EXT}
 fi
 ```
