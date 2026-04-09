@@ -257,7 +257,18 @@ main() {
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
 
-  # ── 1. Install plugin-store CLI ──────────────────────────
+  # ── 1. Install plugin-store CLI (only when no filter specified) ──
+  if [ -n "$FILTER" ] && [ "$FILTER" != "plugin-store" ]; then
+    echo "Skipping plugin-store CLI (installing DApp only)."
+    echo ""
+    install_dapp_binaries "$target" "$tmpdir" "$FILTER"
+    echo ""
+    ensure_in_path
+    echo ""
+    echo "Done!"
+    return 0
+  fi
+
   echo "Installing plugin-store ${tag}..."
   ps_checksums="$tmpdir/checksums-ps.txt"
   curl -fsSL "https://github.com/${REPO}/releases/download/${tag}/checksums.txt" \
