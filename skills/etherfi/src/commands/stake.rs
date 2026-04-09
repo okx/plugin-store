@@ -29,11 +29,7 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     }
 
     // Resolve wallet address
-    let wallet = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let wallet = resolve_wallet(CHAIN_ID)?;
 
     println!(
         "Staking {} ETH ({} wei) via LiquidityPool.deposit()",

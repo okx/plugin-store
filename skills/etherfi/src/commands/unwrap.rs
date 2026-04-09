@@ -29,11 +29,7 @@ pub async fn run(args: UnwrapArgs) -> anyhow::Result<()> {
     }
 
     // Resolve wallet address
-    let wallet = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let wallet = resolve_wallet(CHAIN_ID)?;
 
     // Preview: how much eETH will be returned
     let eeth_expected = weeth_convert_to_assets(weeth, weeth_wei, rpc)
