@@ -229,14 +229,33 @@ jobs:
               done
             fi
 
-            # Copy SKILL.md if not already present (check multiple locations)
+            # Copy SKILL.md if not already at DEST root.
+            # Search multiple locations: the external repo may use different layouts.
             if [ ! -f "$DEST/SKILL.md" ]; then
-              if [ -f "/tmp/ext-${NAME}/SKILL.md" ]; then
-                cp "/tmp/ext-${NAME}/SKILL.md" "$DEST/SKILL.md"
-                echo "  Copied root SKILL.md"
-              elif [ -f "/tmp/ext-${NAME}/skill.md" ]; then
-                cp "/tmp/ext-${NAME}/skill.md" "$DEST/SKILL.md"
-                echo "  Copied root skill.md → SKILL.md"
+              FOUND=""
+              for candidate in \
+                "/tmp/ext-${NAME}/SKILL.md" \
+                "/tmp/ext-${NAME}/skill.md" \
+                "/tmp/ext-${NAME}/${NAME}/skills/${NAME}/SKILL.md" \
+                "/tmp/ext-${NAME}/${NAME}/SKILL.md" \
+                "/tmp/ext-${NAME}/skills/${NAME}/SKILL.md"; do
+                if [ -f "$candidate" ]; then
+                  FOUND="$candidate"
+                  break
+                fi
+              done
+              if [ -n "$FOUND" ]; then
+                cp "$FOUND" "$DEST/SKILL.md"
+                echo "  Copied SKILL.md from $FOUND"
+              fi
+            fi
+
+            # Flatten: if SKILL.md ended up nested, copy to root
+            if [ ! -f "$DEST/SKILL.md" ]; then
+              NESTED=$(find "$DEST" -name "SKILL.md" -type f 2>/dev/null | head -1)
+              if [ -n "$NESTED" ]; then
+                cp "$NESTED" "$DEST/SKILL.md"
+                echo "  Flattened SKILL.md from $NESTED"
               fi
             fi
 
