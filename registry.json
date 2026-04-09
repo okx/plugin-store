@@ -24,7 +24,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/aave-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -75,7 +75,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/across",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -127,7 +127,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/aerodrome-amm",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -179,7 +179,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/archimedes-v1",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -230,7 +230,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/archimedes",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -281,7 +281,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/aura-finance",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -332,7 +332,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/balancer-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -385,7 +385,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/beefy",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -435,7 +435,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/camelot-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -488,7 +488,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/cian-yield-layer",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -543,7 +543,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/cian",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -593,7 +593,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/clanker",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -643,7 +643,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/compound-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -693,7 +693,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/compound-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -743,7 +743,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/curve",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -795,7 +795,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/debridge",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -849,7 +849,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/dolomite",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -900,7 +900,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/eigencloud",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -952,7 +952,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/etherfi",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1006,7 +1006,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/euler-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1059,7 +1059,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/exactly-protocol",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1110,7 +1110,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/fenix-finance",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1162,7 +1162,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/fenix",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1213,7 +1213,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/flap",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1265,7 +1265,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/fluid",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1316,7 +1316,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/four-meme",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1365,7 +1365,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/frax-ether",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1417,7 +1417,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/gearbox-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1467,7 +1467,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/gmx-v1",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1516,7 +1516,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/gmx-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1564,7 +1564,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/hyperliquid",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1617,7 +1617,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/instadapp",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1669,7 +1669,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/ion-protocol",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1720,7 +1720,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/jito",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1770,7 +1770,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/kamino-lend",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1819,7 +1819,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/kamino-liquidity",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1870,7 +1870,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/kelp",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1920,7 +1920,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/lido-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -1969,7 +1969,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/lido",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2019,7 +2019,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/lifi",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2070,7 +2070,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/loopscale",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2122,7 +2122,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/mayan",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2171,7 +2171,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/meme-trench-scanner",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -2209,7 +2209,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/meteora",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2262,7 +2262,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/moonwell",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2313,7 +2313,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/morpho-base",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2363,7 +2363,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/morpho",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2416,7 +2416,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/notional-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2465,7 +2465,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/okx-buildx-hackathon-agent-track",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -2504,7 +2504,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/orca",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2555,7 +2555,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/pancakeswap-clmm",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2609,7 +2609,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/pancakeswap-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2659,7 +2659,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/pancakeswap",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2709,7 +2709,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/pendle",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2760,7 +2760,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/polymarket-agent-skills",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -2798,7 +2798,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/polymarket",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2847,7 +2847,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/pump-fun",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2898,7 +2898,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/quickswap-dex",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2948,7 +2948,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/raydium",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -2998,7 +2998,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/relay",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3048,7 +3048,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/renzo",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3098,7 +3098,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/rocket-pool",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3145,7 +3145,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/rust-cli-inspector",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3195,7 +3195,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/sanctum-validator-lst",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3247,7 +3247,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/segment-finance",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3298,7 +3298,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/sky-lending",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3346,7 +3346,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/smart-money-signal-copy-trade",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3383,7 +3383,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/solayer",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3433,7 +3433,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/solv-solvbtc",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3488,7 +3488,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/spark-savings",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3538,7 +3538,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/spectra",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3589,7 +3589,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/sushiswap-v3",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3641,7 +3641,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/term-structure",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -3689,7 +3689,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/top-rank-tokens-sniper",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3729,7 +3729,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-ai",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3767,7 +3767,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-cca-configurator",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3806,7 +3806,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-cca-deployer",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3845,7 +3845,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-liquidity-planner",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3884,7 +3884,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-pay-with-any-token",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3923,7 +3923,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-swap-integration",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -3962,7 +3962,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-swap-planner",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -4001,7 +4001,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-v4-security-foundations",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -4040,7 +4040,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/uniswap-viem-integration",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -4079,7 +4079,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/velodrome-v2",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -4129,7 +4129,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/vertex-edge",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
@@ -4180,7 +4180,7 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/zerolend",
-          "commit": "ffdfd566a12858125acf3b3fa5f7ce9d19abae5a"
+          "commit": "4069271af82765e16b40868852b6d3dd48482a76"
         },
         "binary": {
           "repo": "MigOKG/plugin-store",
