@@ -16,11 +16,35 @@ pub async fn run(args: QuoteArgs) -> Result<()> {
     let from_addr = crate::config::resolve_token_address(&args.from, args.chain)?;
     let to_addr = crate::config::resolve_token_address(&args.to, args.chain)?;
 
-    // Resolve decimals for the input token
-    let decimals_in = crate::rpc::get_decimals(&from_addr, cfg.rpc_url).await.unwrap_or(18);
-    let decimals_out = crate::rpc::get_decimals(&to_addr, cfg.rpc_url).await.unwrap_or(18);
-    let symbol_in = crate::rpc::get_symbol(&from_addr, cfg.rpc_url).await.unwrap_or_else(|_| args.from.clone());
-    let symbol_out = crate::rpc::get_symbol(&to_addr, cfg.rpc_url).await.unwrap_or_else(|_| args.to.clone());
+    // QuoterV2 only understands ERC-20 addresses — substitute native sentinel with wrapped version
+    let quote_from = if crate::config::is_native_token(&from_addr) {
+        crate::config::wrapped_native(args.chain).to_string()
+    } else {
+        from_addr.clone()
+    };
+    let quote_to = if crate::config::is_native_token(&to_addr) {
+        crate::config::wrapped_native(args.chain).to_string()
+    } else {
+        to_addr.clone()
+    };
+
+    // Native tokens are always 18 decimals; ERC-20s are looked up on-chain
+    let decimals_in = if crate::config::is_native_token(&from_addr) { 18u8 }
+        else { crate::rpc::get_decimals(&from_addr, cfg.rpc_url).await.unwrap_or(18) };
+    let decimals_out = if crate::config::is_native_token(&to_addr) { 18u8 }
+        else { crate::rpc::get_decimals(&to_addr, cfg.rpc_url).await.unwrap_or(18) };
+
+    // Use the input symbol as display name for native (avoids on-chain "WBNB" label)
+    let symbol_in = if crate::config::is_native_token(&from_addr) {
+        args.from.to_uppercase()
+    } else {
+        crate::rpc::get_symbol(&from_addr, cfg.rpc_url).await.unwrap_or_else(|_| args.from.clone())
+    };
+    let symbol_out = if crate::config::is_native_token(&to_addr) {
+        args.to.to_uppercase()
+    } else {
+        crate::rpc::get_symbol(&to_addr, cfg.rpc_url).await.unwrap_or_else(|_| args.to.clone())
+    };
 
     let amount_in = crate::config::human_to_minimal(&args.amount, decimals_in)?;
 
@@ -33,8 +57,8 @@ pub async fn run(args: QuoteArgs) -> Result<()> {
     for fee in fee_tiers {
         match crate::rpc::quote_exact_input_single(
             cfg.quoter_v2,
-            &from_addr,
-            &to_addr,
+            &quote_from,
+            &quote_to,
             amount_in,
             fee,
             cfg.rpc_url,

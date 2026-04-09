@@ -45,11 +45,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<()> {
         .unwrap_or(9_999_999_999);
 
     // Fetch wallet address for use as collect recipient
-    let wallet_address = if args.dry_run {
-        "0x0000000000000000000000000000000000000001".to_string()
-    } else {
-        crate::onchainos::get_wallet_address().await?
-    };
+    let wallet_address = crate::onchainos::get_wallet_address().await?;
 
     // Compute slippage-based minimums using integer arithmetic.
     // tokens_owed0/1 represent credits already accrued to the position; we use them as a

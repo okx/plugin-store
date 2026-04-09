@@ -68,11 +68,7 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
     println!("  NPM:                      {}", cfg.npm);
 
     // Fetch wallet address for use as recipient in mint
-    let wallet_address = if args.dry_run {
-        "0x0000000000000000000000000000000000000001".to_string()
-    } else {
-        crate::onchainos::get_wallet_address().await?
-    };
+    let wallet_address = crate::onchainos::get_wallet_address().await?;
 
     // Step 1: Approve token0 for NPM
     println!("\nStep 1: Approving {} for NonfungiblePositionManager...", sym0);
