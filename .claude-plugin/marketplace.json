@@ -43,15 +43,6 @@
       }
     },
     {
-      "name": "rust-cli-inspector",
-      "description": "Rust CLI querying ETH price via Onchain OS",
-      "source": "./skills/rust-cli-inspector",
-      "category": "utility",
-      "author": {
-        "name": "yz06276"
-      }
-    },
-    {
       "name": "smart-money-signal-copy-trade",
       "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
       "source": "./skills/smart-money-signal-copy-trade",
