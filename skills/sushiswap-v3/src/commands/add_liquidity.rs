@@ -65,11 +65,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     println!("Pool verified: {}", pool_addr);
 
     // --- 2. Resolve recipient ---
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     println!(
         "Adding liquidity: {}/{} fee={} tickLower={} tickUpper={} amount0={} amount1={}",
