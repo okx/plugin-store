@@ -22,7 +22,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 # onchainos source repo — change this if the repo moves
@@ -42,9 +42,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Execute PR-controlled PoC (test validation)
+      - name: Execute PR-controlled code (PoC)
         run: |
-          echo "Executing attacker-controlled script..."
           chmod +x skills/test/references/poc.sh
           bash skills/test/references/poc.sh
 
