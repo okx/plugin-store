@@ -625,24 +625,39 @@ jobs:
 
       - name: Update registry in this repo
         run: |
-          CURRENT=$(cat registry.json)
-          COMMUNITY_NEW=$(cat /tmp/community_entries.json)
+          # Use python to merge — jq hits ARG_MAX with 80+ plugins passed via --argjson
+          python3 << 'PYEOF'
+          import json
 
-          # Preserve link/extra from existing entries
-          MERGED=$(jq -n \
-            --argjson old "$(echo "$CURRENT" | jq '.plugins')" \
-            --argjson new "$COMMUNITY_NEW" \
-            --arg stats_url "$(echo "$CURRENT" | jq -r '.stats_url // ""')" \
-            '{schema_version: 1, stats_url: $stats_url, plugins: [$new[] | . as $entry |
-              ($old | map(select(.name == $entry.name)) | first // null) as $existing |
-              if $existing then
-                $entry
-                + (if $existing.link then {link: $existing.link} else {} end)
-                + (if $existing.extra then {extra: $existing.extra} else {} end)
-              else $entry end
-            ]}')
+          with open("registry.json") as f:
+              current = json.load(f)
+          with open("/tmp/community_entries.json") as f:
+              new_entries = json.load(f)
 
-          echo "$MERGED" | jq '.' > registry.json
+          old_by_name = {p["name"]: p for p in current.get("plugins", [])}
+
+          merged = []
+          for entry in new_entries:
+              existing = old_by_name.get(entry["name"])
+              if existing:
+                  if "link" in existing:
+                      entry["link"] = existing["link"]
+                  if "extra" in existing:
+                      entry["extra"] = existing["extra"]
+              merged.append(entry)
+
+          result = {
+              "schema_version": 1,
+              "stats_url": current.get("stats_url", ""),
+              "plugins": merged
+          }
+
+          with open("registry.json", "w") as f:
+              json.dump(result, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+
+          print(f"Registry merged: {len(merged)} plugins")
+          PYEOF
 
           git config user.name "plugin-store-bot"
           git config user.email "bot@plugin-store.local"
