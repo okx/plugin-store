@@ -23,7 +23,7 @@ build:
   lang: rust
   binary_name: polymarket
   source_repo: skylavis-sky/onchainos-plugins
-  source_commit: "bc1629f28abe5a97df9e57db134a8b6231872ebf"
+  source_commit: "842e2f32151031285bc36bc124c34179c4034f6d"
   source_dir: polymarket
 
 api_calls:
