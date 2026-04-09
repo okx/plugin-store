@@ -36,6 +36,8 @@ jobs:
       source_repo: ${{ steps.find.outputs.source_repo }}
       source_commit: ${{ steps.find.outputs.source_commit }}
       source_dir: ${{ steps.find.outputs.source_dir }}
+      source_mode: ${{ steps.find.outputs.source_mode }}
+      local_source_dir: ${{ steps.find.outputs.local_source_dir }}
       binary_name: ${{ steps.find.outputs.binary_name }}
       build_main: ${{ steps.find.outputs.build_main }}
     steps:
