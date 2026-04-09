@@ -335,9 +335,12 @@ jobs:
       matrix:
         target:
           - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
         include:
           - target: aarch64-apple-darwin
             os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
