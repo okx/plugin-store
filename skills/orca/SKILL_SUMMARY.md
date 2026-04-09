@@ -2,17 +2,17 @@
 # orca -- Skill Summary
 
 ## Overview
-The orca skill provides access to Orca's concentrated liquidity AMM on Solana, enabling users to swap tokens, query pool information, and get swap quotes through the Whirlpools CLMM program. It includes comprehensive safety features like security scanning, price impact checks, and confirmation workflows to protect users during trading operations.
+This skill provides access to Orca's concentrated liquidity AMM on Solana, enabling users to query pool information, get swap quotes, and execute token swaps through the Whirlpools CLMM program. It combines read operations via Orca's REST API with secure write operations through the onchainos framework, including built-in security checks and price impact warnings.
 
 ## Usage
-Use this skill to interact with Orca DEX by querying pools with `get-pools`, getting swap quotes with `get-quote`, or executing swaps with the `swap` command. All swap operations require user confirmation and include built-in safety checks.
+Use `orca get-pools` to find available trading pairs, `orca get-quote` to preview swap rates, and `orca swap` to execute trades after confirmation. All swap operations include automatic security scans and require explicit user approval.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `get-pools` | Query Whirlpool pools for a token pair, sorted by TVL |
-| `get-quote` | Calculate estimated swap output for a given input amount |
-| `swap` | Execute token swap with safety checks and user confirmation |
+| `orca get-pools` | Query Whirlpool pools for token pairs, sorted by TVL |
+| `orca get-quote` | Calculate estimated swap output for given input amount |
+| `orca swap` | Execute token swap with safety checks and user confirmation |
 
 ## Triggers
-Activate this skill when users want to swap tokens on Solana, query Orca liquidity pools, or get trading quotes. Common trigger phrases include "swap on orca", "orca pools", "get swap quote", and "whirlpool swap".
+Activate when users want to swap tokens on Solana, query Orca liquidity pools, get trading quotes, or need access to concentrated liquidity AMM functionality. Also trigger for phrases like "orca swap", "whirlpool swap", or "swap tokens on solana".
