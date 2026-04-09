@@ -1,0 +1,13 @@
+{
+  "name": "pendle",
+  "description": "Pendle Finance yield tokenization — buy/sell PT & YT tokens, add/remove liquidity, mint/redeem PT+YT pairs",
+  "version": "0.1.0",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/pendle",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": ["yield-trading", "fixed-yield", "pt", "yt", "liquidity", "pendle"]
+}
