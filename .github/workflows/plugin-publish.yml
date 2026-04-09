@@ -618,42 +618,10 @@ jobs:
           echo "$ENTRIES" > /tmp/community_entries.json
           echo "Generated $(echo "$ENTRIES" | jq length) community plugin entries"
 
-      - name: Create git tags (max 20, prune oldest)
-        run: |
-          MAX_TAGS=20
-
-          for PLUGIN_NAME in ${{ needs.detect.outputs.changed_plugins }}; do
-            YAML="skills/${PLUGIN_NAME}/plugin.yaml"
-            [ -f "$YAML" ] || continue
-            [ "$PLUGIN_NAME" = "_example-plugin" ] && continue
-            VERSION=$(yq '.version' "$YAML")
-            TAG="plugins/${PLUGIN_NAME}@${VERSION}"
-            if git rev-parse "$TAG" >/dev/null 2>&1; then
-              echo "Tag $TAG exists"
-            else
-              git tag "$TAG"
-              echo "Created tag: $TAG"
-            fi
-          done
-          git push --tags || true
-
-          # Prune oldest plugin tags if total exceeds MAX_TAGS
-          ALL_TAGS=$(git tag -l 'plugins/*' --sort=creatordate)
-          COUNT=$(echo "$ALL_TAGS" | grep -c . || true)
-          if [ "$COUNT" -gt "$MAX_TAGS" ]; then
-            EXCESS=$((COUNT - MAX_TAGS))
-            echo "Tag count ${COUNT} exceeds limit ${MAX_TAGS}, pruning ${EXCESS} oldest tags..."
-            echo "$ALL_TAGS" | head -n "$EXCESS" | while read OLD_TAG; do
-              echo "  Deleting: $OLD_TAG"
-              git tag -d "$OLD_TAG" 2>/dev/null || true
-              git push origin ":refs/tags/$OLD_TAG" 2>/dev/null || true
-            done
-          else
-            echo "Tag count ${COUNT}/${MAX_TAGS} — within limit"
-          fi
-
-      # Summary generation is now in Phase 6 (plugin-summary.yml) with maintainer approval.
-      # No inline summary generation in publish workflow.
+      # Git tags are created automatically by gh release create in the
+      # create-release job. Do NOT create tags here — pushing a tag that
+      # points to a different commit than the release causes GitHub to
+      # convert the release to draft status.
 
       - name: Update registry in this repo
         run: |
