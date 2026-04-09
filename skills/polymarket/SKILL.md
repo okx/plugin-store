@@ -406,3 +406,4 @@ Some markets (multi-outcome events) use `neg_risk: true`. For these:
 | Geopolitics | 0% |
 
 Fees are deducted by the exchange from the received amount. Maker orders pay 0 fees. The `feeRateBps` field in signed orders is set to 0 (takers pay implicitly).
+
