@@ -66,11 +66,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     }
 
     // Resolve recipient
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     let deadline = unix_now() + args.deadline_minutes * 60;
 

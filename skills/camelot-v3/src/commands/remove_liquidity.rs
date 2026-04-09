@@ -54,11 +54,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     };
 
     // Resolve recipient
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     eprintln!(
         "Remove liquidity: tokenId={} liquidity={}",
