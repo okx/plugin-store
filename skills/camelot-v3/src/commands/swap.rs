@@ -73,11 +73,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     let deadline = unix_now() + args.deadline_minutes * 60;
 
     // 3. Resolve recipient
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     // 4. Get decimals for display
     let dec_in = get_decimals(&token_in, &rpc).await.unwrap_or(18);

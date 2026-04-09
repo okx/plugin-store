@@ -1,13 +1,13 @@
 # camelot-v3
-A concentrated liquidity DEX plugin for Arbitrum that enables token swaps, price quotes, and LP position management on Camelot V3 using the Algebra V1 protocol.
+Camelot V3 DEX on Arbitrum — swap tokens, get price quotes, and manage concentrated liquidity positions using the Algebra V1 protocol.
 
 ## Highlights
-- Get real-time price quotes for token swaps without gas costs
-- Execute token swaps on Arbitrum's native concentrated liquidity DEX
-- Manage concentrated liquidity positions with full range or custom tick ranges
-- Add liquidity to earn fees from trading activity
-- Remove liquidity and collect earned fees from positions
-- Built on Algebra V1 protocol with single pool per token pair (no fee tiers)
-- Supports major Arbitrum tokens including WETH, USDT, USDC, ARB, and GRAIL
-- All operations secured with user confirmation requirements for transactions
+- Get price quotes for token swaps without gas costs
+- Execute token swaps on Camelot V3 DEX
+- List and view your LP positions
+- Add concentrated liquidity to pools
+- Remove liquidity from existing positions
+- Native Arbitrum DEX built on Algebra V1 protocol
+- Single pool per token pair (no fee tier selection)
+- Full range and custom tick range support
 
