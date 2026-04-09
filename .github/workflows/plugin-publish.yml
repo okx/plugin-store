@@ -502,11 +502,12 @@ jobs:
               printf '%s\n' "## What's Changed" "" "- **${NAME}** v${VERSION} -- ${DESC}" "- Language: ${LANG} | Platforms: ${PLATFORM_COUNT}" "- Install: npx skills add MigOKG/plugin-store --skill ${NAME}" "- ${SRC_LINE}" "" "## New Contributors" "" "- **${CONTRIBUTOR}** made their first contribution" "" "## Contributors" "" "- **${CONTRIBUTOR}**" "" "---" "Published by OKX Plugin Store CI" > "$NOTES_FILE"
 
               echo "Creating release: $TAG with ${PLATFORM_COUNT} binaries"
-              gh release delete "$TAG" --repo "${{ github.repository }}" --yes 2>/dev/null || true
+              gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
               gh release create "$TAG" \
                 --repo "${{ github.repository }}" \
                 --title "$TITLE" \
                 --notes-file "$NOTES_FILE" \
+                --latest=false \
                 ${BIN}-* checksums.txt 2>&1 && echo "Release created: $TAG" \
                 || echo "::warning::Release create failed for $TAG"
             else
