@@ -277,6 +277,15 @@
       }
     },
     {
+      "name": "polymarket",
+      "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
+      "source": "./skills/polymarket",
+      "category": "trading-strategy",
+      "author": {
+        "name": "skylavis-sky"
+      }
+    },
+    {
       "name": "polymarket-agent-skills",
       "description": "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions",
       "source": "./skills/polymarket-agent-skills",
