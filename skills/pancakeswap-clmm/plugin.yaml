@@ -1,0 +1,30 @@
+schema_version: 1
+name: pancakeswap-clmm
+version: "0.1.0"
+description: "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - dex
+  - liquidity
+  - clmm
+  - farming
+  - v3
+  - pancakeswap
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: pancakeswap-clmm
+
+api_calls:
+  - "https://bsc-rpc.publicnode.com"
+  - "https://ethereum.publicnode.com"
+  - "https://base-rpc.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
