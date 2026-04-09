@@ -74,11 +74,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     };
 
     // --- 3. Resolve recipient ---
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let recipient = resolve_wallet(CHAIN_ID)?;
 
     println!(
         "Adding liquidity: {}/{} stable={} amountA={} amountB={}",
