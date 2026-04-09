@@ -701,3 +701,19 @@ jobs:
             git pull --rebase origin main || { echo "Rebase failed" >&2; exit 1; }
           done
           echo "ERROR: Failed to push registry" >&2; exit 1
+
+      - name: Un-draft all releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Checking for draft releases to publish..."
+          DRAFTS=$(gh release list --repo "${{ github.repository }}" --limit 200 --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName')
+          if [ -z "$DRAFTS" ]; then
+            echo "No draft releases found"
+            exit 0
+          fi
+          echo "$DRAFTS" | while read TAG; do
+            echo "Publishing draft: $TAG"
+            gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false 2>&1 || true
+          done
+          echo "Done. All releases published."
