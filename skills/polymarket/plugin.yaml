@@ -17,7 +17,7 @@ license: MIT
 
 components:
   skill:
-    dir: skills/polymarket
+    dir: "."
 
 build:
   lang: rust
