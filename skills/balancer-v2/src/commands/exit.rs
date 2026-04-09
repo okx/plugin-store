@@ -35,11 +35,7 @@ pub async fn run(
 
     let bpt_raw = config::parse_units(bpt_amount, 18)?;
 
-    let wallet = if dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        onchainos::resolve_wallet(chain_id)?
-    };
+    let wallet = onchainos::resolve_wallet(chain_id)?;
 
     // userData for EXACT_BPT_IN_FOR_TOKENS_OUT (kind=1):
     // abi.encode(uint256(1), uint256 bptAmountIn)

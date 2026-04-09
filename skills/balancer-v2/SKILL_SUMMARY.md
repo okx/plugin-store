@@ -2,10 +2,10 @@
 # balancer-v2 -- Skill Summary
 
 ## Overview
-The balancer-v2 skill provides comprehensive access to Balancer V2, a multi-token automated market maker (AMM) DEX on Ethereum and Arbitrum. It enables users to swap tokens, query pool information, obtain accurate swap quotes, manage liquidity positions, and track LP holdings through Balancer's unified Vault architecture.
+This skill provides comprehensive access to Balancer V2, a multi-token automated market maker (AMM) DEX on Ethereum and Arbitrum. It enables users to swap tokens, manage liquidity positions, query pool information, and get trading quotes through Balancer's unified Vault architecture. All operations route through the same Vault contract address across supported chains, providing a consistent interface for DeFi interactions.
 
 ## Usage
-Install the plugin and ensure onchainos CLI is available, then use commands like `balancer-v2 pools` to discover pools or `balancer-v2 swap` to execute trades. All write operations require the `--confirm` flag and explicit user approval before broadcasting transactions.
+Install the skill via `npx skills add okx/plugin-store --skill balancer-v2` and ensure onchainos CLI is available. All write operations require explicit user confirmation via the `--confirm` flag after previewing transaction details.
 
 ## Commands
 | Command | Description |
@@ -15,8 +15,8 @@ Install the plugin and ensure onchainos CLI is available, then use commands like
 | `quote` | Get swap quotes via on-chain BalancerQueries contract |
 | `positions` | View LP positions and BPT holdings for connected wallet |
 | `swap` | Execute token swaps through Vault.swap() |
-| `join` | Add liquidity to pools via Vault.joinPool() |
-| `exit` | Remove liquidity from pools via Vault.exitPool() |
+| `join` | Add liquidity via Vault.joinPool() |
+| `exit` | Remove liquidity via Vault.exitPool() |
 
 ## Triggers
-Activate this skill when users want to interact with Balancer V2 DEX, including swapping tokens, checking pool information, managing liquidity positions, or getting swap quotes on Arbitrum or Ethereum networks. The skill should also trigger when users mention Balancer-specific terms like BPT, weighted pools, or the Vault contract.
+Activate this skill when users want to interact with Balancer V2 pools, including swapping tokens, providing/removing liquidity, or querying pool data on Arbitrum or Ethereum. Use for phrases like "swap on Balancer," "add liquidity to Balancer pool," or "show Balancer pools."

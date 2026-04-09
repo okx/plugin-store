@@ -51,11 +51,7 @@ pub async fn run(
         raw_amounts.push(raw);
     }
 
-    let wallet = if dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        onchainos::resolve_wallet(chain_id)?
-    };
+    let wallet = onchainos::resolve_wallet(chain_id)?;
 
     // Build joinPool calldata
     // joinPool(bytes32,address,address,(address[],uint256[],bytes,bool))

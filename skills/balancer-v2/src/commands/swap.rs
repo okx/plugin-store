@@ -41,11 +41,7 @@ pub async fn run(
     let amount_in = config::parse_units(amount, decimals_in)?;
 
     // Get wallet address (needed for sender/recipient)
-    let wallet = if dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        onchainos::resolve_wallet(chain_id)?
-    };
+    let wallet = onchainos::resolve_wallet(chain_id)?;
 
     // Get quote for min amount out
     let amount_out_expected = rpc::query_swap(
