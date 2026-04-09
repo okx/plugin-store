@@ -1,21 +1,13 @@
 # compound-v3
+Compound V3 (Comet) lending plugin for supplying collateral, borrowing/repaying assets, and claiming COMP rewards across multiple chains.
 
-Compound V3 (Comet) lending across Ethereum, Base, Arbitrum, and Polygon.
+## Highlights
+- Multi-chain support (Ethereum, Base, Arbitrum, Polygon) with USDC markets
+- Supply collateral assets and borrow base assets with automated debt handling
+- Repay borrowed assets with overflow protection and automatic balance calculations
+- Withdraw supplied collateral with debt validation safeguards
+- Claim COMP rewards from the CometRewards contract
+- Real-time market data including utilization rates, APRs, and total supply/borrow
+- Position tracking with supply/borrow balances and collateralization status
+- Dry-run mode for previewing all transactions before execution
 
-**Category**: defi-protocol  
-**Author**: skylavis-sky  
-**License**: MIT
-
-## Commands
-
-- `get-markets` — market stats (utilization, APR, TVL)
-- `get-position` — account balances and collateral status
-- `supply` — supply collateral or base asset
-- `borrow` — borrow base asset
-- `repay` — repay debt
-- `withdraw` — withdraw collateral
-- `claim-rewards` — claim COMP rewards
-
-## Source
-
-[skylavis-sky/onchainos-plugins/compound-v3](https://github.com/skylavis-sky/onchainos-plugins/tree/main/compound-v3)

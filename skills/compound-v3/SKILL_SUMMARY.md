@@ -1,22 +1,20 @@
 
-# compound-v3 — Skill Summary
+# compound-v3 -- Skill Summary
 
 ## Overview
-This skill enables lending and borrowing on Compound V3 (Comet) across Ethereum, Base, Arbitrum, and Polygon. Users can supply collateral, borrow the base asset (USDC), repay debt, withdraw collateral, and claim COMP rewards. All write operations require user confirmation. Supplying the base asset automatically repays debt first.
+This skill enables interaction with Compound V3 (Comet) lending markets across Ethereum, Base, Arbitrum, and Polygon. It provides complete lending functionality including supplying collateral, borrowing base assets, repaying debt, withdrawing collateral, and claiming COMP rewards. All write operations require user confirmation and support dry-run previews for safety.
 
 ## Usage
-Install the plugin and connect your wallet with `onchainos wallet login`. Use `--dry-run` on any write command to preview before execution.
+Install the plugin via OKX plugin store, ensure your wallet is connected with `onchainos wallet login`, then use commands like `compound-v3 supply`, `compound-v3 borrow`, or `compound-v3 repay` with appropriate parameters.
 
 ## Commands
-| Command | Description |
-|---------|-------------|
-| `get-markets` | View utilization, supply APR, borrow APR, total supply/borrow |
-| `get-position` | View supply balance, borrow balance, and collateral status |
-| `supply` | Supply collateral or base asset (auto-repays debt if base asset supplied) |
-| `borrow` | Borrow the base asset (requires sufficient collateral) |
-| `repay` | Repay borrowed base asset |
-| `withdraw` | Withdraw supplied collateral (requires zero debt) |
-| `claim-rewards` | Claim accrued COMP rewards |
+- `get-markets` - View market statistics (utilization, APRs, total supply/borrow)
+- `get-position` - View account position (supply/borrow balances, collateralization)
+- `supply` - Supply collateral or base asset (auto-repays debt if supplying base)
+- `borrow` - Borrow base asset (requires sufficient collateral)
+- `repay` - Repay borrowed base asset (partial or full repayment)
+- `withdraw` - Withdraw supplied collateral (requires zero debt)
+- `claim-rewards` - Claim COMP rewards from CometRewards contract
 
 ## Triggers
-Activate when users want to supply or borrow on Compound, check their Compound position, repay Compound debt, withdraw collateral, or claim COMP. Key phrases include "compound supply", "compound borrow", "compound repay", "compound withdraw", "COMP rewards", and "comet protocol".
+Activate when users mention compound lending operations, supplying/borrowing assets on Compound, checking compound positions or markets, claiming COMP rewards, or managing compound debt positions. Trigger phrases include "compound supply", "compound borrow", "compound repay", "compound withdraw", "compound rewards", "compound position", and "compound market".
