@@ -77,7 +77,7 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
     )
     .await?;
 
-    let tx_hash = onchainos::extract_tx_hash(&result);
+    let tx_hash = onchainos::extract_tx_hash(&result)?;
 
     println!(
         "{}",

@@ -67,22 +67,51 @@ pub async fn wallet_contract_call_solana(
             "--to",
             to,
             "--unsigned-tx",
-            &tx_base58
+            &tx_base58,
+            "--force",
         ])
         .output()?;
+
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "onchainos contract-call failed (exit code {:?}).\nstdout: {}\nstderr: {}",
+            output.status.code(),
+            stdout,
+            stderr
+        );
+    }
+
     let result: Value = serde_json::from_str(&stdout)
-        .map_err(|e| anyhow::anyhow!("Failed to parse onchainos response: {}\nRaw: {}", e, stdout))?;
+        .map_err(|e| anyhow::anyhow!(
+            "Failed to parse onchainos response: {}\nstdout: {}\nstderr: {}",
+            e, stdout, stderr
+        ))?;
+
+    // Check for API-level errors in the JSON response
+    if result.get("ok").and_then(|v| v.as_bool()) == Some(false) {
+        let msg = result["error"].as_str()
+            .or_else(|| result["message"].as_str())
+            .unwrap_or("unknown error");
+        anyhow::bail!("onchainos contract-call returned error: {}", msg);
+    }
+
     Ok(result)
 }
 
 /// Extract txHash from onchainos response.
 /// Checks data.txHash and data.swapTxHash (for DEX operations).
-pub fn extract_tx_hash(result: &Value) -> String {
+/// Returns an error if no txHash is found instead of silently returning "pending".
+pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {
     result["data"]["swapTxHash"]
         .as_str()
         .or_else(|| result["data"]["txHash"].as_str())
         .or_else(|| result["txHash"].as_str())
-        .unwrap_or("pending")
-        .to_string()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!(
+            "onchainos did not return a transaction hash. Response: {}",
+            serde_json::to_string(result).unwrap_or_default()
+        ))
 }
