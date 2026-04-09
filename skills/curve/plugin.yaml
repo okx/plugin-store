@@ -1,0 +1,31 @@
+schema_version: 1
+name: curve
+version: "0.1.0"
+description: "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC."
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - dex
+  - swap
+  - stablecoin
+  - amm
+  - liquidity
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: curve
+
+api_calls:
+  - "https://api.curve.finance/api/getPools"
+  - "https://ethereum.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://bsc-rpc.publicnode.com"
