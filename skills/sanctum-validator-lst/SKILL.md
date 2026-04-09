@@ -23,14 +23,17 @@ tags:
 if ! command -v sanctum-validator-lst >/dev/null 2>&1; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
+  EXT=""
   case "${OS}_${ARCH}" in
     darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
     darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
+    mingw*_x86_64|msys*_x86_64|cygwin*_x86_64) TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
   esac
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/sanctum-validator-lst@0.1.0/sanctum-validator-lst-${TARGET}" -o ~/.local/bin/sanctum-validator-lst
-  chmod +x ~/.local/bin/sanctum-validator-lst
+  mkdir -p ~/.local/bin
+  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/sanctum-validator-lst@0.1.0/sanctum-validator-lst-${TARGET}${EXT}" -o ~/.local/bin/sanctum-validator-lst${EXT}
+  chmod +x ~/.local/bin/sanctum-validator-lst${EXT}
 fi
 ```
 
