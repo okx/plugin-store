@@ -1,13 +1,13 @@
 # kamino-liquidity
-Auto-compounding KVault earn vaults on Solana for depositing tokens to earn yield with automated liquidity allocation.
+A Solana-based DeFi plugin for interacting with Kamino Liquidity KVault earn vaults to deposit tokens, earn yield, and manage liquidity positions.
 
 ## Highlights
-- Single-token deposits (SOL, USDC) with share-based yield tracking
-- Auto-compounding vault strategies with optimized liquidity allocation
-- Zero performance and management fees on select vaults
-- Real-time position monitoring across all KVaults
-- Secure transaction preview with dry-run capability
-- Direct integration with Kamino Finance API
-- Solana mainnet support with solscan.io transaction tracking
-- Built-in fund limits and safety checks for testing
+- Access to all available Kamino KVault earn vaults on Solana
+- Single-token deposits that auto-compound for yield generation
+- Real-time tracking of vault share positions and balances
+- Secure transaction preview with dry-run functionality before execution
+- Direct integration with onchainos wallet for seamless transaction signing
+- Support for multiple token types including SOL, USDC, and other SPL tokens
+- Automatic vault allocation management with performance and management fee tracking
+- Transaction confirmation and explorer links for complete transparency
 

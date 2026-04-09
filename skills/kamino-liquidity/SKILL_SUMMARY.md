@@ -2,18 +2,18 @@
 # kamino-liquidity -- Skill Summary
 
 ## Overview
-This skill provides access to Kamino Liquidity KVault earn vaults on Solana, enabling users to deposit single tokens into auto-compounding vaults that automatically allocate liquidity to generate yield. Users receive vault shares representing their proportional stake and can track positions across multiple vaults while earning optimized returns through Kamino's automated strategies.
+This skill provides comprehensive access to Kamino Liquidity's KVault earn vaults on Solana, enabling users to deposit single tokens into auto-compounding yield strategies. The plugin handles vault discovery, position tracking, and secure transaction execution through the Kamino API and onchainos wallet integration, with all write operations requiring explicit user confirmation before broadcasting to the blockchain.
 
 ## Usage
-Run commands with `kamino-liquidity <command>` on Solana mainnet (chain 501). Write operations require user confirmation and use `--dry-run` to preview transactions before execution.
+Install via `npx skills add okx/plugin-store --skill kamino-liquidity` and ensure onchainos CLI is available. Use commands with `--dry-run` first to preview transactions, then add `--confirm` to execute after user approval.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
 | `vaults` | List all available KVault earn vaults with filtering options |
 | `positions` | View current share balances across all user's vault positions |
-| `deposit` | Deposit tokens into a vault to earn yield (requires confirmation) |
-| `withdraw` | Redeem vault shares for underlying tokens (requires confirmation) |
+| `deposit` | Deposit tokens into a specified vault to earn yield |
+| `withdraw` | Redeem vault shares for underlying tokens |
 
 ## Triggers
-Activate when users mention Kamino vault operations, liquidity farming, yield earning, or want to deposit/withdraw from KVaults on Solana. Also responds to Chinese terms like Kamino流动性, Kamino保险库, and 存入Kamino.
+Activate when users mention Kamino vault operations, liquidity management, yield farming on Solana, or need to interact with KVault earn strategies. Also triggers on phrases like "Kamino liquidity," "deposit to Kamino," "Kamino earn," or "KVault."
