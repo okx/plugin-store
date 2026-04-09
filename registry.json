@@ -3,6 +3,63 @@
   "stats_url": "https://plugin-store-dun.vercel.app",
   "plugins": [
     {
+      "name": "aave-v3",
+      "version": "0.1.0",
+      "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/aave-v3"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "across",
+      "version": "0.1.0",
+      "description": "Across Protocol cross-chain bridge — bridge tokens between Ethereum, Arbitrum, Base, Optimism, Polygon",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/across"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "aerodrome-amm",
       "version": "0.1.0",
       "description": "Swap tokens and manage classic AMM (volatile/stable) LP positions on Aerodrome Finance on Base",
@@ -45,6 +102,64 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/archimedes"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "archimedes-v1",
+      "version": "0.1.0",
+      "description": "Archimedes Finance leveraged yield protocol on Ethereum -- open up to 10x leveraged OUSD positions using USDC, USDT, or DAI",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/archimedes-v1"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "aura-finance",
+      "version": "0.1.0",
+      "description": "Aura Finance Balancer yield plugin — deposit BPT, claim rewards, lock AURA for vlAURA",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/aura-finance"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -139,6 +254,88 @@
       }
     },
     {
+      "name": "cian",
+      "version": "0.1.0",
+      "description": "CIAN Yield Layer -- multi-chain ERC4626 yield vaults for ETH/BTC LST assets on Ethereum, Arbitrum, BSC, and Mantle",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/cian"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "cian-yield-layer",
+      "version": "0.1.0",
+      "description": "CIAN Yield Layer on Ethereum -- deposit ETH/stETH/pumpBTC into ERC4626 vaults with recursive staking strategies, async 5-day withdrawal via requestRedeem",
+      "author": {
+        "name": "ganlinux"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/cian-yield-layer"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "clanker",
+      "version": "0.1.0",
+      "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/clanker"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "compound-v2",
       "version": "0.1.0",
       "description": "Compound V2 classic cToken lending plugin: supply assets, redeem cTokens, view positions, claim COMP rewards. Supports ETH, USDT, USDC, DAI on Ethereum mainnet.",
@@ -159,6 +356,93 @@
       "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "compound-v3",
+      "version": "0.1.0",
+      "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards across Ethereum, Base, Arbitrum, and Polygon.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/compound-v3"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "curve",
+      "version": "0.1.0",
+      "description": "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/curve"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "debridge",
+      "version": "0.1.0",
+      "description": "deBridge DLN cross-chain bridge — quote and execute cross-chain swaps across EVM chains (Arbitrum, Base, Ethereum, Optimism, BSC, Polygon) and Solana",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana",
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/debridge"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
           "ethereum",
           "base"
         ],
@@ -279,6 +563,110 @@
       }
     },
     {
+      "name": "exactly-protocol",
+      "version": "0.1.0",
+      "description": "Fixed-rate and floating-rate lending on Exactly Protocol (Optimism, Ethereum). Deposit at fixed APY locked until maturity, or supply to variable pools.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/exactly-protocol"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "fenix",
+      "version": "0.1.0",
+      "description": "Fenix Finance plugin for Blast -- swap tokens, add concentrated liquidity, get quotes, and query pools on the Algebra V4 MetaDEX.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/fenix"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "fenix-finance",
+      "version": "0.1.0",
+      "description": "Fenix Finance V3 DEX on Blast — swap, add/remove liquidity, query LP positions (Algebra Integral V1, concentrated liquidity)",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/fenix-finance"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "flap",
+      "version": "0.1.0",
+      "description": "Token launchpad on BSC: create standard or tax tokens with bonding curve, buy and sell tokens via Flap Protocol (flap.sh)",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/flap"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "fluid",
       "version": "0.1.0",
       "description": "Fluid Protocol — DEX + Lending integration. Supply/withdraw to ERC-4626 fTokens, swap via Fluid DEX. Chains: Base, Ethereum, Arbitrum.",
@@ -349,6 +737,35 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/frax-ether"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "gearbox-v3",
+      "version": "0.1.0",
+      "description": "Open and manage leveraged Credit Accounts on Gearbox V3 — Arbitrum and Ethereum",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/gearbox-v3"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -468,6 +885,37 @@
       "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "ion-protocol",
+      "version": "0.1.0",
+      "description": "Ion Protocol CDP lending plugin for LRT/LST collateral on Ethereum Mainnet",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "solana",
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/ion-protocol"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
           "ethereum",
           "base"
         ],
@@ -618,6 +1066,36 @@
       }
     },
     {
+      "name": "lido-v2",
+      "version": "0.1.0",
+      "description": "Lido liquid staking plugin — stake ETH to get stETH, wrap/unwrap wstETH, request and claim ETH withdrawals. Trigger phrases: stake ETH lido, lido staking, stake to lido, lido liquid staking, lido stETH, convert stETH to wstETH, wrap stETH, unwrap wstETH, request lido withdrawal, claim lido ETH, lido withdraw.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "ethereum",
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/lido-v2"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
       "name": "lifi",
       "version": "0.1.0",
       "description": "LI.FI/Jumper cross-chain bridge and swap aggregator supporting 79+ EVM chains",
@@ -638,6 +1116,68 @@
       "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "loopscale",
+      "version": "0.1.0",
+      "description": "Lend, borrow, and manage positions on Loopscale — Solana order-book credit protocol. Trigger phrases: loopscale lend, loopscale borrow, loopscale deposit, loopscale vault, loopscale repay, loopscale withdraw, solana lending loopscale, loopscale position, borrow USDC loopscale, deposit SOL loopscale.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "solana",
+        "ethereum",
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/loopscale"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
+      "name": "mayan",
+      "version": "0.1.0",
+      "description": "Mayan cross-chain swap. Bridge and swap tokens between Solana (501), Ethereum (1), Arbitrum (42161), Base (8453), Optimism (10), Polygon (137), BSC (56), and Avalanche (43114) using Swift, MCTP, and Wormhole routes.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana",
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/mayan"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
           "ethereum",
           "base"
         ],
@@ -680,6 +1220,34 @@
       }
     },
     {
+      "name": "meteora",
+      "version": "0.1.0",
+      "description": "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, and executing swaps on Solana",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/meteora"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "moonwell",
       "version": "0.1.0",
       "description": "Moonwell Flagship (Compound V2 fork) — supply, borrow, redeem, and claim WELL rewards on Base, Optimism, and Moonbeam",
@@ -702,6 +1270,36 @@
         ],
         "protocols": [],
         "risk_level": "medium"
+      }
+    },
+    {
+      "name": "morpho",
+      "version": "0.1.0",
+      "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "ethereum",
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/morpho"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
       }
     },
     {
@@ -788,6 +1386,34 @@
       }
     },
     {
+      "name": "orca",
+      "version": "0.1.0",
+      "description": "Concentrated liquidity AMM on Solana — swap tokens and query pools via the Whirlpools CLMM program",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/orca"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "pancakeswap",
       "version": "0.1.0",
       "description": "Swap tokens and manage liquidity on PancakeSwap V3",
@@ -813,6 +1439,88 @@
         ],
         "protocols": [],
         "risk_level": "medium"
+      }
+    },
+    {
+      "name": "pancakeswap-clmm",
+      "version": "0.1.0",
+      "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/pancakeswap-clmm"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "pancakeswap-v2",
+      "version": "0.1.0",
+      "description": "Swap tokens and provide full-range liquidity on PancakeSwap V2 — the xyk AMM on BSC and Base",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/pancakeswap-v2"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "pendle",
+      "version": "0.1.0",
+      "description": "Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "ethereum",
+        "trading"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/pendle"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
       }
     },
     {
@@ -897,6 +1605,90 @@
         ],
         "protocols": [],
         "risk_level": "high"
+      }
+    },
+    {
+      "name": "pump-fun",
+      "version": "0.1.0",
+      "description": "Buy, sell, and create tokens on pump.fun bonding curves on Solana mainnet",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/pump-fun"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "quickswap-dex",
+      "version": "0.1.0",
+      "description": "Swap tokens and manage liquidity on QuickSwap DEX on Polygon",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/quickswap-dex"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "raydium",
+      "version": "0.1.0",
+      "description": "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/raydium"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -1003,6 +1795,36 @@
       "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "sanctum-validator-lst",
+      "version": "0.1.0",
+      "description": "Stake SOL into validator LSTs and swap between LSTs via Sanctum Router on Solana",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "solana",
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/sanctum-validator-lst"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "ethereum",
           "base"
         ],
         "protocols": [],
@@ -1127,6 +1949,36 @@
       }
     },
     {
+      "name": "solv-solvbtc",
+      "version": "0.1.0",
+      "description": "Solv Protocol SolvBTC -- mint yield-bearing BTC on Arbitrum and Ethereum",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "ethereum",
+        "trading",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/solv-solvbtc"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
       "name": "spark-savings",
       "version": "0.1.0",
       "description": "Earn the Sky Savings Rate (SSR) on USDS/DAI via Spark sUSDS/sDAI savings vaults — ERC-4626 on Ethereum, PSM3-powered on Base/Arbitrum/Optimism",
@@ -1143,6 +1995,34 @@
         "skill": {
           "repo": "MigOKG/plugin-store",
           "dir": "skills/spark-savings"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "spectra",
+      "version": "0.1.0",
+      "description": "Spectra Finance yield tokenization plugin — deposit/redeem PT+YT, claim accrued yield, swap PT via Curve. Primary chain: Base (8453). Secondary: Arbitrum (42161), Ethereum (1).",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "utility",
+      "tags": [
+        "ethereum"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/spectra"
         }
       },
       "link": "https://github.com/MigOKG/plugin-store",
@@ -1183,6 +2063,35 @@
         ],
         "protocols": [],
         "risk_level": "high"
+      }
+    },
+    {
+      "name": "term-structure",
+      "version": "0.1.0",
+      "description": "Lend and borrow at fixed rates on TermMax (Term Structure) — fixed-rate AMM on Arbitrum, Ethereum, BNB",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/term-structure"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
       }
     },
     {
@@ -1486,6 +2395,62 @@
       "link": "https://github.com/MigOKG/plugin-store",
       "extra": {
         "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "vertex-edge",
+      "version": "0.1.0",
+      "description": "Query markets, positions, orderbook, prices and deposit collateral on Vertex Edge perpetual DEX on Arbitrum",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "trading-strategy",
+      "tags": [
+        "trading"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/vertex-edge"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
+    },
+    {
+      "name": "zerolend",
+      "version": "0.1.0",
+      "description": "Supply, borrow, repay, and withdraw on ZeroLend — an Aave V3 fork on zkSync Era, Linea, and Blast. Trigger phrases: zerolend supply, zerolend borrow, zerolend repay, zerolend deposit, zerolend withdraw, lend on zerolend, borrow on linea, borrow on blast, zerolend position, zerolend health factor.",
+      "author": {
+        "name": "skylavis-sky"
+      },
+      "category": "defi-protocol",
+      "tags": [
+        "ethereum",
+        "defi"
+      ],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "MigOKG/plugin-store",
+          "dir": "skills/zerolend"
+        }
+      },
+      "link": "https://github.com/MigOKG/plugin-store",
+      "extra": {
+        "chains": [
+          "ethereum",
           "base"
         ],
         "protocols": [],
