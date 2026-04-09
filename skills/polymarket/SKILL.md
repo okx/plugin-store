@@ -246,6 +246,8 @@ polymarket buy --market-id <id> --outcome <yes|no> --amount <usdc> [--price <0-1
 
 **On-chain ops:** If USDC.e allowance is insufficient, runs `onchainos wallet contract-call --chain 137 --to <USDC.e> --input-data <approve_calldata> --force` automatically.
 
+> ⚠️ **Unlimited approval notice**: The first buy on each market type approves `type(uint256).max` USDC.e to the CTF Exchange contract — this is standard Polymarket CLOB practice to avoid per-trade gas costs. Always confirm the user understands this before their first buy. The approval is a one-time operation per exchange address and is cached locally.
+
 **Amount encoding:** USDC.e amounts are 6-decimal (multiply by 1,000,000 internally). Price must be rounded to tick size (typically 0.01).
 
 **Output fields:** `order_id`, `status` (live/matched/unmatched), `condition_id`, `outcome`, `token_id`, `side`, `order_type`, `limit_price`, `usdc_amount`, `shares`, `tx_hashes`

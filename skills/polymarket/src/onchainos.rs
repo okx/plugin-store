@@ -41,17 +41,17 @@ pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("no txHash in contract-call response"))
 }
 
-/// Get the wallet address from `onchainos wallet balance --chain 137`.
-/// Parses: data.details[0].tokenAssets[0].address
+/// Get the wallet address from `onchainos wallet addresses --chain 137`.
+/// Parses: data.evm[0].address
 pub async fn get_wallet_address() -> Result<String> {
     let output = tokio::process::Command::new("onchainos")
-        .args(["wallet", "balance", "--chain", CHAIN])
+        .args(["wallet", "addresses", "--chain", CHAIN])
         .output()
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let v: Value = serde_json::from_str(&stdout)
-        .map_err(|e| anyhow::anyhow!("wallet balance parse error: {}\nraw: {}", e, stdout))?;
-    v["data"]["details"][0]["tokenAssets"][0]["address"]
+        .map_err(|e| anyhow::anyhow!("wallet addresses parse error: {}\nraw: {}", e, stdout))?;
+    v["data"]["evm"][0]["address"]
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("Could not determine wallet address from onchainos output"))

@@ -220,14 +220,7 @@ pub async fn resolve_market_token(
 }
 
 fn rand_salt() -> u128 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos() as u128;
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as u128;
-    secs.wrapping_mul(1_000_000_000).wrapping_add(nanos)
+    let mut bytes = [0u8; 16];
+    getrandom::getrandom(&mut bytes).expect("getrandom failed");
+    u128::from_le_bytes(bytes)
 }
