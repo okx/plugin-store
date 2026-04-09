@@ -747,8 +747,13 @@ fn check_prompt_injection(content: &str, diags: &mut Vec<LintDiag>) {
         ),
     ];
 
+    // Strip auto-injected pre-flight blocks before scanning for suspicious patterns.
+    // These blocks are added by CI (inject-preflight.py) and contain legitimate
+    // base64, curl, and URL references for binary installation and telemetry.
+    let lower_no_preflight = strip_auto_injected_blocks(&lower);
+
     for (pattern, reason) in suspicious_patterns {
-        if lower.contains(pattern) {
+        if lower_no_preflight.contains(pattern) {
             diags.push(LintDiag {
                 level: DiagLevel::Warning,
                 code: "W100",
@@ -756,6 +761,38 @@ fn check_prompt_injection(content: &str, diags: &mut Vec<LintDiag>) {
             });
         }
     }
+}
+
+/// Remove CI auto-injected pre-flight blocks from content before security scanning.
+/// These blocks are marked with "(auto-injected)" in their heading and contain
+/// legitimate curl/base64/URL patterns for binary installation and telemetry reporting.
+fn strip_auto_injected_blocks(content: &str) -> String {
+    let mut result = String::new();
+    let mut in_injected_block = false;
+    let mut in_code_fence = false;
+
+    for line in content.lines() {
+        if line.contains("(auto-injected)") {
+            in_injected_block = true;
+            continue;
+        }
+        if in_injected_block {
+            if line.starts_with("```") {
+                in_code_fence = !in_code_fence;
+                continue;
+            }
+            // End of injected block: next heading at same or higher level
+            if !in_code_fence && (line.starts_with("## ") || line.starts_with("# ") || line.starts_with("---")) {
+                in_injected_block = false;
+                result.push_str(line);
+                result.push('\n');
+            }
+            continue;
+        }
+        result.push_str(line);
+        result.push('\n');
+    }
+    result
 }
 
 /// Detect invisible / zero-width characters that could hide malicious instructions.
@@ -862,8 +899,10 @@ fn check_dangerous_commands_confirmation(content: &str, diags: &mut Vec<LintDiag
 /// Analyze external URLs in SKILL.md for security risks.
 /// Uses plugin.api_calls to distinguish expected vs unexpected URLs.
 fn check_external_urls(content: &str, plugin: &PluginYaml, diags: &mut Vec<LintDiag>) {
+    // Strip auto-injected pre-flight blocks — their URLs are CI-controlled, not developer-submitted
+    let cleaned = strip_auto_injected_blocks(content);
     let url_re = regex::Regex::new(r#"https?://[^\s\)>\]`"']+"#).unwrap();
-    let urls: Vec<&str> = url_re.find_iter(content).map(|m| m.as_str()).collect();
+    let urls: Vec<&str> = url_re.find_iter(&cleaned).map(|m| m.as_str()).collect();
 
     if urls.is_empty() {
         return;
@@ -875,6 +914,9 @@ fn check_external_urls(content: &str, plugin: &PluginYaml, diags: &mut Vec<LintD
         "web3.okx.com",
         "docs.okx.com",
         "onchainos.com",
+        // CI auto-injected telemetry (inject-preflight.py report install block)
+        "plugin-store-dun.vercel.app",
+        "www.okx.com/priapi/v1/wallet/plugins",
     ];
 
     let lower = content.to_lowercase();
