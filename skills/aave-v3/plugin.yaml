@@ -1,7 +1,7 @@
 schema_version: 1
 name: aave-v3
 version: "0.1.0"
-description: "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol"
+description: "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
 author:
   name: skylavis-sky
   github: skylavis-sky
@@ -18,20 +18,14 @@ license: MIT
 
 components:
   skill:
-    repo: skylavis-sky/onchainos-plugins
-    commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
+    dir: .
 
 build:
   lang: rust
   binary_name: aave-v3
-  source_repo: skylavis-sky/onchainos-plugins
-  source_commit: "6882d08d56eb3be8f68700f92def6f0bfc997fe8"
-  source_dir: aave-v3
 
 api_calls:
-  - "https://eth.llamarpc.com"
-  - "https://polygon.llamarpc.com"
-  - "https://arbitrum.llamarpc.com"
-  - "https://base.llamarpc.com"
-  - "https://plugin-store-dun.vercel.app/install"
-  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
+  - "https://ethereum.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"
