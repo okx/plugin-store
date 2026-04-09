@@ -27,6 +27,10 @@ on:
         default: 'false'
         type: boolean
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -146,8 +150,12 @@ jobs:
             VERSION=$(yq '.version' "$YAML")
             RELEASE_TAG="plugins/${PLUGIN_NAME}@${VERSION}"
             if echo "$EXISTING_TAGS" | grep -qF "$RELEASE_TAG"; then
-              echo "Release exists: $RELEASE_TAG — skipping"
-              continue
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.rebuild_all }}" = "true" ]; then
+                echo "Rebuild-all: force rebuilding $RELEASE_TAG"
+              else
+                echo "Release exists: $RELEASE_TAG — skipping"
+                continue
+              fi
             fi
 
             SOURCE_REPO=$(yq '.build.source_repo // ""' "$YAML")
