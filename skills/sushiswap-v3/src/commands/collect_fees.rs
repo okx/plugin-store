@@ -40,11 +40,7 @@ pub async fn run(args: CollectFeesArgs) -> anyhow::Result<()> {
     println!("Please confirm the fee collection above before proceeding. (Proceeding automatically in non-interactive mode)");
 
     // --- 2. Resolve recipient ---
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     // --- 3. Build collect calldata ---
     // collect((uint256 tokenId, address recipient, uint128 amount0Max, uint128 amount1Max))

@@ -55,11 +55,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     println!("Please confirm the remove-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
 
     // --- 2. Resolve recipient ---
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(args.chain)?
-    };
+    let recipient = resolve_wallet(args.chain)?;
 
     let deadline = unix_now() + args.deadline_minutes * 60;
 
