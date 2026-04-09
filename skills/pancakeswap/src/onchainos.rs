@@ -5,7 +5,7 @@ pub async fn wallet_contract_call(
     to: &str,
     input_data: &str,
     from: Option<&str>,
-    amt: Option<u64>,
+    amt: Option<u128>,
     dry_run: bool,
     confirm: bool,
 ) -> anyhow::Result<serde_json::Value> {
@@ -36,7 +36,7 @@ pub async fn wallet_contract_call(
         to,
         "--input-data",
         input_data,
-        "--force",
+        // Note: --force intentionally omitted — onchainos handles its own confirmation
     ];
 
     let amt_str: String;

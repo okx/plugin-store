@@ -49,8 +49,27 @@ pub fn tick_spacing(fee: u32) -> anyhow::Result<i32> {
     }
 }
 
+/// Sentinel address representing native BNB / ETH (not an ERC-20 contract).
+/// Used internally; never sent to the SmartRouter — swapped for the wrapped address before use.
+pub const NATIVE_SENTINEL: &str = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+/// Returns true if the address is the native-token sentinel.
+pub fn is_native_token(addr: &str) -> bool {
+    addr.eq_ignore_ascii_case(NATIVE_SENTINEL)
+}
+
+/// Returns the wrapped ERC-20 address for the native token on the given chain.
+pub fn wrapped_native(chain_id: u64) -> &'static str {
+    match chain_id {
+        56   => "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB on BSC
+        8453 => "0x4200000000000000000000000000000000000006", // WETH on Base
+        _    => NATIVE_SENTINEL,
+    }
+}
+
 /// Resolve a token symbol to its canonical address for the given chain.
 /// If the input is already a 0x... address, it is returned as-is.
+/// "BNB" and "ETH" resolve to NATIVE_SENTINEL; use wrapped_native() for pool/router calls.
 pub fn resolve_token_address(symbol_or_addr: &str, chain_id: u64) -> anyhow::Result<String> {
     // Already an address
     if symbol_or_addr.starts_with("0x") || symbol_or_addr.starts_with("0X") {
@@ -58,18 +77,20 @@ pub fn resolve_token_address(symbol_or_addr: &str, chain_id: u64) -> anyhow::Res
     }
     let sym = symbol_or_addr.to_uppercase();
     let addr = match (chain_id, sym.as_str()) {
-        // BSC (56)
-        (56, "WBNB") | (56, "BNB") => "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        // BSC (56) — native vs wrapped
+        (56, "BNB")  => NATIVE_SENTINEL,
+        (56, "WBNB") => "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
         (56, "USDT") => "0x55d398326f99059fF775485246999027B3197955",
         (56, "USDC") => "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
         (56, "BUSD") => "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
         (56, "ETH") | (56, "WETH") => "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",
         (56, "CAKE") => "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-        // Base (8453)
-        (8453, "WETH") | (8453, "ETH") => "0x4200000000000000000000000000000000000006",
+        // Base (8453) — native vs wrapped
+        (8453, "ETH")  => NATIVE_SENTINEL,
+        (8453, "WETH") => "0x4200000000000000000000000000000000000006",
         (8453, "USDC") => "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         (8453, "USDT") => "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
-        (8453, "DAI") => "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+        (8453, "DAI")  => "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
         (8453, "CBETH") => "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22",
         _ => anyhow::bail!(
             "Unknown token symbol '{}' on chain {}. Please use a full 0x address.",
