@@ -2,12 +2,12 @@
 Swap tokens and manage concentrated liquidity positions on SushiSwap V3 CLMM across 38+ EVM chains.
 
 ## Highlights
-- Multi-chain support across 38+ EVM networks with identical contract addresses
-- Full concentrated liquidity management with tick-ranged NFT positions
-- Intelligent swap routing that finds best fee tiers automatically
-- Gas-free quote operations using direct RPC calls
-- Complete position lifecycle: mint, modify, collect fees, and burn
-- Built-in slippage protection and approval handling
-- Support for both token symbols and hex addresses
-- Dry-run mode for testing transactions before execution
+- Multi-chain support across 38+ EVM networks with unified contract addresses
+- Complete concentrated liquidity management with tick-based position control
+- Gas-free quote system using direct eth_call to QuoterV2 contract
+- Automatic fee tier optimization for best swap execution
+- NFT-based LP position management with fee collection
+- Slippage protection and dry-run capabilities for all transactions
+- Seamless integration with onchainos wallet system
+- Full-range and custom tick range liquidity provision support
 
