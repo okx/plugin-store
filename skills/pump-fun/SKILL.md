@@ -238,3 +238,4 @@ pump-fun create-token \
 | `priority_fee_unit_limit` | 200,000 | Compute unit limit |
 | `priority_fee_unit_price` | 1,000 | Micro-lamports per compute unit |
 | `fee_bps` | 100 | pump.fun trade fee (1%) |
+
