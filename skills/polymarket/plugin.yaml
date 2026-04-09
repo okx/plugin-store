@@ -1,0 +1,32 @@
+schema_version: 1
+name: polymarket
+version: "0.1.0"
+description: "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - prediction-market
+  - polymarket
+  - polygon
+  - trading
+  - defi
+  - clob
+license: MIT
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: rust
+  binary_name: polymarket
+  source_repo: skylavis-sky/onchainos-plugins
+  source_commit: "f539fe7b8e3e0b56a1a1e9abd1ae43d4b4aea949"
+  source_dir: polymarket
+
+api_calls:
+  - "clob.polymarket.com"
+  - "gamma-api.polymarket.com"
+  - "data-api.polymarket.com"
