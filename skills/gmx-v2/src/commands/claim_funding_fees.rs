@@ -57,7 +57,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClaimFundingFe
     eprintln!("Note: No execution fee needed for claims.");
     eprintln!("Ask user to confirm before proceeding.");
 
-    let result = crate::onchainos::wallet_contract_call(
+    let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
         cfg.exchange_router,
         &calldata,
@@ -65,6 +65,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClaimFundingFe
         None, // no ETH value needed for claim
         dry_run,
         confirm,
+        Some(300_000),
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);

@@ -237,138 +237,123 @@ pub fn encode_create_order(
 }
 
 /// Encode `createDeposit(CreateDepositParams)` calldata
-/// Selector: 0xadc567e6 (createDeposit((address,address,address,address,address,address[],address[],uint256,uint256,uint256,uint256,uint256)))
-/// We use manual ABI encoding for the struct.
+///
+/// Selector: 0xc82aa41b
+/// keccak256("createDeposit(((address,address,address,address,address,address,address[],address[]),uint256,bool,uint256,uint256,bytes32[]))")
+/// Verified from deployed ExchangeRouter bytecode (PUSH4 scan on Arbitrum mainnet).
+///
+/// Flat struct layout (T = outer tuple):
+///   T HEAD (6 words = 192 bytes):
+///     W0: offset_to_addresses = 192
+///     W1: minMarketTokens
+///     W2: shouldUnwrapNativeToken = false
+///     W3: executionFee
+///     W4: callbackGasLimit = 0
+///     W5: offset_to_dataList = 192 + 320 = 512
+///   addresses tuple (10 words = 320 bytes):
+///     receiver, callbackContract=0, uiFeeReceiver=0, market,
+///     initialLongToken, initialShortToken,
+///     offset_longSwapPath=256, offset_shortSwapPath=288,
+///     longSwapPath length=0, shortSwapPath length=0
+///   dataList (1 word): length = 0
 #[allow(clippy::too_many_arguments)]
 pub fn encode_create_deposit(
     receiver: &str,
-    callback_contract: &str,
-    ui_fee_receiver: &str,
+    _callback_contract: &str,
+    _ui_fee_receiver: &str,
     market: &str,
     initial_long_token: &str,
     initial_short_token: &str,
     min_market_tokens: u128,
     execution_fee: u128,
-    src_chain_id: u64,
+    _src_chain_id: u64,
 ) -> String {
-    // createDeposit((Addresses, Numbers, Flags))
-    // Addresses: (receiver, callbackContract, uiFeeReceiver, market, initialLongToken, initialShortToken, longTokenSwapPath[], shortTokenSwapPath[])
-    // Numbers: (minMarketTokens, executionFee, callbackGasLimit, srcChainId)
-    // Flags: (shouldUnwrapNativeToken)
-    //
-    // Selector: let's use the verified one from design
-    // The function signature is complex, so we'll build it piece by piece.
+    // --- addresses tuple (10 words = 320 bytes) ---
+    let mut addresses = String::new();
+    addresses.push_str(&encode_address(receiver));            // receiver
+    addresses.push_str(&zero_address());                      // callbackContract = 0
+    addresses.push_str(&zero_address());                      // uiFeeReceiver = 0
+    addresses.push_str(&encode_address(market));              // market
+    addresses.push_str(&encode_address(initial_long_token));  // initialLongToken
+    addresses.push_str(&encode_address(initial_short_token)); // initialShortToken
+    addresses.push_str(&encode_u256(256));                    // offset to longSwapPath = A_HEAD_SIZE
+    addresses.push_str(&encode_u256(288));                    // offset to shortSwapPath = 256 + 32
+    addresses.push_str(&encode_u256(0));                      // longSwapPath length = 0
+    addresses.push_str(&encode_u256(0));                      // shortSwapPath length = 0
 
-    // Addresses tuple (static head + 2 dynamic arrays):
-    // 6 static address slots + offset to longSwapPath + offset to shortSwapPath + 2 empty arrays
-    let addr_head_slots = 8usize; // 6 addresses + 2 offsets
-    let long_swap_offset = addr_head_slots * 32; // offset to longSwapPath within addr tuple
-    let short_swap_offset = long_swap_offset + 32; // 32 bytes for length=0 array
+    // --- T HEAD (6 words = 192 bytes) ---
+    const T_HEAD_SIZE: usize = 192;
+    const A_SIZE: usize = 320;
+    const DATALIST_OFFSET: usize = T_HEAD_SIZE + A_SIZE; // = 512
 
-    let mut addr_encoded = String::new();
-    addr_encoded.push_str(&encode_address(receiver));
-    addr_encoded.push_str(&encode_address(callback_contract));
-    addr_encoded.push_str(&encode_address(ui_fee_receiver));
-    addr_encoded.push_str(&encode_address(market));
-    addr_encoded.push_str(&encode_address(initial_long_token));
-    addr_encoded.push_str(&encode_address(initial_short_token));
-    addr_encoded.push_str(&encode_u256(long_swap_offset as u128));
-    addr_encoded.push_str(&encode_u256(short_swap_offset as u128));
-    addr_encoded.push_str(&encode_u256(0)); // longSwapPath length=0
-    addr_encoded.push_str(&encode_u256(0)); // shortSwapPath length=0
+    let mut t = String::new();
+    t.push_str(&encode_u256(T_HEAD_SIZE as u128));     // W0: offset to addresses
+    t.push_str(&encode_u256(min_market_tokens));        // W1: minMarketTokens
+    t.push_str(&encode_bool(false));                    // W2: shouldUnwrapNativeToken
+    t.push_str(&encode_u256(execution_fee));            // W3: executionFee
+    t.push_str(&encode_u256(0));                        // W4: callbackGasLimit = 0
+    t.push_str(&encode_u256(DATALIST_OFFSET as u128)); // W5: offset to dataList
+    t.push_str(&addresses);                             // addresses (320 bytes)
+    t.push_str(&encode_u256(0));                        // dataList length = 0
 
-    // Numbers tuple (4 static slots):
-    let mut num_encoded = String::new();
-    num_encoded.push_str(&encode_u256(min_market_tokens));
-    num_encoded.push_str(&encode_u256(execution_fee));
-    num_encoded.push_str(&encode_u256(0)); // callbackGasLimit
-    num_encoded.push_str(&encode_u256(src_chain_id as u128));
-
-    // Flags tuple (1 bool):
-    let mut flags_encoded = String::new();
-    flags_encoded.push_str(&encode_bool(false)); // shouldUnwrapNativeToken
-
-    // Build struct encoding
-    let addr_bytes = addr_encoded.len() / 2;
-    let num_bytes = num_encoded.len() / 2;
-    let offset_addr = 3 * 32usize;
-    let offset_num = offset_addr + addr_bytes;
-    let offset_flags = offset_num + num_bytes;
-
-    let mut struct_encoding = String::new();
-    struct_encoding.push_str(&encode_u256(offset_addr as u128));
-    struct_encoding.push_str(&encode_u256(offset_num as u128));
-    struct_encoding.push_str(&encode_u256(offset_flags as u128));
-    struct_encoding.push_str(&addr_encoded);
-    struct_encoding.push_str(&num_encoded);
-    struct_encoding.push_str(&flags_encoded);
-
-    // Selector for createDeposit
-    // createDeposit((address,address,address,address,address,address,address[],address[],uint256,uint256,uint256,uint256,bool))
-    // We use: 0xadc567e6
-    format!("adc567e6{}{}", encode_u256(0x20), struct_encoding)
+    format!("c82aa41b{}{}", encode_u256(0x20), t)
 }
 
 /// Encode `createWithdrawal(CreateWithdrawalParams)` calldata
-/// Selector: 0x9b8eb9e7
-#[allow(clippy::too_many_arguments)]
+///
+/// Selector: 0xe78dc235
+/// keccak256("createWithdrawal(((address,address,address,address,address[],address[]),uint256,uint256,bool,uint256,uint256,bytes32[]))")
+/// Verified from deployed ExchangeRouter bytecode (PUSH4 scan on Arbitrum mainnet).
+///
+/// Flat struct layout (T = outer tuple):
+///   T HEAD (7 words = 224 bytes):
+///     W0: offset_to_addresses = 224
+///     W1: minLongTokenAmount
+///     W2: minShortTokenAmount
+///     W3: shouldUnwrapNativeToken = false
+///     W4: executionFee
+///     W5: callbackGasLimit = 0
+///     W6: offset_to_dataList = 224 + 256 = 480
+///   addresses tuple (8 words = 256 bytes):
+///     receiver, callbackContract=0, uiFeeReceiver=0, market,
+///     offset_longSwapPath=192, offset_shortSwapPath=224,
+///     longSwapPath length=0, shortSwapPath length=0
+///   dataList (1 word): length = 0
 pub fn encode_create_withdrawal(
     receiver: &str,
-    callback_contract: &str,
-    ui_fee_receiver: &str,
     market: &str,
     min_long_token_amount: u128,
     min_short_token_amount: u128,
     execution_fee: u128,
-    src_chain_id: u64,
 ) -> String {
-    // CreateWithdrawalParams: (receiver, callbackContract, uiFeeReceiver, market, longTokenSwapPath[], shortTokenSwapPath[])
-    // Numbers: (minLongTokenAmount, minShortTokenAmount, executionFee, callbackGasLimit, srcChainId)
-    // Flags: (shouldUnwrapNativeToken)
+    // --- addresses tuple (8 words = 256 bytes) ---
+    let mut addresses = String::new();
+    addresses.push_str(&encode_address(receiver)); // receiver
+    addresses.push_str(&zero_address());            // callbackContract = 0
+    addresses.push_str(&zero_address());            // uiFeeReceiver = 0
+    addresses.push_str(&encode_address(market));    // market
+    addresses.push_str(&encode_u256(192));          // offset to longSwapPath = A_HEAD_SIZE
+    addresses.push_str(&encode_u256(224));          // offset to shortSwapPath = 192 + 32
+    addresses.push_str(&encode_u256(0));            // longSwapPath length = 0
+    addresses.push_str(&encode_u256(0));            // shortSwapPath length = 0
 
-    // Addresses tuple
-    let addr_head_slots = 6usize; // 4 addresses + 2 offsets for swap paths
-    let long_swap_offset = addr_head_slots * 32;
-    let short_swap_offset = long_swap_offset + 32;
+    // --- T HEAD (7 words = 224 bytes) ---
+    const T_HEAD_SIZE: usize = 224;
+    const A_SIZE: usize = 256;
+    const DATALIST_OFFSET: usize = T_HEAD_SIZE + A_SIZE; // = 480
 
-    let mut addr_encoded = String::new();
-    addr_encoded.push_str(&encode_address(receiver));
-    addr_encoded.push_str(&encode_address(callback_contract));
-    addr_encoded.push_str(&encode_address(ui_fee_receiver));
-    addr_encoded.push_str(&encode_address(market));
-    addr_encoded.push_str(&encode_u256(long_swap_offset as u128));
-    addr_encoded.push_str(&encode_u256(short_swap_offset as u128));
-    addr_encoded.push_str(&encode_u256(0)); // longSwapPath length=0
-    addr_encoded.push_str(&encode_u256(0)); // shortSwapPath length=0
+    let mut t = String::new();
+    t.push_str(&encode_u256(T_HEAD_SIZE as u128));      // W0: offset to addresses
+    t.push_str(&encode_u256(min_long_token_amount));     // W1
+    t.push_str(&encode_u256(min_short_token_amount));    // W2
+    t.push_str(&encode_bool(false));                     // W3: shouldUnwrapNativeToken
+    t.push_str(&encode_u256(execution_fee));             // W4
+    t.push_str(&encode_u256(0));                         // W5: callbackGasLimit = 0
+    t.push_str(&encode_u256(DATALIST_OFFSET as u128));   // W6: offset to dataList
+    t.push_str(&addresses);                              // addresses (256 bytes)
+    t.push_str(&encode_u256(0));                         // dataList length = 0
 
-    // Numbers tuple
-    let mut num_encoded = String::new();
-    num_encoded.push_str(&encode_u256(min_long_token_amount));
-    num_encoded.push_str(&encode_u256(min_short_token_amount));
-    num_encoded.push_str(&encode_u256(execution_fee));
-    num_encoded.push_str(&encode_u256(0)); // callbackGasLimit
-    num_encoded.push_str(&encode_u256(src_chain_id as u128));
-
-    // Flags
-    let mut flags_encoded = String::new();
-    flags_encoded.push_str(&encode_bool(false)); // shouldUnwrapNativeToken
-
-    let addr_bytes = addr_encoded.len() / 2;
-    let num_bytes = num_encoded.len() / 2;
-    let offset_addr = 3 * 32usize;
-    let offset_num = offset_addr + addr_bytes;
-    let offset_flags = offset_num + num_bytes;
-
-    let mut struct_encoding = String::new();
-    struct_encoding.push_str(&encode_u256(offset_addr as u128));
-    struct_encoding.push_str(&encode_u256(offset_num as u128));
-    struct_encoding.push_str(&encode_u256(offset_flags as u128));
-    struct_encoding.push_str(&addr_encoded);
-    struct_encoding.push_str(&num_encoded);
-    struct_encoding.push_str(&flags_encoded);
-
-    // Selector for createWithdrawal: 0x9b8eb9e7
-    format!("9b8eb9e7{}{}", encode_u256(0x20), struct_encoding)
+    format!("e78dc235{}{}", encode_u256(0x20), t)
 }
 
 /// Encode the outer `multicall(bytes[])` calldata

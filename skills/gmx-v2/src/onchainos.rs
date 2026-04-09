@@ -60,6 +60,58 @@ pub async fn wallet_contract_call(
     Ok(serde_json::from_str(&stdout)?)
 }
 
+/// Like wallet_contract_call but with an explicit gas limit to bypass estimation failures.
+pub async fn wallet_contract_call_with_gas(
+    chain_id: u64,
+    to: &str,
+    input_data: &str,
+    from: Option<&str>,
+    amt: Option<u128>,
+    dry_run: bool,
+    confirm: bool,
+    gas: Option<u64>,
+) -> anyhow::Result<Value> {
+    if dry_run {
+        return Ok(serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "data": { "txHash": "0x0000000000000000000000000000000000000000000000000000000000000000" },
+            "calldata": input_data
+        }));
+    }
+
+    let chain_str = chain_id.to_string();
+    let mut args: Vec<String> = vec![
+        "wallet".into(),
+        "contract-call".into(),
+        "--chain".into(),
+        chain_str.clone(),
+        "--to".into(),
+        to.into(),
+        "--input-data".into(),
+        input_data.into(),
+    ];
+    if let Some(v) = amt {
+        args.push("--amt".into());
+        args.push(v.to_string());
+    }
+    if let Some(f) = from {
+        args.push("--from".into());
+        args.push(f.into());
+    }
+    if let Some(g) = gas {
+        args.push("--gas".into());
+        args.push(g.to_string());
+    }
+    if confirm {
+        args.push("--force".into());
+    }
+
+    let output = Command::new("onchainos").args(&args).output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(serde_json::from_str(&stdout)?)
+}
+
 /// Extract txHash from wallet contract-call response: {"ok":true,"data":{"txHash":"0x..."}}
 pub fn extract_tx_hash(result: &Value) -> &str {
     result["data"]["txHash"]

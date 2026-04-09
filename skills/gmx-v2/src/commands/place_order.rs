@@ -163,7 +163,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
         }
     }
 
-    let result = crate::onchainos::wallet_contract_call(
+    let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
         cfg.exchange_router,
         &calldata,
@@ -171,6 +171,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
         Some(execution_fee),
         dry_run,
         confirm,
+        Some(500_000),
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);

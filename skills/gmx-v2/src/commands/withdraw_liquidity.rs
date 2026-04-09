@@ -59,13 +59,10 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: WithdrawLiquid
     );
     let create_withdrawal = crate::abi::encode_create_withdrawal(
         &wallet,
-        "0x0000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000",
         &args.market_token,
         args.min_long_amount,
         args.min_short_amount,
         execution_fee,
-        cfg.chain_id,
     );
 
     let multicall_hex = crate::abi::encode_multicall(&[send_wnt, send_gm, create_withdrawal]);
@@ -80,7 +77,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: WithdrawLiquid
     eprintln!("⚠ GMX V2 keeper model: tokens returned 1-30s after tx lands.");
     eprintln!("Ask user to confirm before proceeding.");
 
-    let result = crate::onchainos::wallet_contract_call(
+    let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
         cfg.exchange_router,
         &calldata,
@@ -88,6 +85,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: WithdrawLiquid
         Some(execution_fee),
         dry_run,
         confirm,
+        Some(800_000),
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);

@@ -116,7 +116,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
     eprintln!("⚠ GMX V2 keeper model: GM tokens minted 1-30s after tx lands.");
     eprintln!("Ask user to confirm before proceeding.");
 
-    let result = crate::onchainos::wallet_contract_call(
+    let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
         cfg.exchange_router,
         &calldata,
@@ -124,6 +124,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
         Some(execution_fee),
         dry_run,
         confirm,
+        Some(800_000),
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);
