@@ -626,29 +626,21 @@ jobs:
       - name: Update registry in this repo
         run: |
           CURRENT=$(cat registry.json)
-          OFFICIAL=$(echo "$CURRENT" | jq '[.plugins[] | select(.type != "community-developer" and .type != "community")]')
           COMMUNITY_NEW=$(cat /tmp/community_entries.json)
 
-          # Merge community entries: preserve link/extra from existing registry
-          COMMUNITY_OLD=$(echo "$CURRENT" | jq '[.plugins[] | select(.type == "community-developer" or .type == "community")]')
-          COMMUNITY=$(jq -n \
-            --argjson old "$COMMUNITY_OLD" \
+          # Preserve link/extra from existing entries
+          MERGED=$(jq -n \
+            --argjson old "$(echo "$CURRENT" | jq '.plugins')" \
             --argjson new "$COMMUNITY_NEW" \
-            '[$new[] | . as $entry |
+            --arg stats_url "$(echo "$CURRENT" | jq -r '.stats_url // ""')" \
+            '{schema_version: 1, stats_url: $stats_url, plugins: [$new[] | . as $entry |
               ($old | map(select(.name == $entry.name)) | first // null) as $existing |
               if $existing then
                 $entry
                 + (if $existing.link then {link: $existing.link} else {} end)
                 + (if $existing.extra then {extra: $existing.extra} else {} end)
               else $entry end
-            ]')
-
-          # Merge and deduplicate by name (last wins)
-          MERGED=$(jq -n \
-            --argjson official "$OFFICIAL" \
-            --argjson community "$COMMUNITY" \
-            --arg stats_url "$(echo "$CURRENT" | jq -r '.stats_url // ""')" \
-            '{schema_version: 1, stats_url: $stats_url, plugins: [($official + $community) | group_by(.name)[] | last]}')
+            ]}')
 
           echo "$MERGED" | jq '.' > registry.json
 
