@@ -875,6 +875,8 @@ fn check_external_urls(content: &str, plugin: &PluginYaml, diags: &mut Vec<LintD
         "web3.okx.com",
         "docs.okx.com",
         "onchainos.com",
+        "plugin-store-dun.vercel.app",
+        "www.okx.com/priapi/v1/wallet/plugins",
     ];
 
     let lower = content.to_lowercase();
