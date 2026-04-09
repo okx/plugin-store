@@ -1,22 +1,19 @@
-
-# pancakeswap-clmm -- Skill Summary
+# pancakeswap-clmm — Skill Summary
 
 ## Overview
-This skill manages PancakeSwap V3 CLMM (Concentrated Liquidity Market Maker) farming operations, allowing users to stake their V3 LP NFTs into MasterChefV3 contracts to earn CAKE token rewards. It provides comprehensive farming functionality including staking, unstaking, reward harvesting, and fee collection across BSC, Ethereum, Base, and Arbitrum networks.
-
-## Usage
-Use this skill after creating V3 LP positions with the pancakeswap plugin. Stake LP NFTs to start earning CAKE rewards, harvest rewards periodically, and collect swap fees as needed.
+This skill enables staking PancakeSwap V3 CLMM LP NFTs into MasterChefV3 to earn CAKE rewards, harvesting rewards, collecting swap fees, and viewing positions across BSC, Ethereum, Base, and Arbitrum.
 
 ## Commands
+
 | Command | Description |
 |---------|-------------|
-| `farm --token-id <ID>` | Stake LP NFT into MasterChefV3 to earn CAKE |
-| `unfarm --token-id <ID>` | Withdraw LP NFT and harvest rewards |
-| `harvest --token-id <ID>` | Claim CAKE rewards without unstaking |
-| `collect-fees --token-id <ID>` | Collect swap fees from unstaked positions |
-| `pending-rewards --token-id <ID>` | View pending CAKE rewards |
-| `positions` | View all LP positions (with optional staked IDs) |
-| `farm-pools` | List active MasterChefV3 farming pools |
+| `farm` | Stake a V3 LP NFT into MasterChefV3 to earn CAKE rewards |
+| `unfarm` | Withdraw a staked LP NFT from MasterChefV3 |
+| `harvest` | Claim pending CAKE rewards from a farmed position |
+| `collect-fees` | Collect accumulated swap fees from a V3 LP position |
+| `pending-rewards` | View pending CAKE rewards for a position (read-only) |
+| `farm-pools` | List active MasterChefV3 farming pools (read-only) |
+| `positions` | View all V3 LP positions for a wallet (read-only) |
 
 ## Triggers
-Activate this skill when users want to farm CAKE rewards from V3 LP positions, harvest farming rewards, collect swap fees, or manage staked NFT positions on PancakeSwap. Use trigger phrases like "stake LP NFT", "farm CAKE", "harvest rewards", or "collect fees".
+Activate when users want to farm CAKE, stake LP NFTs, harvest rewards, collect PancakeSwap fees, or view V3 positions. Also triggered by: "stake LP NFT", "farm CAKE", "harvest CAKE rewards", "collect fees", "unfarm position", "PancakeSwap V3 farming".
