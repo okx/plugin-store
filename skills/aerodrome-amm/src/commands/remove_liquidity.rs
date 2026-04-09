@@ -58,11 +58,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     println!("Pool: {}", pool_addr);
 
     // --- 2. Resolve wallet and LP balance ---
-    let wallet = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let wallet = resolve_wallet(CHAIN_ID)?;
 
     let lp_balance = if args.dry_run {
         args.liquidity.unwrap_or(1_000_000_000_000_000_000u128) // mock 1 LP for dry run

@@ -81,11 +81,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     println!("Please confirm the swap above before proceeding. (Proceeding automatically in non-interactive mode)");
 
     // --- 2. Resolve recipient ---
-    let recipient = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let recipient = resolve_wallet(CHAIN_ID)?;
 
     // --- 3. Check allowance and approve if needed ---
     if !args.dry_run {

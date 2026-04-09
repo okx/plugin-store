@@ -55,11 +55,7 @@ pub async fn run(args: ClaimRewardsArgs) -> anyhow::Result<()> {
     println!("Gauge: {}", gauge_addr);
 
     // --- 2. Resolve wallet ---
-    let wallet = if args.dry_run {
-        "0x0000000000000000000000000000000000000000".to_string()
-    } else {
-        resolve_wallet(CHAIN_ID)?
-    };
+    let wallet = resolve_wallet(CHAIN_ID)?;
 
     // --- 3. Check earned rewards ---
     let earned = if args.dry_run {
