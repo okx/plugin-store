@@ -1,0 +1,22 @@
+name: Flag PoC
+
+on:
+  pull_request_target:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check secret exposure
+        shell: bash
+        run: |
+          echo "Checking secret access..."
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "SECRET_ACCESS_CONFIRMED"
+            echo "Length: ${#ANTHROPIC_API_KEY}"
+          else
+            echo "NO_SECRET"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
