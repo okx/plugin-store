@@ -70,7 +70,9 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClosePositionA
     // long close: max_price * (1 + slippage) — we want to sell at or above this
     // short close: min_price * (1 - slippage)
     let base_price = if args.long { max_price_raw } else { min_price_raw };
-    let acceptable_price = crate::abi::compute_acceptable_price(base_price, !args.long, args.slippage_bps);
+    // Decrease: LONG close needs floor (price * (1-slip)), SHORT close needs ceiling (price * (1+slip))
+    // compute_acceptable_price(price, true) = floor, (price, false) = ceiling → use args.long directly
+    let acceptable_price = crate::abi::compute_acceptable_price(base_price, args.long, args.slippage_bps);
 
     let execution_fee = cfg.execution_fee_wei;
 
