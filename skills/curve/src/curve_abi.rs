@@ -126,6 +126,17 @@ pub fn encode_remove_liquidity_2(lp_amount: u128, min_amounts: [u128; 2]) -> Str
     s
 }
 
+/// Build calldata for remove_liquidity(uint256,uint256[4]) — 4-coin
+/// Selector: keccak256("remove_liquidity(uint256,uint256[4])") = 0x7d49d875
+pub fn encode_remove_liquidity_4(lp_amount: u128, min_amounts: [u128; 4]) -> String {
+    let mut s = String::from("0x7d49d875");
+    s.push_str(&encode_uint256_u128(lp_amount));
+    for &a in &min_amounts {
+        s.push_str(&encode_uint256_u128(a));
+    }
+    s
+}
+
 /// Build calldata for remove_liquidity(uint256,uint256[3]) — 3-coin
 /// Selector: keccak256("remove_liquidity(uint256,uint256[3])") = 0xecb586a5
 pub fn encode_remove_liquidity_3(lp_amount: u128, min_amounts: [u128; 3]) -> String {

@@ -89,6 +89,15 @@ pub async fn run(
                 ];
                 curve_abi::encode_remove_liquidity_3(actual_lp_amount, mins)
             }
+            4 => {
+                let mins = [
+                    min_amounts.first().copied().unwrap_or(0),
+                    min_amounts.get(1).copied().unwrap_or(0),
+                    min_amounts.get(2).copied().unwrap_or(0),
+                    min_amounts.get(3).copied().unwrap_or(0),
+                ];
+                curve_abi::encode_remove_liquidity_4(actual_lp_amount, mins)
+            }
             _ => anyhow::bail!("Unsupported pool coin count: {}", n_coins),
         }
     };

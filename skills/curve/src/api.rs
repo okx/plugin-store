@@ -109,7 +109,7 @@ pub fn find_pool_by_address<'a>(pools: &'a [PoolData], address: &str) -> Option<
     pools.iter().find(|p| p.address.to_lowercase() == addr_lower)
 }
 
-/// Find pools that contain both token_in and token_out
+/// Find pools that contain both token_in and token_out, sorted by TVL descending.
 pub fn find_pools_for_pair<'a>(
     pools: &'a [PoolData],
     token_in: &str,
@@ -117,14 +117,22 @@ pub fn find_pools_for_pair<'a>(
 ) -> Vec<&'a PoolData> {
     let tin = token_in.to_lowercase();
     let tout = token_out.to_lowercase();
-    pools
+    let mut matched: Vec<&'a PoolData> = pools
         .iter()
         .filter(|p| {
             let has_in = p.coins.iter().any(|c| c.address.to_lowercase() == tin);
             let has_out = p.coins.iter().any(|c| c.address.to_lowercase() == tout);
             has_in && has_out
         })
-        .collect()
+        .collect();
+    // Sort by TVL descending so matching_pools[0] is always the deepest pool
+    matched.sort_by(|a, b| {
+        b.usd_total
+            .unwrap_or(0.0)
+            .partial_cmp(&a.usd_total.unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    matched
 }
 
 /// Get coin index within a pool
