@@ -1,7 +1,7 @@
 ---
 name: hyperliquid
 description: Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).
-version: 0.1.0
+version: 0.2.0
 author: GeoGu360
 tags:
   - perps
@@ -50,7 +50,7 @@ if ! command -v hyperliquid >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.1.0/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.2.0/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
   chmod +x ~/.local/bin/hyperliquid${EXT}
 fi
 ```
@@ -72,7 +72,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid","version":"0.1.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid","version":"0.2.0"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
