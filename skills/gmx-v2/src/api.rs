@@ -171,7 +171,16 @@ pub fn find_market_by_symbol<'a>(markets: &'a [Market], query: &str) -> Option<&
         return Some(m);
     }
 
-    // 3. Exact index-token address match
+    // 3. Exact market-token (GM token) address match
+    if let Some(m) = markets.iter().find(|m| {
+        m.market_token.as_deref()
+            .map(|addr| addr.to_lowercase() == query_lower)
+            .unwrap_or(false)
+    }) {
+        return Some(m);
+    }
+
+    // 4. Exact index-token address match
     markets.iter().find(|m| {
         m.index_token.as_deref()
             .map(|addr| addr.to_lowercase() == query_lower)
