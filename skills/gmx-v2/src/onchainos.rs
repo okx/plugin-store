@@ -2,14 +2,30 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use serde_json::Value;
 
-/// Resolve the current logged-in wallet address via onchainos wallet balance
+/// Resolve the current logged-in wallet address via onchainos wallet addresses.
+/// Matches the EVM address for the given chain_id.
 pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
-    let chain_str = chain_id.to_string();
     let output = Command::new("onchainos")
-        .args(["wallet", "balance", "--chain", &chain_str, "--output", "json"])
+        .args(["wallet", "addresses"])
         .output()?;
     let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
-    Ok(json["data"]["address"].as_str().unwrap_or("").to_string())
+    // Find the EVM entry matching chain_id
+    let chain_str = chain_id.to_string();
+    if let Some(evm_list) = json["data"]["evm"].as_array() {
+        for entry in evm_list {
+            if entry["chainIndex"].as_str() == Some(&chain_str) {
+                let addr = entry["address"].as_str().unwrap_or("").to_string();
+                if !addr.is_empty() {
+                    return Ok(addr);
+                }
+            }
+        }
+        // All EVM addresses are the same; fall back to first entry
+        if let Some(first) = evm_list.first() {
+            return Ok(first["address"].as_str().unwrap_or("").to_string());
+        }
+    }
+    Ok(String::new())
 }
 
 /// Call onchainos wallet contract-call.
