@@ -99,7 +99,9 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
 
     // Compute acceptable price with slippage
     let base_price = if args.long { min_price_raw } else { max_price_raw };
-    let acceptable_price = crate::abi::compute_acceptable_price(base_price, args.long, args.slippage_bps);
+    // Increase: both long and short opens need a ceiling (price * (1+slip)) so keeper can execute
+    // at current market price. Always pass false so compute_acceptable_price returns price * (1+slip).
+    let acceptable_price = crate::abi::compute_acceptable_price(base_price, false, args.slippage_bps);
 
     let execution_fee = cfg.execution_fee_wei;
 
