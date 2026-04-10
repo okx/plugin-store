@@ -167,15 +167,13 @@ pub async fn get_slot0(pool: &str, rpc_url: &str) -> Result<(u128, i32)> {
 
     let sqrt_price = u128::from_str_radix(sqrt_price_hex, 16).unwrap_or(0);
 
-    // tick is int24 (signed), ABI-padded to 32 bytes; check sign bit
-    let tick_u256 = u128::from_str_radix(tick_hex, 16).unwrap_or(0);
-    let tick: i32 = if tick_u256 > (1u128 << 127) {
-        // negative — two's complement from 256-bit
-        let neg = (!tick_u256).wrapping_add(1);
-        -(neg as i32)
-    } else {
-        tick_u256 as i32
-    };
+    // tick is int24, ABI-padded to 32 bytes (64 hex chars) as int256.
+    // Negative ticks have all high bytes set to 0xFF — u128::from_str_radix
+    // would overflow and fall back to 0.  Decode only the last 8 hex chars
+    // (32 bits) and reinterpret as i32, exactly like decode_int24_from_field
+    // in get_position().
+    let low32 = u32::from_str_radix(&tick_hex[56..64], 16).unwrap_or(0);
+    let tick = low32 as i32;
 
     Ok((sqrt_price, tick))
 }
@@ -297,6 +295,90 @@ pub async fn get_token_ids_for_owner(
         ids.push(decode_u256_from_hex(&hex));
     }
     Ok(ids)
+}
+
+// ── V3 liquidity math ─────────────────────────────────────────────────────────
+
+/// Compute the actual amounts that will be deposited when minting a V3 position.
+///
+/// V3 deposits the optimal ratio for the current price — NOT necessarily the full
+/// desired amounts. One token will be fully consumed; the other may be partially used.
+/// Slippage minimums must be applied to THESE actual amounts, not to desired amounts.
+///
+/// Algorithm mirrors NonfungiblePositionManager._addLiquidity():
+///   L = min(L_from_amount0, L_from_amount1)
+///   actual amounts are then re-derived from L and current sqrtPrice.
+pub fn amounts_for_add_liquidity(
+    sqrt_price_x96: u128,
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_current: i32,
+    amount0_desired: u128,
+    amount1_desired: u128,
+) -> (u128, u128) {
+    let sqrt_p = sqrt_price_x96 as f64 / (1u128 << 96) as f64;
+    let sqrt_a = tick_to_sqrt_price(tick_lower);
+    let sqrt_b = tick_to_sqrt_price(tick_upper);
+
+    if tick_current < tick_lower {
+        // Position entirely in token0
+        (amount0_desired, 0)
+    } else if tick_current >= tick_upper {
+        // Position entirely in token1
+        (0, amount1_desired)
+    } else {
+        // In-range: compute L from each desired amount, take min
+        let l_from_0 = amount0_desired as f64 * sqrt_p * sqrt_b / (sqrt_b - sqrt_p);
+        let l_from_1 = amount1_desired as f64 / (sqrt_p - sqrt_a);
+        let l = l_from_0.min(l_from_1);
+
+        let actual0 = l * (sqrt_b - sqrt_p) / (sqrt_p * sqrt_b);
+        let actual1 = l * (sqrt_p - sqrt_a);
+        (actual0 as u128, actual1 as u128)
+    }
+}
+
+/// Compute the actual token amounts held by a V3 position given the current pool price.
+///
+/// Uses f64 arithmetic (sufficient for slippage bound estimation — we only need
+/// ~1% accuracy, not wei-exact values).
+///
+/// Formula (from Uniswap V3 whitepaper):
+///   if tick < tickLower  → all token0: amount0 = L·(√B − √A) / (√A·√B)
+///   if tick ≥ tickUpper  → all token1: amount1 = L·(√B − √A)
+///   in range             → amount0 = L·(√B − √P) / (√P·√B)
+///                          amount1 = L·(√P − √A)
+///
+/// Returns (amount0, amount1) in minimal units (wei).
+pub fn amounts_from_liquidity(
+    sqrt_price_x96: u128,
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_current: i32,
+    liquidity: u128,
+) -> (u128, u128) {
+    let q96 = (1u128 << 96) as f64;
+    let sqrt_p = sqrt_price_x96 as f64 / q96;
+    let sqrt_a = tick_to_sqrt_price(tick_lower);
+    let sqrt_b = tick_to_sqrt_price(tick_upper);
+    let liq = liquidity as f64;
+
+    if tick_current < tick_lower {
+        let amount0 = liq * (sqrt_b - sqrt_a) / (sqrt_a * sqrt_b);
+        (amount0 as u128, 0)
+    } else if tick_current >= tick_upper {
+        let amount1 = liq * (sqrt_b - sqrt_a);
+        (0, amount1 as u128)
+    } else {
+        let amount0 = liq * (sqrt_b - sqrt_p) / (sqrt_p * sqrt_b);
+        let amount1 = liq * (sqrt_p - sqrt_a);
+        (amount0 as u128, amount1 as u128)
+    }
+}
+
+/// sqrt(1.0001^tick) — the Q96 sqrt price at a given tick, as a plain f64.
+fn tick_to_sqrt_price(tick: i32) -> f64 {
+    f64::powf(1.0001_f64, tick as f64 / 2.0)
 }
 
 // ── Subgraph ──────────────────────────────────────────────────────────────────

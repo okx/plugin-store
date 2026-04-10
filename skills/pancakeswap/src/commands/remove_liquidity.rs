@@ -29,12 +29,34 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<()> {
 
     let liquidity_to_remove = (effective_liquidity as f64 * args.liquidity_pct / 100.0) as u128;
 
+    // Bug 3 fix: compute actual token amounts from V3 liquidity math using the current
+    // pool price, instead of the incorrect tokens_owed proxy used previously.
+    // tokens_owed represents already-accrued fees credited to the position — it is
+    // completely unrelated to the amounts returned by decreaseLiquidity, which are
+    // derived from the position's liquidity and the current sqrtPrice.
+    let pool = crate::rpc::get_pool_address(cfg.factory, &pos.token0, &pos.token1, pos.fee, cfg.rpc_url).await?;
+    let (sqrt_price_x96, tick_current) = crate::rpc::get_slot0(&pool, cfg.rpc_url).await?;
+    let (amount0_out, amount1_out) = crate::rpc::amounts_from_liquidity(
+        sqrt_price_x96,
+        pos.tick_lower,
+        pos.tick_upper,
+        tick_current,
+        liquidity_to_remove,
+    );
+
+    let slippage_bps = (args.slippage * 100.0) as u128;
+    let amount0_min = amount0_out.saturating_mul(10000 - slippage_bps) / 10000;
+    let amount1_min = amount1_out.saturating_mul(10000 - slippage_bps) / 10000;
+
     println!("Remove Liquidity (chain {}):", args.chain);
     println!("  Position:     #{}", args.token_id);
     println!("  Pair:         {}/{}", sym0, sym1);
+    println!("  Current tick: {} (pool sqrtPriceX96: {})", tick_current, sqrt_price_x96);
     println!("  Total liq:    {}{}", effective_liquidity, if pos.liquidity == 0 && args.dry_run { " [synthetic for dry-run]" } else { "" });
     println!("  Remove:       {}% = {}", args.liquidity_pct, liquidity_to_remove);
     println!("  Tick range:   {} to {}", pos.tick_lower, pos.tick_upper);
+    println!("  Expected out: {} {} / {} {} (before slippage)", amount0_out, sym0, amount1_out, sym1);
+    println!("  Min out:      {} {} / {} {} ({}% slippage)", amount0_min, sym0, amount1_min, sym1, args.slippage);
     println!("  Owed fees:    {} {} / {} {}", pos.tokens_owed0, sym0, pos.tokens_owed1, sym1);
     println!("  NPM:          {}", cfg.npm);
 
@@ -50,17 +72,6 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<()> {
     } else {
         crate::onchainos::get_wallet_address().await?
     };
-
-    // Compute slippage-based minimums using integer arithmetic.
-    // tokens_owed0/1 represent credits already accrued to the position; we use them as a
-    // conservative proxy for the amounts expected out of decreaseLiquidity. If the position
-    // has not yet accrued fees (tokens_owed == 0), we fall back to 0 to avoid reverting —
-    // this is safe for initial removals but offers no sandwich protection. Ideally the caller
-    // should pass the current reserve amounts derived from the pool's sqrt price, which
-    // requires off-chain math beyond the scope of this wrapper.
-    let slippage_bps = (args.slippage * 100.0) as u128;
-    let amount0_min = pos.tokens_owed0.saturating_mul(10000 - slippage_bps) / 10000;
-    let amount1_min = pos.tokens_owed1.saturating_mul(10000 - slippage_bps) / 10000;
 
     // Step 1: decreaseLiquidity
     println!("\nStep 1: Calling decreaseLiquidity...");

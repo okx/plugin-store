@@ -8,8 +8,8 @@ pub struct AddLiquidityArgs {
     pub fee: u32,
     pub amount_a: String,
     pub amount_b: String,
-    pub tick_lower: i32,
-    pub tick_upper: i32,
+    pub tick_lower: Option<i32>,
+    pub tick_upper: Option<i32>,
     pub slippage: f64,
     pub chain: u64,
     pub dry_run: bool,
@@ -39,20 +39,50 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
     let amount0_desired = crate::config::human_to_minimal(amount_a_str, decimals0)?;
     let amount1_desired = crate::config::human_to_minimal(amount_b_str, decimals1)?;
 
-    // Validate tick spacing
     let spacing = crate::config::tick_spacing(args.fee)?;
-    if args.tick_lower % spacing != 0 || args.tick_upper % spacing != 0 {
-        anyhow::bail!(
-            "Ticks must be multiples of tickSpacing ({}) for fee tier {}. Got tickLower={}, tickUpper={}",
-            spacing, args.fee, args.tick_lower, args.tick_upper
-        );
-    }
 
-    // Apply slippage to minimums using integer arithmetic (avoids f64 precision loss on large wei values)
-    // slippage is in percent (e.g. 1.0 means 1%), convert to bps (100 bps)
+    // Resolve tick range + fetch pool slot0 (needed for both auto-tick and slippage math)
+    let pool = crate::rpc::get_pool_address(cfg.factory, token0, token1, args.fee, cfg.rpc_url).await
+        .map_err(|e| anyhow::anyhow!("Could not find pool (fee {}, chain {}): {}. Try specifying --tick-lower and --tick-upper manually.", args.fee, args.chain, e))?;
+    let (sqrt_price_x96, current_tick) = crate::rpc::get_slot0(&pool, cfg.rpc_url).await?;
+
+    let (tick_lower, tick_upper) = match (args.tick_lower, args.tick_upper) {
+        (Some(tl), Some(tu)) => {
+            if tl % spacing != 0 || tu % spacing != 0 {
+                anyhow::bail!(
+                    "Ticks must be multiples of tickSpacing ({}) for fee tier {}. Got tickLower={}, tickUpper={}",
+                    spacing, args.fee, tl, tu
+                );
+            }
+            if tl >= tu {
+                anyhow::bail!("tickLower ({}) must be less than tickUpper ({})", tl, tu);
+            }
+            (tl, tu)
+        }
+        (None, None) => {
+            // Auto-compute: ±10% price range ≈ ±1000 ticks, aligned to tickSpacing.
+            let range = 1000i32.max(spacing * 20);
+            // Euclidean division so negative ticks round toward −∞ (correct alignment)
+            let tl = (current_tick - range).div_euclid(spacing) * spacing;
+            let tu = (current_tick + range).div_euclid(spacing) * spacing;
+            println!("Auto tick range: {} to {} (current tick: {}, ±{} ticks)", tl, tu, current_tick, range);
+            (tl, tu)
+        }
+        _ => anyhow::bail!("Provide both --tick-lower and --tick-upper, or omit both for auto ±10% range."),
+    };
+
+    // Compute actual deposit amounts using V3 math, then apply slippage to those.
+    // V3 deposits the optimal ratio for current price — applying slippage to the
+    // desired amounts produces incorrect (too-tight) minimums and causes reverts.
+    let (actual0, actual1) = crate::rpc::amounts_for_add_liquidity(
+        sqrt_price_x96, tick_lower, tick_upper, current_tick,
+        amount0_desired, amount1_desired,
+    );
     let slippage_bps = (args.slippage * 100.0) as u128;
-    let amount0_min = amount0_desired.saturating_mul(10000 - slippage_bps) / 10000;
-    let amount1_min = amount1_desired.saturating_mul(10000 - slippage_bps) / 10000;
+    let amount0_min = actual0.saturating_mul(10000 - slippage_bps) / 10000;
+    let amount1_min = actual1.saturating_mul(10000 - slippage_bps) / 10000;
+    println!("Expected deposit: {} {} / {} {} → min: {} / {} ({}% slippage)",
+        actual0, sym0, actual1, sym1, amount0_min, amount1_min, args.slippage);
 
     // Deadline: 20 minutes from now
     let deadline = std::time::SystemTime::now()
@@ -60,19 +90,38 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
         .map(|d| d.as_secs() + 1200)
         .unwrap_or(9_999_999_999);
 
-    println!("Add Liquidity (chain {}):", args.chain);
-    println!("  Token0 (token0 < token1): {} {}", amount_a_str, sym0);
-    println!("  Token1:                   {} {}", amount_b_str, sym1);
-    println!("  Fee tier:                 {}%", args.fee as f64 / 10000.0);
-    println!("  Tick range:               {} to {}", args.tick_lower, args.tick_upper);
-    println!("  NPM:                      {}", cfg.npm);
-
-    // Fetch wallet address for use as recipient in mint
+    // Fetch wallet address early — needed for balance check and as mint recipient
     let wallet_address = if args.dry_run {
         "0x0000000000000000000000000000000000000001".to_string()
     } else {
         crate::onchainos::get_wallet_address().await?
     };
+
+    // Bug 1 fix: pre-flight balance check — bail before wasting gas on approve
+    if !args.dry_run {
+        let bal0 = crate::rpc::get_balance(token0, &wallet_address, cfg.rpc_url).await?;
+        let bal1 = crate::rpc::get_balance(token1, &wallet_address, cfg.rpc_url).await?;
+        if bal0 < amount0_desired {
+            anyhow::bail!(
+                "Insufficient {} balance: wallet has {} but {} required (minimal units). Deposit more {} before adding liquidity.",
+                sym0, bal0, amount0_desired, sym0
+            );
+        }
+        if bal1 < amount1_desired {
+            anyhow::bail!(
+                "Insufficient {} balance: wallet has {} but {} required (minimal units). Deposit more {} before adding liquidity.",
+                sym1, bal1, amount1_desired, sym1
+            );
+        }
+        println!("Balance check OK: {} {} available, {} {} available", bal0, sym0, bal1, sym1);
+    }
+
+    println!("Add Liquidity (chain {}):", args.chain);
+    println!("  Token0 (token0 < token1): {} {}", amount_a_str, sym0);
+    println!("  Token1:                   {} {}", amount_b_str, sym1);
+    println!("  Fee tier:                 {}%", args.fee as f64 / 10000.0);
+    println!("  Tick range:               {} to {}", tick_lower, tick_upper);
+    println!("  NPM:                      {}", cfg.npm);
 
     // Step 1: Approve token0 for NPM
     println!("\nStep 1: Approving {} for NonfungiblePositionManager...", sym0);
@@ -109,8 +158,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
         token0,
         token1,
         args.fee,
-        args.tick_lower,
-        args.tick_upper,
+        tick_lower,
+        tick_upper,
         amount0_desired,
         amount1_desired,
         amount0_min,

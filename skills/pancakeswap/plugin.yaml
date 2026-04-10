@@ -1,7 +1,7 @@
 schema_version: 1
 name: pancakeswap
-version: "0.1.0"
-description: "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain and Base"
+version: "0.2.0"
+description: "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum"
 author:
   name: GeoGu360
   github: GeoGu360
@@ -13,6 +13,7 @@ tags:
   - pancakeswap
   - bnb-chain
   - base
+  - arbitrum
 license: MIT
 components:
   skill:
@@ -23,5 +24,6 @@ build:
 api_calls:
   - bsc-rpc.publicnode.com
   - base-rpc.publicnode.com
+  - arbitrum-one-rpc.publicnode.com
   - api.studio.thegraph.com
   - api.thegraph.com

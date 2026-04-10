@@ -30,11 +30,22 @@ pub const BASE: ChainConfig = ChainConfig {
     subgraph_url: "https://api.studio.thegraph.com/query/45376/exchange-v3-base/version/latest",
 };
 
+pub const ARBITRUM: ChainConfig = ChainConfig {
+    chain_id: 42161,
+    rpc_url: "https://arbitrum-one-rpc.publicnode.com",
+    smart_router: "0x5E325eDA8064b456f4781070C0738d849c824258",
+    factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+    npm: "0x46A15B0b27311cedF172AB29E4f4766fbE7F4364",
+    quoter_v2: "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
+    subgraph_url: "https://api.thegraph.com/subgraphs/name/pancakeswap/exchange-v3-arbitrum",
+};
+
 pub fn get_chain_config(chain_id: u64) -> anyhow::Result<&'static ChainConfig> {
     match chain_id {
         56 => Ok(&BSC),
         8453 => Ok(&BASE),
-        _ => anyhow::bail!("Unsupported chain ID: {}. Supported: 56 (BSC), 8453 (Base)", chain_id),
+        42161 => Ok(&ARBITRUM),
+        _ => anyhow::bail!("Unsupported chain ID: {}. Supported: 56 (BSC), 8453 (Base), 42161 (Arbitrum)", chain_id),
     }
 }
 
@@ -71,6 +82,13 @@ pub fn resolve_token_address(symbol_or_addr: &str, chain_id: u64) -> anyhow::Res
         (8453, "USDT") => "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
         (8453, "DAI") => "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
         (8453, "CBETH") => "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22",
+        // Arbitrum (42161)
+        (42161, "WETH") | (42161, "ETH") => "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        (42161, "USDC") => "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        (42161, "USDC.E") | (42161, "USDCE") => "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+        (42161, "USDT") => "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+        (42161, "ARB") => "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        (42161, "WBTC") => "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
         _ => anyhow::bail!(
             "Unknown token symbol '{}' on chain {}. Please use a full 0x address.",
             symbol_or_addr, chain_id
