@@ -1,6 +1,6 @@
 schema_version: 1
 name: polymarket
-version: "0.1.0"
+version: "0.2.0"
 description: "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon"
 author:
   name: skylavis-sky
