@@ -64,15 +64,24 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClosePositionA
         ))
         .unwrap_or((0, 0));
 
-    let size_delta_usd = (args.size_usd * 1e30) as u128;
+    // Use integer math to avoid f64 precision loss (same as open_position parse_usd_to_u128)
+    let size_delta_usd = {
+        let int_part = args.size_usd.floor() as u128;
+        let frac_part = args.size_usd - args.size_usd.floor();
+        let precision: u128 = 1_000_000_000_000_000_000_000_000_000_000; // 10^30
+        int_part * precision + (frac_part * 1e30) as u128
+    };
 
-    // For close (decrease): acceptable price is inverted from open
-    // long close: max_price * (1 + slippage) — we want to sell at or above this
-    // short close: min_price * (1 - slippage)
-    let base_price = if args.long { max_price_raw } else { min_price_raw };
-    // Decrease: LONG close needs floor (price * (1-slip)), SHORT close needs ceiling (price * (1+slip))
-    // compute_acceptable_price(price, true) = floor, (price, false) = ceiling → use args.long directly
-    let acceptable_price = crate::abi::compute_acceptable_price(base_price, args.long, args.slippage_bps);
+    // For decrease orders, GMX executes at:
+    //   LONG close: min_price (selling at bid)   → need floor:   acceptable = min_price × (1 - slip)
+    //   SHORT close: max_price (buying at ask)   → need ceiling: acceptable = max_price × (1 + slip)
+    // Use the actual execution-side price as the base in both cases.
+    let (base_price, is_floor) = if args.long {
+        (min_price_raw, true)   // floor: price × (1 - slip)
+    } else {
+        (max_price_raw, false)  // ceiling: price × (1 + slip)
+    };
+    let acceptable_price = crate::abi::compute_acceptable_price(base_price, is_floor, args.slippage_bps);
 
     let execution_fee = cfg.execution_fee_wei;
 
