@@ -57,7 +57,12 @@ pub async fn wallet_contract_call(
 
     let output = Command::new("onchainos").args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    let val: Value = serde_json::from_str(&stdout)?;
+    if val["ok"].as_bool() == Some(false) {
+        let err = val["error"].as_str().unwrap_or("unknown error");
+        anyhow::bail!("onchainos contract-call failed: {}", err);
+    }
+    Ok(val)
 }
 
 /// Like wallet_contract_call but with an explicit gas limit to bypass estimation failures.
@@ -100,7 +105,7 @@ pub async fn wallet_contract_call_with_gas(
         args.push(f.into());
     }
     if let Some(g) = gas {
-        args.push("--gas".into());
+        args.push("--gas-limit".into());
         args.push(g.to_string());
     }
     if confirm {
@@ -109,7 +114,16 @@ pub async fn wallet_contract_call_with_gas(
 
     let output = Command::new("onchainos").args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    if stdout.trim().is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("onchainos contract-call returned empty stdout (exit {}): {}", output.status.code().unwrap_or(-1), stderr.trim());
+    }
+    let val: Value = serde_json::from_str(&stdout)?;
+    if val["ok"].as_bool() == Some(false) {
+        let err = val["error"].as_str().unwrap_or("unknown error");
+        anyhow::bail!("onchainos contract-call failed: {}", err);
+    }
+    Ok(val)
 }
 
 /// Extract txHash from wallet contract-call response: {"ok":true,"data":{"txHash":"0x..."}}

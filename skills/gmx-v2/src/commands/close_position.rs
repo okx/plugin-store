@@ -94,7 +94,17 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClosePositionA
     let multicall_hex = crate::abi::encode_multicall(&[send_wnt, create_order]);
     let calldata = format!("0x{}", multicall_hex);
 
-    let mid_price_usd = (min_price_raw as f64 + max_price_raw as f64) / 2.0 / 1e30;
+    let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
+    let index_decimals = market_info
+        .and_then(|m| m.index_token.as_deref())
+        .and_then(|addr| token_infos.iter().find(|t| t.address.as_deref().map(|a| a.to_lowercase()) == Some(addr.to_lowercase())))
+        .and_then(|t| t.decimals)
+        .unwrap_or(18u8);
+    let mid_price_usd = if min_price_raw == 0 && max_price_raw == 0 {
+        0.0
+    } else {
+        (crate::api::raw_price_to_usd(min_price_raw, index_decimals) + crate::api::raw_price_to_usd(max_price_raw, index_decimals)) / 2.0
+    };
 
     eprintln!("=== Close Position Preview ===");
     eprintln!("Market token: {}", args.market_token);

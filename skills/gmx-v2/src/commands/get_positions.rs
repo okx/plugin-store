@@ -22,6 +22,8 @@ pub async fn run(chain: &str, args: GetPositionsArgs) -> anyhow::Result<()> {
     let tickers = crate::api::fetch_prices(cfg).await.unwrap_or_default();
     // Fetch markets for name resolution
     let markets = crate::api::fetch_markets(cfg).await.unwrap_or_default();
+    // Fetch token decimals for price display
+    let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
 
     // Build getAccountPositions(dataStore, account, start=0, end=20) calldata
     // Selector: 0x77cfb162
@@ -37,7 +39,7 @@ pub async fn run(chain: &str, args: GetPositionsArgs) -> anyhow::Result<()> {
     // Parse the response — positions are ABI-encoded structs
     // The raw response is a complex tuple; we parse key fields by position
     // For display we show what we can extract, and include the raw hex for completeness
-    let positions = parse_positions(&raw, &tickers, &markets);
+    let positions = parse_positions(&raw, &tickers, &markets, &token_infos);
 
     println!(
         "{}",
@@ -57,6 +59,7 @@ fn parse_positions(
     raw: &str,
     tickers: &[crate::api::PriceTicker],
     markets: &[crate::api::Market],
+    token_infos: &[crate::api::TokenInfo],
 ) -> Vec<serde_json::Value> {
     // ABI-encoded array of Position structs
     // The raw data starts with an offset, then array length, then elements
@@ -81,33 +84,31 @@ fn parse_positions(
         return vec![];
     }
 
-    // Each position struct is a fixed-size tuple starting at known offsets
-    // Position struct fields (simplified extraction):
-    // Slot relative positions in each struct vary due to dynamic content
-    // We use a simplified heuristic approach — extract what we can
+    // Position is a STATIC struct (all fields are fixed-size — no dynamic arrays inside).
+    // For static element arrays, ABI-encoding packs elements directly after the length word
+    // with NO per-element offset pointers.
+    //
+    // GMX V2 Position layout (16 static words per element):
+    //   Addresses: account(1) + market(1) + collateralToken(1)       =  3 words
+    //   Numbers:   sizeInUsd + sizeInTokens + collateralAmount +
+    //              fundingFeeAmountPerSize + longTokenClaimable +
+    //              shortTokenClaimable + borrowingFactor +
+    //              (2 more internal fields) + time1 + time2         = 10 words
+    //   Flags:     isLong(1)                                         =  1 word
+    //                                                           Total = 14 words
+    // (Verified empirically from on-chain ABI output)
+    const WORDS_PER_POSITION: usize = 14;
+    const HEX_CHARS_PER_WORD: usize = 64;
+
     let mut results = Vec::new();
 
-    // Look at each 32-byte slot after the array header for addresses
-    let data_start = array_offset + 64; // after length word
+    // Elements start immediately after the length word (no pointer table)
+    let data_start = array_offset + HEX_CHARS_PER_WORD; // skip length word
 
-    // Each position has an offset pointer in the head
     for i in 0..array_len.min(20) {
-        let ptr_start = data_start + i * 64;
-        if data.len() < ptr_start + 64 {
-            break;
-        }
-        let elem_offset_hex = &data[ptr_start..ptr_start + 64];
-        let elem_offset = usize::from_str_radix(elem_offset_hex, 16).unwrap_or(0) * 2;
-
-        // Try to extract key fields from this position struct
-        // Field layout (approximate — varies by GMX version):
-        // +0: account (address)
-        // +1: market (address)
-        // +2: collateralToken (address)
-        // Then Numbers struct, then Flags struct
-        let elem_base = elem_offset; // relative to start of full data
-        if data.len() < elem_base + 6 * 64 {
-            results.push(json!({ "index": i, "raw_offset": elem_offset / 2 }));
+        let elem_base = data_start + i * WORDS_PER_POSITION * HEX_CHARS_PER_WORD;
+        if data.len() < elem_base + 6 * HEX_CHARS_PER_WORD {
+            results.push(json!({ "index": i, "error": "truncated data" }));
             continue;
         }
 
@@ -140,12 +141,18 @@ fn parse_positions(
 
         let current_price_usd = index_token.as_deref().and_then(|addr| {
             crate::api::find_price(tickers, addr).map(|t| {
-                t.min_price
+                let raw = t.min_price
                     .as_deref()
                     .unwrap_or("0")
                     .parse::<u128>()
-                    .unwrap_or(0) as f64
-                    / 1e30
+                    .unwrap_or(0);
+                // GMX price = price_usd * 10^(30 - token_decimals).
+                // Look up decimals from token list; default to 18 (covers ETH, ERC-20s).
+                let decimals = token_infos.iter()
+                    .find(|ti| ti.address.as_deref().map(|a| a.to_lowercase()) == Some(addr.to_lowercase()))
+                    .and_then(|ti| ti.decimals)
+                    .unwrap_or(18u8);
+                crate::api::raw_price_to_usd(raw, decimals)
             })
         });
 

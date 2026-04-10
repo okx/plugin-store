@@ -127,21 +127,55 @@ pub async fn fetch_prices(cfg: &crate::config::ChainConfig) -> anyhow::Result<Ve
     Ok(vec![])
 }
 
-/// Lookup a market by index token symbol or address
+/// Lookup a market by index token symbol or address.
+///
+/// Match priority (most specific first):
+/// 1. Exact full name match, e.g. "ETH/USD [WETH-USDC]"
+/// 2. Exact base-symbol match — name prefix before " [", e.g. "ETH/USD" matches "ETH/USD [WETH-USDC]"
+///    If multiple markets share the same base symbol the first one in the list is returned and a
+///    warning is printed so the caller can see ambiguity.
+/// 3. Exact index-token address match (checksummed or lowercase)
+///
+/// `contains()` is intentionally NOT used — it caused non-deterministic market selection when
+/// multiple markets share a common substring (e.g. "SOL/USD [SOL-USDC]" vs "SOL/USD [SOL-SOL]").
 pub fn find_market_by_symbol<'a>(markets: &'a [Market], query: &str) -> Option<&'a Market> {
     let query_lower = query.to_lowercase();
-    markets.iter().find(|m| {
+
+    // 1. Exact full name match
+    if let Some(m) = markets.iter().find(|m| {
+        m.name.as_deref().map(|n| n.to_lowercase() == query_lower).unwrap_or(false)
+    }) {
+        return Some(m);
+    }
+
+    // 2. Exact base-symbol match (part before " [")
+    let base_matches: Vec<&Market> = markets.iter().filter(|m| {
         if let Some(name) = &m.name {
-            if name.to_lowercase().contains(&query_lower) {
-                return true;
-            }
+            let base = name.split(" [").next().unwrap_or(name);
+            base.to_lowercase() == query_lower
+        } else {
+            false
         }
-        if let Some(addr) = &m.index_token {
-            if addr.to_lowercase() == query_lower {
-                return true;
-            }
-        }
-        false
+    }).collect();
+    if base_matches.len() > 1 {
+        eprintln!(
+            "WARNING: ambiguous market '{}' — {} matches found. Using '{}'. \
+             Pass the full name (e.g. \"{}\") to select a specific market.",
+            query,
+            base_matches.len(),
+            base_matches[0].name.as_deref().unwrap_or("?"),
+            base_matches[0].name.as_deref().unwrap_or("?"),
+        );
+    }
+    if let Some(m) = base_matches.into_iter().next() {
+        return Some(m);
+    }
+
+    // 3. Exact index-token address match
+    markets.iter().find(|m| {
+        m.index_token.as_deref()
+            .map(|addr| addr.to_lowercase() == query_lower)
+            .unwrap_or(false)
     })
 }
 
