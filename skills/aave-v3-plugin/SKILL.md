@@ -1,7 +1,7 @@
 ---
 name: aave-v3-plugin
 description: "Aave V3 lending and borrowing. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
-version: "0.1.0"
+version: "0.2.0"
 author: "skylavis-sky"
 tags:
   - lending
@@ -135,11 +135,11 @@ Please connect your wallet first: run `onchainos wallet login`
 
 | User Intent | Command |
 |-------------|---------|
-| Supply / deposit / lend asset | `aave-v3-plugin supply --asset <ADDRESS> --amount <AMOUNT>` |
-| Withdraw / redeem aTokens | `aave-v3-plugin withdraw --asset <SYMBOL> --amount <AMOUNT>` |
-| Borrow asset | `aave-v3-plugin borrow --asset <ADDRESS> --amount <AMOUNT>` |
-| Repay debt | `aave-v3-plugin repay --asset <ADDRESS> --amount <AMOUNT>` |
-| Repay all debt | `aave-v3-plugin repay --asset <ADDRESS> --all` |
+| Supply / deposit / lend asset | `aave-v3-plugin supply --asset <SYMBOL_OR_ADDRESS> --amount <AMOUNT>` |
+| Withdraw / redeem aTokens | `aave-v3-plugin withdraw --asset <SYMBOL_OR_ADDRESS> --amount <AMOUNT>` |
+| Borrow asset | `aave-v3-plugin borrow --asset <SYMBOL_OR_ADDRESS> --amount <AMOUNT>` |
+| Repay debt | `aave-v3-plugin repay --asset <SYMBOL_OR_ADDRESS> --amount <AMOUNT>` |
+| Repay all debt | `aave-v3-plugin repay --asset <SYMBOL_OR_ADDRESS> --all` |
 | Check health factor | `aave-v3-plugin health-factor` |
 | View positions | `aave-v3-plugin positions` |
 | List reserve rates / APYs | `aave-v3-plugin reserves` |
@@ -299,14 +299,13 @@ aave-v3-plugin --chain 137 repay --asset 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84
 ```
 
 **Key parameters:**
-- `--asset` — ERC-20 contract address of the debt token
+- `--asset` — token symbol (e.g. USDC, WETH) or ERC-20 contract address
 - `--amount` — partial repay amount
-- `--all` — repay full outstanding balance (uses uint256.max)
+- `--all` — repay full outstanding balance
 
 **Notes:**
 - ERC-20 approval is checked automatically; if insufficient, an approve tx is submitted first
-- `--all` repay uses the wallet's actual token balance (not uint256.max) to avoid revert when accrued interest exceeds the wallet balance
-- Always pass the ERC-20 address for `--asset`, not the symbol
+- `--all` repay uses the wallet's actual token balance to avoid revert when accrued interest exceeds wallet balance
 
 **Expected output:**
 <external-content>
@@ -377,6 +376,7 @@ aave-v3-plugin --chain 8453 reserves --asset 0x833589fCD6eDb6E08f4c7C32D4f71b54b
   "reserveCount": 12,
   "reserves": [
     {
+      "symbol": "USDC",
       "underlyingAsset": "0x833589...",
       "supplyApy": "3.2500%",
       "variableBorrowApy": "5.1200%"
