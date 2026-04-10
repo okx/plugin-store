@@ -82,20 +82,57 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
         anyhow::bail!("Cannot determine wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    // Convert USD prices to GMX 30-decimal precision
-    let trigger_price = (args.trigger_price_usd * 1e30) as u128;
-    let acceptable_price = (args.acceptable_price_usd * 1e30) as u128;
-    let size_delta_usd = (args.size_usd * 1e30) as u128;
-
     let execution_fee = cfg.execution_fee_wei;
     let order_type_u8 = args.order_type.to_u8();
 
-    // Validate: for stop-loss on a long, trigger must be below current price
+    // Look up index token decimals so we can convert USD → raw GMX price format.
+    // GMX price format: price_usd × 10^(30 - token_decimals)
+    //   BTC (8 dec)  → × 10^22
+    //   ETH (18 dec) → × 10^12
+    let markets = crate::api::fetch_markets(cfg).await?;
+    let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
+    let market_info = markets.iter().find(|m| {
+        m.market_token.as_deref()
+            .map(|t| t.to_lowercase() == args.market_token.to_lowercase())
+            .unwrap_or(false)
+    });
+    let index_decimals = market_info
+        .and_then(|m| m.index_token.as_deref())
+        .and_then(|addr| token_infos.iter().find(|t|
+            t.address.as_deref().map(|a| a.to_lowercase()) == Some(addr.to_lowercase())
+        ))
+        .and_then(|t| t.decimals)
+        .unwrap_or(18u8);
+    let price_exponent = 30u32 - index_decimals as u32;
+    let price_precision: u128 = 10u128.pow(price_exponent);
+
+    // Convert USD price to raw GMX format using integer math to avoid f64 precision loss.
+    let usd_to_raw = |usd: f64| -> u128 {
+        let int_part = usd.floor() as u128;
+        let frac_part = usd - usd.floor();
+        int_part * price_precision + (frac_part * 10f64.powi(price_exponent as i32)) as u128
+    };
+    let trigger_price = usd_to_raw(args.trigger_price_usd);
+    let acceptable_price = usd_to_raw(args.acceptable_price_usd);
+
+    // size_delta_usd is in GMX's 10^30 USD precision (not token-decimal-adjusted)
+    let size_delta_usd = {
+        let int_part = args.size_usd.floor() as u128;
+        let frac_part = args.size_usd - args.size_usd.floor();
+        let usd_precision: u128 = 1_000_000_000_000_000_000_000_000_000_000;
+        int_part * usd_precision + (frac_part * 1e30) as u128
+    };
+
+    // Fetch current price for display
     let tickers = crate::api::fetch_prices(cfg).await.unwrap_or_default();
-    if let Some(price_tick) = tickers.iter().find(|_| true) {
-        // Simplified: just a placeholder for validation logic
-        let _ = price_tick;
-    }
+    let current_price_usd = market_info
+        .and_then(|m| m.index_token.as_deref())
+        .and_then(|addr| crate::api::find_price(&tickers, addr))
+        .map(|t| {
+            let raw = t.min_price.as_deref().unwrap_or("0").parse::<u128>().unwrap_or(0);
+            crate::api::raw_price_to_usd(raw, index_decimals)
+        })
+        .unwrap_or(0.0);
 
     // Build multicall: [sendWnt, (sendTokens if increase order), createOrder]
     let send_wnt = crate::abi::encode_send_wnt(cfg.order_vault, execution_fee);
@@ -135,8 +172,10 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
     eprintln!("Market token: {}", args.market_token);
     eprintln!("Direction: {}", if args.long { "LONG" } else { "SHORT" });
     eprintln!("Size: ${:.2} USD", args.size_usd);
-    eprintln!("Trigger price: ${:.4}", args.trigger_price_usd);
-    eprintln!("Acceptable price: ${:.4}", args.acceptable_price_usd);
+    eprintln!("Trigger price: ${:.4} (raw: {})", args.trigger_price_usd, trigger_price);
+    eprintln!("Acceptable price: ${:.4} (raw: {})", args.acceptable_price_usd, acceptable_price);
+    eprintln!("Index token decimals: {}", index_decimals);
+    eprintln!("Current price: ${:.4}", current_price_usd);
     eprintln!("Execution fee: {} wei", execution_fee);
     eprintln!("Ask user to confirm before proceeding.");
 
@@ -159,7 +198,9 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
                 false,
                 confirm,
             ).await?;
-            eprintln!("Approval tx: {}", crate::onchainos::extract_tx_hash(&approve_result));
+            let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
+            eprintln!("Approval tx: {}", approve_hash);
+            crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
         }
     }
 

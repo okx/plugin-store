@@ -1,14 +1,31 @@
 use std::process::Command;
+use std::time::{Duration, Instant};
 use serde_json::Value;
 
-/// Resolve the current logged-in wallet address via onchainos wallet balance
+/// Resolve the current logged-in wallet address via onchainos wallet addresses.
+/// Matches the EVM address for the given chain_id.
 pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
-    let chain_str = chain_id.to_string();
     let output = Command::new("onchainos")
-        .args(["wallet", "balance", "--chain", &chain_str, "--output", "json"])
+        .args(["wallet", "addresses"])
         .output()?;
     let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
-    Ok(json["data"]["address"].as_str().unwrap_or("").to_string())
+    // Find the EVM entry matching chain_id
+    let chain_str = chain_id.to_string();
+    if let Some(evm_list) = json["data"]["evm"].as_array() {
+        for entry in evm_list {
+            if entry["chainIndex"].as_str() == Some(&chain_str) {
+                let addr = entry["address"].as_str().unwrap_or("").to_string();
+                if !addr.is_empty() {
+                    return Ok(addr);
+                }
+            }
+        }
+        // All EVM addresses are the same; fall back to first entry
+        if let Some(first) = evm_list.first() {
+            return Ok(first["address"].as_str().unwrap_or("").to_string());
+        }
+    }
+    Ok(String::new())
 }
 
 /// Call onchainos wallet contract-call.
@@ -57,7 +74,12 @@ pub async fn wallet_contract_call(
 
     let output = Command::new("onchainos").args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    let val: Value = serde_json::from_str(&stdout)?;
+    if val["ok"].as_bool() == Some(false) {
+        let err = val["error"].as_str().unwrap_or("unknown error");
+        anyhow::bail!("onchainos contract-call failed: {}", err);
+    }
+    Ok(val)
 }
 
 /// Like wallet_contract_call but with an explicit gas limit to bypass estimation failures.
@@ -100,7 +122,7 @@ pub async fn wallet_contract_call_with_gas(
         args.push(f.into());
     }
     if let Some(g) = gas {
-        args.push("--gas".into());
+        args.push("--gas-limit".into());
         args.push(g.to_string());
     }
     if confirm {
@@ -109,7 +131,49 @@ pub async fn wallet_contract_call_with_gas(
 
     let output = Command::new("onchainos").args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+    if stdout.trim().is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("onchainos contract-call returned empty stdout (exit {}): {}", output.status.code().unwrap_or(-1), stderr.trim());
+    }
+    let val: Value = serde_json::from_str(&stdout)?;
+    if val["ok"].as_bool() == Some(false) {
+        let err = val["error"].as_str().unwrap_or("unknown error");
+        anyhow::bail!("onchainos contract-call failed: {}", err);
+    }
+    Ok(val)
+}
+
+/// Wait for a transaction to be confirmed (txStatus = SUCCESS or FAIL).
+/// Polls `onchainos wallet history --tx-hash` every 2s up to `timeout_secs`.
+/// Returns Ok(()) on SUCCESS, Err on FAIL or timeout.
+pub fn wait_for_tx(chain_id: u64, tx_hash: &str, address: &str, timeout_secs: u64) -> anyhow::Result<()> {
+    if tx_hash.is_empty() || tx_hash == "pending" {
+        return Ok(());
+    }
+    let chain_str = chain_id.to_string();
+    let deadline = Instant::now() + Duration::from_secs(timeout_secs);
+    eprintln!("Waiting for tx {} to confirm...", tx_hash);
+    loop {
+        let output = Command::new("onchainos")
+            .args(["wallet", "history", "--chain", &chain_str,
+                   "--address", address, "--tx-hash", tx_hash])
+            .output();
+        if let Ok(out) = output {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if let Ok(val) = serde_json::from_str::<Value>(&stdout) {
+                let status = val["data"][0]["txStatus"].as_str().unwrap_or("");
+                match status {
+                    "SUCCESS" => { eprintln!("Tx confirmed."); return Ok(()); }
+                    "FAIL" => anyhow::bail!("Approval transaction failed on-chain: {}", tx_hash),
+                    _ => {}
+                }
+            }
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!("Timeout waiting for tx {} to confirm ({}s)", tx_hash, timeout_secs);
+        }
+        std::thread::sleep(Duration::from_secs(2));
+    }
 }
 
 /// Extract txHash from wallet contract-call response: {"ok":true,"data":{"txHash":"0x..."}}

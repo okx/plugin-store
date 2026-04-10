@@ -2,25 +2,25 @@
 # gmx-v2 -- Skill Summary
 
 ## Overview
-This skill enables trading perpetual futures and managing liquidity on GMX V2, a decentralized exchange for leveraged trading. It supports opening/closing positions, placing conditional orders, providing liquidity to GM pools, and querying market data across Arbitrum and Avalanche networks. All operations use GMX's keeper-based execution model where transactions are submitted immediately but executed by keeper bots within 1-30 seconds.
+The gmx-v2 skill enables trading perpetual contracts and managing liquidity on GMX V2 protocol. It supports opening leveraged positions (long/short), placing conditional orders with keeper execution, depositing/withdrawing from GM liquidity pools, and querying market data across Arbitrum and Avalanche networks. All write operations use a multicall pattern with execution fees and include dry-run capabilities for transaction preview.
 
 ## Usage
-Install the plugin and connect your wallet with `onchainos wallet login`. Use `--dry-run` flag to preview any write operations before execution, then confirm with the user before submitting transactions.
+Install the binary via OKX plugin store, ensure your wallet is connected with `onchainos wallet login`, then use commands like `gmx-v2 --chain arbitrum open-position` to trade. Always run with `--dry-run` first to preview transactions before execution.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
 | `list-markets` | View active perpetual markets with liquidity and rates |
 | `get-prices` | Get current oracle prices for tokens |
-| `get-positions` | Query open leveraged positions |
+| `get-positions` | Query open leveraged positions for a wallet |
 | `get-orders` | Query pending conditional orders |
-| `open-position` | Open long/short leveraged position |
-| `close-position` | Close existing position (full/partial) |
-| `place-order` | Place limit/stop-loss/take-profit order |
-| `cancel-order` | Cancel pending conditional order |
-| `deposit-liquidity` | Add liquidity to GM pools |
+| `open-position` | Open a leveraged long or short position |
+| `close-position` | Close an existing position (full or partial) |
+| `place-order` | Place limit, stop-loss, or take-profit orders |
+| `cancel-order` | Cancel a pending conditional order |
+| `deposit-liquidity` | Add tokens to GM liquidity pools |
 | `withdraw-liquidity` | Remove liquidity from GM pools |
-| `claim-funding-fees` | Claim accrued funding fees |
+| `claim-funding-fees` | Claim accrued funding fees from positions |
 
 ## Triggers
-Activate when users want to trade leveraged positions on GMX, place stop-losses or take-profits, manage GMX liquidity pools, or query GMX market data. Key phrases include "GMX trade", "open position", "leverage", "stop loss", "GM pool", and "funding fees".
+Activate when users want to trade perpetuals with leverage, place conditional orders, manage GMX liquidity positions, or query GMX market data. Trigger phrases include "GMX trade", "open position GMX", "GMX leverage", "GMX stop loss", "deposit GM pool".

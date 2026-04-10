@@ -22,6 +22,8 @@ pub async fn run(chain: &str, args: GetPositionsArgs) -> anyhow::Result<()> {
     let tickers = crate::api::fetch_prices(cfg).await.unwrap_or_default();
     // Fetch markets for name resolution
     let markets = crate::api::fetch_markets(cfg).await.unwrap_or_default();
+    // Fetch token decimals for price display
+    let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
 
     // Build getAccountPositions(dataStore, account, start=0, end=20) calldata
     // Selector: 0x77cfb162
@@ -34,10 +36,7 @@ pub async fn run(chain: &str, args: GetPositionsArgs) -> anyhow::Result<()> {
 
     let raw = crate::rpc::eth_call(cfg.reader, &calldata, cfg.rpc_url).await?;
 
-    // Parse the response — positions are ABI-encoded structs
-    // The raw response is a complex tuple; we parse key fields by position
-    // For display we show what we can extract, and include the raw hex for completeness
-    let positions = parse_positions(&raw, &tickers, &markets);
+    let positions = parse_positions(&raw, &tickers, &markets, &token_infos);
 
     println!(
         "{}",
@@ -47,7 +46,6 @@ pub async fn run(chain: &str, args: GetPositionsArgs) -> anyhow::Result<()> {
             "wallet": wallet,
             "count": positions.len(),
             "positions": positions,
-            "raw": raw
         }))?
     );
     Ok(())
@@ -57,18 +55,13 @@ fn parse_positions(
     raw: &str,
     tickers: &[crate::api::PriceTicker],
     markets: &[crate::api::Market],
+    token_infos: &[crate::api::TokenInfo],
 ) -> Vec<serde_json::Value> {
-    // ABI-encoded array of Position structs
-    // The raw data starts with an offset, then array length, then elements
-    // Each position is a tuple with many fields; we extract key ones
-
     let data = raw.trim_start_matches("0x");
     if data.len() < 128 {
         return vec![];
     }
 
-    // Slot 0: offset to array start
-    // Slot 1 (at offset): array length
     let array_offset_hex = &data[0..64];
     let array_offset = usize::from_str_radix(array_offset_hex, 16).unwrap_or(0) * 2;
     if data.len() < array_offset + 64 {
@@ -81,72 +74,93 @@ fn parse_positions(
         return vec![];
     }
 
-    // Each position struct is a fixed-size tuple starting at known offsets
-    // Position struct fields (simplified extraction):
-    // Slot relative positions in each struct vary due to dynamic content
-    // We use a simplified heuristic approach — extract what we can
+    // Position.Props is a static 14-word struct:
+    //   word  0: account
+    //   word  1: market
+    //   word  2: collateralToken
+    //   word  3: sizeInUsd          (10^30 precision)
+    //   word  4: sizeInTokens       (index token units)
+    //   word  5: collateralAmount   (collateral token units)
+    //   words 6-10: funding/borrowing per-size fields
+    //   word 11: increasedAtTime    (unix timestamp)
+    //   word 12: decreasedAtTime    (unix timestamp, 0 if never)
+    //   word 13: isLong             (bool)
+    const WORDS_PER_POSITION: usize = 14;
+    const HEX_CHARS_PER_WORD: usize = 64;
+
     let mut results = Vec::new();
+    let data_start = array_offset + HEX_CHARS_PER_WORD;
 
-    // Look at each 32-byte slot after the array header for addresses
-    let data_start = array_offset + 64; // after length word
-
-    // Each position has an offset pointer in the head
     for i in 0..array_len.min(20) {
-        let ptr_start = data_start + i * 64;
-        if data.len() < ptr_start + 64 {
-            break;
-        }
-        let elem_offset_hex = &data[ptr_start..ptr_start + 64];
-        let elem_offset = usize::from_str_radix(elem_offset_hex, 16).unwrap_or(0) * 2;
-
-        // Try to extract key fields from this position struct
-        // Field layout (approximate — varies by GMX version):
-        // +0: account (address)
-        // +1: market (address)
-        // +2: collateralToken (address)
-        // Then Numbers struct, then Flags struct
-        let elem_base = elem_offset; // relative to start of full data
-        if data.len() < elem_base + 6 * 64 {
-            results.push(json!({ "index": i, "raw_offset": elem_offset / 2 }));
+        let elem_base = data_start + i * WORDS_PER_POSITION * HEX_CHARS_PER_WORD;
+        if data.len() < elem_base + 14 * HEX_CHARS_PER_WORD {
+            results.push(json!({ "index": i, "error": "truncated data" }));
             continue;
         }
 
-        let account_addr = extract_address(data, elem_base);
-        let market_addr = extract_address(data, elem_base + 64);
-        let collateral_addr = extract_address(data, elem_base + 128);
+        let account_addr  = extract_address(data, elem_base);
+        let market_addr   = extract_address(data, elem_base + 1 * HEX_CHARS_PER_WORD);
+        let collateral_addr = extract_address(data, elem_base + 2 * HEX_CHARS_PER_WORD);
 
-        // Find market name
-        let market_name = markets
-            .iter()
-            .find(|m| {
-                m.market_token
-                    .as_deref()
-                    .map(|t| t.to_lowercase() == market_addr.to_lowercase())
-                    .unwrap_or(false)
-            })
+        let size_in_usd_raw    = extract_u128(data, elem_base + 3 * HEX_CHARS_PER_WORD);
+        let size_in_tokens_raw = extract_u128(data, elem_base + 4 * HEX_CHARS_PER_WORD);
+        let collateral_raw     = extract_u128(data, elem_base + 5 * HEX_CHARS_PER_WORD);
+        let is_long            = extract_u128(data, elem_base + 13 * HEX_CHARS_PER_WORD) != 0;
+
+        let size_usd = size_in_usd_raw as f64 / 1e30;
+
+        // Market info
+        let market_info = markets.iter().find(|m| {
+            m.market_token.as_deref()
+                .map(|t| t.to_lowercase() == market_addr.to_lowercase())
+                .unwrap_or(false)
+        });
+        let market_name = market_info
             .and_then(|m| m.name.clone())
             .unwrap_or_else(|| market_addr.clone());
+        let index_token = market_info.and_then(|m| m.index_token.clone());
 
-        // Try to get current price for index token of this market
-        let index_token = markets
-            .iter()
-            .find(|m| {
-                m.market_token
-                    .as_deref()
-                    .map(|t| t.to_lowercase() == market_addr.to_lowercase())
-                    .unwrap_or(false)
-            })
-            .and_then(|m| m.index_token.clone());
+        // Index token decimals (for price and entry price calculation)
+        let index_decimals = index_token.as_deref()
+            .and_then(|addr| token_infos.iter()
+                .find(|ti| ti.address.as_deref().map(|a| a.to_lowercase()) == Some(addr.to_lowercase()))
+                .and_then(|ti| ti.decimals))
+            .unwrap_or(18u8);
 
+        // Collateral token decimals
+        let collateral_decimals = token_infos.iter()
+            .find(|ti| ti.address.as_deref().map(|a| a.to_lowercase()) == Some(collateral_addr.to_lowercase()))
+            .and_then(|ti| ti.decimals)
+            .unwrap_or(18u8);
+
+        let collateral_display = collateral_raw as f64 / 10f64.powi(collateral_decimals as i32);
+        let leverage = if collateral_display > 0.0 { size_usd / collateral_display } else { 0.0 };
+
+        // Current price
         let current_price_usd = index_token.as_deref().and_then(|addr| {
             crate::api::find_price(tickers, addr).map(|t| {
-                t.min_price
-                    .as_deref()
-                    .unwrap_or("0")
-                    .parse::<u128>()
-                    .unwrap_or(0) as f64
-                    / 1e30
+                let raw = t.min_price.as_deref().unwrap_or("0").parse::<u128>().unwrap_or(0);
+                crate::api::raw_price_to_usd(raw, index_decimals)
             })
+        });
+
+        // Entry price = sizeInUsd / sizeInTokens (adjusted for decimals)
+        let entry_price_usd = if size_in_tokens_raw > 0 && size_in_usd_raw > 0 {
+            // entryPrice = sizeInUsd * 10^indexDecimals / (sizeInTokens * 10^30)
+            let factor = 10f64.powi(index_decimals as i32 - 30);
+            size_in_usd_raw as f64 * factor / size_in_tokens_raw as f64
+        } else {
+            0.0
+        };
+
+        // Unrealized PnL
+        let unrealized_pnl = current_price_usd.map(|curr| {
+            if entry_price_usd > 0.0 {
+                let price_change = if is_long { curr - entry_price_usd } else { entry_price_usd - curr };
+                price_change / entry_price_usd * size_usd
+            } else {
+                0.0
+            }
         });
 
         results.push(json!({
@@ -155,21 +169,32 @@ fn parse_positions(
             "market": market_addr,
             "marketName": market_name,
             "collateralToken": collateral_addr,
-            "currentPrice_usd": current_price_usd,
+            "direction": if is_long { "LONG" } else { "SHORT" },
+            "sizeUsd": format!("{:.4}", size_usd),
+            "collateralUsd": format!("{:.4}", collateral_display),
+            "leverage": format!("{:.2}x", leverage),
+            "entryPrice_usd": format!("{:.4}", entry_price_usd),
+            "currentPrice_usd": current_price_usd.map(|p| format!("{:.4}", p)),
+            "unrealizedPnl_usd": unrealized_pnl.map(|p| format!("{:.4}", p)),
         }));
     }
 
     results
 }
 
-fn extract_address(data: &str, byte_offset: usize) -> String {
-    let hex_offset = byte_offset; // already in hex chars
+fn extract_u128(data: &str, hex_offset: usize) -> u128 {
+    if data.len() < hex_offset + 64 {
+        return 0;
+    }
+    let slot = &data[hex_offset..hex_offset + 64];
+    // Lower 128 bits (last 32 hex chars)
+    u128::from_str_radix(&slot[32..], 16).unwrap_or(0)
+}
+
+fn extract_address(data: &str, hex_offset: usize) -> String {
     if data.len() < hex_offset + 64 {
         return "0x0".to_string();
     }
     let slot = &data[hex_offset..hex_offset + 64];
-    if slot.len() < 40 {
-        return "0x0".to_string();
-    }
     format!("0x{}", &slot[slot.len() - 40..])
 }

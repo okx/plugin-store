@@ -99,11 +99,17 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
 
     // Compute acceptable price with slippage
     let base_price = if args.long { min_price_raw } else { max_price_raw };
-    let acceptable_price = crate::abi::compute_acceptable_price(base_price, args.long, args.slippage_bps);
+    // Increase acceptable price (opposite of close):
+    //   LONG open:  ceiling = min_price * (1+slip) → keeper check: execution <= acceptable → pass false
+    //   SHORT open: floor   = max_price * (1-slip) → keeper check: execution >= acceptable → pass true
+    // Both cases = !args.long
+    let acceptable_price = crate::abi::compute_acceptable_price(base_price, !args.long, args.slippage_bps);
 
     let execution_fee = cfg.execution_fee_wei;
 
-    // Check ERC-20 allowance and approve if needed
+    // Check ERC-20 allowance and approve if needed.
+    // Guard with `confirm` so approve and the main TX are always in sync:
+    // without --confirm neither fires; with --confirm both fire.
     if !dry_run {
         let allowance = crate::onchainos::check_allowance(
             cfg.rpc_url,
@@ -113,18 +119,24 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
         ).await.unwrap_or(0);
 
         if allowance < args.collateral_amount {
-            eprintln!("WARNING: Approving {} collateral token to {} -- approving exact amount only. Use --dry-run to preview.", args.collateral_amount, cfg.router);
-            let approve_result = crate::onchainos::erc20_approve(
-                cfg.chain_id,
-                &args.collateral_token,
-                cfg.router,
-                args.collateral_amount,
-                Some(&wallet),
-                false,
-                confirm,
-            ).await?;
-            let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
-            eprintln!("Approval tx: {}", approve_hash);
+            if !confirm {
+                eprintln!("NOTE: Allowance insufficient ({} < {}). Re-run with --confirm to approve and open position.",
+                    allowance, args.collateral_amount);
+            } else {
+                eprintln!("Approving {} collateral token to router {}...", args.collateral_amount, cfg.router);
+                let approve_result = crate::onchainos::erc20_approve(
+                    cfg.chain_id,
+                    &args.collateral_token,
+                    cfg.router,
+                    args.collateral_amount,
+                    Some(&wallet),
+                    false,
+                    true,
+                ).await?;
+                let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
+                eprintln!("Approval tx: {}", approve_hash);
+                crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
+            }
         }
     }
 

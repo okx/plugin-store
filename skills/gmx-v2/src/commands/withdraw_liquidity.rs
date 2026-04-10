@@ -46,7 +46,9 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: WithdrawLiquid
             let r = crate::onchainos::erc20_approve(
                 cfg.chain_id, &args.market_token, cfg.router, args.gm_amount, Some(&wallet), false, confirm,
             ).await?;
-            eprintln!("Approval tx: {}", crate::onchainos::extract_tx_hash(&r));
+            let approve_hash = crate::onchainos::extract_tx_hash(&r);
+            eprintln!("Approval tx: {}", approve_hash);
+            crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
         }
     }
 

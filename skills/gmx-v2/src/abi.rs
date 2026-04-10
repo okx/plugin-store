@@ -95,12 +95,20 @@ pub fn encode_claim_funding_fees(markets: &[&str], tokens: &[&str], receiver: &s
 }
 
 /// Encode `createOrder(CreateOrderParams)` calldata for GMX V2
-/// Selector: 0x97aedce2
+/// Selector: 0xf59c48eb
 ///
-/// CreateOrderParams:
-///   Addresses: (account, receiver, cancellationReceiver, callbackContract, uiFeeReceiver, market, initialCollateralToken, swapPath[])
-///   Numbers:   (orderType, decreasePositionSwapType, sizeDeltaUsd, initialCollateralDeltaAmount, triggerPrice, acceptablePrice, executionFee, callbackGasLimit, minOutputAmount, updatedAtTime, validFromTime, srcChainId)
-///   Flags:     (isLong, shouldUnwrapNativeToken, isFrozen, autoCancel)
+/// CreateOrderParams (actual deployed struct):
+///   addresses: (receiver, cancellationReceiver, callbackContract, uiFeeReceiver, market, initialCollateralToken, swapPath[])
+///   numbers:   (sizeDeltaUsd, initialCollateralDeltaAmount, triggerPrice, acceptablePrice, executionFee, callbackGasLimit, minOutputAmount, validFromTime)
+///   orderType:                  uint8
+///   decreasePositionSwapType:   uint8
+///   isLong:                     bool
+///   shouldUnwrapNativeToken:    bool
+///   autoCancel:                 bool
+///   referralCode:               bytes32
+///   dataList:                   bytes32[]  (empty)
+///
+/// ABI sig: createOrder(((address,address,address,address,address,address,address[]),(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256),uint8,uint8,bool,bool,bool,bytes32,bytes32[]))
 #[allow(clippy::too_many_arguments)]
 pub fn encode_create_order(
     account: &str,
@@ -114,126 +122,77 @@ pub fn encode_create_order(
     acceptable_price: u128,
     execution_fee: u128,
     is_long: bool,
-    src_chain_id: u64,
+    _src_chain_id: u64,
 ) -> String {
-    // The createOrder function takes a single struct param.
-    // ABI-encode as tuple:
-    // - Addresses tuple (8 slots: 8 addresses, last is dynamic array swapPath=[])
-    // - Numbers tuple (12 slots)
-    // - Flags tuple (4 bools)
-    //
-    // The full ABI for the struct has dynamic elements (swapPath array in Addresses).
-    // We encode the struct as a tuple with dynamic tail.
-    //
-    // Selector: 0x97aedce2
-    // ABI: createOrder((address,address,address,address,address,address,address,address[]),(uint8,uint8,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256),(bool,bool,bool,bool))
-    //
-    // The outer tuple is the single function argument.
-    // Top-level: 3 tuple components -> head has 3 offsets (each 32 bytes), then data.
-    // But since the top-level is a single struct, the function arg IS the struct.
-    // Let's use manual ABI encoding:
+    // ── Addresses tuple ──────────────────────────────────────────────────────
+    // (receiver, cancellationReceiver, callbackContract, uiFeeReceiver, market, initialCollateralToken, swapPath[])
+    // 6 static addresses + 1 offset for swapPath (dynamic array, length=0)
+    // Head: 7 words (6 addrs + swapPath offset), Tail: swapPath length word (=0)
+    // swapPath offset = 7*32 = 224 (relative to start of addresses tuple head[0])
+    let swap_path_offset: usize = 7 * 32;
+    let mut addr_enc = String::new();
+    addr_enc.push_str(&encode_address(receiver));         // receiver
+    addr_enc.push_str(&encode_address(account));          // cancellationReceiver = account
+    addr_enc.push_str(&zero_address());                   // callbackContract = 0x0
+    addr_enc.push_str(&zero_address());                   // uiFeeReceiver = 0x0
+    addr_enc.push_str(&encode_address(market));           // market
+    addr_enc.push_str(&encode_address(collateral_token)); // initialCollateralToken
+    addr_enc.push_str(&encode_u256(swap_path_offset as u128)); // offset to swapPath[]
+    addr_enc.push_str(&encode_u256(0));                   // swapPath length = 0
+    // addr_enc = 8 words = 256 bytes
 
-    // The createOrder function takes one argument of struct type.
-    // We encode it as a tuple (addresses_tuple, numbers_tuple, flags_tuple).
-    // Since addresses_tuple contains a dynamic array (swapPath), addresses_tuple is dynamic.
-    // numbers_tuple and flags_tuple are static.
+    // ── Numbers tuple (8 static uint256 fields, encoded inline) ─────────────
+    let mut num_enc = String::new();
+    num_enc.push_str(&encode_u256(size_delta_usd));           // sizeDeltaUsd
+    num_enc.push_str(&encode_u256(collateral_delta_amount));  // initialCollateralDeltaAmount
+    num_enc.push_str(&encode_u256(trigger_price));            // triggerPrice
+    num_enc.push_str(&encode_u256(acceptable_price));         // acceptablePrice
+    num_enc.push_str(&encode_u256(execution_fee));            // executionFee
+    num_enc.push_str(&encode_u256(0));                        // callbackGasLimit = 0
+    num_enc.push_str(&encode_u256(0));                        // minOutputAmount = 0
+    num_enc.push_str(&encode_u256(0));                        // validFromTime = 0
+    // num_enc = 8 words = 256 bytes (static tuple, encoded inline in parent head)
+
+    // ── Top-level struct encoding ─────────────────────────────────────────────
+    // The outer struct (CreateOrderParams) has 9 top-level components:
+    //   0. addresses   — DYNAMIC  → offset in head
+    //   1. numbers     — STATIC   → encoded inline (8 words)
+    //   2. orderType   — STATIC   → 1 word
+    //   3. decreasePositionSwapType — STATIC → 1 word
+    //   4. isLong      — STATIC   → 1 word
+    //   5. shouldUnwrapNativeToken — STATIC → 1 word
+    //   6. autoCancel  — STATIC   → 1 word
+    //   7. referralCode — STATIC  → 1 word
+    //   8. dataList    — DYNAMIC  → offset in head
     //
-    // Function encoding:
-    // [selector][offset_to_struct]
-    // [struct encoding] = [offset_addr_tuple][offset_num_tuple][offset_flags_tuple][addr_tuple data][num_tuple data][flags_tuple data]
+    // Head layout (words): addresses_offset(1) + numbers(8) + orderType(1) +
+    //                      decreaseType(1) + isLong(1) + shouldUnwrap(1) +
+    //                      autoCancel(1) + referralCode(1) + dataList_offset(1) = 16 words
+    // Head size = 16 * 32 = 512 bytes
     //
-    // Wait — the struct is passed as a single tuple argument.
-    // For ABI: function takes (Addresses, Numbers, Flags) as a single tuple param.
-    // The outer encoding is: offset to the tuple (32 bytes = 0x20), then the tuple contents.
-    //
-    // Actually for a struct argument in Solidity ABI:
-    // The encoding is: head = [offset_to_tuple_data], then the tuple encoded.
-    // Since the struct contains dynamic data (swapPath array), the struct itself is dynamic.
-    //
-    // Let's build it step by step:
+    // Offsets are relative to start of struct encoding (start of head[0]).
+    // addresses tail starts at offset 512 (= head end)
+    // dataList tail starts at offset 512 + 256 = 768 (= after addresses 8 words)
+    let head_size: usize = 16 * 32; // 512 bytes
+    let addr_offset = head_size;                      // 512
+    let datalist_offset = head_size + addr_enc.len() / 2; // 512 + 256 = 768
 
-    let mut addresses_encoded = String::new();
-    // Addresses tuple:
-    // (account, receiver, cancellationReceiver=account, callbackContract=0x0, uiFeeReceiver=0x0, market, initialCollateralToken, swapPath=[])
-    // Static slots for 7 addresses + 1 offset for swapPath dynamic array
-    // Layout: 7 addresses (7*32) + offset to swapPath (1*32) + swapPath data (1*32 length + 0 elements)
-    // The tuple itself is dynamic because of swapPath.
+    let mut struct_enc = String::new();
+    struct_enc.push_str(&encode_u256(addr_offset as u128));     // [0] addresses offset
+    struct_enc.push_str(&num_enc);                               // [1-8] numbers inline (8 words)
+    struct_enc.push_str(&encode_u256(order_type as u128));       // [9] orderType
+    struct_enc.push_str(&encode_u256(0));                        // [10] decreasePositionSwapType = 0
+    struct_enc.push_str(&encode_bool(is_long));                  // [11] isLong
+    struct_enc.push_str(&encode_bool(false));                    // [12] shouldUnwrapNativeToken = false
+    struct_enc.push_str(&encode_bool(false));                    // [13] autoCancel = false
+    struct_enc.push_str(&encode_u256(0));                        // [14] referralCode = bytes32(0)
+    struct_enc.push_str(&encode_u256(datalist_offset as u128));  // [15] dataList offset
+    // Tail:
+    struct_enc.push_str(&addr_enc);                              // addresses tail (256 bytes)
+    struct_enc.push_str(&encode_u256(0));                        // dataList length = 0
 
-    // Head of addresses tuple: 8 slots
-    // First 7 are addresses (static), 8th is offset to swapPath
-    let swap_path_offset = 8 * 32usize; // offset within the tuple to the swapPath data
-    addresses_encoded.push_str(&encode_address(account));          // account
-    addresses_encoded.push_str(&encode_address(receiver));         // receiver
-    addresses_encoded.push_str(&encode_address(account));          // cancellationReceiver = account
-    addresses_encoded.push_str(&zero_address());                   // callbackContract = 0x0
-    addresses_encoded.push_str(&zero_address());                   // uiFeeReceiver = 0x0
-    addresses_encoded.push_str(&encode_address(market));           // market
-    addresses_encoded.push_str(&encode_address(collateral_token)); // initialCollateralToken
-    addresses_encoded.push_str(&encode_u256(swap_path_offset as u128)); // offset to swapPath
-    // swapPath data: length=0, no elements
-    addresses_encoded.push_str(&encode_u256(0)); // swapPath length = 0
-
-    // Numbers tuple (12 static slots, all uint types):
-    let mut numbers_encoded = String::new();
-    numbers_encoded.push_str(&encode_u256(order_type as u128));          // orderType
-    numbers_encoded.push_str(&encode_u256(0));                           // decreasePositionSwapType = 0
-    numbers_encoded.push_str(&encode_u256(size_delta_usd));              // sizeDeltaUsd
-    numbers_encoded.push_str(&encode_u256(collateral_delta_amount));     // initialCollateralDeltaAmount
-    numbers_encoded.push_str(&encode_u256(trigger_price));               // triggerPrice
-    numbers_encoded.push_str(&encode_u256(acceptable_price));            // acceptablePrice
-    numbers_encoded.push_str(&encode_u256(execution_fee));       // executionFee
-    numbers_encoded.push_str(&encode_u256(0));                           // callbackGasLimit = 0
-    numbers_encoded.push_str(&encode_u256(0));                           // minOutputAmount = 0
-    numbers_encoded.push_str(&encode_u256(0));                           // updatedAtTime = 0
-    numbers_encoded.push_str(&encode_u256(0));                           // validFromTime = 0
-    numbers_encoded.push_str(&encode_u256(src_chain_id as u128));        // srcChainId
-
-    // Flags tuple (4 static bools):
-    let mut flags_encoded = String::new();
-    flags_encoded.push_str(&encode_bool(is_long));   // isLong
-    flags_encoded.push_str(&encode_bool(false));     // shouldUnwrapNativeToken = false
-    flags_encoded.push_str(&encode_bool(false));     // isFrozen = false
-    flags_encoded.push_str(&encode_bool(false));     // autoCancel = false
-
-    // The createOrder function takes a single struct param (dynamic because Addresses is dynamic).
-    // Encode the struct as an ABI tuple:
-    // Head: offset_to_addresses (32), offset_to_numbers (32), offset_to_flags (32)
-    // Addresses is dynamic (contains swapPath), Numbers and Flags are static.
-    //
-    // Actually in Solidity ABI, a tuple containing a dynamic element is itself dynamic.
-    // The top-level argument encoding:
-    // [head: 3 offsets][addresses_encoded][numbers_encoded][flags_encoded]
-    //
-    // Offsets are relative to the start of the tuple data area.
-    // Head = 3 * 32 = 96 bytes
-    // offset_addr = 96 (0x60) bytes from start of tuple
-    // Numbers is static (12 * 32 = 384 bytes), but since we place it after addresses, offset_num depends on addresses size
-    // Flags is static (4 * 32 = 128 bytes)
-    //
-    // Since addresses_encoded is dynamic, we compute its byte length:
-    let addr_bytes = addresses_encoded.len() / 2; // hex string → bytes
-    let num_bytes = numbers_encoded.len() / 2;
-
-    let offset_addr = 3 * 32usize; // 96 bytes = 0x60
-    let offset_num = offset_addr + addr_bytes;
-    let offset_flags = offset_num + num_bytes;
-
-    let mut struct_encoding = String::new();
-    struct_encoding.push_str(&encode_u256(offset_addr as u128));
-    struct_encoding.push_str(&encode_u256(offset_num as u128));
-    struct_encoding.push_str(&encode_u256(offset_flags as u128));
-    struct_encoding.push_str(&addresses_encoded);
-    struct_encoding.push_str(&numbers_encoded);
-    struct_encoding.push_str(&flags_encoded);
-
-    // The function takes the struct as a direct argument (not wrapped in another offset)
-    // because the function signature already specifies the struct type.
-    // However, since the struct is dynamic, the function's ABI encoding wraps it in an offset:
-    // [selector][offset_to_struct=0x20][struct_data]
-    let struct_bytes = struct_encoding.len() / 2;
-    let _ = struct_bytes; // compiler warning suppression
-
-    format!("97aedce2{}{}", encode_u256(0x20), struct_encoding)
+    // Function: createOrder takes 1 dynamic struct arg → wrap in offset 0x20
+    format!("f59c48eb{}{}", encode_u256(0x20), struct_enc)
 }
 
 /// Encode `createDeposit(CreateDepositParams)` calldata
@@ -365,10 +324,12 @@ pub fn encode_multicall(inner_calls: &[String]) -> String {
 
     let n = inner_calls.len();
 
-    // Calculate offsets for each bytes element relative to start of array data
-    // Array data starts after: length word (32) + n offset words (n*32)
-    // Each bytes element is 32-byte-aligned: 32 (length) + ceil(data_len/32)*32
-    let array_head_size = (1 + n) * 32; // length word + n offset words
+    // Calculate offsets for each bytes element.
+    // Per ABI spec: offsets in bytes[] are relative to the start of the FIRST offset word
+    // (immediately after the length word), NOT relative to the length word itself.
+    // So the first element's offset = n * 32 (just the n offset words).
+    // Each bytes element is: 32 (length word) + ceil(data_len/32)*32 (padded data)
+    let array_head_size = n * 32; // n offset words only (length word excluded from offset base)
 
     let mut element_offsets: Vec<usize> = Vec::with_capacity(n);
     let mut element_data: Vec<String> = Vec::with_capacity(n);
@@ -380,7 +341,8 @@ pub fn encode_multicall(inner_calls: &[String]) -> String {
         // Encode: length (32 bytes) + data (padded to 32-byte boundary)
         let padded_len = (data_bytes + 31) / 32 * 32;
         let padded_hex_len = padded_len * 2;
-        let data_padded = format!("{:<0width$}", call_hex, width = padded_hex_len);
+        let padding_chars = padded_hex_len - call_hex.len();
+        let data_padded = format!("{}{}", call_hex, "0".repeat(padding_chars));
         let encoded_element = format!("{}{}", encode_u256(data_bytes as u128), data_padded);
         current_offset += encoded_element.len() / 2;
         element_data.push(encoded_element);
