@@ -299,6 +299,51 @@ pub async fn get_token_ids_for_owner(
     Ok(ids)
 }
 
+// ── V3 liquidity math ─────────────────────────────────────────────────────────
+
+/// Compute the actual token amounts held by a V3 position given the current pool price.
+///
+/// Uses f64 arithmetic (sufficient for slippage bound estimation — we only need
+/// ~1% accuracy, not wei-exact values).
+///
+/// Formula (from Uniswap V3 whitepaper):
+///   if tick < tickLower  → all token0: amount0 = L·(√B − √A) / (√A·√B)
+///   if tick ≥ tickUpper  → all token1: amount1 = L·(√B − √A)
+///   in range             → amount0 = L·(√B − √P) / (√P·√B)
+///                          amount1 = L·(√P − √A)
+///
+/// Returns (amount0, amount1) in minimal units (wei).
+pub fn amounts_from_liquidity(
+    sqrt_price_x96: u128,
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_current: i32,
+    liquidity: u128,
+) -> (u128, u128) {
+    let q96 = (1u128 << 96) as f64;
+    let sqrt_p = sqrt_price_x96 as f64 / q96;
+    let sqrt_a = tick_to_sqrt_price(tick_lower);
+    let sqrt_b = tick_to_sqrt_price(tick_upper);
+    let liq = liquidity as f64;
+
+    if tick_current < tick_lower {
+        let amount0 = liq * (sqrt_b - sqrt_a) / (sqrt_a * sqrt_b);
+        (amount0 as u128, 0)
+    } else if tick_current >= tick_upper {
+        let amount1 = liq * (sqrt_b - sqrt_a);
+        (0, amount1 as u128)
+    } else {
+        let amount0 = liq * (sqrt_b - sqrt_p) / (sqrt_p * sqrt_b);
+        let amount1 = liq * (sqrt_p - sqrt_a);
+        (amount0 as u128, amount1 as u128)
+    }
+}
+
+/// sqrt(1.0001^tick) — the Q96 sqrt price at a given tick, as a plain f64.
+fn tick_to_sqrt_price(tick: i32) -> f64 {
+    f64::powf(1.0001_f64, tick as f64 / 2.0)
+}
+
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 
 /// Query LP positions from TheGraph subgraph.

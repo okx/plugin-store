@@ -96,12 +96,12 @@ enum Commands {
         /// Human-readable amount for tokenB
         #[arg(long)]
         amount_b: String,
-        /// Lower tick boundary (must be multiple of tickSpacing)
+        /// Lower tick boundary (must be multiple of tickSpacing). Omit to auto-compute ±10% range from current pool price.
         #[arg(long, allow_hyphen_values = true)]
-        tick_lower: i32,
-        /// Upper tick boundary (must be multiple of tickSpacing)
+        tick_lower: Option<i32>,
+        /// Upper tick boundary (must be multiple of tickSpacing). Omit to auto-compute ±10% range from current pool price.
         #[arg(long, allow_hyphen_values = true)]
-        tick_upper: i32,
+        tick_upper: Option<i32>,
         /// Slippage tolerance in percent (e.g. 1.0 = 1%)
         #[arg(long, default_value = "1.0")]
         slippage: f64,
