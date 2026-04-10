@@ -143,7 +143,7 @@
     },
     {
       "name": "pancakeswap",
-      "description": "Swap tokens and manage liquidity on PancakeSwap V3",
+      "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
       "source": "./skills/pancakeswap",
       "category": "utility",
       "author": {
