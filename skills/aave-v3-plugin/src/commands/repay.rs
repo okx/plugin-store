@@ -2,7 +2,6 @@ use anyhow::Context;
 use serde_json::{json, Value};
 
 use crate::calldata;
-use crate::commands::supply::infer_decimals;
 use crate::config::get_chain_config;
 use crate::onchainos;
 use crate::rpc;
@@ -37,6 +36,10 @@ pub async fn run(
         .await
         .context("Failed to resolve Pool address")?;
 
+    // Resolve token contract address and decimals (handles both symbol and 0x address)
+    let (token_addr, decimals) = onchainos::resolve_token(asset, chain_id)
+        .with_context(|| format!("Could not resolve token address for '{}'", asset))?;
+
     // Pre-flight: check debt
     let account_data = rpc::get_user_account_data(&pool_addr, &from_addr, cfg.rpc_url)
         .await
@@ -59,7 +62,7 @@ pub async fn run(
     // For --all: query the wallet's actual token balance and use that as the repay amount.
     // Using uint256.max reverts when wallet balance < accrued dust interest.
     let (amount_minimal, amount_display) = if all {
-        let balance = rpc::get_erc20_balance(asset, &from_addr, cfg.rpc_url)
+        let balance = rpc::get_erc20_balance(&token_addr, &from_addr, cfg.rpc_url)
             .await
             .context("Failed to fetch token balance for full repay")?;
         if balance == 0 {
@@ -67,20 +70,16 @@ pub async fn run(
         }
         (balance, format!("all ({})", balance))
     } else {
-        let decimals = onchainos::resolve_token(asset, chain_id)
-            .map(|(_, d)| d as u64)
-            .unwrap_or_else(|_| infer_decimals(asset));
         let v = amount.unwrap();
         let minimal = (v * 10u128.pow(decimals as u32) as f64) as u128;
         (minimal, v.to_string())
     };
 
-    // Step 4: Check ERC-20 allowance for asset → pool
-    // For full repay (u128::MAX) we approve unconditionally since we can't know exact debt
+    // Step 4: Check ERC-20 allowance for token → pool
     let needs_approval = if all {
         true
     } else {
-        let allowance = rpc::get_allowance(asset, &from_addr, &pool_addr, cfg.rpc_url)
+        let allowance = rpc::get_allowance(&token_addr, &from_addr, &pool_addr, cfg.rpc_url)
             .await
             .unwrap_or(0);
         allowance < amount_minimal
@@ -88,12 +87,16 @@ pub async fn run(
 
     let mut approval_result: Option<Value> = None;
     if needs_approval {
-        eprintln!(
-            "Insufficient ERC-20 allowance for {} → {}. Approving...",
-            asset, pool_addr
-        );
-        let approve_res = onchainos::dex_approve(chain_id, asset, &pool_addr, dry_run)
-            .context("onchainos dex approve failed")?;
+        let approve_calldata = calldata::encode_erc20_approve(&pool_addr, u128::MAX)
+            .context("Failed to encode approve calldata")?;
+        let approve_res = onchainos::wallet_contract_call(
+            chain_id,
+            &token_addr,
+            &approve_calldata,
+            Some(&from_addr),
+            dry_run,
+        )
+        .context("ERC-20 approve failed")?;
         // Wait for approve tx to be mined before submitting repay
         if !dry_run {
             let approve_tx = approve_res["data"]["txHash"]
@@ -110,7 +113,7 @@ pub async fn run(
     }
 
     // Step 5: encode and submit repay
-    let calldata = calldata::encode_repay(asset, amount_minimal, &from_addr)
+    let calldata = calldata::encode_repay(&token_addr, amount_minimal, &from_addr)
         .context("Failed to encode repay calldata")?;
 
     let result = onchainos::wallet_contract_call(
