@@ -128,6 +128,8 @@ pub fn onchainos_sign_eip712(typed_data: &serde_json::Value, wallet: &str) -> an
 /// Uses `onchainos wallet sign-message --type eip712` with the Hyperliquid
 /// EIP-712 typed data structure for L1 action signing.
 ///
+/// wallet_chain_id: the EVM chain ID used to resolve the wallet (passed to --chain so
+///                  onchainos selects the same key it resolved the wallet with).
 /// dry_run: if true, returns the unsigned preview payload without submitting.
 /// confirm: if false (no --confirm flag), returns the preview payload for review.
 ///          if true, proceeds to sign and submit.
@@ -135,6 +137,7 @@ pub fn onchainos_hl_sign(
     action: &Value,
     nonce: u64,
     wallet: &str,
+    wallet_chain_id: u64,
     confirm: bool,
     dry_run: bool,
 ) -> anyhow::Result<Value> {
@@ -173,23 +176,28 @@ pub fn onchainos_hl_sign(
     hasher.update(&hash_input);
     let digest = hasher.finalize();
     let connection_id = format!("0x{}", hex::encode(digest));
+
+
+    // EIP-712 typed data — field order matches HL Python SDK exactly:
+    // domain: chainId, name, verifyingContract, version
+    // types: Agent first, EIP712Domain second (required by onchainos for correct hash)
     let eip712_message = serde_json::json!({
         "domain": {
-            "name": "Exchange",
-            "version": "1",
             "chainId": 1337,
-            "verifyingContract": "0x0000000000000000000000000000000000000000"
+            "name": "Exchange",
+            "verifyingContract": "0x0000000000000000000000000000000000000000",
+            "version": "1"
         },
         "types": {
+            "Agent": [
+                { "name": "source",       "type": "string"  },
+                { "name": "connectionId", "type": "bytes32" }
+            ],
             "EIP712Domain": [
                 { "name": "name",              "type": "string"  },
                 { "name": "version",           "type": "string"  },
                 { "name": "chainId",           "type": "uint256" },
                 { "name": "verifyingContract", "type": "address" }
-            ],
-            "Agent": [
-                { "name": "source",       "type": "string"  },
-                { "name": "connectionId", "type": "bytes32" }
             ]
         },
         "primaryType": "Agent",
@@ -201,6 +209,7 @@ pub fn onchainos_hl_sign(
 
     let eip712_str = serde_json::to_string(&eip712_message)?;
 
+    let wallet_chain_str = wallet_chain_id.to_string();
     let output = Command::new("onchainos")
         .args([
             "wallet",
@@ -210,7 +219,7 @@ pub fn onchainos_hl_sign(
             "--message",
             &eip712_str,
             "--chain",
-            "1",
+            &wallet_chain_str,
             "--from",
             wallet,
         ])

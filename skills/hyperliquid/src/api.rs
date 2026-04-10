@@ -63,6 +63,12 @@ pub async fn get_meta(info_url: &str) -> anyhow::Result<Value> {
 /// Look up the asset index for a coin symbol from meta.
 /// Returns None if the coin is not found.
 pub async fn get_asset_index(info_url: &str, coin: &str) -> anyhow::Result<usize> {
+    let (idx, _) = get_asset_meta(info_url, coin).await?;
+    Ok(idx)
+}
+
+/// Look up the asset index AND szDecimals for a coin symbol from meta.
+pub async fn get_asset_meta(info_url: &str, coin: &str) -> anyhow::Result<(usize, u32)> {
     let meta = get_meta(info_url).await?;
     let universe = meta["universe"]
         .as_array()
@@ -72,7 +78,8 @@ pub async fn get_asset_index(info_url: &str, coin: &str) -> anyhow::Result<usize
     for (i, asset) in universe.iter().enumerate() {
         if let Some(name) = asset["name"].as_str() {
             if name.to_uppercase() == coin_upper {
-                return Ok(i);
+                let sz_dec = asset["szDecimals"].as_u64().unwrap_or(4) as u32;
+                return Ok((i, sz_dec));
             }
         }
     }

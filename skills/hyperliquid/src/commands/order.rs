@@ -1,10 +1,10 @@
 use clap::Args;
-use crate::api::{get_asset_index, get_all_mids};
-use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID};
+use crate::api::{get_asset_meta, get_all_mids};
+use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{
     build_bracketed_order_action, build_limit_order_action, build_market_order_action,
-    format_px, submit_exchange_request,
+    format_px, market_slippage_px, submit_exchange_request,
 };
 
 #[derive(Args)]
@@ -73,13 +73,18 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         }
     }
 
-    let asset_idx = get_asset_index(info, &coin).await?;
+    let (asset_idx, sz_decimals) = get_asset_meta(info, &coin).await?;
 
     let mids = get_all_mids(info).await?;
     let current_price = mids
         .get(&coin)
         .and_then(|v| v.as_str())
         .unwrap_or("unknown");
+
+    // Slippage-protected price for market orders — 5% tolerance, rounded to HL's
+    // sz_decimals significant figures (matches Python SDK round_to_sz_decimals).
+    let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
+    let slippage_px_str = market_slippage_px(mid_f, is_buy, sz_decimals);
 
     let has_bracket = args.sl_px.is_some() || args.tp_px.is_some();
 
@@ -89,16 +94,10 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             "market" => serde_json::json!({
                 "a": asset_idx,
                 "b": is_buy,
-                "p": "0",
+                "p": slippage_px_str,
                 "s": args.size,
                 "r": args.reduce_only,
-                "t": {
-                    "trigger": {
-                        "isMarket": true,
-                        "tpsl": "tp",
-                        "triggerPx": "0"
-                    }
-                }
+                "t": { "limit": { "tif": "Ioc" } }
             }),
             "limit" => {
                 let price_str = args
@@ -133,7 +132,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         )
     } else {
         match args.r#type.as_str() {
-            "market" => build_market_order_action(asset_idx, is_buy, &args.size, args.reduce_only),
+            "market" => build_market_order_action(asset_idx, is_buy, &args.size, args.reduce_only, &slippage_px_str),
             "limit" => {
                 let price_str = args
                     .price
@@ -182,7 +181,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     }
 
     let wallet = resolve_wallet(CHAIN_ID)?;
-    let signed = onchainos_hl_sign(&action, nonce, &wallet, true, false)?;
+    let signed = onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)?;
     let result = submit_exchange_request(exchange, signed).await?;
 
     println!(

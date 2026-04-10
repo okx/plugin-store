@@ -1,8 +1,8 @@
 use clap::Args;
-use crate::api::{get_asset_index, get_all_mids, get_clearinghouse_state};
-use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID};
+use crate::api::{get_asset_meta, get_all_mids, get_clearinghouse_state};
+use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
-use crate::signing::{build_close_action, submit_exchange_request};
+use crate::signing::{build_close_action, market_slippage_px, submit_exchange_request};
 
 #[derive(Args)]
 pub struct CloseArgs {
@@ -30,8 +30,8 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let coin = normalize_coin(&args.coin);
     let nonce = now_ms();
 
-    // Look up asset index
-    let asset_idx = get_asset_index(info, &coin).await?;
+    // Look up asset index and sz_decimals for price rounding
+    let (asset_idx, sz_decimals) = get_asset_meta(info, &coin).await?;
 
     // Resolve wallet
     let wallet = resolve_wallet(CHAIN_ID)?;
@@ -93,8 +93,11 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         .unwrap_or("unknown");
 
     let closing_side = if position_is_long { "sell" } else { "buy" };
+    let close_is_buy = !position_is_long;
+    let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
+    let slippage_px_str = market_slippage_px(mid_f, close_is_buy, sz_decimals);
 
-    let action = build_close_action(asset_idx, position_is_long, &close_size);
+    let action = build_close_action(asset_idx, position_is_long, &close_size, &slippage_px_str);
 
     println!(
         "{}",
@@ -125,7 +128,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let signed = onchainos_hl_sign(&action, nonce, &wallet, true, false)?;
+    let signed = onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)?;
     let result = submit_exchange_request(exchange, signed).await?;
 
     println!(

@@ -11,7 +11,7 @@ use clap::Args;
 use serde_json::json;
 
 use crate::api::get_asset_index;
-use crate::config::{exchange_url, info_url, now_ms, CHAIN_ID};
+use crate::config::{exchange_url, info_url, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{build_market_order_action, submit_exchange_request};
 
@@ -43,10 +43,11 @@ pub async fn run(args: RegisterArgs) -> anyhow::Result<()> {
     // the recovered signer address in the error response.
     let nonce = now_ms();
     let asset_idx = get_asset_index(info_url(), "ETH").await.unwrap_or(1);
-    let dummy_action = build_market_order_action(asset_idx, true, "0", false);
+    // Price "0" is intentionally invalid — we want HL to reject this but reveal the signer.
+    let dummy_action = build_market_order_action(asset_idx, true, "0", false, "0");
 
     // Sign through onchainos (real signing required to get HL to reveal signer)
-    let signed = onchainos_hl_sign(&dummy_action, nonce, &wallet, true, false)
+    let signed = onchainos_hl_sign(&dummy_action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)
         .map_err(|e| anyhow::anyhow!(
             "onchainos signing failed: {}. Ensure onchainos is installed and a wallet is configured.",
             e

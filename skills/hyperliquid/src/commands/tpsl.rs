@@ -1,6 +1,6 @@
 use clap::Args;
 use crate::api::{get_asset_index, get_all_mids, get_clearinghouse_state};
-use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID};
+use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{build_standalone_tpsl_action, format_px, submit_exchange_request};
 
@@ -201,7 +201,7 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let signed = onchainos_hl_sign(&action, nonce, &wallet, true, false)?;
+    let signed = onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)?;
     let result = submit_exchange_request(exchange, signed).await?;
 
     println!(

@@ -11,6 +11,7 @@ use commands::{
     close::CloseArgs,
     deposit::DepositArgs,
     order::OrderArgs,
+    orders::OrdersArgs,
     positions::PositionsArgs,
     prices::PricesArgs,
     register::RegisterArgs,
@@ -32,6 +33,8 @@ struct Cli {
 enum Commands {
     /// Show open perpetual positions, unrealized PnL, and margin summary
     Positions(PositionsArgs),
+    /// List open orders (limit, TP/SL); optionally filter by coin
+    Orders(OrdersArgs),
     /// Get current mid prices for all markets or a specific coin
     Prices(PricesArgs),
     /// Place a market or limit order; optionally attach TP/SL bracket (requires --confirm)
@@ -53,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Positions(args) => commands::positions::run(args).await,
+        Commands::Orders(args) => commands::orders::run(args).await,
         Commands::Prices(args) => commands::prices::run(args).await,
         Commands::Order(args) => commands::order::run(args).await,
         Commands::Close(args) => commands::close::run(args).await,

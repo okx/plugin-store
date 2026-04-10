@@ -15,6 +15,48 @@ pub fn format_px(px: f64) -> String {
     s.to_string()
 }
 
+/// Round a price to the correct number of decimal places for a given coin,
+/// matching the Python SDK's round_to_sz_decimals(px, sz_decimals) logic.
+/// This rounds to `sz_decimals` significant figures.
+///
+/// Example: ETH sz_decimals=4, price=2098.4 → 4 sig figs → round to 0 dp → "2098"
+pub fn round_px(px: f64, sz_decimals: u32) -> String {
+    if px == 0.0 {
+        return "0".to_string();
+    }
+    if sz_decimals == 0 {
+        return format!("{}", px.round() as i64);
+    }
+    let mag = px.abs().log10().floor() as i32;
+    let decimal_places = (sz_decimals as i32) - mag - 1;
+    let rounded = if decimal_places <= 0 {
+        let factor = 10_f64.powi(-decimal_places);
+        (px / factor).round() * factor
+    } else {
+        let factor = 10_f64.powi(decimal_places);
+        (px * factor).round() / factor
+    };
+    // For integer results (decimal_places ≤ 0), return as-is — no trimming to avoid
+    // stripping significant zeros (e.g. "2100" → "21" if trimmed).
+    // For decimal results, trim trailing zeros after the decimal point.
+    if decimal_places <= 0 {
+        format!("{:.0}", rounded)
+    } else {
+        let s = format!("{:.prec$}", rounded, prec = decimal_places as usize);
+        let s = s.trim_end_matches('0').trim_end_matches('.');
+        s.to_string()
+    }
+}
+
+/// Compute slippage-protected price for a market order.
+/// is_buy=true → price * 1.05 (pay up to 5% above mid)
+/// is_buy=false → price * 0.95 (accept down to 5% below mid)
+/// Rounds to sz_decimals significant figures to match HL's validation.
+pub fn market_slippage_px(mid_px: f64, is_buy: bool, sz_decimals: u32) -> String {
+    let px = if is_buy { mid_px * 1.05 } else { mid_px * 0.95 };
+    round_px(px, sz_decimals)
+}
+
 /// Slippage-protected limit price for market trigger orders.
 /// When a trigger fires as "market", HL still needs a worst-acceptable-price.
 /// Convention: 10% slippage tolerance (same as HL web UI default).
@@ -30,25 +72,26 @@ fn trigger_limit_px(trigger_px: f64, is_buy: bool) -> String {
 // ─── Entry orders ────────────────────────────────────────────────────────────
 
 /// Build the order action payload for a market order.
+/// Uses IOC (Immediate-or-Cancel) limit at slippage price — HL's standard market order format.
+/// slippage_px_str: worst-acceptable price (mid × 1.05 for buy, mid × 0.95 for sell).
 pub fn build_market_order_action(
     asset: usize,
     is_buy: bool,
     size_str: &str,
     reduce_only: bool,
+    slippage_px_str: &str,
 ) -> Value {
     json!({
         "type": "order",
         "orders": [{
             "a": asset,
             "b": is_buy,
-            "p": "0",
+            "p": slippage_px_str,
             "s": size_str,
             "r": reduce_only,
             "t": {
-                "trigger": {
-                    "isMarket": true,
-                    "tpsl": "tp",
-                    "triggerPx": "0"
+                "limit": {
+                    "tif": "Ioc"
                 }
             }
         }],
@@ -84,23 +127,22 @@ pub fn build_limit_order_action(
 
 // ─── Close ───────────────────────────────────────────────────────────────────
 
-/// Market close: reduce-only market order in the opposite direction.
+/// Market close: reduce-only IOC limit at slippage price in the opposite direction.
 /// position_is_long: true → sell to close; false → buy to close.
-pub fn build_close_action(asset: usize, position_is_long: bool, size_str: &str) -> Value {
+/// slippage_px_str: worst-acceptable price (mid × 1.05 for buy, mid × 0.95 for sell).
+pub fn build_close_action(asset: usize, position_is_long: bool, size_str: &str, slippage_px_str: &str) -> Value {
     let is_buy = !position_is_long;
     json!({
         "type": "order",
         "orders": [{
             "a": asset,
             "b": is_buy,
-            "p": "0",
+            "p": slippage_px_str,
             "s": size_str,
             "r": true,
             "t": {
-                "trigger": {
-                    "isMarket": true,
-                    "tpsl": "tp",
-                    "triggerPx": "0"
+                "limit": {
+                    "tif": "Ioc"
                 }
             }
         }],
@@ -148,8 +190,8 @@ pub fn build_trigger_order_element(
         "t": {
             "trigger": {
                 "isMarket": is_market,
-                "tpsl": tpsl,
-                "triggerPx": trigger_px_str
+                "triggerPx": trigger_px_str,
+                "tpsl": tpsl
             }
         }
     })
@@ -227,6 +269,19 @@ pub fn build_cancel_action(asset: usize, oid: u64) -> Value {
             "a": asset,
             "o": oid
         }]
+    })
+}
+
+/// Build cancel action for multiple orders in one request.
+/// Each element of `orders` is (asset_index, oid).
+pub fn build_batch_cancel_action(orders: &[(usize, u64)]) -> Value {
+    let cancels: Vec<Value> = orders
+        .iter()
+        .map(|(a, o)| json!({"a": a, "o": o}))
+        .collect();
+    json!({
+        "type": "cancel",
+        "cancels": cancels
     })
 }
 

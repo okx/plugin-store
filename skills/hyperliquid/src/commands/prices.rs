@@ -7,14 +7,14 @@ pub struct PricesArgs {
     /// Specific coin to get price for (e.g. BTC, ETH, SOL).
     /// If omitted, returns all market mid prices.
     #[arg(long)]
-    pub market: Option<String>,
+    pub coin: Option<String>,
 }
 
 pub async fn run(args: PricesArgs) -> anyhow::Result<()> {
     let url = info_url();
     let mids = get_all_mids(url).await?;
 
-    match args.market {
+    match args.coin {
         Some(coin) => {
             let coin_upper = normalize_coin(&coin);
             match mids.get(&coin_upper) {
@@ -30,7 +30,7 @@ pub async fn run(args: PricesArgs) -> anyhow::Result<()> {
                 }
                 None => {
                     anyhow::bail!(
-                        "Coin '{}' not found. Check spelling or run `hyperliquid prices` without --market to list all coins.",
+                        "Coin '{}' not found. Check spelling or run `hyperliquid prices` without --coin to list all coins.",
                         coin_upper
                     );
                 }

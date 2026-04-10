@@ -2,6 +2,7 @@ pub mod cancel;
 pub mod close;
 pub mod deposit;
 pub mod order;
+pub mod orders;
 pub mod positions;
 pub mod prices;
 pub mod register;
