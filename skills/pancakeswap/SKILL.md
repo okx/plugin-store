@@ -1,6 +1,6 @@
 ---
 name: pancakeswap
-description: "Swap tokens and manage liquidity on PancakeSwap V3"
+description: "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum"
 version: "0.1.0"
 author: "GeoGu360"
 tags:
@@ -9,6 +9,7 @@ tags:
   - liquidity
   - pancakeswap
   - bsc
+  - arbitrum
 ---
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
@@ -82,7 +83,7 @@ fi
 
 # PancakeSwap V3 Skill
 
-Swap tokens and manage concentrated liquidity on PancakeSwap V3 — the leading DEX on BNB Chain (BSC) and Base.
+Swap tokens and manage concentrated liquidity on PancakeSwap V3 — the leading DEX on BNB Chain (BSC), Base, and Arbitrum.
 
 **Trigger phrases:** "pancakeswap", "swap on pancake", "PCS swap", "add liquidity pancakeswap", "remove liquidity pancakeswap", "pancakeswap pool", "PancakeSwap V3"
 
@@ -109,7 +110,7 @@ Before executing any write command, verify:
 
 1. **Binary installed**: `pancakeswap --version` — if not found, install the plugin via the OKX plugin store
 2. **Wallet connected**: `onchainos wallet status` — confirm wallet is logged in and active address is set
-3. **Chain supported**: target chain must be BNB Chain (56) or Base (8453)
+3. **Chain supported**: target chain must be BNB Chain (56), Base (8453), or Arbitrum (42161)
 
 If the wallet is not connected, output:
 ```
@@ -126,19 +127,22 @@ Get the expected output amount for a token swap without executing any transactio
 
 ```
 pancakeswap quote \
-  --from <tokenIn_address> \
-  --to   <tokenOut_address> \
+  --from <tokenIn_address_or_symbol> \
+  --to   <tokenOut_address_or_symbol> \
   --amount <human_amount> \
-  [--chain 56|8453]
+  [--chain 56|8453|42161]
 ```
 
 **Examples:**
 ```
 # Quote 1 WBNB → USDT on BSC
-pancakeswap quote --from 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c --to 0x55d398326f99059ff775485246999027b3197955 --amount 1 --chain 56
+pancakeswap quote --from WBNB --to USDT --amount 1 --chain 56
 
 # Quote 0.5 WETH → USDC on Base
-pancakeswap quote --from 0x4200000000000000000000000000000000000006 --to 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 --amount 0.5 --chain 8453
+pancakeswap quote --from WETH --to USDC --amount 0.5 --chain 8453
+
+# Quote 0.1 WETH → USDC on Arbitrum
+pancakeswap quote --from WETH --to USDC --amount 0.1 --chain 42161
 ```
 
 This command queries QuoterV2 via `eth_call` (no transaction, no gas cost). It tries all four fee tiers (0.01%, 0.05%, 0.25%, 1%) and returns the best output.
@@ -153,11 +157,11 @@ Swap an exact input amount of one token for the maximum available output via Pan
 
 ```
 pancakeswap swap \
-  --from <tokenIn_address> \
-  --to   <tokenOut_address> \
+  --from <tokenIn_address_or_symbol> \
+  --to   <tokenOut_address_or_symbol> \
   --amount <human_amount> \
   [--slippage 0.5] \
-  [--chain 56|8453] \
+  [--chain 56|8453|42161] \
   [--dry-run]
 ```
 
@@ -192,14 +196,15 @@ Query PancakeV3Factory for all pools across all fee tiers for a given token pair
 
 ```
 pancakeswap pools \
-  --token0 <address> \
-  --token1 <address> \
-  [--chain 56|8453]
+  --token0 <address_or_symbol> \
+  --token1 <address_or_symbol> \
+  [--chain 56|8453|42161]
 ```
 
 **Example:**
 ```
-pancakeswap pools --token0 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c --token1 0x55d398326f99059ff775485246999027b3197955 --chain 56
+pancakeswap pools --token0 WBNB --token1 USDT --chain 56
+pancakeswap pools --token0 WETH --token1 USDC --chain 42161
 ```
 
 Returns pool addresses, liquidity, and current price (sqrtPriceX96) for each fee tier. This is a read-only operation using `eth_call` — no transactions or gas required.
@@ -215,12 +220,13 @@ View all active PancakeSwap V3 LP positions for a wallet address.
 ```
 pancakeswap positions \
   --owner <wallet_address> \
-  [--chain 56|8453]
+  [--chain 56|8453|42161]
 ```
 
 **Example:**
 ```
 pancakeswap positions --owner 0xYourWalletAddress --chain 56
+pancakeswap positions --owner 0xYourWalletAddress --chain 42161
 ```
 
 Queries TheGraph subgraph first; falls back to on-chain enumeration via NonfungiblePositionManager if the subgraph is unavailable. Read-only — no transactions.
@@ -235,28 +241,30 @@ Mint a new V3 LP position via NonfungiblePositionManager.
 
 ```
 pancakeswap add-liquidity \
-  --token-a <address> \
-  --token-b <address> \
+  --token-a <address_or_symbol> \
+  --token-b <address_or_symbol> \
   --fee <100|500|2500|10000> \
   --amount-a <human_amount> \
   --amount-b <human_amount> \
-  --tick-lower <int> \
-  --tick-upper <int> \
+  [--tick-lower <int>] \
+  [--tick-upper <int>] \
   [--slippage 1.0] \
-  [--chain 56|8453] \
+  [--chain 56|8453|42161] \
   [--dry-run]
 ```
 
 **Execution flow:**
 
 1. Sort tokens so that token0 < token1 numerically (required by the protocol).
-2. Validate that tick values are multiples of the fee tier's tickSpacing.
-3. Present the full plan (amounts, tick range, slippage, NPM address).
-4. Ask user to confirm before proceeding.
-5. After user confirmation, submit Step 1 — approve token0 for NonfungiblePositionManager via `onchainos wallet contract-call`.
-6. After user confirmation, submit Step 2 — approve token1 for NonfungiblePositionManager via `onchainos wallet contract-call`.
-7. After user confirmation, submit Step 3 — `mint(MintParams)` via `onchainos wallet contract-call` to NonfungiblePositionManager.
-8. Report tokenId and transaction hash to the user.
+2. Fetch pool address and current tick via `slot0()`.
+3. **Tick range**: if `--tick-lower`/`--tick-upper` are omitted, auto-compute ±10% price range (~±1000 ticks) from the current pool tick, aligned to tickSpacing. If provided, validate they are multiples of tickSpacing.
+4. **Balance check**: verify wallet holds sufficient token0 and token1 before submitting any transaction. Fails early with a clear message if balance is insufficient.
+5. **Slippage minimums**: compute the actual deposit amounts using V3 liquidity math (based on current sqrtPrice and tick range), then apply slippage tolerance to those amounts. This prevents "Price slippage check" reverts caused by applying slippage to `desired` amounts instead of actual amounts.
+6. Present the full plan (amounts, tick range, expected deposit, min amounts, NPM address).
+7. Submit Step 1 — approve token0 for NonfungiblePositionManager.
+8. Submit Step 2 — approve token1 for NonfungiblePositionManager.
+9. Submit Step 3 — `mint(MintParams)` to NonfungiblePositionManager.
+10. Report tokenId and transaction hash.
 
 **tickSpacing by fee tier:**
 | Fee | tickSpacing |
@@ -267,9 +275,10 @@ pancakeswap add-liquidity \
 | 10000 | 200 |
 
 **Notes:**
-- Ticks must be multiples of tickSpacing or the mint will revert.
+- Omit both `--tick-lower` and `--tick-upper` to let the skill auto-select a ±10% range around the current price. Provide both for manual control.
+- Slippage is applied to actual V3-computed deposit amounts, not to desired amounts.
 - Approvals go to NonfungiblePositionManager (not SmartRouter).
-- Use `--dry-run` to preview calldata.
+- Use `--dry-run` to preview calldata without submitting.
 
 ---
 
@@ -283,27 +292,28 @@ Remove liquidity from an existing V3 position. This always performs two steps: `
 pancakeswap remove-liquidity \
   --token-id <nft_id> \
   [--liquidity-pct 100] \
-  [--chain 56|8453] \
+  [--slippage 0.5] \
+  [--chain 56|8453|42161] \
   [--dry-run]
 ```
 
 **Example:**
 ```
-# Remove all liquidity from position #1234
+# Remove all liquidity from position #1234 on BSC
 pancakeswap remove-liquidity --token-id 1234 --chain 56
 
-# Remove 50% liquidity from position #1234
-pancakeswap remove-liquidity --token-id 1234 --liquidity-pct 50 --chain 56
+# Remove 50% liquidity from position #345455 on Arbitrum with 1% slippage
+pancakeswap remove-liquidity --token-id 345455 --liquidity-pct 50 --slippage 1.0 --chain 42161
 ```
 
 **Execution flow:**
 
-1. Fetch position data via `eth_call` to verify ownership and current liquidity.
-2. Warn the user if the position is out-of-range (only one token will be returned).
-3. Present the full plan (liquidity to remove, position details).
-4. Ask user to confirm before proceeding.
-5. After user confirmation, submit Step 1 — `decreaseLiquidity` via `onchainos wallet contract-call` to NonfungiblePositionManager. This credits tokens back to the position but does NOT transfer them.
-6. After user confirmation, submit Step 2 — `collect` via `onchainos wallet contract-call` to NonfungiblePositionManager. This transfers the credited tokens to your wallet.
+1. Fetch position data (pair, tick range, liquidity) via `eth_call` on NonfungiblePositionManager.
+2. Fetch current pool price via `slot0()`.
+3. **Slippage minimums**: compute expected token amounts using V3 liquidity math (based on current sqrtPrice, tick range, and liquidity to remove), then apply slippage tolerance. This ensures sandwich protection even when `tokensOwed = 0` (new positions with no accrued fees).
+4. Present the full plan (expected out, min amounts, owed fees).
+5. Submit Step 1 — `decreaseLiquidity` to NonfungiblePositionManager. Credits tokens back to the position but does NOT transfer them.
+6. Submit Step 2 — `collect` to NonfungiblePositionManager. Transfers the credited tokens to the wallet.
 7. Report amounts received and transaction hashes.
 
 **Important:** `decreaseLiquidity` alone does not transfer tokens. The `collect` step is always required to receive them.
@@ -312,29 +322,40 @@ pancakeswap remove-liquidity --token-id 1234 --liquidity-pct 50 --chain 56
 
 ## Contract Addresses
 
-| Contract | BSC (56) | Base (8453) |
-|----------|----------|-------------|
-| SmartRouter | `0x13f4EA83D0bd40E75C8222255bc855a974568Dd4` | `0x678Aa4bF4E210cf2166753e054d5b7c31cc7fa86` |
-| PancakeV3Factory | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` |
-| NonfungiblePositionManager | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` |
-| QuoterV2 | `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997` | `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997` |
+| Contract | BSC (56) | Base (8453) | Arbitrum (42161) |
+|----------|----------|-------------|------------------|
+| SmartRouter | `0x13f4EA83D0bd40E75C8222255bc855a974568Dd4` | `0x678Aa4bF4E210cf2166753e054d5b7c31cc7fa86` | `0x5E325eDA8064b456f4781070C0738d849c824258` |
+| PancakeV3Factory | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` | `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865` |
+| NonfungiblePositionManager | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` |
+| QuoterV2 | `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997` | `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997` | `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997` |
 
 ## Common Token Addresses
 
 ### BSC (Chain 56)
-| Token | Address |
-|-------|---------|
-| WBNB | `0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c` |
-| USDT | `0x55d398326f99059ff775485246999027b3197955` |
+| Symbol | Address |
+|--------|---------|
+| WBNB / BNB | `0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c` |
+| USDT | `0x55d398326f99059fF775485246999027B3197955` |
 | USDC | `0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d` |
 | BUSD | `0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56` |
-| ETH | `0x2170Ed0880ac9A755fd29B2688956BD959F933F8` |
+| WETH / ETH | `0x2170Ed0880ac9A755fd29B2688956BD959F933F8` |
 | CAKE | `0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82` |
 
 ### Base (Chain 8453)
-| Token | Address |
-|-------|---------|
-| WETH | `0x4200000000000000000000000000000000000006` |
-| USDC (native) | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| USDC (bridged) | `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA` |
-| USDbC | `0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA` |
+| Symbol | Address |
+|--------|---------|
+| WETH / ETH | `0x4200000000000000000000000000000000000006` |
+| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| USDT | `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2` |
+| DAI | `0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb` |
+| CBETH | `0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22` |
+
+### Arbitrum (Chain 42161)
+| Symbol | Address |
+|--------|---------|
+| WETH / ETH | `0x82aF49447D8a07e3bd95BD0d56f35241523fBab1` |
+| USDC | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` |
+| USDC.E | `0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8` |
+| USDT | `0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9` |
+| ARB | `0x912CE59144191C1204E64559FE8253a0e49E6548` |
+| WBTC | `0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f` |
