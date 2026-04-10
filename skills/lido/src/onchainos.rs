@@ -105,3 +105,20 @@ pub fn extract_tx_hash(result: &Value) -> &str {
         .or_else(|| result["txHash"].as_str())
         .unwrap_or("pending")
 }
+
+/// Like extract_tx_hash but returns an error if the hash is missing or "pending".
+/// Use this for write operations where a missing hash means the TX was not broadcast.
+pub fn extract_tx_hash_or_err(result: &Value, label: &str) -> anyhow::Result<String> {
+    let hash = result["data"]["txHash"]
+        .as_str()
+        .or_else(|| result["txHash"].as_str())
+        .unwrap_or("pending");
+    if hash == "pending" || hash.is_empty() {
+        anyhow::bail!(
+            "{} transaction was not broadcast (txHash missing). Response: {}",
+            label,
+            result
+        );
+    }
+    Ok(hash.to_string())
+}

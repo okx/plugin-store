@@ -79,7 +79,7 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Step 1: Approve
+    // Step 1: Approve stETH spend — must be mined before step 2 can succeed
     println!("Step 1/2: Approving stETH spend...");
     let approve_result = onchainos::wallet_contract_call(
         chain_id,
@@ -91,10 +91,10 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         args.dry_run,
     )
     .await?;
-    let approve_tx = onchainos::extract_tx_hash(&approve_result);
+    let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result, "Approve")?;
     println!("Approve tx: {}", approve_tx);
 
-    // Step 2: Request withdrawal
+    // Step 2: Request withdrawal (requires approve to be mined first)
     println!("Step 2/2: Submitting withdrawal request...");
     let request_result = onchainos::wallet_contract_call(
         chain_id,
@@ -106,7 +106,7 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
         args.dry_run,
     )
     .await?;
-    let request_tx = onchainos::extract_tx_hash(&request_result);
+    let request_tx = onchainos::extract_tx_hash_or_err(&request_result, "requestWithdrawals")?;
     println!("Request tx: {}", request_tx);
     println!();
     println!("Withdrawal request submitted. You will receive an unstETH NFT (ERC-721).");
