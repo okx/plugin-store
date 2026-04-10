@@ -22,12 +22,12 @@ pub async fn run(args: BalanceArgs) -> anyhow::Result<()> {
     // balanceOf(address)
     let balance_calldata = rpc::calldata_single_address(config::SEL_BALANCE_OF, &address);
     let balance_result =
-        onchainos::eth_call(chain_id, config::STETH_ADDRESS, &balance_calldata)?;
+        onchainos::eth_call(chain_id, config::STETH_ADDRESS, &balance_calldata).await?;
 
     // sharesOf(address)
     let shares_calldata = rpc::calldata_single_address(config::SEL_SHARES_OF, &address);
     let shares_result =
-        onchainos::eth_call(chain_id, config::STETH_ADDRESS, &shares_calldata)?;
+        onchainos::eth_call(chain_id, config::STETH_ADDRESS, &shares_calldata).await?;
 
     println!("=== Lido stETH Balance ===");
     println!("Address: {}", address);
