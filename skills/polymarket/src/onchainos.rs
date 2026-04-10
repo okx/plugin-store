@@ -132,17 +132,14 @@ pub async fn ctf_set_approval_for_all(ctf_addr: &str, operator: &str) -> Result<
     extract_tx_hash(&result)
 }
 
-/// Approve max USDC.e to CTF Exchange. Used before BUY orders.
-pub async fn approve_usdc_max(neg_risk: bool) -> Result<String> {
+/// Approve a bounded USDC.e amount to CTF Exchange. Used before BUY orders.
+/// Approves exactly `amount` (the order's maker_amount raw units) to avoid granting
+/// unlimited spending power to the exchange contract.
+pub async fn approve_usdc(neg_risk: bool, amount: u64) -> Result<String> {
     use crate::config::Contracts;
     let usdc = Contracts::USDC_E;
     let exchange = Contracts::exchange_for(neg_risk);
-    // For true max uint256, we encode manually
-    let spender_padded = pad_address(exchange);
-    let amount_padded = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff".to_string();
-    let calldata = format!("0x095ea7b3{}{}", spender_padded, amount_padded);
-    let result = wallet_contract_call(usdc, &calldata).await?;
-    extract_tx_hash(&result)
+    usdc_approve(usdc, exchange, amount as u128).await
 }
 
 /// Approve CTF tokens for CTF Exchange. Used before SELL orders.

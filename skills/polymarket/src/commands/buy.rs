@@ -7,7 +7,7 @@ use crate::api::{
     OrderBody, OrderRequest,
 };
 use crate::auth::ensure_credentials;
-use crate::onchainos::{approve_usdc_max, get_wallet_address};
+use crate::onchainos::{approve_usdc, get_wallet_address};
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 /// Run the buy command.
@@ -88,8 +88,8 @@ pub async fn run(
     let usdc_needed_raw = to_token_units(usdc_amount);
 
     if allowance_raw < usdc_needed_raw || auto_approve {
-        eprintln!("[polymarket] Approving USDC.e for CTF Exchange...");
-        let tx_hash = approve_usdc_max(neg_risk).await?;
+        eprintln!("[polymarket] Approving {} USDC.e for CTF Exchange...", usdc_amount);
+        let tx_hash = approve_usdc(neg_risk, usdc_needed_raw).await?;
         eprintln!("[polymarket] Approval tx: {}", tx_hash);
     }
 

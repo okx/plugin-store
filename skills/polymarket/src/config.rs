@@ -4,6 +4,7 @@ use std::path::PathBuf;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
+
 /// Persisted API credentials derived via L1 (ClobAuth EIP-712) auth.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Credentials {
@@ -95,74 +96,6 @@ impl Contracts {
             Self::CTF_EXCHANGE
         }
     }
-}
-
-// ─── Local signing key ────────────────────────────────────────────────────────
-
-fn signing_key_path() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".config")
-        .join("polymarket")
-        .join("signing_key.hex")
-}
-
-/// Load or auto-generate a local k256 signing key for Polymarket.
-/// The key is stored at ~/.config/polymarket/signing_key.hex with 0o600 permissions.
-/// This key is used to sign ClobAuth and orders, similar to the Hyperliquid plugin pattern.
-pub fn get_or_create_signing_key() -> Result<k256::ecdsa::SigningKey> {
-    let path = signing_key_path();
-
-    if path.exists() {
-        let hex_str = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading signing key from {}", path.display()))?;
-        let bytes = hex::decode(hex_str.trim())
-            .context("decoding signing key hex")?;
-        let key = k256::ecdsa::SigningKey::from_bytes(bytes.as_slice().into())
-            .context("parsing signing key bytes")?;
-        return Ok(key);
-    }
-
-    // Generate new key from random bytes
-    let mut key_bytes = [0u8; 32];
-    getrandom::getrandom(&mut key_bytes).context("generating random key")?;
-    let key = k256::ecdsa::SigningKey::from_bytes(key_bytes.as_slice().into())
-        .context("creating signing key")?;
-
-    // Persist with restricted permissions
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(&path, hex::encode(key_bytes))
-        .with_context(|| format!("writing signing key to {}", path.display()))?;
-    #[cfg(unix)]
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
-
-    let addr = signing_key_address(&key);
-    eprintln!("[polymarket] Generated new local signing key: {}", addr);
-    eprintln!("[polymarket] Key stored at: {}", path.display());
-
-    Ok(key)
-}
-
-/// Derive the Ethereum address from a k256 signing key.
-pub fn signing_key_address(key: &k256::ecdsa::SigningKey) -> String {
-    use k256::ecdsa::VerifyingKey;
-    use tiny_keccak::{Hasher, Keccak};
-
-    let verifying_key = VerifyingKey::from(key);
-    // Uncompressed public key = 0x04 + 32-byte x + 32-byte y (65 bytes total)
-    let pubkey_bytes = verifying_key
-        .to_encoded_point(false)
-        .as_bytes()
-        .to_vec();
-    // Keccak256 of the 64 uncompressed bytes (skip the 0x04 prefix)
-    let mut hasher = Keccak::v256();
-    let mut hash = [0u8; 32];
-    hasher.update(&pubkey_bytes[1..]);
-    hasher.finalize(&mut hash);
-    // Last 20 bytes = Ethereum address
-    format!("0x{}", hex::encode(&hash[12..]))
 }
 
 /// Base URLs

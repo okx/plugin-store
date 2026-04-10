@@ -75,10 +75,10 @@ If not installed, instruct the user to install the plugin from the plugin store.
 > `list-markets`, `get-market`, and `get-positions` do **not** require onchainos. Skip this step for read-only operations.
 
 ```bash
-onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh
+onchainos --version 2>/dev/null || echo "onchainos not installed"
 ```
 
-If the install script fails, instruct the user to visit https://github.com/okx/onchainos for manual installation.
+If onchainos is not installed, direct the user to https://github.com/okx/onchainos for installation instructions.
 
 ### Step 3 — Connect wallet (required for buy/sell/cancel only)
 

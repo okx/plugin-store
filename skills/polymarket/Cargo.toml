@@ -19,9 +19,5 @@ hmac = "0.12"
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "5"
-k256 = { version = "0.13", features = ["ecdsa"] }
-tiny-keccak = { version = "2", features = ["keccak"] }
 hex = "0.4"
 getrandom = { version = "0.2", features = ["std"] }
-num-bigint = "0.4"
-num-traits = "0.2"
