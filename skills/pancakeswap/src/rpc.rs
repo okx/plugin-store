@@ -167,15 +167,13 @@ pub async fn get_slot0(pool: &str, rpc_url: &str) -> Result<(u128, i32)> {
 
     let sqrt_price = u128::from_str_radix(sqrt_price_hex, 16).unwrap_or(0);
 
-    // tick is int24 (signed), ABI-padded to 32 bytes; check sign bit
-    let tick_u256 = u128::from_str_radix(tick_hex, 16).unwrap_or(0);
-    let tick: i32 = if tick_u256 > (1u128 << 127) {
-        // negative — two's complement from 256-bit
-        let neg = (!tick_u256).wrapping_add(1);
-        -(neg as i32)
-    } else {
-        tick_u256 as i32
-    };
+    // tick is int24, ABI-padded to 32 bytes (64 hex chars) as int256.
+    // Negative ticks have all high bytes set to 0xFF — u128::from_str_radix
+    // would overflow and fall back to 0.  Decode only the last 8 hex chars
+    // (32 bits) and reinterpret as i32, exactly like decode_int24_from_field
+    // in get_position().
+    let low32 = u32::from_str_radix(&tick_hex[56..64], 16).unwrap_or(0);
+    let tick = low32 as i32;
 
     Ok((sqrt_price, tick))
 }
