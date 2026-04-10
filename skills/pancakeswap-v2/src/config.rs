@@ -28,7 +28,7 @@ pub fn chain_config(chain_id: u64) -> anyhow::Result<ChainConfig> {
             router02: "0x8cFe327CEc66d1C090Dd72bd0FF11d690C33a2Eb",
             factory: "0x02a84c1b3BBD7401a5f7fa98a384EBC70bB5749E",
             weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-            rpc_url: "https://arb1.arbitrum.io/rpc",
+            rpc_url: "https://arbitrum-one-rpc.publicnode.com",
             explorer: "https://arbiscan.io",
         }),
         _ => anyhow::bail!("Unsupported chain ID {}. Supported: 56 (BSC), 8453 (Base), 42161 (Arbitrum)", chain_id),

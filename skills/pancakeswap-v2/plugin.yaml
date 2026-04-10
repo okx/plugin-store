@@ -1,7 +1,7 @@
 schema_version: 1
 name: pancakeswap-v2
-version: "0.2.0"
-description: "Swap tokens and provide full-range liquidity on PancakeSwap V2 — the xyk AMM on BSC and Base. Trigger phrases: swap on pancakeswap v2, pancake swap, pcs v2 swap, add liquidity pancakeswap, remove liquidity pancake, pancake amm, pancakeswap v2 quote, check pancake pair."
+version: "0.2.1"
+description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
 author:
   name: skylavis-sky
   github: skylavis-sky
@@ -16,6 +16,7 @@ tags:
   - v2
   - xyk
   - lp
+  - arbitrum
 license: MIT
 
 components:
@@ -29,3 +30,4 @@ build:
 api_calls:
   - "https://bsc-rpc.publicnode.com"
   - "https://base-rpc.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
