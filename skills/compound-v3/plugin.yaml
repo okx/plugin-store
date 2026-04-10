@@ -1,6 +1,6 @@
 schema_version: 1
 name: compound-v3
-version: "0.1.0"
+version: "0.1.1"
 description: "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards"
 author:
   name: skylavis-sky
@@ -26,4 +26,6 @@ api_calls:
   - "https://ethereum.publicnode.com"
   - "https://base-rpc.publicnode.com"
   - "https://arbitrum-one-rpc.publicnode.com"
-  - "https://polygon-rpc.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

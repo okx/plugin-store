@@ -37,7 +37,7 @@ pub fn get_market_config(chain_id: u64, market: &str) -> anyhow::Result<MarketCo
             chain_id: 42161,
             comet_proxy: "0x9c4ec768c28520B50860ea7a15bd7213a9fF58bf",
             rewards_contract: "0x88730d254A2f7e6AC8388c3198aFd694bA9f7fae",
-            base_asset: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+            base_asset: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
             base_asset_decimals: 6,
             base_asset_symbol: "USDC",
             rpc_url: "https://arbitrum-one-rpc.publicnode.com",
@@ -49,7 +49,7 @@ pub fn get_market_config(chain_id: u64, market: &str) -> anyhow::Result<MarketCo
             base_asset: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
             base_asset_decimals: 6,
             base_asset_symbol: "USDC",
-            rpc_url: "https://polygon-rpc.com",
+            rpc_url: "https://polygon-bor-rpc.publicnode.com",
         }),
         _ => anyhow::bail!(
             "Unsupported chain_id={} market={}. Supported: chain 1/8453/42161/137 market usdc",
