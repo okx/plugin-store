@@ -43,7 +43,7 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
 
     // Pre-flight: check isStakingPaused()
     let paused_calldata = format!("0x{}", config::SEL_IS_STAKING_PAUSED);
-    let paused_result = onchainos::eth_call(chain_id, config::STETH_ADDRESS, &paused_calldata)?;
+    let paused_result = onchainos::eth_call(chain_id, config::STETH_ADDRESS, &paused_calldata).await?;
     if let Ok(return_data) = rpc::extract_return_data(&paused_result) {
         let val = rpc::decode_uint256(&return_data).unwrap_or(0);
         if val != 0 {

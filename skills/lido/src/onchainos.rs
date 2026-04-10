@@ -68,7 +68,7 @@ pub async fn wallet_contract_call(
 
 /// Read-only eth_call via direct JSON-RPC to public Ethereum RPC endpoint.
 /// onchainos wallet contract-call does not support --read-only; use direct RPC instead.
-pub fn eth_call(chain_id: u64, to: &str, input_data: &str) -> anyhow::Result<Value> {
+pub async fn eth_call(chain_id: u64, to: &str, input_data: &str) -> anyhow::Result<Value> {
     let rpc_url = match chain_id {
         1 => "https://ethereum.publicnode.com",
         _ => anyhow::bail!("Unsupported chain_id for eth_call: {}", chain_id),
@@ -82,12 +82,14 @@ pub fn eth_call(chain_id: u64, to: &str, input_data: &str) -> anyhow::Result<Val
         ],
         "id": 1
     });
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let resp: Value = client
         .post(rpc_url)
         .json(&body)
-        .send()?
-        .json()?;
+        .send()
+        .await?
+        .json()
+        .await?;
     if let Some(err) = resp.get("error") {
         anyhow::bail!("eth_call RPC error: {}", err);
     }
