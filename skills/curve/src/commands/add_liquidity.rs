@@ -1,7 +1,6 @@
 // commands/add_liquidity.rs — Add liquidity to a Curve pool
 use crate::{api, config, curve_abi, onchainos, rpc};
 use anyhow::Result;
-use tokio::time::{sleep, Duration};
 
 pub async fn run(
     chain_id: u64,
@@ -72,9 +71,8 @@ pub async fn run(
         return Ok(());
     }
 
-    // Approve each token with a non-zero amount
+    // Approve each token with a non-zero amount, waiting for each to confirm on-chain
     if let Some(p) = pool {
-        let mut approved_any = false;
         for (i, coin) in p.coins.iter().enumerate() {
             let amount = amounts[i];
             if amount == 0 {
@@ -96,12 +94,9 @@ pub async fn run(
                 .await?;
                 let ah = onchainos::extract_tx_hash_or_err(&approve_result)?;
                 eprintln!("Approve {} tx: {}", coin.symbol, ah);
-                approved_any = true;
+                // Wait for approve to confirm before proceeding (prevents simulation race condition)
+                onchainos::wait_for_tx(&ah, rpc_url).await?;
             }
-        }
-        if approved_any {
-            // Wait for approvals to confirm before adding liquidity
-            sleep(Duration::from_secs(5)).await;
         }
     }
 
