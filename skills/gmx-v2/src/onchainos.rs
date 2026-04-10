@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::time::{Duration, Instant};
 use serde_json::Value;
 
 /// Resolve the current logged-in wallet address via onchainos wallet balance
@@ -124,6 +125,39 @@ pub async fn wallet_contract_call_with_gas(
         anyhow::bail!("onchainos contract-call failed: {}", err);
     }
     Ok(val)
+}
+
+/// Wait for a transaction to be confirmed (txStatus = SUCCESS or FAIL).
+/// Polls `onchainos wallet history --tx-hash` every 2s up to `timeout_secs`.
+/// Returns Ok(()) on SUCCESS, Err on FAIL or timeout.
+pub fn wait_for_tx(chain_id: u64, tx_hash: &str, address: &str, timeout_secs: u64) -> anyhow::Result<()> {
+    if tx_hash.is_empty() || tx_hash == "pending" {
+        return Ok(());
+    }
+    let chain_str = chain_id.to_string();
+    let deadline = Instant::now() + Duration::from_secs(timeout_secs);
+    eprintln!("Waiting for tx {} to confirm...", tx_hash);
+    loop {
+        let output = Command::new("onchainos")
+            .args(["wallet", "history", "--chain", &chain_str,
+                   "--address", address, "--tx-hash", tx_hash])
+            .output();
+        if let Ok(out) = output {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if let Ok(val) = serde_json::from_str::<Value>(&stdout) {
+                let status = val["data"][0]["txStatus"].as_str().unwrap_or("");
+                match status {
+                    "SUCCESS" => { eprintln!("Tx confirmed."); return Ok(()); }
+                    "FAIL" => anyhow::bail!("Approval transaction failed on-chain: {}", tx_hash),
+                    _ => {}
+                }
+            }
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!("Timeout waiting for tx {} to confirm ({}s)", tx_hash, timeout_secs);
+        }
+        std::thread::sleep(Duration::from_secs(2));
+    }
 }
 
 /// Extract txHash from wallet contract-call response: {"ok":true,"data":{"txHash":"0x..."}}

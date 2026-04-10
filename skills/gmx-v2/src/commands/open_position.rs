@@ -131,6 +131,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
                 ).await?;
                 let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
                 eprintln!("Approval tx: {}", approve_hash);
+                crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
             }
         }
     }
