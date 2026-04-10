@@ -1,7 +1,7 @@
 ---
 name: pancakeswap
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum"
-version: "0.1.0"
+version: "0.2.0"
 author: "GeoGu360"
 tags:
   - dex
