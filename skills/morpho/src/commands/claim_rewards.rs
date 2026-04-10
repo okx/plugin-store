@@ -50,7 +50,7 @@ pub async fn run(
         from,
         None,
         dry_run,
-        true,
+        false,
     ).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 
@@ -84,6 +84,10 @@ async fn fetch_merkl_claims(user: &str, chain_id: u64) -> anyhow::Result<MerklCl
         .await
         .context("Merkl API request failed")?;
 
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        // 404 means no rewards for this user — treat as empty
+        return Ok(MerklClaims { tokens: vec![], claimable: vec![], proofs: vec![] });
+    }
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();

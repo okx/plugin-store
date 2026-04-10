@@ -8,7 +8,7 @@ mod rpc;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "morpho", version = "0.1.0", about = "Supply, borrow and earn yield on Morpho — a permissionless lending protocol")]
+#[command(name = "morpho", version, about = "Supply, borrow and earn yield on Morpho — a permissionless lending protocol")]
 struct Cli {
     /// Chain ID: 1 (Ethereum) or 8453 (Base) — can also be passed per subcommand
     #[arg(long, default_value = "1", global = true)]
@@ -149,6 +149,29 @@ enum Commands {
         dry_run: bool,
     },
 
+    /// Withdraw collateral from a Morpho Blue market
+    WithdrawCollateral {
+        /// Market unique key (bytes32 hex)
+        #[arg(long)]
+        market_id: String,
+
+        /// Human-readable amount of collateral to withdraw (mutually exclusive with --all)
+        #[arg(long)]
+        amount: Option<String>,
+
+        /// Withdraw all collateral
+        #[arg(long)]
+        all: bool,
+
+        /// Chain ID (overrides global --chain)
+        #[arg(long)]
+        chain: Option<u64>,
+
+        /// Simulate without broadcasting (overrides global --dry-run)
+        #[arg(long)]
+        dry_run: bool,
+    },
+
     /// Claim Merkl rewards (P1)
     ClaimRewards {
         /// Chain ID (overrides global --chain)
@@ -206,6 +229,11 @@ async fn main() {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
             commands::supply_collateral::run(&market_id, &amount, chain_id, from, dry_run).await
+        }
+        Commands::WithdrawCollateral { market_id, amount, all, chain, dry_run } => {
+            let chain_id = chain.unwrap_or(global_chain);
+            let dry_run = dry_run || global_dry_run;
+            commands::withdraw_collateral::run(&market_id, amount.as_deref(), all, chain_id, from, dry_run).await
         }
         Commands::ClaimRewards { chain, dry_run } => {
             let chain_id = chain.unwrap_or(global_chain);

@@ -38,11 +38,10 @@ fn encode_market_params(mp: &MarketParamsData) -> String {
 /// supplyCollateral(marketParams, assets, onBehalf, data)
 /// Selector: 0x238d6579
 /// Layout: selector(4) + marketParams(5×32) + assets(32) + onBehalf(32) + data_offset(32) + data_len(32)
-/// data is empty bytes; offset = 0xc0 = 192 (number of bytes after selector before data field)
+/// ABI offset for bytes: total head slots × 32. Head = 5 (mp) + 1 (assets) + 1 (onBehalf) + 1 (offset ptr) = 8 slots → 256 = 0x100
 pub fn encode_supply_collateral(mp: &MarketParamsData, assets: u128, on_behalf: &str) -> String {
-    // Offset for bytes data: after selector we have 7 fixed 32-byte words before the dynamic part
-    // = 5 (marketParams) + 1 (assets) + 1 (onBehalf) = 7 words = 7 * 32 = 224 = 0xe0
-    let data_offset = format!("{:064x}", 7u128 * 32u128);
+    // 8 head slots × 32 bytes = 256 = 0x100
+    let data_offset = format!("{:064x}", 8u128 * 32u128);
     format!(
         "0x238d6579{}{}{}{}{}",
         encode_market_params(mp),
@@ -100,8 +99,8 @@ pub fn encode_repay(
     shares: u128,
     on_behalf: &str,
 ) -> String {
-    // data_offset: 5 (marketParams) + 1 (assets) + 1 (shares) + 1 (onBehalf) = 8 words = 256 = 0x100
-    let data_offset = format!("{:064x}", 8u128 * 32u128);
+    // 9 head slots × 32 = 288 = 0x120: 5 (mp) + assets + shares + onBehalf + offset ptr
+    let data_offset = format!("{:064x}", 9u128 * 32u128);
     format!(
         "0x20b76e81{}{}{}{}{}{}",
         encode_market_params(mp),
@@ -122,7 +121,8 @@ pub fn encode_blue_supply(
     shares: u128,
     on_behalf: &str,
 ) -> String {
-    let data_offset = format!("{:064x}", 8u128 * 32u128);
+    // 9 head slots × 32 = 288 = 0x120: 5 (mp) + assets + shares + onBehalf + offset ptr
+    let data_offset = format!("{:064x}", 9u128 * 32u128);
     format!(
         "0xa99aad89{}{}{}{}{}{}",
         encode_market_params(mp),

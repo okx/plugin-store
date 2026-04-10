@@ -35,6 +35,14 @@ pub async fn run(
     let borrow_assets: u128;
 
     if all {
+        if dry_run {
+            // In dry-run mode, skip live position check — no debt to look up
+            repay_shares = 0;
+            repay_assets = 0;
+            borrow_assets = 0;
+            display_amount = "0 (dry-run)".to_string();
+            eprintln!("[morpho] [dry-run] Repaying all debt (skipping live position check)...");
+        } else {
         // Fetch borrow shares for full repayment via GraphQL positions
         let positions = api::get_user_positions(borrower, chain_id).await?;
         let pos = positions.iter().find(|p| p.market.unique_key == market_id)
@@ -49,6 +57,7 @@ pub async fn run(
         display_amount = calldata::format_amount(borrow_assets, decimals);
 
         eprintln!("[morpho] Repaying all debt ({} {}) using {} shares...", display_amount, symbol, repay_shares);
+        }
     } else {
         let amt_str = amount.context("Must provide --amount or --all")?;
         repay_assets = calldata::parse_amount(amt_str, decimals)?;
@@ -72,8 +81,9 @@ pub async fn run(
     if dry_run {
         eprintln!("[morpho] [dry-run] Would approve: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, loan_token, approve_calldata);
     }
-    let approve_result = onchainos::wallet_contract_call(chain_id, &loan_token, &approve_calldata, from, None, dry_run, true).await?;
+    let approve_result = onchainos::wallet_contract_call(chain_id, &loan_token, &approve_calldata, from, None, dry_run, true).await?;  // --force: approval is a prerequisite step
     let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result)?;
+    onchainos::wait_for_tx(&approve_tx, cfg.rpc_url, chain_id).await?;
 
     // Step 2: repay(marketParams, assets, shares, onBehalf, data)
     let repay_calldata = calldata::encode_repay(&mp, repay_assets, repay_shares, borrower);
@@ -91,7 +101,7 @@ pub async fn run(
         from,
         None,
         dry_run,
-        true,
+        false,
     ).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 

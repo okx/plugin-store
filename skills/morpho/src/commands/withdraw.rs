@@ -49,7 +49,7 @@ pub async fn run(
     }
 
     // Ask user to confirm before executing on-chain
-    let result = onchainos::wallet_contract_call(chain_id, vault, &calldata_hex, from, None, dry_run, true).await?;
+    let result = onchainos::wallet_contract_call(chain_id, vault, &calldata_hex, from, None, dry_run, false).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 
     let output = serde_json::json!({

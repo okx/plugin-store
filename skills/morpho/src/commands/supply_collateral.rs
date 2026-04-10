@@ -36,8 +36,9 @@ pub async fn run(
     if dry_run {
         eprintln!("[morpho] [dry-run] Would approve: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, collateral_token, approve_calldata);
     }
-    let approve_result = onchainos::wallet_contract_call(chain_id, &collateral_token, &approve_calldata, from, None, dry_run, true).await?;
+    let approve_result = onchainos::wallet_contract_call(chain_id, &collateral_token, &approve_calldata, from, None, dry_run, true).await?;  // --force: approval is a prerequisite step
     let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result)?;
+    onchainos::wait_for_tx(&approve_tx, cfg.rpc_url, chain_id).await?;
 
     // Step 2: supplyCollateral(marketParams, assets, onBehalf, data)
     let supply_calldata = calldata::encode_supply_collateral(&mp, raw_amount, supplier);
@@ -54,7 +55,7 @@ pub async fn run(
         from,
         None,
         dry_run,
-        true,
+        false,
     ).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 

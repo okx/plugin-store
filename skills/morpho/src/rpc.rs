@@ -66,20 +66,38 @@ pub async fn erc20_decimals(token: &str, rpc_url: &str) -> anyhow::Result<u8> {
 }
 
 /// Read ERC-20 symbol.
+/// Handles both dynamic string ABI encoding (ERC-20 standard) and bytes32 encoding
+/// used by older tokens (USDC, USDT deployed pre-ERC-20 string standard).
 pub async fn erc20_symbol(token: &str, rpc_url: &str) -> anyhow::Result<String> {
     // symbol() selector = 0x95d89b41
     let hex = eth_call(token, "0x95d89b41", rpc_url).await?;
-    // ABI-decode string: offset(32) + length(32) + data
     let hex_clean = hex.trim_start_matches("0x");
+
+    // bytes32 encoding: exactly 64 hex chars (32 bytes), null-padded ASCII
+    // Used by USDC, USDT, and other tokens deployed before the string standard
+    if hex_clean.len() == 64 {
+        let bytes = hex::decode(hex_clean).unwrap_or_default();
+        let trimmed: Vec<u8> = bytes.into_iter().take_while(|&b| b != 0).collect();
+        if !trimmed.is_empty() {
+            return Ok(String::from_utf8_lossy(&trimmed).to_string());
+        }
+        return Ok("UNKNOWN".to_string());
+    }
+
+    // Dynamic string ABI encoding: offset(32) + length(32) + data
+    // Each ABI slot is 32 bytes = 64 hex chars
+    // [0..64]   = offset pointer (always 0x20)
+    // [64..128] = string byte length (32-byte slot)
+    // [128..]   = string data (padded to 32-byte boundary)
     if hex_clean.len() < 128 {
         return Ok("UNKNOWN".to_string());
     }
-    let len_hex = &hex_clean[64..96];
+    let len_hex = &hex_clean[64..128];
     let len = usize::from_str_radix(len_hex, 16).unwrap_or(0);
     if len == 0 || hex_clean.len() < 128 + len * 2 {
         return Ok("UNKNOWN".to_string());
     }
-    let data_hex = &hex_clean[96..96 + len * 2];
+    let data_hex = &hex_clean[128..128 + len * 2];
     let bytes = hex::decode(data_hex).unwrap_or_default();
     Ok(String::from_utf8_lossy(&bytes).to_string())
 }

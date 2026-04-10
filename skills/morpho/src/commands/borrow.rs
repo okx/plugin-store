@@ -44,7 +44,7 @@ pub async fn run(
         from,
         None,
         dry_run,
-        true,
+        false,
     ).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 

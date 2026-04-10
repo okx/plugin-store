@@ -1,15 +1,17 @@
 use serde_json::Value;
 
 /// Call `onchainos wallet contract-call` and return parsed JSON output.
-/// Set `confirm=true` to append `--force` and broadcast the transaction.
+/// Set `force=true` to append `--force` and broadcast immediately (use only for token approvals).
+/// For main protocol operations (supply, borrow, repay, withdraw, claim), use `force=false` —
+/// onchainos will present the transaction for user confirmation before broadcasting.
 pub async fn wallet_contract_call(
     chain_id: u64,
     to: &str,
     input_data: &str,
     from: Option<&str>,
-    amt: Option<u64>,
+    amt: Option<u128>,
     dry_run: bool,
-    confirm: bool,
+    force: bool,
 ) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
     let mut args = vec![
@@ -43,7 +45,7 @@ pub async fn wallet_contract_call(
         }));
     }
 
-    if confirm {
+    if force {
         args.push("--force");
     }
 
@@ -53,6 +55,32 @@ pub async fn wallet_contract_call(
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(serde_json::from_str(&stdout)?)
+}
+
+/// Poll until a transaction is confirmed on-chain.
+/// Called after approve --force so the main op simulation sees the updated allowance.
+/// Uses chain-aware timeouts: Ethereum mainnet (~12s blocks) polls up to 40s; Base (~2s blocks) polls up to 16s.
+pub async fn wait_for_tx(tx_hash: &str, rpc_url: &str, chain_id: u64) -> anyhow::Result<()> {
+    if tx_hash == "0x0000000000000000000000000000000000000000000000000000000000000000" {
+        return Ok(()); // dry-run stub hash — nothing to wait for
+    }
+    let max_attempts: u32 = if chain_id == 1 { 20 } else { 8 }; // 40s for ETH mainnet, 16s for Base
+    let client = reqwest::Client::new();
+    for _ in 0..max_attempts {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        let body = serde_json::json!({
+            "jsonrpc": "2.0", "method": "eth_getTransactionReceipt",
+            "params": [tx_hash], "id": 1
+        });
+        if let Ok(resp) = client.post(rpc_url).json(&body).send().await {
+            if let Ok(v) = resp.json::<serde_json::Value>().await {
+                if !v["result"].is_null() {
+                    return Ok(());
+                }
+            }
+        }
+    }
+    Ok(()) // proceed anyway after timeout
 }
 
 /// Extract txHash from wallet contract-call response, returning an error if the call failed.
@@ -80,21 +108,21 @@ pub async fn erc20_approve(
     amount: u128,
     from: Option<&str>,
     dry_run: bool,
-    confirm: bool,
 ) -> anyhow::Result<Value> {
     // approve(address,uint256) selector = 0x095ea7b3
     let spender_clean = spender.trim_start_matches("0x");
     let spender_padded = format!("{:0>64}", spender_clean);
     let amount_hex = format!("{:064x}", amount);
     let calldata = format!("0x095ea7b3{}{}", spender_padded, amount_hex);
-    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run, confirm).await
+    // Approvals always use --force: they are prerequisite steps, not the main user action
+    wallet_contract_call(chain_id, token_addr, &calldata, from, None, dry_run, true).await
 }
 
-/// Query wallet balance (supports --output json).
+/// Query wallet balance for the given chain. Returns raw JSON from onchainos.
 pub async fn wallet_balance(chain_id: u64) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
     let output = tokio::process::Command::new("onchainos")
-        .args(["wallet", "balance", "--chain", &chain_str, "--output", "json"])
+        .args(["wallet", "balance", "--chain", &chain_str])
         .output()
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -112,17 +140,19 @@ pub async fn wallet_status() -> anyhow::Result<Value> {
 }
 
 /// Resolve the caller's wallet address: use `from` if provided, otherwise
-/// query the active onchainos wallet via `wallet addresses`.
-pub async fn resolve_wallet(from: Option<&str>, _chain_id: u64) -> anyhow::Result<String> {
+/// query the active onchainos wallet via `wallet addresses --chain <id>`.
+pub async fn resolve_wallet(from: Option<&str>, chain_id: u64) -> anyhow::Result<String> {
     if let Some(addr) = from {
         return Ok(addr.to_string());
     }
+    let chain_str = chain_id.to_string();
     let output = tokio::process::Command::new("onchainos")
-        .args(["wallet", "addresses"])
+        .args(["wallet", "addresses", "--chain", &chain_str])
         .output()
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: Value = serde_json::from_str(&stdout)?;
+    let v: Value = serde_json::from_str(&stdout)
+        .map_err(|e| anyhow::anyhow!("wallet addresses parse error: {}\nraw: {}", e, stdout))?;
     let addr = v["data"]["evm"][0]["address"]
         .as_str()
         .ok_or_else(|| anyhow::anyhow!("Could not determine active EVM wallet address. Ensure onchainos is logged in."))?
