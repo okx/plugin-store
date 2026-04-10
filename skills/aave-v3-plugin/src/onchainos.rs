@@ -108,14 +108,10 @@ pub fn defi_positions(chain_id: u64, wallet_addr: &str) -> anyhow::Result<Value>
 }
 
 /// Resolve a token symbol or address to (contract_address, decimals).
-/// If `asset` is already a 0x-prefixed 42-char hex address, returns it as-is with decimals=18.
-/// Otherwise queries onchainos token search by symbol on the given chain.
+/// For both symbol and address inputs, queries onchainos token search to get actual decimals.
+/// Falls back to decimals=18 only if the token is not found in onchainos.
 pub fn resolve_token(asset: &str, chain_id: u64) -> anyhow::Result<(String, u8)> {
-    // If it already looks like an address, trust it
-    if asset.starts_with("0x") && asset.len() == 42 {
-        let decimals = infer_decimals_from_addr();
-        return Ok((asset.to_lowercase(), decimals));
-    }
+    let is_address = asset.starts_with("0x") && asset.len() == 42;
     let chain_name = chain_id_to_name(chain_id);
     let mut cmd = base_cmd();
     cmd.args(["token", "search", "--query", asset, "--chain", chain_name]);
@@ -124,16 +120,22 @@ pub fn resolve_token(asset: &str, chain_id: u64) -> anyhow::Result<(String, u8)>
     let tokens = result
         .as_array()
         .or_else(|| result.get("data").and_then(|d| d.as_array()))
-        .ok_or_else(|| anyhow::anyhow!("No tokens found for symbol '{}' on chain {}", asset, chain_id))?;
+        .ok_or_else(|| anyhow::anyhow!("No tokens found for '{}' on chain {}", asset, chain_id))?;
 
     let first = tokens.first().ok_or_else(|| {
         anyhow::anyhow!("No token match for '{}' on chain {}", asset, chain_id)
     })?;
 
-    let addr = first["tokenContractAddress"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Missing tokenContractAddress in token search result"))?
-        .to_lowercase();
+    // For address input: use the original address directly (token search confirms it exists);
+    // for symbol input: extract the contract address from search results.
+    let addr = if is_address {
+        asset.to_lowercase()
+    } else {
+        first["tokenContractAddress"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Missing tokenContractAddress in token search result"))?
+            .to_lowercase()
+    };
 
     let decimals = first["decimal"]
         .as_str()
@@ -141,10 +143,6 @@ pub fn resolve_token(asset: &str, chain_id: u64) -> anyhow::Result<(String, u8)>
         .unwrap_or(18);
 
     Ok((addr, decimals))
-}
-
-fn infer_decimals_from_addr() -> u8 {
-    18
 }
 
 /// Public alias for use in dry-run command string formatting.
