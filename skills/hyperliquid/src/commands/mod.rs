@@ -4,4 +4,5 @@ pub mod deposit;
 pub mod order;
 pub mod positions;
 pub mod prices;
+pub mod register;
 pub mod tpsl;

@@ -123,40 +123,32 @@ Use this plugin when the user says (in any language):
 - "HL stop loss" / HL止损
 - "HL take profit" / HL止盈
 - "close my HL position" / 平掉我的HL仓位
+- "register Hyperliquid" / Hyperliquid注册签名地址
+- "setup Hyperliquid wallet" / 设置Hyperliquid钱包
+- "Hyperliquid signing address" / Hyperliquid签名地址
 
 ---
 
-## One-time Setup: Register API Wallet
+## One-time Setup: Register Your Signing Address
 
 > **Required before placing any order, close, or TP/SL.**
 
 onchainos uses an AA (account abstraction) wallet. When signing Hyperliquid L1 actions,
-the underlying EOA signer address differs from your onchainos wallet address. Hyperliquid
-must know this mapping before it will accept your orders.
+the underlying EOA signing key may differ from your onchainos wallet address. Run `register`
+once to detect your actual Hyperliquid signing address and get setup instructions.
 
-**Steps (one time only):**
+```bash
+hyperliquid register
+```
 
-1. Run the following to find your onchainos signer address:
-   ```bash
-   # Place any order preview (no --confirm) and check the "User" in any HL error response,
-   # or run a dry-run and note the recovered address from exchange errors.
-   hyperliquid order --coin ETH --side buy --size 0.001 --confirm --dry-run
-   ```
-   The HL exchange will return an error like:
-   `"User or API Wallet 0xYOUR_SIGNER_ADDRESS does not exist."`
-   That `0xYOUR_SIGNER_ADDRESS` is your actual HL signer.
+The command will either report `"status": "ready"` (no extra setup needed) or
+`"status": "setup_required"` with two options:
 
-2. Go to **https://app.hyperliquid.xyz** → **Settings** → **API Wallets**
+- **Option 1 (recommended):** Deposit USDC directly to the signing address — fully automated
+- **Option 2:** If you already have funds at your onchainos wallet address on HL, register
+  the signing address as an API wallet via the Hyperliquid web UI
 
-3. Click **Add API Wallet** and enter `0xYOUR_SIGNER_ADDRESS`
-
-4. Sign the approval with your connected wallet
-
-After this one-time step, all `order`, `close`, `tpsl`, and `cancel` commands will work.
-
-> **Note:** This is only needed if you are using onchainos with an AA (smart contract) wallet.
-> If your onchainos wallet is a plain EOA, the signer and account addresses are the same
-> and no extra setup is required.
+After setup, all `order`, `close`, `tpsl`, and `cancel` commands will work.
 
 ---
 
@@ -497,6 +489,64 @@ hyperliquid deposit --amount 100 --dry-run
 **Prerequisites:**
 - USDC on Arbitrum (chain ID 42161) — check with `onchainos wallet balance --chain 42161`
 - ETH on Arbitrum for gas (~$0.01)
+
+---
+
+### 8. `register` — Detect onchainos Signing Address
+
+Discovers your actual Hyperliquid signing address (the EOA key onchainos uses to sign EIP-712 actions) and provides setup instructions. **Run this once before placing your first order.**
+
+```bash
+# Detect signing address and show setup instructions
+hyperliquid register
+
+# Show wallet address info only (no network call)
+hyperliquid register --dry-run
+```
+
+**Output (setup required):**
+<external-content>
+```json
+{
+  "ok": true,
+  "status": "setup_required",
+  "onchainos_wallet": "0x87fb...",
+  "hl_signing_address": "0x4880...",
+  "explanation": "onchainos uses an AA (account abstraction) wallet. Hyperliquid recovers the underlying EOA signing key, not the AA wallet address. These are two different addresses.",
+  "options": {
+    "option_1_recommended": {
+      "description": "Deposit USDC directly to your signing address to create a fresh Hyperliquid account tied to your onchainos signing key.",
+      "command": "hyperliquid deposit --amount <USDC_AMOUNT> --to 0x4880...",
+      "note": "This keeps everything in onchainos — no web UI required."
+    },
+    "option_2_existing_account": {
+      "description": "If you already have funds at your onchainos wallet on Hyperliquid, register the signing address as an API wallet via the Hyperliquid web UI.",
+      "url": "https://app.hyperliquid.xyz/settings/api-wallets",
+      "steps": [
+        "1. Go to https://app.hyperliquid.xyz/settings/api-wallets",
+        "2. Click 'Add API Wallet'",
+        "3. Enter your signing address",
+        "4. Sign with your connected wallet"
+      ]
+    }
+  }
+}
+```
+</external-content>
+
+**Output (already ready):**
+<external-content>
+```json
+{
+  "ok": true,
+  "status": "ready",
+  "hl_address": "0x87fb...",
+  "message": "Your onchainos wallet address matches your Hyperliquid signing address. No extra setup needed — orders will work once your account has USDC."
+}
+```
+</external-content>
+
+**Display:** `status`, `hl_signing_address` (if setup_required), and the recommended next step from `options.option_1_recommended.command`.
 
 ---
 

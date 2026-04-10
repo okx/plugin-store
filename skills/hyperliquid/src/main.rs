@@ -13,6 +13,7 @@ use commands::{
     order::OrderArgs,
     positions::PositionsArgs,
     prices::PricesArgs,
+    register::RegisterArgs,
     tpsl::TpslArgs,
 };
 
@@ -43,6 +44,8 @@ enum Commands {
     Cancel(CancelArgs),
     /// Deposit USDC from Arbitrum to Hyperliquid via the official bridge
     Deposit(DepositArgs),
+    /// Detect your onchainos signing address on Hyperliquid and show setup instructions
+    Register(RegisterArgs),
 }
 
 #[tokio::main]
@@ -56,5 +59,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::Tpsl(args) => commands::tpsl::run(args).await,
         Commands::Cancel(args) => commands::cancel::run(args).await,
         Commands::Deposit(args) => commands::deposit::run(args).await,
+        Commands::Register(args) => commands::register::run(args).await,
     }
 }
