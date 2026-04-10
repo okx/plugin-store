@@ -41,7 +41,11 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
 
     let spacing = crate::config::tick_spacing(args.fee)?;
 
-    // Resolve tick range: use provided values or auto-compute ±10% around current pool price
+    // Resolve tick range + fetch pool slot0 (needed for both auto-tick and slippage math)
+    let pool = crate::rpc::get_pool_address(cfg.factory, token0, token1, args.fee, cfg.rpc_url).await
+        .map_err(|e| anyhow::anyhow!("Could not find pool (fee {}, chain {}): {}. Try specifying --tick-lower and --tick-upper manually.", args.fee, args.chain, e))?;
+    let (sqrt_price_x96, current_tick) = crate::rpc::get_slot0(&pool, cfg.rpc_url).await?;
+
     let (tick_lower, tick_upper) = match (args.tick_lower, args.tick_upper) {
         (Some(tl), Some(tu)) => {
             if tl % spacing != 0 || tu % spacing != 0 {
@@ -56,13 +60,9 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
             (tl, tu)
         }
         (None, None) => {
-            // Auto-compute: fetch current tick from pool, build ±10% price range.
-            // ±10% in price ≈ ±953 ticks (log(1.1)/log(1.0001)), rounded to 1000 for simplicity.
-            let pool = crate::rpc::get_pool_address(cfg.factory, token0, token1, args.fee, cfg.rpc_url).await
-                .map_err(|e| anyhow::anyhow!("Could not find pool (fee {}, chain {}): {}. Try specifying --tick-lower and --tick-upper manually.", args.fee, args.chain, e))?;
-            let (_sqrt_price, current_tick) = crate::rpc::get_slot0(&pool, cfg.rpc_url).await?;
+            // Auto-compute: ±10% price range ≈ ±1000 ticks, aligned to tickSpacing.
             let range = 1000i32.max(spacing * 20);
-            // Use Euclidean division so negative ticks round toward −∞ (correct tick alignment)
+            // Euclidean division so negative ticks round toward −∞ (correct alignment)
             let tl = (current_tick - range).div_euclid(spacing) * spacing;
             let tu = (current_tick + range).div_euclid(spacing) * spacing;
             println!("Auto tick range: {} to {} (current tick: {}, ±{} ticks)", tl, tu, current_tick, range);
@@ -71,11 +71,18 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
         _ => anyhow::bail!("Provide both --tick-lower and --tick-upper, or omit both for auto ±10% range."),
     };
 
-    // Apply slippage to minimums using integer arithmetic (avoids f64 precision loss on large wei values)
-    // slippage is in percent (e.g. 1.0 means 1%), convert to bps (100 bps)
+    // Compute actual deposit amounts using V3 math, then apply slippage to those.
+    // V3 deposits the optimal ratio for current price — applying slippage to the
+    // desired amounts produces incorrect (too-tight) minimums and causes reverts.
+    let (actual0, actual1) = crate::rpc::amounts_for_add_liquidity(
+        sqrt_price_x96, tick_lower, tick_upper, current_tick,
+        amount0_desired, amount1_desired,
+    );
     let slippage_bps = (args.slippage * 100.0) as u128;
-    let amount0_min = amount0_desired.saturating_mul(10000 - slippage_bps) / 10000;
-    let amount1_min = amount1_desired.saturating_mul(10000 - slippage_bps) / 10000;
+    let amount0_min = actual0.saturating_mul(10000 - slippage_bps) / 10000;
+    let amount1_min = actual1.saturating_mul(10000 - slippage_bps) / 10000;
+    println!("Expected deposit: {} {} / {} {} → min: {} / {} ({}% slippage)",
+        actual0, sym0, actual1, sym1, amount0_min, amount1_min, args.slippage);
 
     // Deadline: 20 minutes from now
     let deadline = std::time::SystemTime::now()

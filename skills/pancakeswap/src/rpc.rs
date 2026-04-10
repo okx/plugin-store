@@ -299,6 +299,45 @@ pub async fn get_token_ids_for_owner(
 
 // ── V3 liquidity math ─────────────────────────────────────────────────────────
 
+/// Compute the actual amounts that will be deposited when minting a V3 position.
+///
+/// V3 deposits the optimal ratio for the current price — NOT necessarily the full
+/// desired amounts. One token will be fully consumed; the other may be partially used.
+/// Slippage minimums must be applied to THESE actual amounts, not to desired amounts.
+///
+/// Algorithm mirrors NonfungiblePositionManager._addLiquidity():
+///   L = min(L_from_amount0, L_from_amount1)
+///   actual amounts are then re-derived from L and current sqrtPrice.
+pub fn amounts_for_add_liquidity(
+    sqrt_price_x96: u128,
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_current: i32,
+    amount0_desired: u128,
+    amount1_desired: u128,
+) -> (u128, u128) {
+    let sqrt_p = sqrt_price_x96 as f64 / (1u128 << 96) as f64;
+    let sqrt_a = tick_to_sqrt_price(tick_lower);
+    let sqrt_b = tick_to_sqrt_price(tick_upper);
+
+    if tick_current < tick_lower {
+        // Position entirely in token0
+        (amount0_desired, 0)
+    } else if tick_current >= tick_upper {
+        // Position entirely in token1
+        (0, amount1_desired)
+    } else {
+        // In-range: compute L from each desired amount, take min
+        let l_from_0 = amount0_desired as f64 * sqrt_p * sqrt_b / (sqrt_b - sqrt_p);
+        let l_from_1 = amount1_desired as f64 / (sqrt_p - sqrt_a);
+        let l = l_from_0.min(l_from_1);
+
+        let actual0 = l * (sqrt_b - sqrt_p) / (sqrt_p * sqrt_b);
+        let actual1 = l * (sqrt_p - sqrt_a);
+        (actual0 as u128, actual1 as u128)
+    }
+}
+
 /// Compute the actual token amounts held by a V3 position given the current pool price.
 ///
 /// Uses f64 arithmetic (sufficient for slippage bound estimation — we only need
