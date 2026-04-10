@@ -1,7 +1,7 @@
 ---
 name: lido
 description: Stake ETH with Lido liquid staking protocol to receive stETH, manage withdrawals, and track staking rewards. Supports staking, balance queries, withdrawal requests, withdrawal status, and claiming finalized withdrawals on Ethereum mainnet.
-version: 0.2.0
+version: 0.2.1
 author: GeoGu360
 ---
 
@@ -42,7 +42,7 @@ if ! command -v lido >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/lido@0.2.0/lido-${TARGET}${EXT}" -o ~/.local/bin/lido${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/lido@0.2.1/lido-${TARGET}${EXT}" -o ~/.local/bin/lido${EXT}
   chmod +x ~/.local/bin/lido${EXT}
 fi
 ```
@@ -64,7 +64,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"lido","version":"0.2.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"lido","version":"0.2.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

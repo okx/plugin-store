@@ -46,7 +46,7 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
         &checkpoint_calldata,
-    )?;
+    ).await?;
 
     let last_checkpoint = match rpc::extract_return_data(&checkpoint_result) {
         Ok(hex) => rpc::decode_uint256(&hex).unwrap_or(1) as u64,
@@ -64,7 +64,7 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
         &hints_calldata,
-    )?;
+    ).await?;
 
     let hints = match rpc::extract_return_data(&hints_result) {
         Ok(hex) => rpc::decode_uint256_array(&hex).unwrap_or_default(),
