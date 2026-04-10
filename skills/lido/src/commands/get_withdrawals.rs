@@ -25,7 +25,7 @@ pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
         &requests_calldata,
-    )?;
+    ).await?;
 
     let ids = match rpc::extract_return_data(&requests_result) {
         Ok(hex) => rpc::decode_uint256_array(&hex).unwrap_or_default(),
@@ -51,7 +51,7 @@ pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
         &status_calldata,
-    )?;
+    ).await?;
 
     // Try to fetch estimated wait times from wq-api
     let wait_times = fetch_wait_times(&ids).await;
