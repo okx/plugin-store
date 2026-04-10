@@ -209,6 +209,8 @@ polymarket buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-
 
 **Amount encoding:** USDC.e amounts are 6-decimal (multiply by 1,000,000 internally). Price must be rounded to tick size (typically 0.01).
 
+> ⚠️ **Market order slippage**: When `--price` is omitted, the order is a FOK (fill-or-kill) market order that fills at the best available price from the order book. On low-liquidity markets or large order sizes, this price may be significantly worse than the mid-price. Recommend using `--price` (limit order) for amounts above $10 to control slippage.
+
 **Output fields:** `order_id`, `status` (live/matched/unmatched), `condition_id`, `outcome`, `token_id`, `side`, `order_type`, `limit_price`, `usdc_amount`, `shares`, `tx_hashes`
 
 **Example:**
@@ -241,6 +243,8 @@ polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price 
 **On-chain ops:** If CTF token allowance is insufficient, runs `onchainos wallet contract-call --chain 137 --to <CTF> --input-data <setApprovalForAll_calldata> --force` automatically.
 
 **Output fields:** `order_id`, `status`, `condition_id`, `outcome`, `token_id`, `side`, `order_type`, `limit_price`, `shares`, `usdc_out`, `tx_hashes`
+
+> ⚠️ **Market order slippage**: When `--price` is omitted, the order is a FOK market order that fills at the best available bid. On thin markets, the received price may be well below mid. Use `--price` for any sell above a few shares to avoid slippage.
 
 **Example:**
 ```

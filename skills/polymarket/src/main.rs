@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(
     name = "polymarket",
-    version = "0.1.0",
+    version = "0.2.0",
     about = "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon (chain 137)"
 )]
 struct Cli {
