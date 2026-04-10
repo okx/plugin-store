@@ -165,6 +165,8 @@ pancakeswap swap \
   [--dry-run]
 ```
 
+> **User confirmation required**: Always ask the user to confirm swap details before submitting any transaction.
+
 **Execution flow:**
 
 1. Fetch token metadata (decimals, symbol) via `eth_call`.
