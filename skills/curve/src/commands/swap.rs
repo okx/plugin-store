@@ -1,7 +1,6 @@
 // commands/swap.rs — Execute a swap via Curve pool exchange()
 use crate::{api, config, curve_abi, onchainos, rpc};
 use anyhow::Result;
-use tokio::time::{sleep, Duration};
 
 /// Determine whether a pool uses uint256 or int128 indices.
 /// Factory v2 (CryptoSwap, tricrypto) pools use uint256; classic StableSwap pools use int128.
@@ -118,7 +117,7 @@ pub async fn run(
             .await?;
             let approve_hash = onchainos::extract_tx_hash_or_err(&approve_result)?;
             eprintln!("Approve tx: {}", approve_hash);
-            sleep(Duration::from_secs(3)).await;
+            onchainos::wait_for_tx(&approve_hash, rpc_url).await?;
         }
     }
 
