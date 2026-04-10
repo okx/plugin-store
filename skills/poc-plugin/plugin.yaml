@@ -1,0 +1,3 @@
+name: poc-plugin
+version: 1.0.0
+description: "PoC for pull_request_target execution validation"
