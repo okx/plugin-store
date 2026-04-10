@@ -439,7 +439,7 @@
     },
     {
       "name": "pancakeswap",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Swap tokens and manage liquidity on PancakeSwap V3",
       "author": {
         "name": "GeoGu360"
