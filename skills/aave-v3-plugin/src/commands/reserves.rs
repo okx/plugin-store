@@ -58,16 +58,22 @@ pub async fn run(
     let mut reserves: Vec<Value> = Vec::new();
 
     for addr in &reserve_addresses {
-        // Apply address filter if specified
+        // Fetch symbol first so we can filter by it
+        let symbol = rpc::get_erc20_symbol(addr, cfg.rpc_url).await.unwrap_or_default();
+
+        // Apply filter: match by address (0x...) or symbol (case-insensitive)
         if let Some(filter) = asset_filter {
-            if filter.starts_with("0x") && !addr.eq_ignore_ascii_case(filter) {
+            if filter.starts_with("0x") {
+                if !addr.eq_ignore_ascii_case(filter) {
+                    continue;
+                }
+            } else if !symbol.eq_ignore_ascii_case(filter) {
                 continue;
             }
         }
 
         // Call Pool.getReserveData(address asset) — selector 0x35ea6a75
-        // Returns DataTypes.ReserveData packed struct; APY rates at slots 2 and 4.
-        match get_reserve_data_from_pool(&pool_addr, addr, cfg.rpc_url).await {
+        match get_reserve_data_from_pool(&pool_addr, addr, &symbol, cfg.rpc_url).await {
             Ok(reserve_data) => {
                 reserves.push(reserve_data);
             }
@@ -93,6 +99,7 @@ pub async fn run(
 async fn get_reserve_data_from_pool(
     pool_addr: &str,
     asset_addr: &str,
+    symbol: &str,
     rpc_url: &str,
 ) -> anyhow::Result<Value> {
     // getReserveData(address asset) → selector 0x35ea6a75
@@ -116,6 +123,7 @@ async fn get_reserve_data_from_pool(
     let variable_borrow_rate = decode_ray_to_apy_pct(raw, 4)?;
 
     Ok(json!({
+        "symbol": symbol,
         "underlyingAsset": asset_addr,
         "supplyApy": format!("{:.4}%", liquidity_rate),
         "variableBorrowApy": format!("{:.4}%", variable_borrow_rate)

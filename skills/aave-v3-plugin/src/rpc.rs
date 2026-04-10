@@ -244,6 +244,23 @@ pub async fn get_allowance(
     decode_u128_at(raw, 0)
 }
 
+/// Get ERC-20 token symbol: token.symbol()
+/// Function selector: symbol() -> 0x95d89b41
+pub async fn get_erc20_symbol(token_addr: &str, rpc_url: &str) -> anyhow::Result<String> {
+    let hex_result = eth_call(rpc_url, token_addr, "0x95d89b41").await?;
+    let raw = strip_0x(&hex_result);
+    // ABI-encoded string: offset(32) + length(32) + data(padded)
+    if raw.len() < 128 {
+        return Ok(String::new());
+    }
+    let len = usize::from_str_radix(&raw[64..128], 16).unwrap_or(0);
+    if len == 0 || raw.len() < 128 + len * 2 {
+        return Ok(String::new());
+    }
+    let bytes = hex::decode(&raw[128..128 + len * 2]).unwrap_or_default();
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 fn strip_0x(s: &str) -> &str {
