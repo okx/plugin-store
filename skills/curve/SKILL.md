@@ -335,7 +335,7 @@ curve --chain <chain_id> [--dry-run] remove-liquidity --pool <pool_address> [--l
 - `--pool` — Pool contract address
 - `--lp-amount` — LP tokens to redeem (default: full wallet balance)
 - `--coin-index` — Coin index for single-coin withdrawal (omit for proportional)
-- `--min-amounts` — Minimum amounts to receive (default: 0)
+- `--min-amounts` — Minimum amounts to receive (default: 0); pass as many values as pool coins (2, 3, or 4)
 - `--wallet` — Sender address
 
 **Execution flow:**
@@ -368,10 +368,14 @@ curve --chain 42161 remove-liquidity --pool <2pool_addr> --min-amounts "0,0"
 | `No LP token balance` | Wallet has no LP in that pool | Check `get-balances` first |
 | `Cannot determine wallet address` | Not logged in to onchainos | Run `onchainos wallet login` |
 | `txHash: pending` | Transaction not broadcast | `--force` flag is applied automatically for write ops |
+| `execution reverted` on quote/swap | Wrong pool selected (duplicate low-TVL pool) | Fixed in v0.2.0: pools are now sorted by TVL so the deepest pool is always selected |
+| `Unsupported pool coin count: 4` | 4-coin pool used with remove-liquidity | Fixed in v0.2.0: 4-coin proportional withdrawal now supported |
+| `transferFrom reverted` on approve | Approval broadcast before prior tx confirmed | Fixed in v0.2.0: `wait_for_tx` polls receipt before main op |
 
 ## Security Notes
 
 - Pool addresses are fetched from the official Curve API (`api.curve.finance`) only — never from user input
 - ERC-20 allowance is checked before each approve to avoid duplicate transactions
+- ⚠️ ERC-20 approvals use `--force` and broadcast immediately without an onchainos confirmation prompt — this is required so the main swap/liquidity op simulation sees the updated allowance
 - Price impact > 5% triggers a warning; handle in agent before calling `swap`
 - Use `--dry-run` to preview all write operations before execution
