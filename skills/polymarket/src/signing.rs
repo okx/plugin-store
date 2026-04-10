@@ -45,8 +45,8 @@ fn ctf_exchange_domain_sep(verifying_contract: &str) -> Result<[u8; 32]> {
     let type_hash = keccak256(
         b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
     );
-    // Polymarket CTF Exchange on-chain domain name is "ClobAuthDomain"
-    let name_hash = keccak256(b"ClobAuthDomain");
+    // Polymarket CTF Exchange on-chain domain name (verified via contract domainSeparator())
+    let name_hash = keccak256(b"Polymarket CTF Exchange");
     let version_hash = keccak256(b"1");
 
     let contract_bytes = hex::decode(
@@ -131,9 +131,9 @@ pub fn sign_clob_auth(
 
 /// Parameters for a Polymarket limit order.
 pub struct OrderParams {
-    pub salt: u128,
-    pub maker: String,      // onchainos wallet address (holds USDC.e)
-    pub signer: String,     // local signing key address (operator)
+    pub salt: u64,
+    pub maker: String,      // Polymarket proxy wallet address (holds USDC.e / outcome tokens)
+    pub signer: String,     // onchainos wallet address (approved operator of proxy wallet)
     pub taker: String,
     pub token_id: String,
     pub maker_amount: u64,
@@ -143,6 +143,64 @@ pub struct OrderParams {
     pub fee_rate_bps: u64,
     pub side: u8,           // 0=BUY, 1=SELL
     pub signature_type: u8, // 0=EOA
+}
+
+/// Sign a Polymarket order EIP-712 via `onchainos sign-message --type eip712`.
+///
+/// Builds a complete EIP-712 structured data JSON with EIP712Domain in `types`
+/// (required for correct hash computation — per Hyperliquid root-cause finding).
+pub async fn sign_order_via_onchainos(order: &OrderParams, neg_risk: bool) -> anyhow::Result<String> {
+    use crate::config::Contracts;
+    let verifying_contract = Contracts::exchange_for(neg_risk);
+
+    let json = serde_json::to_string(&serde_json::json!({
+        "types": {
+            "EIP712Domain": [
+                {"name": "name", "type": "string"},
+                {"name": "version", "type": "string"},
+                {"name": "chainId", "type": "uint256"},
+                {"name": "verifyingContract", "type": "address"}
+            ],
+            "Order": [
+                {"name": "salt", "type": "uint256"},
+                {"name": "maker", "type": "address"},
+                {"name": "signer", "type": "address"},
+                {"name": "taker", "type": "address"},
+                {"name": "tokenId", "type": "uint256"},
+                {"name": "makerAmount", "type": "uint256"},
+                {"name": "takerAmount", "type": "uint256"},
+                {"name": "expiration", "type": "uint256"},
+                {"name": "nonce", "type": "uint256"},
+                {"name": "feeRateBps", "type": "uint256"},
+                {"name": "side", "type": "uint8"},
+                {"name": "signatureType", "type": "uint8"}
+            ]
+        },
+        "primaryType": "Order",
+        "domain": {
+            "name": "Polymarket CTF Exchange",
+            "version": "1",
+            "chainId": 137,
+            "verifyingContract": verifying_contract
+        },
+        "message": {
+            "salt": order.salt.to_string(),
+            "maker": order.maker,
+            "signer": order.signer,
+            "taker": order.taker,
+            "tokenId": order.token_id,
+            "makerAmount": order.maker_amount.to_string(),
+            "takerAmount": order.taker_amount.to_string(),
+            "expiration": order.expiration.to_string(),
+            "nonce": order.nonce.to_string(),
+            "feeRateBps": order.fee_rate_bps.to_string(),
+            "side": order.side,
+            "signatureType": order.signature_type
+        }
+    }))
+    .expect("Order EIP-712 JSON serialization failed");
+
+    crate::onchainos::sign_eip712(&json).await
 }
 
 /// Sign a Polymarket order EIP-712 with the local signing key.
@@ -170,8 +228,8 @@ uint256 nonce,uint256 feeRateBps,uint8 side,uint8 signatureType)",
 
     // uint256 salt
     let mut slot = [0u8; 32];
-    let salt_bytes = order.salt.to_be_bytes(); // 16 bytes
-    slot[16..].copy_from_slice(&salt_bytes);
+    let salt_bytes = order.salt.to_be_bytes(); // 8 bytes
+    slot[24..].copy_from_slice(&salt_bytes);
     struct_buf.extend_from_slice(&slot);
 
     // address maker

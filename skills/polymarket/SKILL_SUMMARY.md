@@ -2,10 +2,10 @@
 # polymarket -- Skill Summary
 
 ## Overview
-This skill enables trading on Polymarket prediction markets through Polygon. Users can browse markets, buy/sell YES/NO outcome tokens, manage positions, and cancel orders. The plugin uses local EIP-712 signing for order authentication and automatically handles USDC.e approvals for trades. All market data comes from Polymarket's CLOB, Gamma, and Data APIs.
+This skill enables trading on Polymarket prediction markets through Polygon. Users can browse markets, buy/sell YES/NO and categorical outcome tokens, manage positions, and cancel orders. The plugin uses the onchainos wallet for EIP-712 order signing and automatically handles USDC.e approvals for trades. All market data comes from Polymarket's CLOB, Gamma, and Data APIs.
 
 ## Usage
-Install the plugin and connect your wallet to Polygon (chain 137). Trading commands auto-generate local credentials on first use. Browse markets with `list-markets`, place orders with `buy`/`sell`, and monitor positions with `get-positions`.
+Install the plugin and connect your onchainos wallet to Polygon (chain 137). API credentials are auto-derived from the wallet on first use. Browse markets with `list-markets`, place orders with `buy`/`sell`, and monitor positions with `get-positions`.
 
 ## Commands
 | Command | Description |

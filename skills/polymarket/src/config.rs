@@ -11,9 +11,12 @@ pub struct Credentials {
     pub secret: String,
     pub passphrase: String,
     pub nonce: u64,
-    /// Ethereum address of the local signing key used to derive these credentials.
+    /// Ethereum address of the onchainos wallet used to derive these credentials.
     #[serde(default)]
     pub signing_address: String,
+    /// Polymarket proxy wallet address (maker for orders). Populated after polymarket.com onboarding.
+    #[serde(default)]
+    pub proxy_wallet: Option<String>,
 }
 
 impl Credentials {
