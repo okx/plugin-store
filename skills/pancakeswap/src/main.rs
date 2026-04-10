@@ -26,7 +26,7 @@ enum Commands {
         /// Human-readable input amount (e.g. "1.5")
         #[arg(long)]
         amount: String,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
     },
@@ -45,7 +45,7 @@ enum Commands {
         /// Slippage tolerance in percent (e.g. 0.5 = 0.5%)
         #[arg(long, default_value = "0.5")]
         slippage: f64,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
         /// Preview transactions without submitting
@@ -64,7 +64,7 @@ enum Commands {
         /// Second token address
         #[arg(long)]
         token1: String,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
     },
@@ -74,7 +74,7 @@ enum Commands {
         /// Wallet address to query
         #[arg(long)]
         owner: String,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
     },
@@ -105,7 +105,7 @@ enum Commands {
         /// Slippage tolerance in percent (e.g. 1.0 = 1%)
         #[arg(long, default_value = "1.0")]
         slippage: f64,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
         /// Preview transactions without submitting
@@ -127,7 +127,7 @@ enum Commands {
         /// Slippage tolerance in percent for minimum amounts out (e.g. 0.5 = 0.5%)
         #[arg(long, default_value = "0.5")]
         slippage: f64,
-        /// Chain ID (56 = BSC, 8453 = Base)
+        /// Chain ID (56 = BSC, 8453 = Base, 42161 = Arbitrum)
         #[arg(long, default_value = "56")]
         chain: u64,
         /// Preview transactions without submitting
