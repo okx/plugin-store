@@ -1,8 +1,0 @@
-{
-  "name": "rust-cli-inspector",
-  "description": "Rust CLI querying ETH price via Onchain OS",
-  "version": "1.1.0",
-  "author": {"name": "yz06276"},
-  "license": "MIT",
-  "keywords": ["rust", "onchainos", "eth"]
-}
