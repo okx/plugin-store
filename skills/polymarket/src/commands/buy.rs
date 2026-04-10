@@ -2,14 +2,13 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_buy_worst_price, get_balance_allowance, get_clob_market, get_orderbook,
+    compute_buy_worst_price, get_balance_allowance, get_clob_market, get_market_fee, get_orderbook,
     get_tick_size, post_order, round_amount_down, round_price, round_size_down, to_token_units,
     OrderBody, OrderRequest,
 };
 use crate::auth::ensure_credentials;
-use crate::config::{get_or_create_signing_key, signing_key_address};
-use crate::onchainos::{approve_usdc_max, ensure_operator_approval, get_wallet_address};
-use crate::signing::{sign_order, OrderParams};
+use crate::onchainos::{approve_usdc_max, get_wallet_address};
+use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 /// Run the buy command.
 pub async fn run(
@@ -40,25 +39,23 @@ pub async fn run(
 
     let client = Client::new();
 
-    // Load/generate local signing key and derive its address
-    let signing_key = get_or_create_signing_key()?;
-    let signer_addr = signing_key_address(&signing_key);
+    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
+    let signer_addr = get_wallet_address().await?;
 
-    // Resolve onchainos wallet (holds USDC.e)
-    let wallet_addr = get_wallet_address().await?;
+    // Derive API credentials for the onchainos wallet
+    let creds = ensure_credentials(&client, &signer_addr).await?;
 
-    // Ensure local signing key is approved as operator for the onchainos wallet
-    ensure_operator_approval(&wallet_addr, &signer_addr, false).await?;
-
-    // Get/derive credentials via local signing key (no onchainos EIP-712)
-    let creds = ensure_credentials(&client, &signing_key).await?;
+    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
+    // No proxy wallet or polymarket.com onboarding required.
+    let maker_addr = signer_addr.clone();
 
     // Resolve market
     let (condition_id, token_id, neg_risk) =
         resolve_market_token(&client, market_id, outcome).await?;
 
-    // Get tick size
+    // Get tick size and market fee rate
     let tick_size = get_tick_size(&client, &token_id).await?;
+    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
 
     // Parse USDC amount
     let usdc_amount: f64 = amount.parse().context("invalid amount")?;
@@ -71,7 +68,11 @@ pub async fn run(
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
         }
-        round_price(p, tick_size)
+        let rp = round_price(p, tick_size);
+        if rp <= 0.0 || rp >= 1.0 {
+            bail!("price {p} rounds to {rp} with tick size {tick_size} — out of range (0, 1)");
+        }
+        rp
     } else {
         let book = get_orderbook(&client, &token_id).await?;
         compute_buy_worst_price(&book.asks, usdc_amount)
@@ -79,14 +80,11 @@ pub async fn run(
     };
 
     // Check USDC allowance and auto-approve if needed
+    use crate::config::Contracts;
+    let exchange_addr = Contracts::exchange_for(neg_risk);
     let allowance_info =
         get_balance_allowance(&client, &signer_addr, &creds, "COLLATERAL", None).await?;
-    let allowance_raw = allowance_info
-        .allowance
-        .as_deref()
-        .unwrap_or("0")
-        .parse::<u64>()
-        .unwrap_or(0);
+    let allowance_raw = allowance_info.allowance_for(exchange_addr);
     let usdc_needed_raw = to_token_units(usdc_amount);
 
     if allowance_raw < usdc_needed_raw || auto_approve {
@@ -106,24 +104,24 @@ pub async fn run(
 
     let params = OrderParams {
         salt,
-        maker: wallet_addr.clone(), // onchainos wallet holds USDC.e
-        signer: signer_addr.clone(), // local key signs the order
+        maker: maker_addr.clone(),    // EOA mode: maker = signer = onchainos wallet
+        signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
         maker_amount: maker_amount_raw,
         taker_amount: taker_amount_raw,
         expiration: 0,
         nonce: 0,
-        fee_rate_bps: 0,
+        fee_rate_bps,
         side: 0, // BUY
         signature_type: 0, // EOA
     };
 
-    let signature = sign_order(&signing_key, &params, neg_risk)?;
+    let signature = sign_order_via_onchainos(&params, neg_risk).await?;
 
     let order_body = OrderBody {
-        salt: salt.to_string(),
-        maker: wallet_addr.clone(),
+        salt,  // serialized as JSON number per clob-client spec
+        maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
@@ -131,7 +129,7 @@ pub async fn run(
         taker_amount: taker_amount_raw.to_string(),
         expiration: "0".to_string(),
         nonce: "0".to_string(),
-        fee_rate_bps: "0".to_string(),
+        fee_rate_bps: fee_rate_bps.to_string(),
         side: "BUY".to_string(),
         signature_type: 0,
         signature,
@@ -172,25 +170,23 @@ pub async fn run(
 }
 
 /// Resolve (condition_id, token_id, neg_risk) from a market_id and outcome string.
+/// Supports any outcome label (e.g. "yes", "no", "trump", "republican", "option-a").
 pub async fn resolve_market_token(
     client: &Client,
     market_id: &str,
     outcome: &str,
 ) -> Result<(String, String, bool)> {
+    let outcome_lower = outcome.to_lowercase();
     if market_id.starts_with("0x") || market_id.starts_with("0X") {
         let market = get_clob_market(client, market_id).await?;
-        let is_yes = outcome.to_lowercase() == "yes";
         let token = market
             .tokens
             .iter()
-            .find(|t| {
-                if is_yes {
-                    t.outcome.to_lowercase() == "yes"
-                } else {
-                    t.outcome.to_lowercase() == "no"
-                }
-            })
-            .ok_or_else(|| anyhow::anyhow!("Could not find {} token in market", outcome))?;
+            .find(|t| t.outcome.to_lowercase() == outcome_lower)
+            .ok_or_else(|| {
+                let available: Vec<&str> = market.tokens.iter().map(|t| t.outcome.as_str()).collect();
+                anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, available)
+            })?;
         Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk))
     } else {
         let gamma = crate::api::get_gamma_market_by_slug(client, market_id).await?;
@@ -200,17 +196,12 @@ pub async fn resolve_market_token(
             .ok_or_else(|| anyhow::anyhow!("No condition_id in Gamma market response"))?;
         let token_ids = gamma.token_ids();
         let outcomes = gamma.outcome_list();
-        let is_yes = outcome.to_lowercase() == "yes";
         let idx = outcomes
             .iter()
-            .position(|o| {
-                if is_yes {
-                    o.to_lowercase() == "yes"
-                } else {
-                    o.to_lowercase() == "no"
-                }
-            })
-            .ok_or_else(|| anyhow::anyhow!("Could not find {} outcome in market", outcome))?;
+            .position(|o| o.to_lowercase() == outcome_lower)
+            .ok_or_else(|| {
+                anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, outcomes)
+            })?;
         let token_id = token_ids
             .get(idx)
             .cloned()
@@ -219,8 +210,12 @@ pub async fn resolve_market_token(
     }
 }
 
-fn rand_salt() -> u128 {
-    let mut bytes = [0u8; 16];
+/// Generate a random salt within JavaScript's safe integer range (< 2^53).
+/// The clob-client sends salt as a JSON number (Number.parseInt), so we must
+/// ensure no precision loss on the server side.
+fn rand_salt() -> u64 {
+    let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");
-    u128::from_le_bytes(bytes)
+    // Mask to 53 bits = 0x1FFFFFFFFFFFFF
+    u64::from_le_bytes(bytes) & 0x001F_FFFF_FFFF_FFFF
 }

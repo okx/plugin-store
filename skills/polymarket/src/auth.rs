@@ -1,19 +1,64 @@
 /// Polymarket authentication helpers.
 ///
-/// L1: ClobAuth EIP-712 signed with local k256 key → derive API keys
+/// L1: ClobAuth EIP-712 signed via `onchainos sign-message --type eip712` → derive API keys
 /// L2: HMAC-SHA256 request signing with stored credentials
+///
+/// EIP712Domain MUST be included in the `types` field of the structured data JSON for
+/// onchainos to compute the hash correctly (root cause from Hyperliquid investigation).
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose, Engine as _};
 use hmac::{Hmac, Mac};
-use k256::ecdsa::SigningKey;
 use reqwest::Client;
 use serde::Deserialize;
 use sha2::Sha256;
 
-use crate::config::{save_credentials, signing_key_address, Credentials, Urls};
-use crate::signing::sign_clob_auth;
+use crate::config::{save_credentials, Credentials, Urls};
+use crate::onchainos::sign_eip712;
 
-// ─── L1: ClobAuth EIP-712 ────────────────────────────────────────────────────
+// ─── L1: ClobAuth EIP-712 via onchainos ──────────────────────────────────────
+
+/// Build the EIP-712 structured data JSON for a ClobAuth message.
+/// Includes EIP712Domain in `types` — required by onchainos sign-message.
+fn build_clob_auth_json(wallet_addr: &str, timestamp: u64, nonce: u64) -> String {
+    serde_json::to_string(&serde_json::json!({
+        "types": {
+            "EIP712Domain": [
+                {"name": "name", "type": "string"},
+                {"name": "version", "type": "string"},
+                {"name": "chainId", "type": "uint256"}
+            ],
+            "ClobAuth": [
+                {"name": "address", "type": "address"},
+                {"name": "timestamp", "type": "string"},
+                {"name": "nonce", "type": "uint256"},
+                {"name": "message", "type": "string"}
+            ]
+        },
+        "primaryType": "ClobAuth",
+        "domain": {
+            "name": "ClobAuthDomain",
+            "version": "1",
+            "chainId": 137
+        },
+        "message": {
+            "address": wallet_addr,
+            "timestamp": timestamp.to_string(),
+            "nonce": nonce,
+            "message": "This message attests that I control the given wallet"
+        }
+    }))
+    .expect("ClobAuth JSON serialization failed")
+}
+
+/// Sign a ClobAuth EIP-712 message via the onchainos wallet.
+/// Returns (signature, timestamp, nonce).
+async fn sign_clob_auth_onchainos(wallet_addr: &str, nonce: u64) -> Result<(String, u64, u64)> {
+    let timestamp = chrono::Utc::now().timestamp() as u64;
+    let json = build_clob_auth_json(wallet_addr, timestamp, nonce);
+    let signature = sign_eip712(&json).await
+        .context("ClobAuth EIP-712 signing via onchainos failed")?;
+    Ok((signature, timestamp, nonce))
+}
 
 /// Build L1 HTTP headers from a ClobAuth signature.
 pub fn l1_headers(address: &str, sig: &str, timestamp: u64, nonce: u64) -> Vec<(String, String)> {
@@ -39,7 +84,6 @@ pub fn hmac_signature(
     path: &str,
     body: &str,
 ) -> Result<String> {
-    // Polymarket secrets may or may not have base64 padding; normalize before decoding
     let padded = match secret_b64url.len() % 4 {
         2 => format!("{}==", secret_b64url),
         3 => format!("{}=", secret_b64url),
@@ -54,7 +98,6 @@ pub fn hmac_signature(
     let mut mac = HmacSha256::new_from_slice(&secret_bytes).context("creating HMAC")?;
     mac.update(message.as_bytes());
     let result = mac.finalize().into_bytes();
-    // py-clob-client uses base64.urlsafe_b64encode which includes padding
     Ok(general_purpose::URL_SAFE.encode(result))
 }
 
@@ -87,16 +130,15 @@ pub struct ApiKeyResponse {
     pub api_key: String,
     pub secret: String,
     pub passphrase: String,
+    /// Proxy wallet returned by Polymarket when the account has been set up via polymarket.com.
+    #[serde(rename = "proxyWallet", default)]
+    pub proxy_wallet: Option<String>,
 }
 
-/// Create new API keys using L1 auth with local signing key.
-pub async fn create_api_key(
-    client: &Client,
-    signing_key: &SigningKey,
-    nonce: u64,
-) -> Result<Credentials> {
-    let (address, sig, timestamp, nonce_used) = sign_clob_auth(signing_key, nonce)?;
-    let headers = l1_headers(&address, &sig, timestamp, nonce_used);
+/// Create new API keys using L1 auth with onchainos wallet.
+pub async fn create_api_key(client: &Client, wallet_addr: &str, nonce: u64) -> Result<Credentials> {
+    let (sig, timestamp, nonce_used) = sign_clob_auth_onchainos(wallet_addr, nonce).await?;
+    let headers = l1_headers(wallet_addr, &sig, timestamp, nonce_used);
 
     let mut req = client.post(format!("{}/auth/api-key", Urls::CLOB));
     for (k, v) in &headers {
@@ -116,20 +158,17 @@ pub async fn create_api_key(
         secret: api_key_resp.secret,
         passphrase: api_key_resp.passphrase,
         nonce,
-        signing_address: address,
+        signing_address: wallet_addr.to_string(),
+        proxy_wallet: api_key_resp.proxy_wallet,
     };
     save_credentials(&creds)?;
     Ok(creds)
 }
 
 /// Derive existing API keys using L1 auth + same nonce.
-pub async fn derive_api_key(
-    client: &Client,
-    signing_key: &SigningKey,
-    nonce: u64,
-) -> Result<Credentials> {
-    let (address, sig, timestamp, _) = sign_clob_auth(signing_key, nonce)?;
-    let headers = l1_headers(&address, &sig, timestamp, nonce);
+pub async fn derive_api_key(client: &Client, wallet_addr: &str, nonce: u64) -> Result<Credentials> {
+    let (sig, timestamp, _) = sign_clob_auth_onchainos(wallet_addr, nonce).await?;
+    let headers = l1_headers(wallet_addr, &sig, timestamp, nonce);
 
     let mut req = client.get(format!("{}/auth/derive-api-key", Urls::CLOB));
     for (k, v) in &headers {
@@ -149,17 +188,16 @@ pub async fn derive_api_key(
         secret: api_key_resp.secret,
         passphrase: api_key_resp.passphrase,
         nonce,
-        signing_address: address,
+        signing_address: wallet_addr.to_string(),
+        proxy_wallet: api_key_resp.proxy_wallet,
     };
     save_credentials(&creds)?;
     Ok(creds)
 }
 
-/// Load stored credentials or auto-derive them using the local signing key.
-pub async fn ensure_credentials(
-    client: &Client,
-    signing_key: &SigningKey,
-) -> Result<Credentials> {
+/// Load stored credentials or auto-derive them using the onchainos wallet.
+/// Re-derives if the cached credentials were for a different wallet address.
+pub async fn ensure_credentials(client: &Client, wallet_addr: &str) -> Result<Credentials> {
     // Check environment variables first
     let env_key = std::env::var("POLYMARKET_API_KEY").unwrap_or_default();
     let env_secret = std::env::var("POLYMARKET_SECRET").unwrap_or_default();
@@ -171,19 +209,23 @@ pub async fn ensure_credentials(
             secret: env_secret,
             passphrase: env_pass,
             nonce: 0,
-            signing_address: signing_key_address(signing_key),
+            signing_address: wallet_addr.to_string(),
+            proxy_wallet: None,
         });
     }
 
-    // Try loading from file
+    // Try loading from file — only use if it matches the current wallet
     if let Some(creds) = crate::config::load_credentials()? {
-        return Ok(creds);
+        if creds.signing_address.to_lowercase() == wallet_addr.to_lowercase() {
+            return Ok(creds);
+        }
+        eprintln!("[polymarket] Wallet address changed, re-deriving API credentials...");
     }
 
-    // Auto-derive via local signing key (no onchainos EIP-712 needed)
-    eprintln!("[polymarket] Deriving API keys from local signing key...");
-    match derive_api_key(client, signing_key, 0).await {
+    // Auto-derive via onchainos wallet EIP-712 signing
+    eprintln!("[polymarket] Deriving API credentials for wallet {}...", wallet_addr);
+    match derive_api_key(client, wallet_addr, 0).await {
         Ok(c) => Ok(c),
-        Err(_) => create_api_key(client, signing_key, 0).await,
+        Err(_) => create_api_key(client, wallet_addr, 0).await,
     }
 }

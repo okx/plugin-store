@@ -209,7 +209,8 @@ pub struct OrderRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OrderBody {
-    pub salt: String,
+    /// salt is serialized as a JSON number (not string) per clob-client spec
+    pub salt: u64,
     pub maker: String,
     pub signer: String,
     pub taker: String,
@@ -249,7 +250,26 @@ pub struct OrderResponse {
 pub struct BalanceAllowance {
     pub asset_address: Option<String>,
     pub balance: Option<String>,
+    /// singular allowance (older API format)
     pub allowance: Option<String>,
+    /// plural allowances map (newer API format: {exchange_addr: amount})
+    #[serde(default)]
+    pub allowances: std::collections::HashMap<String, String>,
+}
+
+impl BalanceAllowance {
+    /// Get the allowance for a specific exchange address, checking both formats.
+    pub fn allowance_for(&self, exchange_addr: &str) -> u64 {
+        // Check the plural allowances map first (newer format)
+        let addr_lower = exchange_addr.to_lowercase();
+        for (k, v) in &self.allowances {
+            if k.to_lowercase() == addr_lower {
+                return v.parse().unwrap_or(0);
+            }
+        }
+        // Fall back to singular allowance field (older format)
+        self.allowance.as_deref().unwrap_or("0").parse().unwrap_or(0)
+    }
 }
 
 // ─── CLOB API calls ───────────────────────────────────────────────────────────
@@ -274,13 +294,27 @@ pub async fn get_orderbook(client: &Client, token_id: &str) -> Result<OrderBook>
         .context("parsing order book response")
 }
 
+/// Fetch the market's maker_base_fee (in basis points) from CLOB market data.
+/// Returns 0 if not found.
+pub async fn get_market_fee(client: &Client, condition_id: &str) -> Result<u64> {
+    let url = format!("{}/markets/{}", Urls::CLOB, condition_id);
+    let v: Value = client.get(&url).send().await?.json().await?;
+    let fee = v["maker_base_fee"]
+        .as_u64()
+        .or_else(|| v["maker_base_fee"].as_str().and_then(|s| s.parse().ok()))
+        .unwrap_or(0);
+    Ok(fee)
+}
+
 pub async fn get_tick_size(client: &Client, token_id: &str) -> Result<f64> {
     let url = format!("{}/tick-size?token_id={}", Urls::CLOB, token_id);
     let v: Value = client.get(&url).send().await?.json().await?;
-    let s = v["minimum_tick_size"]
-        .as_str()
-        .unwrap_or("0.01");
-    Ok(s.parse().unwrap_or(0.01))
+    // minimum_tick_size may be a JSON number or a JSON string
+    let tick = v["minimum_tick_size"]
+        .as_f64()
+        .or_else(|| v["minimum_tick_size"].as_str().and_then(|s| s.parse().ok()))
+        .unwrap_or(0.01);
+    Ok(tick)
 }
 
 pub async fn get_price(client: &Client, token_id: &str, side: &str) -> Result<String> {
@@ -302,13 +336,14 @@ pub async fn get_balance_allowance(
     asset_type: &str,
     token_id: Option<&str>,
 ) -> Result<BalanceAllowance> {
-    let mut path = format!(
-        "/balance-allowance?asset_type={}&signature_type=0",
-        asset_type
-    );
-    if let Some(tid) = token_id {
-        path.push_str(&format!("&token_id={}", tid));
-    }
+    let query = if let Some(tid) = token_id {
+        format!("?asset_type={}&signature_type=0&token_id={}", asset_type, tid)
+    } else {
+        format!("?asset_type={}&signature_type=0", asset_type)
+    };
+    // Polymarket CLOB HMAC signing uses only the base path (without query params)
+    let hmac_path = "/balance-allowance";
+    let full_path = format!("{}{}", hmac_path, query);
 
     let headers = l2_headers(
         address,
@@ -316,11 +351,11 @@ pub async fn get_balance_allowance(
         &creds.secret,
         &creds.passphrase,
         "GET",
-        &path,
+        hmac_path,
         "",
     )?;
 
-    let url = format!("{}{}", Urls::CLOB, path);
+    let url = format!("{}{}", Urls::CLOB, full_path);
     let mut req = client.get(&url);
     for (k, v) in &headers {
         req = req.header(k.as_str(), v.as_str());
@@ -535,6 +570,22 @@ pub async fn get_gamma_market_by_slug(client: &Client, slug: &str) -> Result<Gam
     }
 
     Ok(parsed)
+}
+
+// ─── Profile / proxy wallet ───────────────────────────────────────────────────
+
+/// Fetch the Polymarket proxy wallet address for a given signer address.
+/// Calls `GET /profile?user=<address>` on the CLOB API.
+/// Returns None if the user has not completed polymarket.com onboarding.
+pub async fn get_proxy_wallet(client: &Client, signer_addr: &str) -> Result<Option<String>> {
+    let url = format!("{}/profile?user={}", Urls::CLOB, signer_addr);
+    let v: Value = client.get(&url).send().await?.json().await
+        .context("parsing profile response")?;
+    let proxy = v["proxyWallet"]
+        .as_str()
+        .or_else(|| v["proxy_wallet"].as_str())
+        .map(|s| s.to_string());
+    Ok(proxy)
 }
 
 // ─── Data API calls ───────────────────────────────────────────────────────────

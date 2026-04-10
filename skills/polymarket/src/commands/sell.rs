@@ -2,20 +2,20 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_sell_worst_price, get_balance_allowance, get_orderbook, get_tick_size, post_order,
-    round_amount_down, round_price, round_size_down, to_token_units, OrderBody, OrderRequest,
+    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook, get_tick_size,
+    post_order, round_amount_down, round_price, round_size_down, to_token_units, OrderBody,
+    OrderRequest,
 };
 use crate::auth::ensure_credentials;
-use crate::config::{get_or_create_signing_key, signing_key_address};
-use crate::onchainos::{approve_ctf, ensure_operator_approval, get_wallet_address};
-use crate::signing::{sign_order, OrderParams};
+use crate::onchainos::{approve_ctf, get_wallet_address};
+use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 use super::buy::resolve_market_token;
 
 /// Run the sell command.
 ///
 /// market_id: condition_id (0x-prefixed) or slug
-/// outcome: "yes" or "no"
+/// outcome: outcome label, case-insensitive (e.g. "yes", "no", "trump")
 /// shares: number of token shares to sell (human-readable)
 /// price: limit price in [0, 1], or None for market order (FOK)
 pub async fn run(
@@ -47,15 +47,20 @@ pub async fn run(
 
     let client = Client::new();
 
-    let signing_key = get_or_create_signing_key()?;
-    let signer_addr = signing_key_address(&signing_key);
-    let wallet_addr = get_wallet_address().await?;
-    ensure_operator_approval(&wallet_addr, &signer_addr, false).await?;
-    let creds = ensure_credentials(&client, &signing_key).await?;
+    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
+    let signer_addr = get_wallet_address().await?;
+
+    // Derive API credentials for the onchainos wallet
+    let creds = ensure_credentials(&client, &signer_addr).await?;
+
+    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
+    // No proxy wallet or polymarket.com onboarding required.
+    let maker_addr = signer_addr.clone();
 
     let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
 
     let tick_size = get_tick_size(&client, &token_id).await?;
+    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
 
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
     if share_amount <= 0.0 {
@@ -67,7 +72,11 @@ pub async fn run(
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
         }
-        round_price(p, tick_size)
+        let rp = round_price(p, tick_size);
+        if rp <= 0.0 || rp >= 1.0 {
+            bail!("price {p} rounds to {rp} with tick size {tick_size} — out of range (0, 1)");
+        }
+        rp
     } else {
         let book = get_orderbook(&client, &token_id).await?;
         compute_sell_worst_price(&book.bids, share_amount)
@@ -90,7 +99,9 @@ pub async fn run(
     }
 
     // Check CTF token allowance and auto-approve if needed
-    let allowance_raw = token_balance.allowance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
+    use crate::config::Contracts;
+    let exchange_addr = Contracts::exchange_for(neg_risk);
+    let allowance_raw = token_balance.allowance_for(exchange_addr);
     if allowance_raw < shares_needed_raw || auto_approve {
         eprintln!("[polymarket] Approving CTF tokens for CTF Exchange...");
         let tx_hash = approve_ctf(neg_risk).await?;
@@ -101,7 +112,6 @@ pub async fn run(
     let rounded_shares = round_size_down(share_amount);
     let maker_amount_raw = to_token_units(rounded_shares); // shares to sell
 
-    // taker_amount = shares * price (USDC.e to receive)
     let usdc_out = rounded_shares * limit_price;
     let rounded_usdc = round_amount_down(usdc_out, tick_size);
     let taker_amount_raw = to_token_units(rounded_usdc);
@@ -110,7 +120,7 @@ pub async fn run(
 
     let params = OrderParams {
         salt,
-        maker: wallet_addr.clone(),
+        maker: maker_addr.clone(),    // EOA mode: maker = signer = onchainos wallet
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
@@ -118,16 +128,16 @@ pub async fn run(
         taker_amount: taker_amount_raw,
         expiration: 0,
         nonce: 0,
-        fee_rate_bps: 0,
+        fee_rate_bps,
         side: 1, // SELL
         signature_type: 0,
     };
 
-    let signature = sign_order(&signing_key, &params, neg_risk)?;
+    let signature = sign_order_via_onchainos(&params, neg_risk).await?;
 
     let order_body = OrderBody {
-        salt: salt.to_string(),
-        maker: wallet_addr.clone(),
+        salt,  // serialized as JSON number per clob-client spec
+        maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
@@ -135,7 +145,7 @@ pub async fn run(
         taker_amount: taker_amount_raw.to_string(),
         expiration: "0".to_string(),
         nonce: "0".to_string(),
-        fee_rate_bps: "0".to_string(),
+        fee_rate_bps: fee_rate_bps.to_string(),
         side: "SELL".to_string(),
         signature_type: 0,
         signature,
@@ -177,8 +187,9 @@ pub async fn run(
     Ok(())
 }
 
-fn rand_salt() -> u128 {
-    let mut bytes = [0u8; 16];
+/// Generate a random salt within JavaScript's safe integer range (< 2^53).
+fn rand_salt() -> u64 {
+    let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");
-    u128::from_le_bytes(bytes)
+    u64::from_le_bytes(bytes) & 0x001F_FFFF_FFFF_FFFF
 }

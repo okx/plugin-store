@@ -7,7 +7,7 @@ Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on
 - Sell existing positions with limit or market orders
 - View open positions with real-time P&L tracking
 - Cancel individual or bulk orders
-- Auto-generates local signing keys for trading
+- Uses onchainos wallet for EIP-712 signing — no separate key setup required
 - Supports both regular and negative risk markets
 - Direct integration with Polymarket CLOB API
 
