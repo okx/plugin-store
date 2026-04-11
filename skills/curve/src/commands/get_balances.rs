@@ -1,14 +1,6 @@
-// commands/get_balances.rs — Query user LP token balances across Curve pools via Multicall3
-use crate::{api, config, onchainos, rpc};
+// commands/get_balances.rs — Query user LP token balances across Curve pools
+use crate::{api, config, multicall, onchainos, rpc};
 use anyhow::Result;
-
-/// Max pools per Multicall3 batch (~88 KB calldata each, safe for public nodes).
-const BATCH_SIZE: usize = 200;
-
-/// Minimum LP balance to show — filters out Curve's 1-wei and 64-wei pool
-/// initialization seeds that appear as "positions" for every factory pool.
-/// Any real deposit produces orders of magnitude more LP tokens than this.
-const MIN_LP_BALANCE: u128 = 1_000_000;
 
 pub async fn run(chain_id: u64, wallet: Option<String>) -> Result<()> {
     let chain_name = config::chain_name(chain_id);
@@ -20,54 +12,80 @@ pub async fn run(chain_id: u64, wallet: Option<String>) -> Result<()> {
         None => {
             let w = onchainos::resolve_wallet(chain_id)?;
             if w.is_empty() {
-                anyhow::bail!(
-                    "Cannot determine wallet address. Pass --wallet or ensure onchainos is logged in."
-                );
+                anyhow::bail!("Cannot determine wallet address. Pass --wallet or ensure onchainos is logged in.");
             }
             w
         }
     };
 
-    // Fetch all pools from Curve API
+    // Fetch all pools
     let pools = api::get_all_pools(chain_name).await?;
-    // For older Curve v1 pools, the LP token is a separate contract (lpTokenAddress).
-    // For factory/crypto pools the LP token IS the pool address.
-    let lp_addrs: Vec<&str> = pools
+
+    // Round 1 — Multicall: pool.token() for every pool to get LP token addresses.
+    // Factory-crypto pools have a separate LP token contract; others return pool address or fail.
+    let token_calls: Vec<(String, Vec<u8>)> = pools
         .iter()
-        .map(|p| {
-            p.lp_token_address
-                .as_deref()
-                .filter(|s| !s.is_empty())
-                .unwrap_or(&p.address)
+        .map(|p| (p.address.clone(), hex::decode("fc0c546a").unwrap()))
+        .collect();
+    let token_results = multicall::batch_call(token_calls, rpc_url)
+        .await
+        .unwrap_or_default();
+
+    let lp_tokens: Vec<String> = pools
+        .iter()
+        .zip(token_results.iter())
+        .map(|(pool, res)| match res {
+            Some(data) => multicall::decode_address(data, &pool.address),
+            None => pool.address.clone(),
         })
         .collect();
 
-    // Batch balanceOf via Multicall3: N sequential calls → ceil(N/200) calls
-    let mut all_balances: Vec<u128> = Vec::with_capacity(pools.len());
-    for chunk in lp_addrs.chunks(BATCH_SIZE) {
-        let balances = rpc::multicall_balance_of(chunk, &wallet_addr, rpc_url)
-            .await
-            .unwrap_or_else(|_| vec![0u128; chunk.len()]);
-        all_balances.extend(balances);
-    }
+    // Round 2 — Multicall: balanceOf(wallet) for every LP token.
+    let wallet_clean = wallet_addr.trim_start_matches("0x");
+    let mut wallet_word = vec![0u8; 32];
+    let wb = hex::decode(wallet_clean).unwrap_or_default();
+    wallet_word[32 - wb.len()..].copy_from_slice(&wb);
 
-    // Collect pools where LP balance > 0
+    let balance_calls: Vec<(String, Vec<u8>)> = lp_tokens
+        .iter()
+        .map(|lp| {
+            let mut cd = hex::decode("70a08231").unwrap();
+            cd.extend_from_slice(&wallet_word);
+            (lp.clone(), cd)
+        })
+        .collect();
+    let balance_results = multicall::batch_call(balance_calls, rpc_url)
+        .await
+        .unwrap_or_default();
+
+    // Build positions (only pools with non-zero LP balance)
     let mut positions = Vec::new();
-    for (pool, balance) in pools.iter().zip(all_balances.iter()) {
-        if *balance >= MIN_LP_BALANCE {
-            let coins: Vec<_> = pool.coins.iter().map(|c| c.symbol.as_str()).collect();
-            // All Curve LP tokens use 18 decimals
-            let lp_human = format!("{:.6}", *balance as f64 / 1e18);
-            positions.push(serde_json::json!({
-                "pool_id": pool.id,
-                "pool_name": pool.name,
-                "pool_address": pool.address,
-                "coins": coins,
-                "lp_balance": lp_human,
-                "lp_balance_raw": balance.to_string(),
-                "tvl_usd": pool.usd_total
-            }));
+    for ((pool, lp_token), bal_res) in pools
+        .iter()
+        .zip(lp_tokens.iter())
+        .zip(balance_results.iter())
+    {
+        let balance = bal_res
+            .as_deref()
+            .map(multicall::decode_u128)
+            .unwrap_or(0);
+        if balance == 0 {
+            continue;
         }
+        // decimals() only for pools we actually hold — usually 0–2 calls
+        let dec = rpc::decimals(lp_token, rpc_url).await;
+        let lp_balance = balance as f64 / 10f64.powi(dec as i32);
+        let coins: Vec<_> = pool.coins.iter().map(|c| c.symbol.as_str()).collect();
+        positions.push(serde_json::json!({
+            "pool_id": pool.id,
+            "pool_name": pool.name,
+            "pool_address": pool.address,
+            "lp_token_address": lp_token,
+            "coins": coins,
+            "lp_balance": format!("{:.6}", lp_balance),
+            "lp_balance_raw": balance.to_string(),
+            "tvl_usd": pool.usd_total
+        }));
     }
 
     println!(

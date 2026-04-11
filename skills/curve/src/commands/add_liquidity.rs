@@ -1,6 +1,6 @@
 // commands/add_liquidity.rs — Add liquidity to a Curve pool
 use crate::{api, config, curve_abi, onchainos, rpc};
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 pub async fn run(
     chain_id: u64,
@@ -71,21 +71,11 @@ pub async fn run(
         return Ok(());
     }
 
-    // ETH sentinel address used by Curve for native ETH coins
-    const ETH_SENTINEL: &str = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-
-    // Approve each ERC-20 token; skip native ETH (no approve needed)
-    // and accumulate any ETH amount to pass as msg.value
-    let mut eth_value: u128 = 0;
+    // Approve each token with a non-zero amount; wait for each approve to confirm before next
     if let Some(p) = pool {
         for (i, coin) in p.coins.iter().enumerate() {
             let amount = amounts[i];
             if amount == 0 {
-                continue;
-            }
-            // Native ETH: no approve, pass as msg.value
-            if coin.address.to_lowercase() == ETH_SENTINEL {
-                eth_value += amount;
                 continue;
             }
             let allowance = rpc::get_allowance(&coin.address, &wallet_addr, &pool_address, rpc_url)
@@ -103,21 +93,22 @@ pub async fn run(
                 )
                 .await?;
                 let ah = onchainos::extract_tx_hash_or_err(&approve_result)?;
-                eprintln!("Approve {} tx: {}", coin.symbol, ah);
-                // Wait for approve to confirm before proceeding (prevents simulation race condition)
-                onchainos::wait_for_tx(&ah, rpc_url, chain_id).await?;
+                eprintln!("Approve {} tx: {} — waiting for confirmation...", coin.symbol, ah);
+                onchainos::wait_for_tx(chain_id, ah.clone(), wallet_addr.clone())
+                    .await
+                    .with_context(|| format!("Approve {} tx did not confirm in time", coin.symbol))?;
+                eprintln!("Approve {} confirmed.", coin.symbol);
             }
         }
     }
 
-    // Execute add_liquidity — pass ETH as msg.value if pool contains native ETH
-    let amt = if eth_value > 0 { Some(eth_value as u64) } else { None };
+    // Execute add_liquidity — requires --force
     let result = onchainos::wallet_contract_call(
         chain_id,
         &pool_address,
         &calldata,
         Some(&wallet_addr),
-        amt,
+        None,
         true,  // --force required
         false,
     )

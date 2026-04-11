@@ -2,47 +2,13 @@
 use std::process::Command;
 use serde_json::Value;
 
-/// Resolve active wallet EVM address via `onchainos wallet addresses --chain <id>`.
-pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
-    let chain_str = chain_id.to_string();
+/// Resolve active wallet EVM address via `onchainos wallet addresses`.
+pub fn resolve_wallet(_chain_id: u64) -> anyhow::Result<String> {
     let output = Command::new("onchainos")
-        .args(["wallet", "addresses", "--chain", &chain_str])
+        .args(["wallet", "addresses"])
         .output()?;
-    let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))
-        .map_err(|e| anyhow::anyhow!("wallet addresses parse error: {}", e))?;
-    let addr = json["data"]["evm"][0]["address"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Could not determine active EVM wallet address. Ensure onchainos is logged in."))?
-        .to_string();
-    Ok(addr)
-}
-
-/// Poll until a transaction is confirmed on-chain.
-/// Chain-aware timeout: Ethereum mainnet (~12s block time) = 20 attempts × 2s = 40s;
-/// fast chains (Base, Arbitrum, etc.) = 12 attempts × 2s = 24s.
-/// Called after approve --force so the main op simulation sees the updated allowance.
-pub async fn wait_for_tx(tx_hash: &str, rpc_url: &str, chain_id: u64) -> anyhow::Result<()> {
-    if tx_hash == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-        return Ok(()); // dry-run stub hash — nothing to wait for
-    }
-    let max_attempts: u32 = if chain_id == 1 { 20 } else { 12 };
-    let client = reqwest::Client::new();
-    for _ in 0..max_attempts {
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let body = serde_json::json!({
-            "jsonrpc": "2.0", "method": "eth_getTransactionReceipt",
-            "params": [tx_hash], "id": 1
-        });
-        if let Ok(resp) = client.post(rpc_url).json(&body).send().await {
-            if let Ok(v) = resp.json::<Value>().await {
-                if !v["result"].is_null() {
-                    return Ok(());
-                }
-            }
-        }
-    }
-    eprintln!("Warning: wait_for_tx timed out after {}s — proceeding", max_attempts * 2);
-    Ok(()) // proceed anyway after timeout
+    let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
+    Ok(json["data"]["evmAddress"].as_str().unwrap_or("").to_string())
 }
 
 /// Call onchainos wallet contract-call.
@@ -94,6 +60,47 @@ pub async fn wallet_contract_call(
     Ok(serde_json::from_str(&stdout)?)
 }
 
+/// Poll onchainos wallet history until txStatus is SUCCESS or FAILED (or timeout).
+/// Uses spawn_blocking so Command::output() doesn't block the Tokio runtime thread.
+pub async fn wait_for_tx(chain_id: u64, tx_hash: String, wallet_addr: String) -> anyhow::Result<bool> {
+    tokio::task::spawn_blocking(move || wait_for_tx_sync(chain_id, &tx_hash, &wallet_addr))
+        .await
+        .map_err(|e| anyhow::anyhow!("spawn_blocking error: {}", e))?
+}
+
+fn wait_for_tx_sync(chain_id: u64, tx_hash: &str, wallet_addr: &str) -> anyhow::Result<bool> {
+    let chain_str = chain_id.to_string();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
+    loop {
+        if std::time::Instant::now() > deadline {
+            anyhow::bail!("Timeout (90s) waiting for tx {} to confirm", tx_hash);
+        }
+        let output = Command::new("onchainos")
+            .args([
+                "wallet", "history",
+                "--tx-hash", tx_hash,
+                "--address", wallet_addr,
+                "--chain", &chain_str,
+            ])
+            .output();
+        if let Ok(out) = output {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&String::from_utf8_lossy(&out.stdout)) {
+                if let Some(entry) = v["data"].as_array().and_then(|a| a.first()) {
+                    match entry["txStatus"].as_str() {
+                        Some("SUCCESS") => return Ok(true),
+                        Some("FAILED") => {
+                            let reason = entry["failReason"].as_str().unwrap_or("");
+                            anyhow::bail!("tx {} failed on-chain: {}", tx_hash, reason);
+                        }
+                        _ => {} // PENDING — keep polling
+                    }
+                }
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_secs(3));
+    }
+}
+
 /// Extract txHash from wallet contract-call response, returning an error on failure.
 pub fn extract_tx_hash_or_err(result: &Value) -> anyhow::Result<String> {
     if result["ok"].as_bool() != Some(true) {
@@ -124,6 +131,6 @@ pub async fn erc20_approve(
     let spender_padded = format!("{:0>64}", spender_clean);
     let amount_hex = format!("{:064x}", amount);
     let calldata = format!("0x095ea7b3{}{}", spender_padded, amount_hex);
-    // Approvals use --force: they must broadcast immediately as prerequisite steps
-    wallet_contract_call(chain_id, token_addr, &calldata, from, None, true, dry_run).await
+    // approve does not need --force (only swap/exchange does)
+    wallet_contract_call(chain_id, token_addr, &calldata, from, None, false, dry_run).await
 }

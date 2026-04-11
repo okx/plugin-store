@@ -2,6 +2,7 @@ mod api;
 mod commands;
 mod config;
 mod curve_abi;
+mod multicall;
 mod onchainos;
 mod rpc;
 
@@ -59,9 +60,9 @@ enum Commands {
         #[arg(long)]
         token_out: String,
 
-        /// Input amount in minimal units (e.g. 1000000 = 1 USDC with 6 decimals)
+        /// Input amount in human-readable units (e.g. 1.0 = 1 USDC)
         #[arg(long)]
-        amount: u128,
+        amount: f64,
 
         /// Slippage tolerance (default: 0.005 = 0.5%)
         #[arg(long, default_value = "0.005")]
@@ -78,9 +79,9 @@ enum Commands {
         #[arg(long)]
         token_out: String,
 
-        /// Input amount in minimal units
+        /// Input amount in human-readable units (e.g. 1.0 = 1 USDC)
         #[arg(long)]
-        amount: u128,
+        amount: f64,
 
         /// Slippage tolerance (default: 0.005 = 0.5%)
         #[arg(long, default_value = "0.005")]

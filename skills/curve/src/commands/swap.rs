@@ -1,6 +1,6 @@
 // commands/swap.rs — Execute a swap via Curve pool exchange()
 use crate::{api, config, curve_abi, onchainos, rpc};
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 /// Determine whether a pool uses uint256 or int128 indices.
 /// Factory v2 (CryptoSwap, tricrypto) pools use uint256; classic StableSwap pools use int128.
@@ -13,7 +13,7 @@ pub async fn run(
     chain_id: u64,
     token_in: String,
     token_out: String,
-    amount_in: u128,
+    amount_in: f64,
     slippage: f64,
     wallet: Option<String>,
     dry_run: bool,
@@ -55,11 +55,28 @@ pub async fn run(
     let out_idx = api::coin_index(pool, &token_out_addr).unwrap_or(1);
     let use_uint256 = uses_uint256_indices(pool);
 
+    // Resolve symbols and decimals from pool coin data
+    let in_coin = pool.coins.get(in_idx);
+    let out_coin = pool.coins.get(out_idx);
+    let in_symbol = in_coin
+        .map(|c| c.symbol.clone())
+        .unwrap_or_else(|| token_in.clone());
+    let out_symbol = out_coin
+        .map(|c| c.symbol.clone())
+        .unwrap_or_else(|| token_out.clone());
+    let in_decimals: u32 = in_coin
+        .and_then(|c| c.decimals.as_deref())
+        .and_then(|d| d.parse().ok())
+        .unwrap_or(18);
+
+    // Convert human-readable amount to minimal units
+    let amount_minimal = (amount_in * 10f64.powi(in_decimals as i32)) as u128;
+
     // Get a quote to determine expected output
     let get_dy_calldata = if use_uint256 {
-        curve_abi::encode_get_dy_uint256(in_idx as u64, out_idx as u64, amount_in)
+        curve_abi::encode_get_dy_uint256(in_idx as u64, out_idx as u64, amount_minimal)
     } else {
-        curve_abi::encode_get_dy(in_idx as i64, out_idx as i64, amount_in)
+        curve_abi::encode_get_dy(in_idx as i64, out_idx as i64, amount_minimal)
     };
 
     let result_hex = rpc::eth_call(&pool.address, &get_dy_calldata, rpc_url).await?;
@@ -71,22 +88,13 @@ pub async fn run(
 
     let min_expected = (amount_out as f64 * (1.0 - slippage)) as u128;
 
-    // Warn on high price impact (>5%)
-    let price_impact_pct = ((amount_in as f64 - amount_out as f64) / amount_in as f64 * 100.0).max(0.0);
-    if price_impact_pct > 5.0 {
-        eprintln!(
-            "Warning: high price impact {:.2}% — consider reducing swap size or checking pool liquidity",
-            price_impact_pct
-        );
-    }
-
     // Build exchange calldata
     // Selector: 0x3df02124 = exchange(int128,int128,uint256,uint256) for StableSwap pools
     // Selector: 0x5b41b908 = exchange(uint256,uint256,uint256,uint256) for CryptoSwap/factory-v2 pools
     let calldata = if use_uint256 {
-        curve_abi::encode_exchange_uint256(in_idx as u64, out_idx as u64, amount_in, min_expected)
+        curve_abi::encode_exchange_uint256(in_idx as u64, out_idx as u64, amount_minimal, min_expected)
     } else {
-        curve_abi::encode_exchange(in_idx as i64, out_idx as i64, amount_in, min_expected)
+        curve_abi::encode_exchange(in_idx as i64, out_idx as i64, amount_minimal, min_expected)
     };
 
     if dry_run {
@@ -97,9 +105,9 @@ pub async fn run(
                 "dry_run": true,
                 "chain": chain_name,
                 "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
-                "token_in": { "symbol": token_in, "address": token_in_addr, "index": in_idx },
-                "token_out": { "symbol": token_out, "address": token_out_addr, "index": out_idx },
-                "amount_in_raw": amount_in.to_string(),
+                "token_in": { "symbol": in_symbol, "address": token_in_addr, "index": in_idx },
+                "token_out": { "symbol": out_symbol, "address": token_out_addr, "index": out_idx },
+                "amount_in_raw": amount_minimal.to_string(),
                 "expected_out_raw": amount_out.to_string(),
                 "min_expected_raw": min_expected.to_string(),
                 "slippage_pct": slippage * 100.0,
@@ -113,25 +121,28 @@ pub async fn run(
     // ERC-20 approve if not native ETH
     if !is_native {
         let allowance = rpc::get_allowance(&token_in_addr, &wallet_addr, &pool.address, rpc_url).await?;
-        if allowance < amount_in {
-            eprintln!("Approving {} for Curve pool...", token_in);
+        if allowance < amount_minimal {
+            eprintln!("Approving {} for Curve pool...", in_symbol);
             let approve_result = onchainos::erc20_approve(
                 chain_id,
                 &token_in_addr,
                 &pool.address,
-                amount_in,
+                amount_minimal,
                 Some(&wallet_addr),
                 false,
             )
             .await?;
             let approve_hash = onchainos::extract_tx_hash_or_err(&approve_result)?;
-            eprintln!("Approve tx: {}", approve_hash);
-            onchainos::wait_for_tx(&approve_hash, rpc_url, chain_id).await?;
+            eprintln!("Approve tx: {} — waiting for confirmation...", approve_hash);
+            onchainos::wait_for_tx(chain_id, approve_hash.clone(), wallet_addr.clone())
+                .await
+                .context("Approve tx did not confirm in time")?;
+            eprintln!("Approve confirmed.");
         }
     }
 
     // Execute swap — requires --force for DEX operations
-    let amt = if is_native { Some(amount_in as u64) } else { None };
+    let amt = if is_native { Some(amount_minimal as u64) } else { None };
     let result = onchainos::wallet_contract_call(
         chain_id,
         &pool.address,
@@ -152,9 +163,9 @@ pub async fn run(
             "ok": true,
             "chain": chain_name,
             "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
-            "token_in": { "symbol": token_in, "address": token_in_addr },
-            "token_out": { "symbol": token_out, "address": token_out_addr },
-            "amount_in_raw": amount_in.to_string(),
+            "token_in": { "symbol": in_symbol, "address": token_in_addr },
+            "token_out": { "symbol": out_symbol, "address": token_out_addr },
+            "amount_in_raw": amount_minimal.to_string(),
             "expected_out_raw": amount_out.to_string(),
             "min_expected_raw": min_expected.to_string(),
             "tx_hash": tx_hash,

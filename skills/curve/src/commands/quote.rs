@@ -13,7 +13,7 @@ pub async fn run(
     chain_id: u64,
     token_in: String,
     token_out: String,
-    amount_in: u128,
+    amount_in: f64,
     slippage: f64,
 ) -> Result<()> {
     let chain_name = config::chain_name(chain_id);
@@ -40,11 +40,28 @@ pub async fn run(
     let in_idx = api::coin_index(pool, &token_in_addr).unwrap_or(0);
     let out_idx = api::coin_index(pool, &token_out_addr).unwrap_or(1);
 
+    // Resolve symbols and decimals from pool coin data
+    let in_coin = pool.coins.get(in_idx);
+    let out_coin = pool.coins.get(out_idx);
+    let in_symbol = in_coin
+        .map(|c| c.symbol.clone())
+        .unwrap_or_else(|| token_in.clone());
+    let out_symbol = out_coin
+        .map(|c| c.symbol.clone())
+        .unwrap_or_else(|| token_out.clone());
+    let in_decimals: u32 = in_coin
+        .and_then(|c| c.decimals.as_deref())
+        .and_then(|d| d.parse().ok())
+        .unwrap_or(18);
+
+    // Convert human-readable amount to minimal units
+    let amount_minimal = (amount_in * 10f64.powi(in_decimals as i32)) as u128;
+
     // Call get_dy directly on the pool
     let calldata = if uses_uint256_indices(pool) {
-        curve_abi::encode_get_dy_uint256(in_idx as u64, out_idx as u64, amount_in)
+        curve_abi::encode_get_dy_uint256(in_idx as u64, out_idx as u64, amount_minimal)
     } else {
-        curve_abi::encode_get_dy(in_idx as i64, out_idx as i64, amount_in)
+        curve_abi::encode_get_dy(in_idx as i64, out_idx as i64, amount_minimal)
     };
 
     let result_hex = rpc::eth_call(&pool.address, &calldata, rpc_url).await?;
@@ -56,12 +73,10 @@ pub async fn run(
 
     // Calculate min_expected with slippage
     let min_expected = (amount_out as f64 * (1.0 - slippage)) as u128;
-    let price_impact_pct = if amount_out > 0 {
-        let in_f = amount_in as f64;
+    let price_impact_pct = {
+        let in_f = amount_minimal as f64;
         let out_f = amount_out as f64;
         ((in_f - out_f) / in_f * 100.0).max(0.0)
-    } else {
-        0.0
     };
 
     println!(
@@ -70,9 +85,9 @@ pub async fn run(
             "ok": true,
             "chain": chain_name,
             "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
-            "token_in": { "symbol": token_in, "address": token_in_addr, "index": in_idx },
-            "token_out": { "symbol": token_out, "address": token_out_addr, "index": out_idx },
-            "amount_in_raw": amount_in.to_string(),
+            "token_in": { "symbol": in_symbol, "address": token_in_addr, "index": in_idx },
+            "token_out": { "symbol": out_symbol, "address": token_out_addr, "index": out_idx },
+            "amount_in_raw": amount_minimal.to_string(),
             "amount_out_raw": amount_out.to_string(),
             "min_expected_raw": min_expected.to_string(),
             "slippage_pct": slippage * 100.0,
