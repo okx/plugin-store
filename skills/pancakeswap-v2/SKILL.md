@@ -105,6 +105,19 @@ fi
 
 Before executing any write operation, verify the environment is ready:
 
+> **Version check**: Run `pancakeswap-v2 --version` and confirm it prints `pancakeswap-v2 0.2.3`. If the installed version is older, force-reinstall:
+> ```bash
+> OS=$(uname -s | tr A-Z a-z); ARCH=$(uname -m)
+> case "${OS}_${ARCH}" in
+>   darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
+>   darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
+>   linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
+>   linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
+> esac
+> curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2@0.2.3/pancakeswap-v2-${TARGET}" \
+>   -o ~/.local/bin/pancakeswap-v2 && chmod +x ~/.local/bin/pancakeswap-v2
+> ```
+
 ```bash
 # Check onchainos version (requires >= 0.1.0)
 onchainos --version
@@ -135,11 +148,32 @@ Do NOT use for: PancakeSwap V3 swaps (use pancakeswap skill), concentrated liqui
 - Supports BSC (chain 56, default), Base (chain 8453), and Arbitrum One (chain 42161)
 - V2 uses constant-product xyk formula; LP tokens are standard ERC-20 (not NFTs); fixed 0.25% swap fee
 
+## Global Flags
+
+These flags apply to the **entire binary** and must be placed **before** the subcommand:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--chain <id>` | `56` | Chain ID: 56 (BSC), 8453 (Base), 42161 (Arbitrum) |
+| `--dry-run` | false | Simulate without broadcasting — no onchainos call made |
+| `--slippage-bps <n>` | `50` | Slippage tolerance in basis points (50 = 0.5%) |
+| `--deadline-secs <n>` | `300` | Transaction deadline in seconds from now |
+| `--from <address>` | wallet | Override sender address |
+| `--rpc-url <url>` | (chain default) | Override RPC endpoint |
+
+**Correct usage pattern:**
+```
+pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100
+pancakeswap-v2 --dry-run --chain 56 add-liquidity --token-a USDT --token-b BNB --amount-a 100 --amount-b 0.05
+```
+
+> ⚠️ `--dry-run` does **not** appear in subcommand `--help` output because it is a global flag. Always pass it before the subcommand name.
+
 ## Execution Flow for Write Operations
 
-1. Run with `--dry-run` first to preview calldata and estimated amounts
+1. Run with `pancakeswap-v2 --dry-run --chain <id> <command> ...` to preview calldata and estimated amounts
 2. **Ask user to confirm** the transaction details before proceeding
-3. Execute only after explicit user approval
+3. Execute only after explicit user approval (re-run without `--dry-run`)
 4. Report transaction hash and block explorer link
 
 ---
@@ -204,7 +238,10 @@ Read-only operation — no confirmation required.
 
 **Usage:**
 ```
+# Live swap
 pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100
+# Dry-run preview (--dry-run is a global flag, goes before the subcommand)
+pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100
 ```
 
 **Parameters:**
@@ -213,12 +250,12 @@ pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100
 | tokenIn | `--token-in` | Input token: symbol or address. Use BNB/ETH for native |
 | tokenOut | `--token-out` | Output token: symbol or address |
 | amountIn | `--amount-in` | Input amount as a human-readable decimal (e.g. 100, 1.5, 0.001) |
-| slippageBps | `--slippage-bps` | Slippage in basis points (default 50 = 0.5%) |
-| deadlineSecs | `--deadline-secs` | Seconds until deadline (default 300) |
-| dryRun | `--dry-run` | Preview calldata only, no broadcast |
+| slippageBps | `--slippage-bps` | Slippage in basis points (default 50 = 0.5%) — global flag |
+| deadlineSecs | `--deadline-secs` | Seconds until deadline (default 300) — global flag |
+| dryRun | `--dry-run` | Preview calldata only, no broadcast — **global flag, place before subcommand** |
 
 **Execution flow:**
-1. Run `--dry-run` to preview the swap calldata and expected output
+1. Run `pancakeswap-v2 --dry-run --chain 56 swap ...` to preview the swap calldata and expected output
 2. **Ask user to confirm** the swap details (tokenIn, tokenOut, amountIn, amountOutMin, slippage)
 3. If tokenIn is an ERC-20 and allowance is insufficient, first submit an exact-amount approve tx via `onchainos wallet contract-call`; **ask user to confirm** the approval
 4. Submit swap via `onchainos wallet contract-call`
@@ -253,6 +290,9 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b USDT --amount-a
 
 # Token + native BNB
 pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 10 --amount-b 0.05
+
+# Dry-run preview (--dry-run is a global flag, goes before the subcommand)
+pancakeswap-v2 --dry-run --chain 56 add-liquidity --token-a USDT --token-b BNB --amount-a 100 --amount-b 0.05
 ```
 
 **Parameters:**
@@ -262,12 +302,12 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 
 | tokenB | `--token-b` | Second token. Use BNB/ETH for native |
 | amountA | `--amount-a` | Desired amount of tokenA as a human-readable decimal (e.g. 10, 0.5) |
 | amountB | `--amount-b` | Desired amount of tokenB (or native BNB/ETH) as a human-readable decimal |
-| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
-| dryRun | `--dry-run` | Preview calldata only |
+| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) — global flag |
+| dryRun | `--dry-run` | Preview calldata only — **global flag, place before subcommand** |
 
 **Execution flow:**
 1. Check current pair reserves and ratio
-2. Run `--dry-run` to preview the transaction
+2. Run `pancakeswap-v2 --dry-run --chain 56 add-liquidity ...` to preview the transaction
 3. **Ask user to confirm** the amounts and LP token receipt before proceeding
 4. Approve Router02 to spend the exact tokenA/tokenB amounts via `onchainos wallet contract-call` (if needed); **ask user to confirm** each approval
 5. Submit `addLiquidity` or `addLiquidityETH` via `onchainos wallet contract-call`
@@ -294,13 +334,13 @@ pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liqui
 | tokenA | `--token-a` | First token |
 | tokenB | `--token-b` | Second token. Use BNB/ETH to receive native |
 | liquidity | `--liquidity` | LP tokens to burn as a human-readable decimal (e.g. 1.0). Omit to remove all |
-| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
-| dryRun | `--dry-run` | Preview only |
+| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) — global flag |
+| dryRun | `--dry-run` | Preview only — **global flag, place before subcommand** |
 
 **Execution flow:**
 1. Fetch LP balance and compute expected token withdrawals
 2. Display summary: LP amount, expected tokenA and tokenB out
-3. Run `--dry-run` to preview calldata
+3. Run `pancakeswap-v2 --dry-run --chain 56 remove-liquidity ...` to preview calldata
 4. **Ask user to confirm** the removal details before proceeding
 5. Approve LP tokens to Router02 via `onchainos wallet contract-call`; **ask user to confirm**
 6. Submit `removeLiquidity` or `removeLiquidityETH` via `onchainos wallet contract-call`
@@ -384,6 +424,9 @@ For Arbitrum One (42161): WETH `0x82aF49447D8a07e3bd95BD0d56f35241523fBab1`, USD
 - **fix**: `--amount-in`, `--amount-a`, `--amount-b`, and `--liquidity` now accept human-readable decimal input (e.g. `1.5`, `100`, `0.001`). Previously clap rejected decimal values at parse time with "invalid digit found in string" because those args were typed `u128`. Changed to `String` and added `parse_human_amount()` which resolves each token's ERC-20 `decimals()` on-chain and converts to raw units.
 - **feat**: `pancakeswap-v2 --version` now works (added `version` to `#[command(...)]` attribute)
 - **fix**: `.gitignore` uses `/target/` (anchored) instead of `target/`
+- **fix**: consolidate duplicate `erc20_decimals` / `get_erc20_decimals` into single function in `rpc.rs`
+- **docs**: Added Global Flags section explaining that `--dry-run`, `--chain`, `--slippage-bps`, `--deadline-secs`, `--from`, `--rpc-url` are root-level flags and must be placed **before** the subcommand
+- **docs**: Updated Usage examples for `swap`, `add-liquidity`, and `remove-liquidity` to show correct `--dry-run` placement
 
 ### v0.2.2 (2026-04-11)
 
