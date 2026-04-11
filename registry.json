@@ -496,10 +496,10 @@
     },
     {
       "name": "pancakeswap-v2",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "description": "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair.",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky"
       },
       "category": "defi-protocol",
       "tags": [],
