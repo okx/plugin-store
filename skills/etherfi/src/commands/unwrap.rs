@@ -2,7 +2,7 @@ use clap::Args;
 use crate::calldata::build_unwrap_calldata;
 use crate::config::{format_units, parse_units, rpc_url, weeth_address, CHAIN_ID};
 use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
-use crate::rpc::{get_balance, weeth_convert_to_assets};
+use crate::rpc::get_balance;
 
 #[derive(Args)]
 pub struct UnwrapArgs {
@@ -31,10 +31,10 @@ pub async fn run(args: UnwrapArgs) -> anyhow::Result<()> {
     // Resolve wallet address
     let wallet = resolve_wallet(CHAIN_ID)?;
 
-    // Preview: how much eETH will be returned
-    let eeth_expected = weeth_convert_to_assets(weeth, weeth_wei, rpc)
-        .await
-        .unwrap_or(0);
+    // Preview: how much eETH will be returned.
+    // weETH.convertToAssets() reverts on this contract; use getRate() instead.
+    let rate = crate::rpc::weeth_get_rate(weeth, rpc).await.unwrap_or(0.0);
+    let eeth_expected = (weeth_wei as f64 * rate) as u128;
 
     println!(
         "Unwrapping {} weETH ({} wei) → eETH",

@@ -4,7 +4,7 @@ description: >
   Liquid restaking on Ethereum. Deposit ETH into ether.fi LiquidityPool to receive eETH,
   wrap eETH into weETH (ERC-4626 yield-bearing token) to earn staking + EigenLayer
   restaking rewards, unstake eETH back to ETH, check balances, and view current APY.
-version: 0.2.1
+version: 0.2.2
 author: GeoGu360
 tags:
   - liquid-staking
@@ -37,12 +37,7 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install etherfi binary (auto-injected)
 
 ```bash
-NEED_INSTALL=true
-if command -v etherfi >/dev/null 2>&1; then
-  _VER=$(etherfi --version 2>/dev/null | awk '{print $2}')
-  [ "$_VER" = "0.2.1" ] && NEED_INSTALL=false
-fi
-if [ "$NEED_INSTALL" = "true" ]; then
+if ! command -v etherfi >/dev/null 2>&1; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -58,7 +53,7 @@ if [ "$NEED_INSTALL" = "true" ]; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/etherfi@0.2.1/etherfi-${TARGET}${EXT}" -o ~/.local/bin/etherfi${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/etherfi@0.2.2/etherfi-${TARGET}${EXT}" -o ~/.local/bin/etherfi${EXT}
   chmod +x ~/.local/bin/etherfi${EXT}
 fi
 ```
@@ -80,7 +75,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"etherfi","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"etherfi","version":"0.2.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -90,7 +85,6 @@ fi
 ```
 
 ---
-
 
 
 # ether.fi — Liquid Restaking Plugin
