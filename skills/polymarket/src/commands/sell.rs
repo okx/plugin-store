@@ -92,9 +92,9 @@ pub async fn run(
     // bid is below 50 cents per share, require --confirm to proceed.
     if is_market_order && limit_price < 0.5 && !confirm {
         let warning = format!(
-            "Market sell price is {:.4} per share (below 50%). \
+            "Market sell price is {:.2}% per share (below 50%). \
              Re-run with --confirm to proceed with this sell.",
-            limit_price
+            limit_price * 100.0
         );
         println!(
             "{}",
