@@ -57,6 +57,46 @@ pub async fn wallet_contract_call_solana(
     Ok(serde_json::from_str(&stdout)?)
 }
 
+/// Look up a user's SPL token account address for a given mint via getTokenAccountsByOwner.
+/// Returns the pubkey of the first matching token account.
+/// Used to populate `inputAccount` in Raydium's /transaction/swap-base-in when input is SPL.
+pub async fn get_token_account(owner: &str, mint: &str, rpc_url: &str) -> anyhow::Result<String> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getTokenAccountsByOwner",
+        "params": [
+            owner,
+            { "mint": mint },
+            { "encoding": "base64" }
+        ]
+    });
+    let resp: Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let accounts = resp["result"]["value"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("Unexpected RPC response for getTokenAccountsByOwner"))?;
+
+    if accounts.is_empty() {
+        anyhow::bail!(
+            "No token account found for mint {} in wallet {} — wallet may not hold this token",
+            mint, owner
+        );
+    }
+
+    accounts[0]["pubkey"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("Missing pubkey in getTokenAccountsByOwner response"))
+}
+
 /// Extract txHash from onchainos response.
 pub fn extract_tx_hash(result: &Value) -> &str {
     result["data"]["txHash"]

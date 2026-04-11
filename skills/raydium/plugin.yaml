@@ -25,3 +25,4 @@ build:
 api_calls:
   - "https://api-v3.raydium.io"
   - "https://transaction-v1.raydium.io"
+  - "https://api.mainnet-beta.solana.com"
