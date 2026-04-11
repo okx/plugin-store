@@ -70,9 +70,7 @@ pub async fn run(
     }
 
     // Determine price
-    // Track whether this is a market order (no explicit price) for the bad-price gate.
-    let is_market_order = price.is_none();
-    let (limit_price, best_bid) = if let Some(p) = price {
+    let limit_price = if let Some(p) = price {
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
         }
@@ -80,42 +78,13 @@ pub async fn run(
         if rp <= 0.0 || rp >= 1.0 {
             bail!("price {p} rounds to {rp} with tick size {tick_size} — out of range (0, 1)");
         }
-        (rp, None)
+        rp
     } else {
         let book = get_orderbook(&client, &token_id).await?;
-        // Bids are ascending in the CLOB API — last element is the best (highest) bid.
-        let best = book.bids.last()
-            .and_then(|b| b.price.parse::<f64>().ok());
-        let fill = compute_sell_worst_price(&book.bids, share_amount)
-            .ok_or_else(|| anyhow::anyhow!("No bids available in the order book"))?;
-        (fill, best)
+        // Bids are ascending in the CLOB API — iterate in reverse to start from the best bid.
+        compute_sell_worst_price(&book.bids, share_amount)
+            .ok_or_else(|| anyhow::anyhow!("No bids available in the order book"))?
     };
-
-    // ── Feature 2: bad-price confirmation gate ───────────────────────────────
-    // Only applies to market orders (no explicit --price). If the worst-case fill
-    // price is less than 50% of the best available bid, the order is eating deep
-    // into thin liquidity — require --confirm to proceed.
-    if is_market_order && !confirm {
-        if let Some(best) = best_bid {
-            if limit_price < 0.5 * best {
-                let warning = format!(
-                    "Market sell fill price {:.4} is less than 50% of the best bid {:.4}. \
-                     Re-run with --confirm to proceed with this sell.",
-                    limit_price, best
-                );
-                println!(
-                    "{}",
-                    serde_json::json!({
-                        "ok": false,
-                        "requires_confirmation": true,
-                        "warning": warning
-                    })
-                );
-                return Ok(());
-            }
-        }
-    }
-    // ── End Feature 2 ────────────────────────────────────────────────────────
 
     // Check CTF token balance
     let token_balance = get_balance_allowance(&client, &signer_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;

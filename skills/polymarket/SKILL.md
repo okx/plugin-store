@@ -300,7 +300,7 @@ polymarket buy --market-id 0xabc... --outcome no --amount 100
 ### `sell` — Sell Outcome Shares
 
 ```
-polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--confirm]
+polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve]
 ```
 
 **Flags:**
@@ -312,7 +312,6 @@ polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price 
 | `--price` | Limit price in (0, 1). Omit for market order (FOK) | — |
 | `--order-type` | `GTC` (resting limit) or `FOK` (fill-or-kill) | `GTC` |
 | `--approve` | Force CTF token approval before placing | false |
-| `--confirm` | Confirm a low-price market sell gated by the bad-price warning | false |
 
 **Auth required:** Yes — onchainos wallet; EIP-712 order signing via `onchainos sign-message --type eip712`
 
@@ -324,25 +323,57 @@ polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price 
 
 > ⚠️ **Market order slippage**: When `--price` is omitted, the order is a FOK market order that fills at the best available bid. On thin markets, the received price may be well below mid. Use `--price` for any sell above a few shares to avoid slippage.
 
-> ⚠️ **Bad-price confirmation gate**: When `--price` is omitted (market order), the plugin checks the best available bid price. If it is below **0.50 per share**, the order is **not placed**. Instead the command outputs `{"ok": false, "requires_confirmation": true, "warning": "..."}` and exits 0. Re-run with `--confirm` to proceed. This gate is intentionally skipped when `--price` is provided, as the user has already acknowledged the price.
-
 **Example:**
 ```
 polymarket sell --market-id will-btc-hit-100k-by-2025 --outcome yes --shares 100 --price 0.72
 polymarket sell --market-id 0xabc... --outcome no --shares 50
-polymarket sell --market-id 0xabc... --outcome no --shares 50 --confirm
 ```
+
+---
+
+### Pre-sell Liquidity Check (Required Agent Step)
+
+**Before calling `sell`, you MUST call `get-market` and assess liquidity for the outcome being sold.**
+
+```bash
+polymarket get-market --market-id <id>
+```
+
+Find the token matching the outcome being sold in the `tokens[]` array. Extract:
+- `best_bid` — current highest buy offer for that outcome
+- `best_ask` — current lowest sell offer  
+- `last_trade` — price of the most recent trade
+- Market-level `liquidity` — total USD locked in the market
+
+**Warn the user and ask for explicit confirmation before proceeding if ANY of the following apply:**
+
+| Signal | Threshold | What to tell the user |
+|--------|-----------|----------------------|
+| No buyers | `best_bid` is null or `0` | "There are no active buyers for this outcome. Your sell order may not fill." |
+| Price collapsed | `best_bid < 0.5 × last_trade` | "The best bid ($B) is less than 50% of the last traded price ($L). You would be selling at a significant loss from recent prices." |
+| Wide spread | `best_ask − best_bid > 0.15` | "The bid-ask spread is wide ($spread), indicating thin liquidity. You may get a poor fill price." |
+| Thin market | `liquidity < 1000` | "This market has very low total liquidity ($X USD). Large sells will have high price impact." |
+
+**When warning, always show the user:**
+1. Current `best_bid`, `last_trade`, and market `liquidity`
+2. Estimated USDC received: `shares × best_bid` (before fees)
+3. A clear question: *"Market liquidity looks poor. Estimated receive: $Y for [N] shares at [best_bid]. Do you want to proceed?"*
+
+Only call `sell` after the user explicitly confirms they want to proceed.
+
+**If `--price` is provided by the user**, skip this check — the user has already set their acceptable price.
 
 ---
 
 ### Safety Guards
 
-Two runtime guards protect against common order mistakes:
+One runtime guard built into the binary protects against order parameter mistakes:
 
 | Guard | Command | Trigger | Behaviour |
 |-------|---------|---------|-----------|
 | Minimum order size | `buy` | `--amount` is below the market's `min_order_size` | Command exits with an error stating the required minimum. Applies even in `--dry-run` mode. |
-| Bad-price confirmation | `sell` | Market order (no `--price`) with computed fill price < 0.50/share | Command halts and outputs `requires_confirmation`. Re-run with `--confirm` to proceed. |
+
+Liquidity protection for `sell` is handled at the agent level via the **Pre-sell Liquidity Check** above.
 
 ---
 
