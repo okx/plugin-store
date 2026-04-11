@@ -2,7 +2,7 @@ use clap::Args;
 use crate::api::fetch_stats;
 use crate::config::{eeth_address, format_units, rpc_url, weeth_address, CHAIN_ID};
 use crate::onchainos::resolve_wallet;
-use crate::rpc::{get_balance, weeth_convert_to_assets};
+use crate::rpc::get_balance;
 
 #[derive(Args)]
 pub struct PositionsArgs {
@@ -30,9 +30,11 @@ pub async fn run(args: PositionsArgs) -> anyhow::Result<()> {
     // Fetch weETH balance (18 decimals)
     let weeth_balance = get_balance(weeth, &owner, rpc).await.unwrap_or(0);
 
-    // Convert weETH to eETH equivalent for display
+    // Convert weETH to eETH equivalent for display.
+    // weETH.convertToAssets() reverts on this contract; use getRate() instead.
     let weeth_as_eeth = if weeth_balance > 0 {
-        weeth_convert_to_assets(weeth, weeth_balance, rpc).await.unwrap_or(0)
+        let rate = crate::rpc::weeth_get_rate(weeth, rpc).await.unwrap_or(0.0);
+        (weeth_balance as f64 * rate) as u128
     } else {
         0
     };
