@@ -53,8 +53,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
     // Resolve token decimals and parse human-readable amounts
     let token_a_for_dec = if native_a { cfg.weth.to_string() } else { resolve_token_address(&args.token_a, args.chain_id) };
     let token_b_for_dec = if native_b { cfg.weth.to_string() } else { resolve_token_address(&args.token_b, args.chain_id) };
-    let decimals_a = rpc::get_erc20_decimals(&token_a_for_dec, rpc).await.unwrap_or(18);
-    let decimals_b = rpc::get_erc20_decimals(&token_b_for_dec, rpc).await.unwrap_or(18);
+    let decimals_a = rpc::erc20_decimals(&token_a_for_dec, rpc).await.unwrap_or(18);
+    let decimals_b = rpc::erc20_decimals(&token_b_for_dec, rpc).await.unwrap_or(18);
     let amount_a = rpc::parse_human_amount(&args.amount_a, decimals_a)?;
     let amount_b = rpc::parse_human_amount(&args.amount_b, decimals_b)?;
     if amount_a == 0 && amount_b == 0 {

@@ -205,12 +205,6 @@ fn parse_amounts_out(hex: &str, path_len: usize) -> anyhow::Result<Vec<u128>> {
 /// Selector: 0x313ce567
 pub async fn erc20_decimals(token: &str, rpc_url: &str) -> anyhow::Result<u8> {
     let result = eth_call(token, "0x313ce567", rpc_url).await?;
-    let v = decode_u128(&result);
-    Ok(v as u8)
-}
-/// ERC-20 decimals() → u8 via raw hex decode. Falls back to 18 on error.
-pub async fn get_erc20_decimals(token: &str, rpc_url: &str) -> anyhow::Result<u8> {
-    let result = eth_call(token, "0x313ce567", rpc_url).await?;
     let clean = result.trim_start_matches("0x");
     if clean.len() < 2 { return Ok(18); }
     Ok(u8::from_str_radix(&clean[clean.len() - 2..], 16).unwrap_or(18))

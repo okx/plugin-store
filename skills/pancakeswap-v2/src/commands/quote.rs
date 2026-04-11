@@ -37,7 +37,7 @@ pub async fn run(args: QuoteArgs) -> Result<serde_json::Value> {
     };
 
     // Resolve decimals for tokenIn and parse human-readable amount
-    let decimals_in = rpc::get_erc20_decimals(&token_in_addr, rpc).await.unwrap_or(18);
+    let decimals_in = rpc::erc20_decimals(&token_in_addr, rpc).await.unwrap_or(18);
     let amount_in_raw = rpc::parse_human_amount(&args.amount_in, decimals_in)?;
     if amount_in_raw == 0 {
         anyhow::bail!("Amount must be greater than 0.");
