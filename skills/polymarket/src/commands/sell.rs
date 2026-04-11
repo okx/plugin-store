@@ -83,7 +83,8 @@ pub async fn run(
         (rp, None)
     } else {
         let book = get_orderbook(&client, &token_id).await?;
-        let best = book.bids.first()
+        // Bids are ascending in the CLOB API — last element is the best (highest) bid.
+        let best = book.bids.last()
             .and_then(|b| b.price.parse::<f64>().ok());
         let fill = compute_sell_worst_price(&book.bids, share_amount)
             .ok_or_else(|| anyhow::anyhow!("No bids available in the order book"))?;

@@ -605,12 +605,12 @@ pub async fn get_positions(client: &Client, user_address: &str) -> Result<Vec<Po
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/// Compute the worst price for a BUY by walking the asks until cumulative USDC is covered.
-/// Returns the price of the last ask needed.
+/// Compute the worst price for a BUY by walking the asks best-to-worst until cumulative USDC is covered.
+/// The CLOB API returns asks in descending price order, so we iterate in reverse to start from the best ask.
 pub fn compute_buy_worst_price(asks: &[PriceLevel], usdc_amount: f64) -> Option<f64> {
     let mut cumulative = 0.0f64;
     let mut worst = None;
-    for ask in asks {
+    for ask in asks.iter().rev() {
         let price: f64 = ask.price.parse().ok()?;
         let size: f64 = ask.size.parse().ok()?;
         cumulative += price * size;
@@ -622,12 +622,12 @@ pub fn compute_buy_worst_price(asks: &[PriceLevel], usdc_amount: f64) -> Option<
     worst
 }
 
-/// Compute the worst price for a SELL by walking the bids (descending) until cumulative shares covered.
+/// Compute the worst price for a SELL by walking the bids best-to-worst until cumulative shares covered.
+/// The CLOB API returns bids in ascending price order, so we iterate in reverse to start from the best bid.
 pub fn compute_sell_worst_price(bids: &[PriceLevel], share_amount: f64) -> Option<f64> {
     let mut cumulative = 0.0f64;
     let mut worst = None;
-    // bids are descending
-    for bid in bids {
+    for bid in bids.iter().rev() {
         let price: f64 = bid.price.parse().ok()?;
         let size: f64 = bid.size.parse().ok()?;
         cumulative += size;
