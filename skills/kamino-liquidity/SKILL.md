@@ -24,7 +24,7 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
+npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Install kamino-liquidity binary (auto-injected)
@@ -46,7 +46,7 @@ if ! command -v kamino-liquidity >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/kamino-liquidity@0.1.0/kamino-liquidity-${TARGET}${EXT}" -o ~/.local/bin/kamino-liquidity${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-liquidity@0.1.0/kamino-liquidity-${TARGET}${EXT}" -o ~/.local/bin/kamino-liquidity${EXT}
   chmod +x ~/.local/bin/kamino-liquidity${EXT}
 fi
 ```
