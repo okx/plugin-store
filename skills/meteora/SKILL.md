@@ -1,10 +1,10 @@
 ---
 name: meteora
-description: "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, and add liquidity. Trigger phrases: Meteora swap, swap on Meteora, find Meteora pool, Meteora DLMM, check my Meteora positions, add liquidity to Meteora, provide liquidity on Meteora. Chinese: Meteora换币, 查询Meteora流动池, 在Meteora上兑换代币, 在Meteora上加流动性"
+description: "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, add liquidity, and remove liquidity. Trigger phrases: Meteora swap, swap on Meteora, find Meteora pool, Meteora DLMM, check my Meteora positions, add liquidity to Meteora, provide liquidity on Meteora, remove liquidity from Meteora, withdraw from Meteora position, close Meteora position. Chinese: Meteora换币, 查询Meteora流动池, 在Meteora上兑换代币, 在Meteora上加流动性, 撤出Meteora流动性, 关闭Meteora仓位"
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
@@ -43,7 +43,7 @@ if ! command -v meteora >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.2.0/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.3.0/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
   chmod +x ~/.local/bin/meteora${EXT}
 fi
 ```
@@ -62,7 +62,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"meteora","version":"0.2.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"meteora","version":"0.3.0"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"meteora","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -78,6 +78,7 @@ fi
 - **Read operations** (`get-pools`, `get-pool-detail`, `get-swap-quote`, `get-user-positions`) → direct REST API calls to `https://dlmm.datapi.meteora.ag`; no wallet or confirmation needed
 - **Swap** (`swap`) → after user confirmation, executes via `onchainos swap execute --chain solana`; CLI handles signing and broadcast automatically
 - **Add liquidity** (`add-liquidity`) → builds a Solana transaction natively in Rust (initialize position + add liquidity instructions), submits via `onchainos wallet contract-call --chain 501`; uses SpotBalanced strategy distributing tokens across 70-bin position centered at active bin
+- **Remove liquidity** (`remove-liquidity`) → builds a `removeLiquidityByRange` instruction and optionally a `closePosition` instruction, submits via `onchainos wallet contract-call --chain 501`; 600k compute budget requested
 
 ## Supported Operations
 
@@ -222,6 +223,52 @@ meteora add-liquidity --pool <addr> --amount-x 0.1 --amount-y 10 --bin-range 5
 
 ---
 
+### remove-liquidity — Remove liquidity from a DLMM position
+
+Remove some or all liquidity from an existing Meteora DLMM position. Optionally close the position account afterwards to reclaim rent (~0.057 SOL).
+
+```
+meteora remove-liquidity --pool <pool_address> --position <position_address> [--pct <1-100>] [--close] [--wallet <address>] [--dry-run]
+```
+
+**Parameters:**
+- `--pool` — DLMM pool (LbPair) address (required)
+- `--position` — Position PDA address; obtain from `get-user-positions` output (required)
+- `--pct` — Percentage of liquidity to remove, 1–100 (default: 100)
+- `--close` — Close the position account after full removal (100%) to reclaim ~0.057 SOL rent
+- `--wallet` — Wallet address; omit to use the onchainos logged-in wallet
+- `--dry-run` — Preview only; no transaction submitted
+
+**Output fields:** `ok`, `pool`, `position`, `wallet`, `pct_removed`, `position_closed`, `tx_hash`, `explorer_url`
+
+> Use `position_address` from `get-user-positions` output directly as `--position`.
+
+**Execution Flow:**
+1. Run with `--dry-run` to preview: shows bin range, token accounts, and whether the position will be closed
+2. **Ask user to confirm** — especially if `--close` is used (permanent, reclaims rent)
+3. Execute after explicit user approval
+4. Token X and token Y are returned to the wallet's associated token accounts (created on-chain if missing)
+5. If `--close` is set and `--pct 100`, the position account is closed and ~0.057 SOL is returned
+
+**Notes:**
+- Attempting to remove from an empty position (all liquidity already withdrawn) returns `"ok": false` with a helpful message; no on-chain call is made
+- `--close` only takes effect when `--pct 100` (full removal); partial removals cannot close the position
+- Fees accumulated in the position are NOT automatically claimed by this command — use a separate claim-fees command if available, or the Meteora web UI
+
+**Examples:**
+```
+# Preview removing all liquidity from a position
+meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --dry-run
+
+# Remove 50% of liquidity
+meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --pct 50
+
+# Remove all liquidity and close the position (reclaims rent)
+meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --close
+```
+
+---
+
 ## Token Addresses (Solana Mainnet)
 
 | Token | Mint Address |
@@ -279,4 +326,17 @@ meteora add-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --amou
 
 # Step 3: Ask user to confirm, then execute
 meteora add-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --amount-x 0.01 --amount-y 1.5
+```
+
+### Scenario 5: Remove liquidity from a position
+
+```
+# Step 1: Find your positions
+meteora get-user-positions
+
+# Step 2: Preview removal (dry run)
+meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --dry-run
+
+# Step 3: Ask user to confirm, then remove all and close position
+meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --close
 ```
