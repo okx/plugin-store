@@ -7,6 +7,10 @@ pub fn resolve_wallet_solana() -> anyhow::Result<String> {
     let output = Command::new("onchainos")
         .args(["wallet", "addresses", "--chain", "501"])
         .output()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("onchainos wallet addresses failed (exit {}): {}", output.status, stderr.trim());
+    }
     let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))
         .map_err(|e| anyhow::anyhow!("wallet addresses parse error: {}", e))?;
     let addr = json["data"]["solana"][0]["address"].as_str().unwrap_or("").to_string();
@@ -58,9 +62,11 @@ pub async fn wallet_contract_call_solana(
 }
 
 /// Extract txHash from onchainos response.
-pub fn extract_tx_hash(result: &Value) -> &str {
+/// Returns an error if txHash is absent, so broadcast failures are not silently masked.
+pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {
     result["data"]["txHash"]
         .as_str()
         .or_else(|| result["txHash"].as_str())
-        .unwrap_or("pending")
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("onchainos response missing txHash: {}", result))
 }

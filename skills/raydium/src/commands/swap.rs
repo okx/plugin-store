@@ -210,7 +210,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         let broadcast_result =
             onchainos::wallet_contract_call_solana(RAYDIUM_AMM_PROGRAM, serialized_tx, false)
                 .await?;
-        let tx_hash = onchainos::extract_tx_hash(&broadcast_result);
+        let tx_hash = onchainos::extract_tx_hash(&broadcast_result)?;
         results.push(serde_json::json!({
             "txHash": tx_hash,
             "broadcastResult": broadcast_result,
