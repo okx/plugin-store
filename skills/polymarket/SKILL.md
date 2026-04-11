@@ -1,7 +1,7 @@
 ---
 name: polymarket
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, and manage orders on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, polymarket yes token, polymarket no token, prediction market trade, polymarket price."
-version: "0.3.0"
+version: "0.2.1"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -20,7 +20,7 @@ tags:
 ### Install polymarket binary
 
 ```bash
-REQUIRED_VERSION="0.3.0"
+REQUIRED_VERSION="0.2.1"
 INSTALLED_VERSION=$(polymarket --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
@@ -116,7 +116,7 @@ Polymarket is a prediction market platform on Polygon where users trade outcome 
 polymarket --version
 ```
 
-Expected: `polymarket 0.3.0`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket 0.2.1`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel only)
 
