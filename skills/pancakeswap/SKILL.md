@@ -14,9 +14,6 @@ tags:
 
 
 
-
-
-
 # PancakeSwap V3 Skill
 
 Swap tokens and manage concentrated liquidity on PancakeSwap V3 — the leading DEX on BNB Chain (BSC), Base, and Arbitrum.

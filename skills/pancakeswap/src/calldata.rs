@@ -83,14 +83,6 @@ pub fn encode_approve(spender: &str, amount: u128) -> Result<String> {
     Ok(format!("0x{}", hex::encode(call.abi_encode())))
 }
 
-pub fn encode_approve_max(spender: &str) -> Result<String> {
-    let call = approveCall {
-        spender: spender.parse::<Address>()?,
-        amount: U256::MAX,
-    };
-    Ok(format!("0x{}", hex::encode(call.abi_encode())))
-}
-
 // ── SmartRouter ───────────────────────────────────────────────────────────────
 
 pub fn encode_exact_input_single(
