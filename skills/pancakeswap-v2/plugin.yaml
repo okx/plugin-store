@@ -1,6 +1,6 @@
 schema_version: 1
 name: pancakeswap-v2
-version: "0.2.1"
+version: "0.2.2"
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
 author:
   name: skylavis-sky
@@ -28,6 +28,6 @@ build:
   binary_name: pancakeswap-v2
 
 api_calls:
-  - "https://bsc-rpc.publicnode.com"
-  - "https://base-rpc.publicnode.com"
-  - "https://arbitrum-one-rpc.publicnode.com"
+  - bsc-rpc.publicnode.com
+  - base-rpc.publicnode.com
+  - arbitrum-one-rpc.publicnode.com

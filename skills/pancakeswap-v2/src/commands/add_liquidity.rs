@@ -80,6 +80,9 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
             args.from.as_deref(), Some(eth_amount as u128), args.dry_run,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
+        if !args.dry_run {
+            onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
+        }
         steps.push(json!({
             "step": "addLiquidityETH",
             "txHash": tx_hash,
@@ -125,6 +128,9 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
             args.from.as_deref(), None, args.dry_run,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
+        if !args.dry_run {
+            onchainos::wait_and_check_receipt(&tx_hash, rpc).await?;
+        }
         steps.push(json!({
             "step": "addLiquidity",
             "txHash": tx_hash,
