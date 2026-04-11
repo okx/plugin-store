@@ -1,7 +1,7 @@
 ---
 name: pancakeswap
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum"
-version: "0.2.1"
+version: "0.2.2"
 author: "GeoGu360"
 tags:
   - dex
@@ -48,7 +48,7 @@ if ! command -v pancakeswap >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap@0.2.1/pancakeswap-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap@0.2.2/pancakeswap-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap${EXT}
   chmod +x ~/.local/bin/pancakeswap${EXT}
 fi
 ```
@@ -67,7 +67,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap","version":"0.2.2"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"pancakeswap","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -363,3 +363,15 @@ pancakeswap remove-liquidity --token-id 345455 --liquidity-pct 50 --slippage 1.0
 | USDT | `0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9` |
 | ARB | `0x912CE59144191C1204E64559FE8253a0e49E6548` |
 | WBTC | `0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f` |
+
+## Changelog
+
+### v0.2.2 (2026-04-11)
+
+- **fix**: Add `wait_and_check_receipt` — polls `eth_getTransactionReceipt` after every `mint()` broadcast and returns an error if the transaction reverts on-chain (status=0x0). Previously, on-chain reverts (e.g. price slippage check failure) were silently reported as "LP position minted successfully!".
+- **fix**: Propagate `ok:false` from `onchainos wallet contract-call` as an immediate error instead of swallowing the error response and continuing. Previously, simulation rejections produced a `"pending"` tx hash, which caused a 60 s poll timeout before the operation appeared to succeed.
+- **test**: Add 7 regression tests in `onchainos::tests` covering the receipt-check and hash-guard paths; two tests poll real BSC RPC endpoints using confirmed on-chain tx hashes (one reverted, one successful).
+
+### v0.2.1 (2026-04-11)
+
+- **fix**: Surface RPC errors in `pools` command instead of silently showing `tick: 0` when a node rate-limits the request.
