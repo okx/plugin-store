@@ -1,6 +1,6 @@
 schema_version: 1
 name: meteora
-version: "0.1.0"
+version: "0.1.1"
 description: "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, and executing swaps on Solana"
 author:
   name: "skylavis-sky"
@@ -21,9 +21,6 @@ components:
 build:
   lang: rust
   binary_name: meteora
-  source_repo: skylavis-sky/onchainos-plugins
-  source_commit: "f539fe7bb9b4b386d073f3ce7768fd2ebc077b92"
-  source_dir: meteora
 
 api_calls:
   - "https://dlmm.datapi.meteora.ag"

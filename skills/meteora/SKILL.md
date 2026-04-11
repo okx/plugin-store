@@ -4,7 +4,7 @@ description: "Meteora DLMM plugin for Solana — search liquidity pools, get swa
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
@@ -43,7 +43,7 @@ if ! command -v meteora >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.1.0/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/meteora@0.1.1/meteora-${TARGET}${EXT}" -o ~/.local/bin/meteora${EXT}
   chmod +x ~/.local/bin/meteora${EXT}
 fi
 ```
@@ -62,7 +62,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"meteora","version":"0.1.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"meteora","version":"0.1.1"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"meteora","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -119,6 +119,8 @@ Get an estimated swap quote for a token pair using the onchainos DEX aggregator 
 meteora get-swap-quote --from-token <mint> --to-token <mint> --amount <readable_amount>
 ```
 
+**Output fields:** `from_token`, `from_symbol`, `to_token`, `to_symbol`, `from_amount_readable`, `from_amount_raw`, `to_amount_readable` (human-readable, e.g. `"84.132157"`), `to_amount_raw`, `price_impact_pct`, `price_impact_warning`
+
 **Examples:**
 ```
 meteora get-swap-quote --from-token So11111111111111111111111111111111111111112 --to-token EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v --amount 1.0
@@ -154,7 +156,7 @@ meteora swap --from-token <mint> --to-token <mint> --amount <readable_amount> [-
 ```
 
 **Execution Flow:**
-1. Run with `--dry-run` to preview the quote without submitting a transaction
+1. Run with `--dry-run` to preview the quote — outputs `estimated_output` (human-readable), `estimated_output_raw`, `price_impact_pct`
 2. **Ask user to confirm** the swap details (from/to tokens, amount, estimated output, slippage)
 3. Execute after explicit user approval: `meteora swap --from-token ... --to-token ... --amount ...`
 4. Report transaction hash and Solscan link
