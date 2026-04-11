@@ -197,6 +197,7 @@ pub fn wallet_contract_call(
             "simulatedCommand": cmd_str
         }));
     }
+    args.push("--force".to_string());
     let mut cmd = base_cmd();
     cmd.args(&args);
     run_cmd(cmd)

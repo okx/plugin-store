@@ -43,8 +43,12 @@ pub async fn run(
         ));
     }
 
+    // Resolve asset address (handles both symbol and address inputs)
+    let (asset_addr, _decimals) = onchainos::resolve_token(asset, chain_id)
+        .with_context(|| format!("Could not resolve token address for '{}'", asset))?;
+
     // Encode calldata
-    let calldata = calldata::encode_set_collateral(asset, enable)
+    let calldata = calldata::encode_set_collateral(&asset_addr, enable)
         .context("Failed to encode setUserUseReserveAsCollateral calldata")?;
 
     let result = onchainos::wallet_contract_call(

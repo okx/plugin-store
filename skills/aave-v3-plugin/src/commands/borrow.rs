@@ -68,7 +68,7 @@ pub async fn run(
 
     // Resolve asset address and decimals via onchainos token search (handles USDC=6, WBTC=8, etc.)
     let (asset_addr, decimals) = onchainos::resolve_token(asset, chain_id)
-        .unwrap_or_else(|_| (asset.to_string(), 18));
+        .with_context(|| format!("Could not resolve token address for '{}'", asset))?;
     let amount_minimal = (amount * 10u128.pow(decimals as u32) as f64) as u128;
 
     let calldata = calldata::encode_borrow(&asset_addr, amount_minimal, &from_addr)
