@@ -1,6 +1,6 @@
 schema_version: 1
 name: curve
-version: "0.2.2"
+version: "0.2.3"
 description: "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC."
 author:
   name: GeoGu360
@@ -29,3 +29,5 @@ api_calls:
   - "https://base-rpc.publicnode.com"
   - "https://polygon-bor-rpc.publicnode.com"
   - "https://bsc-rpc.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

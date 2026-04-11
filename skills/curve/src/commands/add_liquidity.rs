@@ -5,8 +5,8 @@ use anyhow::{Context, Result};
 pub async fn run(
     chain_id: u64,
     pool_address: String,
-    amounts: Vec<u128>,
-    min_mint: u128,
+    amount_strs: Vec<String>,
+    min_mint_str: String,
     wallet: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
@@ -25,22 +25,46 @@ pub async fn run(
         }
     };
 
-    // Fetch pool info to get coin list
+    // Fetch pool info to get coin list and decimals
     let pools = api::get_all_pools(chain_name).await?;
     let pool = api::find_pool_by_address(&pools, &pool_address);
 
     let n_coins = match pool {
         Some(p) => p.coins.len(),
-        None => amounts.len(), // fallback: infer from amounts length
+        None => amount_strs.len(), // fallback: infer from amounts length
     };
 
-    if amounts.len() != n_coins {
+    if amount_strs.len() != n_coins {
         anyhow::bail!(
             "Pool has {} coins but {} amounts were provided",
             n_coins,
-            amounts.len()
+            amount_strs.len()
         );
     }
+
+    // Parse human-readable amounts using per-coin decimals
+    let amounts: Vec<u128> = if let Some(p) = pool {
+        let mut parsed = Vec::with_capacity(n_coins);
+        for (i, s) in amount_strs.iter().enumerate() {
+            let coin_decimals: u8 = p
+                .coins
+                .get(i)
+                .and_then(|c| c.decimals.as_deref())
+                .and_then(|d| d.parse().ok())
+                .unwrap_or(18);
+            parsed.push(rpc::parse_human_amount(s, coin_decimals)?);
+        }
+        parsed
+    } else {
+        // No pool info — assume 18 decimals for all coins
+        amount_strs
+            .iter()
+            .map(|s| rpc::parse_human_amount(s, 18))
+            .collect::<Result<Vec<_>>>()?
+    };
+
+    // Parse min_mint as LP tokens (always 18 decimals)
+    let min_mint = rpc::parse_human_amount(&min_mint_str, 18)?;
 
     // Build add_liquidity calldata based on coin count
     let calldata = match n_coins {

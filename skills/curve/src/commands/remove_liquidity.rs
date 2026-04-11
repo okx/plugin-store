@@ -5,9 +5,9 @@ use anyhow::Result;
 pub async fn run(
     chain_id: u64,
     pool_address: String,
-    lp_amount: Option<u128>,   // None means "all"
-    coin_index: Option<i64>,   // None = proportional, Some(i) = single-coin
-    min_amounts: Vec<u128>,    // min amounts for proportional; single value for one-coin
+    lp_amount_str: Option<String>, // None means "all"; human-readable LP token amount (18 dec)
+    coin_index: Option<i64>,       // None = proportional, Some(i) = single-coin
+    min_amount_strs: Vec<String>,  // human-readable min amounts per coin
     wallet: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
@@ -37,9 +37,15 @@ pub async fn run(
         .filter(|s| !s.is_empty())
         .unwrap_or(&pool_address);
 
+    // Parse human-readable lp_amount if provided (LP tokens are always 18 decimals)
+    let parsed_lp_amount: Option<u128> = match &lp_amount_str {
+        Some(s) => Some(rpc::parse_human_amount(s, 18)?),
+        None => None,
+    };
+
     // Get LP balance
     let lp_balance = if dry_run {
-        lp_amount.unwrap_or(1_000_000_000_000_000_000u128) // 1e18 placeholder
+        parsed_lp_amount.unwrap_or(1_000_000_000_000_000_000u128) // 1e18 placeholder
     } else {
         let bal = rpc::balance_of(lp_token_addr, &wallet_addr, rpc_url).await?;
         if bal == 0 {
@@ -48,8 +54,28 @@ pub async fn run(
         bal
     };
 
-    let actual_lp_amount = lp_amount.unwrap_or(lp_balance);
+    let actual_lp_amount = parsed_lp_amount.unwrap_or(lp_balance);
     let n_coins = pool.map(|p| p.coins.len()).unwrap_or(2);
+
+    // Parse human-readable min_amounts using per-coin decimals
+    let min_amounts: Vec<u128> = if let Some(p) = pool {
+        let mut parsed = Vec::new();
+        for (i, s) in min_amount_strs.iter().enumerate() {
+            let coin_decimals: u8 = p
+                .coins
+                .get(i)
+                .and_then(|c| c.decimals.as_deref())
+                .and_then(|d| d.parse().ok())
+                .unwrap_or(18);
+            parsed.push(rpc::parse_human_amount(s, coin_decimals)?);
+        }
+        parsed
+    } else {
+        min_amount_strs
+            .iter()
+            .map(|s| rpc::parse_human_amount(s, 18))
+            .collect::<Result<Vec<_>>>()?
+    };
 
     // Build calldata
     let calldata = if let Some(idx) = coin_index {

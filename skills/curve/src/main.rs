@@ -98,13 +98,13 @@ enum Commands {
         #[arg(long)]
         pool: String,
 
-        /// Comma-separated token amounts in minimal units (e.g. "1000000,1000000" for 2-coin pool)
+        /// Comma-separated token amounts in human-readable units matching pool coin order (e.g. "0,500.0,500.0" for 3pool: DAI,USDC,USDT)
         #[arg(long)]
         amounts: String,
 
-        /// Minimum LP tokens to mint (default: 0)
+        /// Minimum LP tokens to accept in human-readable units (default: 0)
         #[arg(long, default_value = "0")]
-        min_mint: u128,
+        min_mint: String,
 
         /// Sender wallet address (default: onchainos active wallet)
         #[arg(long)]
@@ -117,15 +117,15 @@ enum Commands {
         #[arg(long)]
         pool: String,
 
-        /// LP token amount to redeem in minimal units (default: full balance)
+        /// LP token amount to redeem in human-readable units (default: full balance)
         #[arg(long)]
-        lp_amount: Option<u128>,
+        lp_amount: Option<String>,
 
         /// Coin index for single-coin withdrawal (omit for proportional)
         #[arg(long, allow_hyphen_values = true)]
         coin_index: Option<i64>,
 
-        /// Comma-separated minimum output amounts (default: "0" or "0,0" etc.)
+        /// Comma-separated minimum output amounts in human-readable units (default: "0" or "0,0" etc.)
         #[arg(long, default_value = "0")]
         min_amounts: String,
 
@@ -175,11 +175,11 @@ async fn main() {
             min_mint,
             wallet,
         } => {
-            let parsed_amounts: Vec<u128> = amounts
+            let amount_strs: Vec<String> = amounts
                 .split(',')
-                .filter_map(|s| s.trim().parse().ok())
+                .map(|s| s.trim().to_string())
                 .collect();
-            commands::add_liquidity::run(chain_id, pool, parsed_amounts, min_mint, wallet, dry_run)
+            commands::add_liquidity::run(chain_id, pool, amount_strs, min_mint, wallet, dry_run)
                 .await
         }
         Commands::RemoveLiquidity {
@@ -189,16 +189,16 @@ async fn main() {
             min_amounts,
             wallet,
         } => {
-            let parsed_mins: Vec<u128> = min_amounts
+            let min_amount_strs: Vec<String> = min_amounts
                 .split(',')
-                .filter_map(|s| s.trim().parse().ok())
+                .map(|s| s.trim().to_string())
                 .collect();
             commands::remove_liquidity::run(
                 chain_id,
                 pool,
                 lp_amount,
                 coin_index,
-                parsed_mins,
+                min_amount_strs,
                 wallet,
                 dry_run,
             )

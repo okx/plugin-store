@@ -1,5 +1,48 @@
 // rpc.rs — Direct eth_call utilities (no onchainos)
 
+/// Parse a human-readable decimal amount string into minimal units (u128).
+///
+/// Examples (decimals=6):
+///   "1.0"  → 1_000_000
+///   "0.5"  → 500_000
+///   "1000" → 1_000_000_000_000
+pub fn parse_human_amount(amount_str: &str, decimals: u8) -> anyhow::Result<u128> {
+    let s = amount_str.trim();
+    let factor = 10u128.pow(decimals as u32);
+    if let Some(dot_pos) = s.find('.') {
+        let int_part: u128 = if dot_pos == 0 {
+            0
+        } else {
+            s[..dot_pos]
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?
+        };
+        let frac_str = &s[dot_pos + 1..];
+        if frac_str.len() > decimals as usize {
+            anyhow::bail!(
+                "Amount '{}' has {} decimal places but token only supports {}",
+                s,
+                frac_str.len(),
+                decimals
+            );
+        }
+        let frac: u128 = if frac_str.is_empty() {
+            0
+        } else {
+            frac_str
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?
+        };
+        let frac_factor = 10u128.pow(decimals as u32 - frac_str.len() as u32);
+        Ok(int_part * factor + frac * frac_factor)
+    } else {
+        let int_val: u128 = s
+            .parse()
+            .map_err(|_| anyhow::anyhow!("Invalid amount: '{}'", s))?;
+        Ok(int_val * factor)
+    }
+}
+
 /// Perform a raw JSON-RPC eth_call
 pub async fn eth_call(to: &str, data: &str, rpc_url: &str) -> anyhow::Result<String> {
     let client = reqwest::Client::new();
