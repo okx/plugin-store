@@ -5,6 +5,20 @@ use serde_json::json;
 
 // ── Raw eth_call ──────────────────────────────────────────────────────────────
 
+/// Extract a human-readable error string from an eth_call JSON error object.
+/// Strips the raw ABI-encoded hex suffix that some RPC nodes append.
+/// e.g. `{"code":3,"message":"execution reverted: Foo: 0x08c379a0..."}` → "execution reverted: Foo"
+fn decode_rpc_error(err: &serde_json::Value) -> String {
+    if let Some(msg) = err["message"].as_str() {
+        // Some RPC nodes append `: 0x<abidata>` after the revert reason — strip it
+        if let Some(idx) = msg.find(": 0x") {
+            return msg[..idx].to_string();
+        }
+        return msg.to_string();
+    }
+    err.to_string()
+}
+
 /// Execute an eth_call and return the hex result string.
 pub async fn eth_call(to: &str, data: &str, rpc_url: &str) -> Result<String> {
     let body = json!({
@@ -22,7 +36,7 @@ pub async fn eth_call(to: &str, data: &str, rpc_url: &str) -> Result<String> {
         .await?;
 
     if let Some(err) = resp.get("error") {
-        anyhow::bail!("eth_call error: {}", err);
+        anyhow::bail!("eth_call error: {}", decode_rpc_error(err));
     }
 
     Ok(resp["result"].as_str().unwrap_or("0x").to_string())
@@ -45,7 +59,7 @@ pub async fn eth_call_with_gas(to: &str, data: &str, rpc_url: &str, gas: &str) -
         .await?;
 
     if let Some(err) = resp.get("error") {
-        anyhow::bail!("eth_call error: {}", err);
+        anyhow::bail!("eth_call error: {}", decode_rpc_error(err));
     }
 
     Ok(resp["result"].as_str().unwrap_or("0x").to_string())
@@ -283,8 +297,17 @@ pub async fn get_token_ids_for_owner(
     let balance_hex = eth_call(npm, &format!("0x70a08231{}", padded_owner), rpc_url).await?;
     let balance = decode_u256_from_hex(&balance_hex) as usize;
 
-    let mut ids = Vec::with_capacity(balance);
-    for i in 0..balance {
+    const MAX_POSITIONS: usize = 100;
+    let capped = balance.min(MAX_POSITIONS);
+    if balance > MAX_POSITIONS {
+        eprintln!(
+            "WARNING: address holds {} positions; showing first {} only.",
+            balance, MAX_POSITIONS
+        );
+    }
+
+    let mut ids = Vec::with_capacity(capped);
+    for i in 0..capped {
         // tokenOfOwnerByIndex(address,uint256) = 0x2f745c59
         let calldata = format!(
             "0x2f745c59{:0>64}{:0>64x}",

@@ -1,7 +1,7 @@
 {
   "name": "pancakeswap",
   "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": {"name": "GeoGu360", "github": "GeoGu360"},
   "homepage": "https://github.com/okx/plugin-store/tree/main/skills/pancakeswap",
   "repository": "https://github.com/okx/plugin-store",
