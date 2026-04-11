@@ -538,15 +538,25 @@ jobs:
                 ${BIN}-* checksums.txt 2>&1; then
                 echo "Release created: $TAG"
 
-                # If this plugin was renamed, check for old-name releases to clean up
-                # Look for releases matching the binary pattern but with a different plugin name
+                # Clean up old VERSION releases for this plugin
+                # New version confirmed → delete all older versions
+                gh release list --repo "${{ github.repository }}" --limit 100 --json tagName --jq '.[].tagName' \
+                  | grep "^plugins/${NAME}@" \
+                  | grep -v "^${TAG}$" \
+                  | while read OLD_VER_TAG; do
+                    echo "  Deleting old version: $OLD_VER_TAG"
+                    gh release delete "$OLD_VER_TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+                  done
+
+                # Clean up old NAME releases (plugin rename scenario)
                 OLD_TAG_PATTERN="plugins/${BIN}@"
                 if [ "$OLD_TAG_PATTERN" != "plugins/${NAME}@" ]; then
-                  OLD_TAG="${OLD_TAG_PATTERN}${VERSION}"
-                  if gh release view "$OLD_TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
-                    echo "  Cleaning up old release from rename: $OLD_TAG"
-                    gh release delete "$OLD_TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
-                  fi
+                  gh release list --repo "${{ github.repository }}" --limit 100 --json tagName --jq '.[].tagName' \
+                    | grep "^${OLD_TAG_PATTERN}" \
+                    | while read OLD_NAME_TAG; do
+                      echo "  Deleting renamed release: $OLD_NAME_TAG"
+                      gh release delete "$OLD_NAME_TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+                    done
                 fi
               else
                 echo "::warning::Release create failed for $TAG"
