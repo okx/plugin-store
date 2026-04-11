@@ -1,6 +1,6 @@
 schema_version: 1
 name: pancakeswap
-version: "0.2.1"
+version: "0.2.2"
 description: "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum"
 author:
   name: GeoGu360

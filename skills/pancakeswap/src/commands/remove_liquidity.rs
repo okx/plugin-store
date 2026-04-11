@@ -12,6 +12,10 @@ pub struct RemoveLiquidityArgs {
 }
 
 pub async fn run(args: RemoveLiquidityArgs) -> Result<()> {
+    if args.liquidity_pct <= 0.0 || args.liquidity_pct > 100.0 {
+        anyhow::bail!("liquidity-pct must be between 1 and 100 (got {}).", args.liquidity_pct);
+    }
+
     let cfg = crate::config::get_chain_config(args.chain)?;
 
     // Fetch current position data to verify it exists and get liquidity

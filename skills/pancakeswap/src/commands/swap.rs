@@ -19,6 +19,10 @@ pub async fn run(args: SwapArgs) -> Result<()> {
     let from_addr = crate::config::resolve_token_address(&args.from, args.chain)?;
     let to_addr = crate::config::resolve_token_address(&args.to, args.chain)?;
 
+    if from_addr == to_addr {
+        anyhow::bail!("tokenIn and tokenOut must be different tokens.");
+    }
+
     // Resolve token metadata
     let decimals_in = crate::rpc::get_decimals(&from_addr, cfg.rpc_url).await.unwrap_or(18);
     let decimals_out = crate::rpc::get_decimals(&to_addr, cfg.rpc_url).await.unwrap_or(18);
@@ -26,6 +30,10 @@ pub async fn run(args: SwapArgs) -> Result<()> {
     let symbol_out = crate::rpc::get_symbol(&to_addr, cfg.rpc_url).await.unwrap_or_else(|_| args.to.clone());
 
     let amount_in = crate::config::human_to_minimal(&args.amount, decimals_in)?;
+
+    if amount_in == 0 {
+        anyhow::bail!("Amount must be greater than 0.");
+    }
 
     // Get best quote across fee tiers, verifying pool has actual liquidity
     let fee_tiers = [100u32, 500, 2500, 10000];

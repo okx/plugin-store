@@ -16,6 +16,10 @@ pub async fn run(args: QuoteArgs) -> Result<()> {
     let from_addr = crate::config::resolve_token_address(&args.from, args.chain)?;
     let to_addr = crate::config::resolve_token_address(&args.to, args.chain)?;
 
+    if from_addr == to_addr {
+        anyhow::bail!("tokenIn and tokenOut must be different tokens.");
+    }
+
     // Resolve decimals for the input token
     let decimals_in = crate::rpc::get_decimals(&from_addr, cfg.rpc_url).await.unwrap_or(18);
     let decimals_out = crate::rpc::get_decimals(&to_addr, cfg.rpc_url).await.unwrap_or(18);
@@ -49,11 +53,7 @@ pub async fn run(args: QuoteArgs) -> Result<()> {
     }
 
     if best_amount_out == 0 {
-        eprintln!("No quote found. Errors per fee tier:");
-        for e in &errors {
-            eprintln!("  {}", e);
-        }
-        anyhow::bail!("Could not get a quote for this token pair on chain {}", args.chain);
+        anyhow::bail!("No liquidity path found for this token pair on chain {}. Use `pancakeswap pools` to verify pools exist.", args.chain);
     }
 
     let amount_out_human = best_amount_out as f64 / 10f64.powi(decimals_out as i32);

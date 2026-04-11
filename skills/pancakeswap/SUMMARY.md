@@ -1,13 +1,13 @@
 # pancakeswap
-Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain and Base.
+Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum.
 
 ## Highlights
-- Token swaps via SmartRouter across all fee tiers
-- Concentrated liquidity position management (add/remove)
-- Real-time swap quotes without gas costs
-- Support for BNB Chain (BSC) and Base networks
-- Pool discovery and liquidity analytics
-- Position tracking and portfolio viewing
-- Multi-step transaction safety with user confirmations
-- Integration with onchainos wallet infrastructure
+- Token swaps via SmartRouter across all fee tiers (0.01%, 0.05%, 0.25%, 1%)
+- Add/remove concentrated liquidity positions with auto-calculated tick ranges
+- Real-time quotes and pool discovery across multiple chains
+- Support for BNB Chain (BSC), Base, and Arbitrum networks
+- Integration with TheGraph for efficient position queries
+- Comprehensive slippage protection using V3 liquidity math
+- Built-in balance verification and transaction simulation
+- Automatic approval handling for both SwapRouter and NonfungiblePositionManager
 

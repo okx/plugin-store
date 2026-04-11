@@ -283,8 +283,17 @@ pub async fn get_token_ids_for_owner(
     let balance_hex = eth_call(npm, &format!("0x70a08231{}", padded_owner), rpc_url).await?;
     let balance = decode_u256_from_hex(&balance_hex) as usize;
 
-    let mut ids = Vec::with_capacity(balance);
-    for i in 0..balance {
+    const MAX_POSITIONS: usize = 100;
+    let capped = balance.min(MAX_POSITIONS);
+    if balance > MAX_POSITIONS {
+        eprintln!(
+            "WARNING: address holds {} positions; showing first {} only.",
+            balance, MAX_POSITIONS
+        );
+    }
+
+    let mut ids = Vec::with_capacity(capped);
+    for i in 0..capped {
         // tokenOfOwnerByIndex(address,uint256) = 0x2f745c59
         let calldata = format!(
             "0x2f745c59{:0>64}{:0>64x}",

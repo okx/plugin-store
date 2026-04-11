@@ -2,20 +2,18 @@
 # pancakeswap -- Skill Summary
 
 ## Overview
-This skill enables token swapping and concentrated liquidity management on PancakeSwap V3, the leading decentralized exchange on BNB Chain and Base. It provides comprehensive DEX functionality including real-time quotes, token swaps via SmartRouter, liquidity position minting/burning, pool analytics, and portfolio tracking. All operations integrate with the onchainos wallet system and include safety checks with user confirmation steps for write operations.
+This skill enables token swaps and concentrated liquidity management on PancakeSwap V3 across BNB Chain, Base, and Arbitrum. It provides comprehensive DEX functionality including quote generation, token swaps via SmartRouter, liquidity position management, and pool discovery. The skill uses proper V3 liquidity mathematics for accurate slippage calculations and integrates with both on-chain contracts and TheGraph subgraphs for optimal performance.
 
 ## Usage
-Install the plugin via OKX plugin store, ensure your onchainos wallet is connected, then use commands like `pancakeswap quote`, `pancakeswap swap`, or `pancakeswap add-liquidity`. All write operations require explicit user confirmation before broadcasting transactions.
+Install the plugin from OKX plugin store, ensure your wallet is connected via `onchainos wallet login`, then use commands like `pancakeswap quote` for price discovery or `pancakeswap swap` for token exchanges. All write operations require explicit user confirmation and use the `--confirm` flag for transaction broadcasting.
 
 ## Commands
-| Command | Description |
-|---------|-------------|
-| `quote` | Get swap quotes without executing transactions |
-| `swap` | Execute token swaps via SmartRouter |
-| `pools` | List available pools for token pairs |
-| `positions` | View LP positions for a wallet address |
-| `add-liquidity` | Mint new concentrated liquidity positions |
-| `remove-liquidity` | Remove liquidity and collect tokens from positions |
+- `quote` - Get swap quotes without executing transactions
+- `swap` - Execute token swaps via SmartRouter with slippage protection
+- `pools` - List all pools for a token pair across fee tiers
+- `positions` - View active LP positions for a wallet address
+- `add-liquidity` - Mint new concentrated liquidity positions
+- `remove-liquidity` - Remove liquidity and collect tokens from positions
 
 ## Triggers
-Activate this skill when users mention PancakeSwap operations like "swap on pancake", "add liquidity pancakeswap", "PCS swap", or want to manage V3 concentrated liquidity positions. Do not use for PancakeSwap V2 AMM operations.
+Activate when users want to swap tokens on PancakeSwap, manage liquidity positions, or query pool information on BNB Chain, Base, or Arbitrum. Trigger phrases include "pancakeswap", "swap on pancake", "add liquidity pancakeswap", and "PancakeSwap V3".

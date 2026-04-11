@@ -39,6 +39,10 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
     let amount0_desired = crate::config::human_to_minimal(amount_a_str, decimals0)?;
     let amount1_desired = crate::config::human_to_minimal(amount_b_str, decimals1)?;
 
+    if amount0_desired == 0 && amount1_desired == 0 {
+        anyhow::bail!("Both amounts are zero — provide at least one non-zero amount.");
+    }
+
     let spacing = crate::config::tick_spacing(args.fee)?;
 
     // Resolve tick range + fetch pool slot0 (needed for both auto-tick and slippage math)
@@ -177,6 +181,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
     let r = crate::onchainos::wallet_contract_call(args.chain, cfg.npm, &mint_calldata, None, None, args.dry_run, args.confirm).await?;
     let tx_hash = crate::onchainos::extract_tx_hash(&r);
     println!("  Mint tx: {}", tx_hash);
+    println!("  Waiting for on-chain confirmation...");
+    crate::onchainos::wait_and_check_receipt(tx_hash, cfg.rpc_url).await?;
     println!("\nLP position minted successfully!");
 
     Ok(())
