@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v2
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
-version: "0.2.2"
+version: "0.2.3"
 author: "skylavis-sky"
 tags:
   - dex
@@ -15,6 +15,7 @@ tags:
   - lp
   - arbitrum
 ---
+
 
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
@@ -33,45 +34,25 @@ npx skills add okx/onchainos-skills --yes --global
 npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
-### Install pancakeswap-v2 binary (auto-injected)
-
-```bash
-if ! command -v pancakeswap-v2 >/dev/null 2>&1; then
-  OS=$(uname -s | tr A-Z a-z)
-  ARCH=$(uname -m)
-  EXT=""
-  case "${OS}_${ARCH}" in
-    darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
-    darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
-    linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
-    linux_i686)    TARGET="i686-unknown-linux-gnu" ;;
-    linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
-    linux_armv7l)  TARGET="armv7-unknown-linux-gnueabihf" ;;
-    mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
-  esac
-  mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2@0.2.1/pancakeswap-v2-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap-v2${EXT}
-  chmod +x ~/.local/bin/pancakeswap-v2${EXT}
-fi
-```
-
 ### Report install (auto-injected, runs once)
 
 ```bash
 REPORT_FLAG="$HOME/.plugin-store/reported/pancakeswap-v2"
 if [ ! -f "$REPORT_FLAG" ]; then
   mkdir -p "$HOME/.plugin-store/reported"
+  # Device fingerprint → SHA256 → 32-char device ID
   DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
   DEV_ID=$(echo -n "$DEV_RAW" | shasum -a 256 | head -c 32)
+  # HMAC signature (obfuscated key, same as CLI binary)
   _K=$(echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | base64 -d 2>/dev/null || echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | openssl base64 -d)
   HMAC_SIG=$(echo -n "${_K}${DEV_ID}" | shasum -a 256 | head -c 8)
   DIV_ID="${DEV_ID}${HMAC_SIG}"
   unset _K
+  # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-v2","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v2","version":"0.2.3"}' >/dev/null 2>&1 || true
+  # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"pancakeswap-v2","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -85,6 +66,19 @@ fi
 ## Pre-flight Checks
 
 Before executing any write operation, verify the environment is ready:
+
+> **Version check**: Run `pancakeswap-v2 --version` and confirm it prints `pancakeswap-v2 0.2.3`. If the installed version is older, force-reinstall:
+> ```bash
+> OS=$(uname -s | tr A-Z a-z); ARCH=$(uname -m)
+> case "${OS}_${ARCH}" in
+>   darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
+>   darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
+>   linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
+>   linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
+> esac
+> curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2@0.2.3/pancakeswap-v2-${TARGET}" \
+>   -o ~/.local/bin/pancakeswap-v2 && chmod +x ~/.local/bin/pancakeswap-v2
+> ```
 
 ```bash
 # Check onchainos version (requires >= 0.1.0)
@@ -116,11 +110,32 @@ Do NOT use for: PancakeSwap V3 swaps (use pancakeswap skill), concentrated liqui
 - Supports BSC (chain 56, default), Base (chain 8453), and Arbitrum One (chain 42161)
 - V2 uses constant-product xyk formula; LP tokens are standard ERC-20 (not NFTs); fixed 0.25% swap fee
 
+## Global Flags
+
+These flags apply to the **entire binary** and must be placed **before** the subcommand:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--chain <id>` | `56` | Chain ID: 56 (BSC), 8453 (Base), 42161 (Arbitrum) |
+| `--dry-run` | false | Simulate without broadcasting — no onchainos call made |
+| `--slippage-bps <n>` | `50` | Slippage tolerance in basis points (50 = 0.5%) |
+| `--deadline-secs <n>` | `300` | Transaction deadline in seconds from now |
+| `--from <address>` | wallet | Override sender address |
+| `--rpc-url <url>` | (chain default) | Override RPC endpoint |
+
+**Correct usage pattern:**
+```
+pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amount-in 1000000000000000000
+pancakeswap-v2 --dry-run --chain 56 add-liquidity --token-a USDT --token-b BNB --amount-a 1000000000000000000 --amount-b 1000000000000000
+```
+
+> ⚠️ `--dry-run` does **not** appear in subcommand `--help` output because it is a global flag. Always pass it before the subcommand name.
+
 ## Execution Flow for Write Operations
 
-1. Run with `--dry-run` first to preview calldata and estimated amounts
+1. Run with `pancakeswap-v2 --dry-run --chain <id> <command> ...` to preview calldata and estimated amounts
 2. **Ask user to confirm** the transaction details before proceeding
-3. Execute only after explicit user approval
+3. Execute only after explicit user approval (re-run without `--dry-run`)
 4. Report transaction hash and block explorer link
 
 ---
@@ -185,7 +200,10 @@ Read-only operation — no confirmation required.
 
 **Usage:**
 ```
+# Live swap
 pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100000000000000000000
+# Dry-run preview (--dry-run is a global flag, goes before the subcommand)
+pancakeswap-v2 --dry-run --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100000000000000000000
 ```
 
 **Parameters:**
@@ -194,12 +212,12 @@ pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 1000
 | tokenIn | `--token-in` | Input token: symbol or address. Use BNB/ETH for native |
 | tokenOut | `--token-out` | Output token: symbol or address |
 | amountIn | `--amount-in` | Input amount in minimal units |
-| slippageBps | `--slippage-bps` | Slippage in basis points (default 50 = 0.5%) |
-| deadlineSecs | `--deadline-secs` | Seconds until deadline (default 300) |
-| dryRun | `--dry-run` | Preview calldata only, no broadcast |
+| slippageBps | `--slippage-bps` | Slippage in basis points (default 50 = 0.5%) — global flag |
+| deadlineSecs | `--deadline-secs` | Seconds until deadline (default 300) — global flag |
+| dryRun | `--dry-run` | Preview calldata only, no broadcast — **global flag, place before subcommand** |
 
 **Execution flow:**
-1. Run `--dry-run` to preview the swap calldata and expected output
+1. Run `pancakeswap-v2 --dry-run --chain 56 swap ...` to preview the swap calldata and expected output
 2. **Ask user to confirm** the swap details (tokenIn, tokenOut, amountIn, amountOutMin, slippage)
 3. If tokenIn is an ERC-20 and allowance is insufficient, first submit an exact-amount approve tx via `onchainos wallet contract-call`; **ask user to confirm** the approval
 4. Submit swap via `onchainos wallet contract-call`
@@ -234,6 +252,9 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b USDT --amount-a
 
 # Token + native BNB
 pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 10000000000000000000 --amount-b 50000000000000000
+
+# Dry-run preview (--dry-run is a global flag, goes before the subcommand)
+pancakeswap-v2 --dry-run --chain 56 add-liquidity --token-a USDT --token-b BNB --amount-a 1000000000000000000 --amount-b 1000000000000000
 ```
 
 **Parameters:**
@@ -243,12 +264,12 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 
 | tokenB | `--token-b` | Second token. Use BNB/ETH for native |
 | amountA | `--amount-a` | Desired amount of tokenA in minimal units |
 | amountB | `--amount-b` | Desired amount of tokenB (or native BNB/ETH) in minimal units |
-| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
-| dryRun | `--dry-run` | Preview calldata only |
+| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) — global flag |
+| dryRun | `--dry-run` | Preview calldata only — **global flag, place before subcommand** |
 
 **Execution flow:**
 1. Check current pair reserves and ratio
-2. Run `--dry-run` to preview the transaction
+2. Run `pancakeswap-v2 --dry-run --chain 56 add-liquidity ...` to preview the transaction
 3. **Ask user to confirm** the amounts and LP token receipt before proceeding
 4. Approve Router02 to spend the exact tokenA/tokenB amounts via `onchainos wallet contract-call` (if needed); **ask user to confirm** each approval
 5. Submit `addLiquidity` or `addLiquidityETH` via `onchainos wallet contract-call`
@@ -275,13 +296,13 @@ pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liqui
 | tokenA | `--token-a` | First token |
 | tokenB | `--token-b` | Second token. Use BNB/ETH to receive native |
 | liquidity | `--liquidity` | LP tokens to burn (minimal units). Omit to remove all |
-| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
-| dryRun | `--dry-run` | Preview only |
+| slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) — global flag |
+| dryRun | `--dry-run` | Preview only — **global flag, place before subcommand** |
 
 **Execution flow:**
 1. Fetch LP balance and compute expected token withdrawals
 2. Display summary: LP amount, expected tokenA and tokenB out
-3. Run `--dry-run` to preview calldata
+3. Run `pancakeswap-v2 --dry-run --chain 56 remove-liquidity ...` to preview calldata
 4. **Ask user to confirm** the removal details before proceeding
 5. Approve LP tokens to Router02 via `onchainos wallet contract-call`; **ask user to confirm**
 6. Submit `removeLiquidity` or `removeLiquidityETH` via `onchainos wallet contract-call`
@@ -359,6 +380,13 @@ For Arbitrum One (42161): WETH `0x82aF49447D8a07e3bd95BD0d56f35241523fBab1`, USD
 ---
 
 ## Changelog
+
+### v0.2.3 (2026-04-11)
+
+- **fix**: Binary download URL in install block corrected from `@0.2.1` (404) to `@0.2.3`
+- **fix**: Added upgrade instructions for users who already have an older binary installed (presence-only `if ! command -v` check does not auto-upgrade)
+- **docs**: Added Global Flags section explaining that `--dry-run`, `--chain`, `--slippage-bps`, `--deadline-secs`, `--from`, `--rpc-url` are root-level flags and must be placed **before** the subcommand (e.g. `pancakeswap-v2 --dry-run --chain 56 add-liquidity ...`)
+- **docs**: Updated Usage examples for `swap`, `add-liquidity`, and `remove-liquidity` to show correct `--dry-run` placement
 
 ### v0.2.1 (2026-04-11)
 

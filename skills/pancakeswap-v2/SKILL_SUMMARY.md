@@ -2,21 +2,23 @@
 # pancakeswap-v2 -- Skill Summary
 
 ## Overview
-This skill enables interaction with PancakeSwap V2, the constant-product (xyk) automated market maker on BSC and Base networks. It provides comprehensive functionality for token swapping, liquidity provision, and pool data retrieval, with built-in safety features including transaction previews, slippage protection, and explicit user confirmation for all write operations.
+This skill enables AI agents to interact with PancakeSwap V2 DEX across BSC, Base, and Arbitrum networks. It provides comprehensive functionality for token swaps, liquidity management, and pool information retrieval using the constant product AMM formula. All write operations require user confirmation and integrate with onchainos wallet for secure transaction execution.
 
 ## Usage
-Use voice commands like "swap USDT for CAKE on PancakeSwap V2" or "add liquidity to CAKE/BNB pool" to trigger operations. All write operations require explicit user confirmation after displaying transaction previews via dry-run mode.
+Install the binary via the auto-injected dependency scripts, ensure onchainos wallet is authenticated, then use commands with appropriate global flags like `--chain` and `--dry-run` for transaction preview.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `quote` | Get expected swap output amounts and pricing |
+| `quote` | Get expected swap output amounts |
 | `swap` | Execute token swaps with slippage protection |
-| `add-liquidity` | Provide liquidity to earn LP tokens |
-| `remove-liquidity` | Withdraw liquidity by burning LP tokens |
+| `add-liquidity` | Add liquidity to token pairs |
+| `remove-liquidity` | Remove liquidity from positions |
 | `get-pair` | Look up pair contract addresses |
-| `get-reserves` | Check current pool reserves and ratios |
-| `lp-balance` | View LP token balances for specific pairs |
+| `get-reserves` | Get current pool reserves |
+| `lp-balance` | Check LP token balances |
+
+Global flags: `--chain <id>`, `--dry-run`, `--slippage-bps <n>`, `--deadline-secs <n>`, `--from <address>`, `--rpc-url <url>`
 
 ## Triggers
-Activate this skill when users want to trade tokens, provide liquidity, or check prices on PancakeSwap V2 specifically (not V3). Trigger phrases include "swap on pancakeswap v2", "add liquidity pancakeswap", "pancake amm", and "check pancake pair".
+Activate this skill when users mention PancakeSwap V2 operations, token swaps on Pancake, liquidity management, or checking pool information on BSC/Base/Arbitrum. Key phrases include "swap pancakeswap v2", "add/remove liquidity pancake", "pcs v2 quote", and "check pancake pair".
