@@ -4,7 +4,7 @@ description: "Raydium AMM plugin for token swaps, price queries, and pool info o
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 
@@ -44,7 +44,7 @@ if ! command -v raydium >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/raydium@0.1.2/raydium-${TARGET}${EXT}" -o ~/.local/bin/raydium${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/raydium@0.1.3/raydium-${TARGET}${EXT}" -o ~/.local/bin/raydium${EXT}
   chmod +x ~/.local/bin/raydium${EXT}
 fi
 ```
@@ -66,7 +66,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"raydium","version":"0.1.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"raydium","version":"0.1.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

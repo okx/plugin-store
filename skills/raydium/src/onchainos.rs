@@ -61,6 +61,43 @@ pub async fn wallet_contract_call_solana(
     Ok(serde_json::from_str(&stdout)?)
 }
 
+
+/// Resolve the user's Associated Token Account (ATA) for a given SPL mint via Solana RPC.
+/// Required by Raydium's /transaction/swap-base-in API as `inputAccount` when input is SPL.
+pub async fn get_token_account(owner: &str, mint: &str, rpc_url: &str) -> anyhow::Result<String> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getTokenAccountsByOwner",
+        "params": [
+            owner,
+            { "mint": mint },
+            { "encoding": "base64" }
+        ]
+    });
+    let resp: Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    let accounts = resp["result"]["value"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("Unexpected RPC response: {}", resp))?;
+    if accounts.is_empty() {
+        anyhow::bail!(
+            "No token account found for mint {} in wallet {}. \
+             Ensure the wallet holds this token before swapping.",
+            mint, owner
+        );
+    }
+    accounts[0]["pubkey"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("Missing pubkey in token account response"))
+}
 /// Extract txHash from onchainos response.
 /// Returns an error if txHash is absent, so broadcast failures are not silently masked.
 pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {

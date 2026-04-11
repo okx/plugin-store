@@ -15,7 +15,7 @@ use serde_json::Value;
 use crate::config::{
     parse_human_amount, DEFAULT_COMPUTE_UNIT_PRICE, DEFAULT_SLIPPAGE_BPS, DEFAULT_TX_VERSION,
     PRICE_IMPACT_BLOCK_PCT, PRICE_IMPACT_WARN_PCT, RAYDIUM_AMM_PROGRAM, SOL_NATIVE_MINT,
-    USDC_SOLANA, TX_API_BASE,
+    SOLANA_RPC_URL, USDC_SOLANA, TX_API_BASE,
 };
 use crate::onchainos;
 
@@ -167,9 +167,23 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         );
     }
 
-    // Step 2: Build serialized transaction - must submit immediately after (blockhash ~60s)
+    // Step 2: Resolve input token account (required by Raydium API when input is SPL, not native SOL)
+    let input_account: Option<String> = if args.input_mint != SOL_NATIVE_MINT {
+        let acct = onchainos::get_token_account(&wallet, &args.input_mint, SOLANA_RPC_URL)
+            .await
+            .map_err(|e| anyhow::anyhow!(
+                "Failed to resolve input token account for mint {}: {}. \
+                 Ensure the wallet holds the input token before swapping.",
+                args.input_mint, e
+            ))?;
+        Some(acct)
+    } else {
+        None
+    };
+
+    // Step 3: Build serialized transaction - must submit immediately after (blockhash ~60s)
     let tx_url = format!("{}/transaction/swap-base-in", TX_API_BASE);
-    let tx_body = serde_json::json!({
+    let mut tx_body = serde_json::json!({
         "swapResponse": quote_resp,
         "txVersion": args.tx_version,
         "wallet": wallet,
@@ -177,6 +191,9 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         "unwrapSol": args.unwrap_sol,
         "computeUnitPriceMicroLamports": args.compute_unit_price,
     });
+    if let Some(ref acct) = input_account {
+        tx_body["inputAccount"] = serde_json::Value::String(acct.clone());
+    }
     let tx_resp: Value = client
         .post(&tx_url)
         .json(&tx_body)
@@ -200,7 +217,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         anyhow::bail!("No transactions returned from Raydium API");
     }
 
-    // Step 3: Broadcast each transaction immediately (blockhash expires ~60s)
+    // Step 4: Broadcast each transaction immediately (blockhash expires ~60s)
     let mut results: Vec<Value> = Vec::new();
     for tx_item in transactions {
         let serialized_tx = tx_item["transaction"]

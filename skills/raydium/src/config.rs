@@ -7,6 +7,7 @@ pub const USDC_SOLANA: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 pub const DATA_API_BASE: &str = "https://api-v3.raydium.io";
 pub const TX_API_BASE: &str = "https://transaction-v1.raydium.io";
+pub const SOLANA_RPC_URL: &str = "https://api.mainnet-beta.solana.com";
 
 // Raydium AMM V4 program (standard pools — used as --to for onchainos contract-call)
 pub const RAYDIUM_AMM_PROGRAM: &str = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
