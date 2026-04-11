@@ -177,6 +177,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
     let r = crate::onchainos::wallet_contract_call(args.chain, cfg.npm, &mint_calldata, None, None, args.dry_run, args.confirm).await?;
     let tx_hash = crate::onchainos::extract_tx_hash(&r);
     println!("  Mint tx: {}", tx_hash);
+    println!("  Waiting for on-chain confirmation...");
+    crate::onchainos::wait_and_check_receipt(tx_hash, cfg.rpc_url).await?;
     println!("\nLP position minted successfully!");
 
     Ok(())
