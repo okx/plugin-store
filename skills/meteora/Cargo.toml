@@ -1,0 +1,25 @@
+[package]
+name = "meteora"
+version = "0.3.1"
+edition = "2021"
+
+[[bin]]
+name = "meteora"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+bincode = "1"
+bs58 = "0.5"
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solana-sdk = { version = "2.1", default-features = false, features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
