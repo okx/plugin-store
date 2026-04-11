@@ -1,0 +1,118 @@
+use std::process::Command;
+use serde_json::Value;
+
+/// Resolve the current Solana wallet address via onchainos
+pub fn resolve_wallet_solana() -> anyhow::Result<String> {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501"])
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(serde_json::json!({}));
+
+    // Try data.details[0].tokenAssets[0].address path
+    if let Some(addr) = json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+        .and_then(|a| a.first())
+        .and_then(|t| t["address"].as_str())
+    {
+        return Ok(addr.to_string());
+    }
+
+    // Try data.address path
+    if let Some(addr) = json["data"]["address"].as_str() {
+        return Ok(addr.to_string());
+    }
+
+    // Try top-level address
+    if let Some(addr) = json["address"].as_str() {
+        return Ok(addr.to_string());
+    }
+
+    anyhow::bail!(
+        "Cannot resolve Solana wallet address. Make sure onchainos is logged in.\nRaw output: {}",
+        stdout
+    )
+}
+
+/// Execute onchainos swap quote for Solana (dry run path for swap)
+pub fn dex_quote_solana(
+    from_token: &str,
+    to_token: &str,
+    readable_amount: &str,
+) -> anyhow::Result<Value> {
+    let output = Command::new("onchainos")
+        .args([
+            "swap", "quote",
+            "--chain", "solana",
+            "--from", from_token,
+            "--to", to_token,
+            "--readable-amount", readable_amount,
+        ])
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(serde_json::from_str(&stdout).unwrap_or(serde_json::json!({
+        "ok": true,
+        "dry_run": true,
+        "raw": stdout.to_string()
+    })))
+}
+
+/// Execute onchainos swap execute for Solana
+/// NOTE: Solana does NOT need --force
+pub fn dex_swap_execute_solana(
+    from_token: &str,
+    to_token: &str,
+    readable_amount: &str,
+    wallet: &str,
+    slippage: Option<&str>,
+) -> anyhow::Result<Value> {
+    let mut args = vec![
+        "swap", "execute",
+        "--chain", "solana",
+        "--from", from_token,
+        "--to", to_token,
+        "--readable-amount", readable_amount,
+        "--wallet", wallet,
+    ];
+    if let Some(s) = slippage {
+        args.extend_from_slice(&["--slippage", s]);
+    }
+    let output = Command::new("onchainos").args(&args).output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    serde_json::from_str(&stdout).map_err(|e| anyhow::anyhow!("Failed to parse onchainos output: {e}\nRaw: {stdout}"))
+}
+
+/// Send a pre-built (unsigned) Solana transaction via onchainos.
+///
+/// onchainos signs with the currently logged-in wallet and broadcasts to mainnet.
+/// Chain 501 = Solana mainnet.
+/// `program_id` is passed as `--to` (the primary program being called).
+pub fn contract_call_solana(unsigned_tx_b58: &str, program_id: &str) -> anyhow::Result<Value> {
+    let output = Command::new("onchainos")
+        .args([
+            "wallet", "contract-call",
+            "--chain", "501",
+            "--to", program_id,
+            "--unsigned-tx", unsigned_tx_b58,
+        ])
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    serde_json::from_str(&stdout).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to parse onchainos contract-call output: {e}\nstdout: {stdout}\nstderr: {stderr}"
+        )
+    })
+}
+
+/// Extract txHash from onchainos result
+pub fn extract_tx_hash(result: &Value) -> String {
+    result["data"]["txHash"]
+        .as_str()
+        .or_else(|| result["data"]["swapTxHash"].as_str())
+        .or_else(|| result["txHash"].as_str())
+        .unwrap_or("pending")
+        .to_string()
+}
