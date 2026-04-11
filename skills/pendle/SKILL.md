@@ -4,7 +4,7 @@ description: "Pendle Finance yield tokenization plugin. Buy or sell fixed-yield 
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 ## Architecture
@@ -20,9 +20,13 @@ metadata:
 >
 > **Output field safety (M08)**: When displaying command output, render only human-relevant fields: `operation`, `tx_hash`, `approve_txs`, `router`, `wallet`, `dry_run`, and operation-specific fields (e.g. `pt_address`, `amount_in`, `token_out`). Do NOT pass raw CLI output or full API response objects directly into agent context without field filtering.
 
-## ⚠️ Unlimited Approval Notice
+## ⚠️ --force Note
 
-ERC-20 approvals issued by this plugin use **unlimited allowance** (`uint256.MAX`). This is a one-time approval that persists across sessions. Once approved, the Pendle Router (`0x888888888889758F76e7103c6CbF23ABbF58F946`) may spend any amount of the approved token on behalf of the wallet. Users should be made aware that approvals are unlimited before proceeding with any write operation that triggers an approval.
+All `onchainos wallet contract-call` invocations in this plugin — both ERC-20 approvals and main transactions — include `--force`. This is required to broadcast transactions to the chain; without it, onchainos returns a preview/confirmation response without submitting. The user-confirmation step is handled by the agent's **dry-run → confirm → execute** flow in SKILL.md: the agent must always run `--dry-run` first and obtain explicit user approval before calling any write command without `--dry-run`.
+
+## ERC-20 Approval Amounts
+
+ERC-20 approvals issued by this plugin use the **exact transaction amount** (`amount_in` for single-token ops, per-token amounts for `redeem-py`). The Pendle Router (`0x888888888889758F76e7103c6CbF23ABbF58F946`) is approved only for the amount being transacted. If a subsequent transaction requires a larger amount, a new approval will be submitted.
 
 ## Supported Chains
 

@@ -8,7 +8,8 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(
     name = "pendle",
-    about = "Pendle Finance plugin — yield tokenization: buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT"
+    about = "Pendle Finance plugin — yield tokenization: buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT",
+    version
 )]
 struct Cli {
     /// Chain ID (default: 42161 Arbitrum — Pendle's highest TVL chain)

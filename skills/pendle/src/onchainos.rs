@@ -69,6 +69,7 @@ pub async fn wallet_contract_call(
         to.to_string(),
         "--input-data".to_string(),
         input_data.to_string(),
+        "--force".to_string(),
     ];
 
     if let Some(v) = amt {
@@ -120,11 +121,16 @@ pub async fn wallet_contract_call(
 }
 
 /// Extract txHash from onchainos wallet contract-call response.
-pub fn extract_tx_hash(result: &Value) -> &str {
+/// Returns an error if txHash is absent — a missing hash means the transaction was not broadcast.
+pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {
     result["data"]["txHash"]
         .as_str()
         .or_else(|| result["txHash"].as_str())
-        .unwrap_or("pending")
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!(
+            "Transaction was not broadcast — no txHash in onchainos response: {}",
+            result
+        ))
 }
 
 /// Build ERC-20 approve calldata and submit via wallet contract-call.

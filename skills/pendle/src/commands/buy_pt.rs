@@ -47,7 +47,7 @@ pub async fn run(
 
     let (calldata, router_to) = api::extract_sdk_calldata(&sdk_resp)?;
     let approvals = api::extract_required_approvals(&sdk_resp);
-    let amount_in_wei: u128 = amount_in.parse().unwrap_or(u128::MAX);
+    let amount_in_wei: u128 = amount_in.parse().map_err(|_| anyhow::anyhow!("Failed to parse amount-in: '{}'", amount_in))?;
 
     let mut approve_hashes: Vec<String> = Vec::new();
 
@@ -62,7 +62,7 @@ pub async fn run(
             dry_run,
         )
         .await?;
-        approve_hashes.push(onchainos::extract_tx_hash(&approve_result).to_string());
+        approve_hashes.push(onchainos::extract_tx_hash(&approve_result)?);
     }
 
     // Submit main buy-PT transaction
@@ -76,7 +76,7 @@ pub async fn run(
     )
     .await?;
 
-    let tx_hash = onchainos::extract_tx_hash(&result).to_string();
+    let tx_hash = onchainos::extract_tx_hash(&result)?;
 
     Ok(serde_json::json!({
         "ok": true,

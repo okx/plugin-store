@@ -56,15 +56,16 @@ pub async fn run(
     let (calldata, router_to) = api::extract_sdk_calldata(&sdk_resp)?;
     let approvals = api::extract_required_approvals(&sdk_resp);
     // Build token→amount map so each token is approved for its own exact amount
-    let pt_wei: u128 = pt_amount.parse().unwrap_or(u128::MAX);
-    let yt_wei: u128 = yt_amount.parse().unwrap_or(u128::MAX);
+    let pt_wei: u128 = pt_amount.parse().map_err(|_| anyhow::anyhow!("Failed to parse pt-amount: '{}'", pt_amount))?;
+    let yt_wei: u128 = yt_amount.parse().map_err(|_| anyhow::anyhow!("Failed to parse yt-amount: '{}'", yt_amount))?;
     let mut token_amounts = std::collections::HashMap::new();
     token_amounts.insert(pt_address.to_lowercase(), pt_wei);
     token_amounts.insert(yt_address.to_lowercase(), yt_wei);
 
     let mut approve_hashes: Vec<String> = Vec::new();
     for (token_addr, spender) in &approvals {
-        let approve_amount = *token_amounts.get(&token_addr.to_lowercase()).unwrap_or(&u128::MAX);
+        let approve_amount = *token_amounts.get(&token_addr.to_lowercase())
+            .ok_or_else(|| anyhow::anyhow!("Unexpected approval requested for token '{}' — not PT or YT", token_addr))?;
         let approve_result = onchainos::erc20_approve(
             chain_id,
             token_addr,
@@ -74,7 +75,7 @@ pub async fn run(
             dry_run,
         )
         .await?;
-        approve_hashes.push(onchainos::extract_tx_hash(&approve_result).to_string());
+        approve_hashes.push(onchainos::extract_tx_hash(&approve_result)?);
     }
 
     let result = onchainos::wallet_contract_call(
@@ -87,7 +88,7 @@ pub async fn run(
     )
     .await?;
 
-    let tx_hash = onchainos::extract_tx_hash(&result).to_string();
+    let tx_hash = onchainos::extract_tx_hash(&result)?;
 
     Ok(serde_json::json!({
         "ok": true,
