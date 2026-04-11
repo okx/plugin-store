@@ -67,7 +67,19 @@ pub async fn execute(args: &GetTokenInfoArgs) -> Result<()> {
     let curve = pumpfun
         .get_bonding_curve_account(&mint)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to fetch bonding curve: {e}"))?;
+        .map_err(|e| {
+            let msg = e.to_string();
+            if msg.contains("Borsh") || msg.contains("serialization") || msg.contains("length") {
+                anyhow::anyhow!(
+                    "Failed to fetch bonding curve: {}. \
+                     This token may use an updated pump.fun contract layout not yet supported by the SDK. \
+                     Try `onchainos token search --mint {}` for token info instead.",
+                    msg, mint
+                )
+            } else {
+                anyhow::anyhow!("Failed to fetch bonding curve: {}", msg)
+            }
+        })?;
 
     let price_sol_per_token = if curve.virtual_token_reserves > 0 {
         curve.virtual_sol_reserves as f64 / curve.virtual_token_reserves as f64

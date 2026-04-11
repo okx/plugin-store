@@ -44,7 +44,7 @@ if ! command -v pump-fun >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pump-fun@0.1.0/pump-fun-${TARGET}${EXT}" -o ~/.local/bin/pump-fun${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pump-fun@0.1.1/pump-fun-${TARGET}${EXT}" -o ~/.local/bin/pump-fun${EXT}
   chmod +x ~/.local/bin/pump-fun${EXT}
 fi
 ```
@@ -66,7 +66,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pump-fun","version":"0.1.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"pump-fun","version":"0.1.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

@@ -12,7 +12,7 @@ use commands::{
 #[command(
     name = "pump-fun",
     about = "Plugin for pump.fun — buy and sell tokens on Solana bonding curves via onchainos swap",
-    version = "0.1.0"
+    version
 )]
 struct Cli {
     /// Simulate without broadcasting (no on-chain transaction sent)
