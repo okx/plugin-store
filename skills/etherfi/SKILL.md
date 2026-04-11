@@ -37,7 +37,12 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install etherfi binary (auto-injected)
 
 ```bash
-if ! command -v etherfi >/dev/null 2>&1; then
+NEED_INSTALL=true
+if command -v etherfi >/dev/null 2>&1; then
+  _VER=$(etherfi --version 2>/dev/null | awk '{print $2}')
+  [ "$_VER" = "0.2.1" ] && NEED_INSTALL=false
+fi
+if [ "$NEED_INSTALL" = "true" ]; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
