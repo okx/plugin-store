@@ -93,12 +93,16 @@ pub async fn run(
         eprintln!("[polymarket] Approval tx: {}", tx_hash);
     }
 
-    // Build order amounts
-    let rounded_usdc = round_amount_down(usdc_amount, tick_size);
-    let maker_amount_raw = to_token_units(rounded_usdc);
-    let shares = rounded_usdc / limit_price;
+    // Build order amounts — compute shares first, then back-compute USDC from
+    // price × rounded_shares to guarantee the maker/taker ratio is exactly limit_price.
+    // (Rounding shares and USDC independently produces a skewed ratio that fails API
+    // tick-size validation, e.g. 10_000_000 / 10_200_000 = 50/51 ≠ 0.98.)
+    let shares = usdc_amount / limit_price;
     let rounded_shares = round_size_down(shares);
     let taker_amount_raw = to_token_units(rounded_shares);
+    let actual_usdc = limit_price * rounded_shares;
+    let rounded_usdc = round_amount_down(actual_usdc, tick_size);
+    let maker_amount_raw = to_token_units(rounded_usdc);
 
     let salt = rand_salt();
 
