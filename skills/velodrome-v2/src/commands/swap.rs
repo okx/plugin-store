@@ -5,7 +5,7 @@ use crate::config::{
     resolve_token_address, router_address, rpc_url, unix_now,
 };
 use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
-use crate::rpc::{factory_get_pool, get_allowance, router_get_amounts_out};
+use crate::rpc::{factory_get_pool, get_allowance, get_erc20_decimals, parse_human_amount, router_get_amounts_out};
 
 const CHAIN_ID: u64 = 10;
 
@@ -17,9 +17,9 @@ pub struct SwapArgs {
     /// Output token (symbol or hex address)
     #[arg(long)]
     pub token_out: String,
-    /// Amount in (smallest token unit, e.g. 50000000000000 = 0.00005 WETH)
+    /// Amount in (human-readable decimal, e.g. 0.1 for 0.1 WETH, 1.5 for 1.5 USDC)
     #[arg(long)]
-    pub amount_in: u128,
+    pub amount_in: String,
     /// Slippage tolerance in percent (e.g. 0.5 = 0.5%)
     #[arg(long, default_value = "0.5")]
     pub slippage: f64,
@@ -44,6 +44,10 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     let factory = factory_address();
     let router = router_address();
 
+    // --- 0. Parse amount_in ---
+    let decimals_in = get_erc20_decimals(&token_in, rpc).await?;
+    let amount_in = parse_human_amount(&args.amount_in, decimals_in)?;
+
     // --- 1. Find best pool (volatile or stable) ---
     let stable_options: Vec<bool> = match args.stable {
         Some(s) => vec![s],
@@ -58,7 +62,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
         if pool_addr == "0x0000000000000000000000000000000000000000" {
             continue;
         }
-        match router_get_amounts_out(router, args.amount_in, &token_in, &token_out, stable, factory, rpc).await {
+        match router_get_amounts_out(router, amount_in, &token_in, &token_out, stable, factory, rpc).await {
             Ok(amount_out) if amount_out > best_amount_out => {
                 best_amount_out = amount_out;
                 best_stable = stable;
@@ -76,7 +80,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
 
     println!(
         "Quote: tokenIn={} tokenOut={} amountIn={} stable={} amountOut={} amountOutMin={}",
-        token_in, token_out, args.amount_in, best_stable, best_amount_out, amount_out_min
+        token_in, token_out, amount_in, best_stable, best_amount_out, amount_out_min
     );
     println!("Please confirm the swap above before proceeding. (Proceeding automatically in non-interactive mode)");
 
@@ -90,7 +94,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     // --- 3. Check allowance and approve if needed ---
     if !args.dry_run {
         let allowance = get_allowance(&token_in, &recipient, router, rpc).await?;
-        if allowance < args.amount_in {
+        if allowance < amount_in {
             println!("Approving {} for Router...", token_in);
             let approve_data = build_approve_calldata(router, u128::MAX);
             let approve_result =
@@ -104,7 +108,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     // --- 4. Build swapExactTokensForTokens calldata ---
     let deadline = unix_now() + args.deadline_minutes * 60;
     let calldata = build_swap_calldata(
-        args.amount_in,
+        amount_in,
         amount_out_min,
         &token_in,
         &token_out,
@@ -119,7 +123,7 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     let tx_hash = extract_tx_hash(&result);
     println!(
         "{{\"ok\":true,\"txHash\":\"{}\",\"tokenIn\":\"{}\",\"tokenOut\":\"{}\",\"amountIn\":{},\"stable\":{},\"amountOutMin\":{}}}",
-        tx_hash, token_in, token_out, args.amount_in, best_stable, amount_out_min
+        tx_hash, token_in, token_out, amount_in, best_stable, amount_out_min
     );
 
     Ok(())

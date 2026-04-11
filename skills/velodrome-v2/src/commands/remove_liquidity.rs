@@ -5,7 +5,7 @@ use crate::config::{
     resolve_token_address, router_address, rpc_url, unix_now,
 };
 use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
-use crate::rpc::{factory_get_pool, get_allowance, get_balance};
+use crate::rpc::{factory_get_pool, get_allowance, get_balance, get_erc20_decimals, parse_human_amount};
 
 const CHAIN_ID: u64 = 10;
 
@@ -20,15 +20,15 @@ pub struct RemoveLiquidityArgs {
     /// Use stable pool (omit for volatile, add flag for stable)
     #[arg(long, default_value_t = false)]
     pub stable: bool,
-    /// Amount of LP tokens to remove. If omitted, removes all LP tokens.
+    /// Amount of LP tokens to remove (human-readable decimal). If omitted, removes all LP tokens.
     #[arg(long)]
-    pub liquidity: Option<u128>,
-    /// Minimum acceptable amount of token A (0 = no minimum)
+    pub liquidity: Option<String>,
+    /// Minimum acceptable amount of token A (human-readable decimal, 0 = no minimum)
     #[arg(long, default_value = "0")]
-    pub amount_a_min: u128,
-    /// Minimum acceptable amount of token B (0 = no minimum)
+    pub amount_a_min: String,
+    /// Minimum acceptable amount of token B (human-readable decimal, 0 = no minimum)
     #[arg(long, default_value = "0")]
-    pub amount_b_min: u128,
+    pub amount_b_min: String,
     /// Transaction deadline in minutes from now
     #[arg(long, default_value = "20")]
     pub deadline_minutes: u64,
@@ -57,7 +57,16 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     }
     println!("Pool: {}", pool_addr);
 
-    // --- 2. Resolve wallet and LP balance ---
+    // --- 2. Parse min amounts (LP tokens have 18 decimals; token mins use their own decimals) ---
+    let decimals_a = get_erc20_decimals(&token_a, rpc).await?;
+    let decimals_b = get_erc20_decimals(&token_b, rpc).await?;
+    let amount_a_min = parse_human_amount(&args.amount_a_min, decimals_a)?;
+    let amount_b_min = parse_human_amount(&args.amount_b_min, decimals_b)?;
+
+    // LP tokens always have 18 decimals
+    let lp_decimals: u8 = 18;
+
+    // --- 3. Resolve wallet and LP balance ---
     let wallet = if args.dry_run {
         "0x0000000000000000000000000000000000000000".to_string()
     } else {
@@ -65,12 +74,15 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     };
 
     let lp_balance = if args.dry_run {
-        args.liquidity.unwrap_or(1_000_000_000_000_000_000u128) // mock 1 LP for dry run
+        args.liquidity.as_deref().map(|s| parse_human_amount(s, lp_decimals)).transpose()?.unwrap_or(1_000_000_000_000_000_000u128) // mock 1 LP for dry run
     } else {
         get_balance(&pool_addr, &wallet, rpc).await?
     };
 
-    let liquidity_to_remove = args.liquidity.unwrap_or(lp_balance);
+    let liquidity_to_remove = match args.liquidity.as_deref() {
+        Some(s) => parse_human_amount(s, lp_decimals)?,
+        None => lp_balance,
+    };
 
     if !args.dry_run && liquidity_to_remove == 0 {
         println!("{{\"ok\":false,\"error\":\"No LP token balance to remove\"}}");
@@ -83,7 +95,7 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
     );
     println!("Please confirm the remove-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
 
-    // --- 3. Approve LP token -> Router ---
+    // --- 4. Approve LP token -> Router ---
     if !args.dry_run {
         let lp_allowance = get_allowance(&pool_addr, &wallet, router, rpc).await?;
         if lp_allowance < liquidity_to_remove {
@@ -95,15 +107,15 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
         }
     }
 
-    // --- 4. Build removeLiquidity calldata ---
+    // --- 5. Build removeLiquidity calldata ---
     let deadline = unix_now() + args.deadline_minutes * 60;
     let calldata = build_remove_liquidity_calldata(
         &token_a,
         &token_b,
         args.stable,
         liquidity_to_remove,
-        args.amount_a_min,
-        args.amount_b_min,
+        amount_a_min,
+        amount_b_min,
         &wallet,
         deadline,
     );

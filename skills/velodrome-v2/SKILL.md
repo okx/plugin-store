@@ -1,7 +1,7 @@
 ---
 name: velodrome-v2
 description: Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism (chain 10). Supports swap, quote, pools, positions, add-liquidity, remove-liquidity, claim-rewards.
-version: 0.1.0
+version: 0.1.1
 author: GeoGu360
 tags:
   - dex
@@ -28,23 +28,43 @@ onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/
 npx skills add okx/onchainos-skills --yes --global
 
 # 3. Install plugin-store skills (enables plugin discovery and management)
-npx skills add MigOKG/plugin-store --skill plugin-store --yes --global
+npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
 ### Install velodrome-v2 binary (auto-injected)
 
 ```bash
-if ! command -v velodrome-v2 >/dev/null 2>&1; then
+REQUIRED_VERSION="0.1.1"
+INSTALLED_VERSION=$(velodrome-v2 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$INSTALLED_VERSION" | sort -V | head -1)" != "$REQUIRED_VERSION" ] || [ -z "$INSTALLED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
+  EXT=""
   case "${OS}_${ARCH}" in
     darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
     darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
     linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
+    linux_i686)    TARGET="i686-unknown-linux-gnu" ;;
     linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
+    linux_armv7l)  TARGET="armv7-unknown-linux-gnueabihf" ;;
+    mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
+    mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
+    mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
-  curl -fsSL "https://github.com/MigOKG/plugin-store/releases/download/plugins/velodrome-v2@0.1.0/velodrome-v2-${TARGET}" -o ~/.local/bin/velodrome-v2
-  chmod +x ~/.local/bin/velodrome-v2
+  DOWNLOAD_URL="https://github.com/okx/plugin-store/releases/download/plugins/velodrome-v2@${REQUIRED_VERSION}/velodrome-v2-${TARGET}${EXT}"
+  DEST="$HOME/.local/bin/velodrome-v2${EXT}"
+  curl -fsSL "$DOWNLOAD_URL" -o "$DEST"
+  chmod +x "$DEST"
+  # SHA256 checksum verification
+  EXPECTED_SHA256=$(curl -fsSL "${DOWNLOAD_URL}.sha256" 2>/dev/null || echo "")
+  if [ -n "$EXPECTED_SHA256" ]; then
+    ACTUAL_SHA256=$(sha256sum "$DEST" 2>/dev/null || shasum -a 256 "$DEST" | awk '{print $1}')
+    if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+      echo "ERROR: SHA256 mismatch for velodrome-v2 binary. Download may be corrupted." >&2
+      rm -f "$DEST"
+      exit 1
+    fi
+  fi
 fi
 ```
 
@@ -120,12 +140,12 @@ Queries Router.getAmountsOut via eth_call (no transaction). Auto-checks both vol
 velodrome-v2 quote \
   --token-in WETH \
   --token-out USDC \
-  --amount-in 50000000000000
+  --amount-in 0.00005
 ```
 
 **Specify pool type:**
 ```bash
-velodrome-v2 quote --token-in USDC --token-out DAI --amount-in 1000000 --stable true
+velodrome-v2 quote --token-in USDC --token-out DAI --amount-in 1.0 --stable true
 ```
 
 **Output:**
@@ -150,18 +170,18 @@ Executes swapExactTokensForTokens on the Velodrome V2 Router. Quotes first, then
 velodrome-v2 swap \
   --token-in WETH \
   --token-out USDC \
-  --amount-in 50000000000000 \
+  --amount-in 0.00005 \
   --slippage 0.5
 ```
 
 **With dry run (no broadcast):**
 ```bash
-velodrome-v2 swap --token-in WETH --token-out USDC --amount-in 50000000000000 --dry-run
+velodrome-v2 swap --token-in WETH --token-out USDC --amount-in 0.00005 --dry-run
 ```
 
 **Force stable pool:**
 ```bash
-velodrome-v2 swap --token-in USDC --token-out DAI --amount-in 1000000 --stable true
+velodrome-v2 swap --token-in USDC --token-out DAI --amount-in 1.0 --stable true
 ```
 
 **Output:**
@@ -264,8 +284,8 @@ velodrome-v2 add-liquidity \
   --token-a WETH \
   --token-b USDC \
   --stable false \
-  --amount-a-desired 50000000000000 \
-  --amount-b-desired 118000
+  --amount-a-desired 0.00005 \
+  --amount-b-desired 0.118
 ```
 
 **Auto-quote token B amount:**
@@ -275,7 +295,7 @@ velodrome-v2 add-liquidity \
   --token-a WETH \
   --token-b USDC \
   --stable false \
-  --amount-a-desired 50000000000000
+  --amount-a-desired 0.00005
 ```
 
 **Output:**
@@ -311,7 +331,7 @@ velodrome-v2 remove-liquidity \
   --token-a WETH \
   --token-b USDC \
   --stable false \
-  --liquidity 1000000000000000
+  --liquidity 0.001
 ```
 
 **Output:**

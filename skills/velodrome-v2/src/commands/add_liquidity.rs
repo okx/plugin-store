@@ -5,7 +5,7 @@ use crate::config::{
     resolve_token_address, router_address, rpc_url, unix_now,
 };
 use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
-use crate::rpc::{factory_get_pool, get_allowance, router_quote_add_liquidity};
+use crate::rpc::{factory_get_pool, get_allowance, get_erc20_decimals, parse_human_amount, router_quote_add_liquidity};
 
 const CHAIN_ID: u64 = 10;
 
@@ -20,18 +20,18 @@ pub struct AddLiquidityArgs {
     /// Use stable pool (omit for volatile, add flag for stable)
     #[arg(long, default_value_t = false)]
     pub stable: bool,
-    /// Desired amount of token A (smallest unit)
+    /// Desired amount of token A (human-readable decimal, e.g. 0.0001 for 0.0001 WETH)
     #[arg(long)]
-    pub amount_a_desired: u128,
-    /// Desired amount of token B (smallest unit, 0 = auto-quote)
+    pub amount_a_desired: String,
+    /// Desired amount of token B (human-readable decimal, 0 = auto-quote)
     #[arg(long, default_value = "0")]
-    pub amount_b_desired: u128,
-    /// Minimum acceptable amount of token A (0 = no minimum)
+    pub amount_b_desired: String,
+    /// Minimum acceptable amount of token A (human-readable decimal, 0 = no minimum)
     #[arg(long, default_value = "0")]
-    pub amount_a_min: u128,
-    /// Minimum acceptable amount of token B (0 = no minimum)
+    pub amount_a_min: String,
+    /// Minimum acceptable amount of token B (human-readable decimal, 0 = no minimum)
     #[arg(long, default_value = "0")]
-    pub amount_b_min: u128,
+    pub amount_b_min: String,
     /// Transaction deadline in minutes from now
     #[arg(long, default_value = "20")]
     pub deadline_minutes: u64,
@@ -50,6 +50,13 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     let factory = factory_address();
     let router = router_address();
 
+    // --- 0. Parse amounts ---
+    let decimals_a = get_erc20_decimals(&token_a, rpc).await?;
+    let decimals_b = get_erc20_decimals(&token_b, rpc).await?;
+    let amount_a_desired = parse_human_amount(&args.amount_a_desired, decimals_a)?;
+    let amount_a_min = parse_human_amount(&args.amount_a_min, decimals_a)?;
+    let amount_b_min = parse_human_amount(&args.amount_b_min, decimals_b)?;
+
     // --- 1. Verify pool exists ---
     let pool_addr = factory_get_pool(&token_a, &token_b, args.stable, factory, rpc).await?;
     if pool_addr == "0x0000000000000000000000000000000000000000" {
@@ -61,16 +68,17 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     println!("Pool verified: {}", pool_addr);
 
     // --- 2. Auto-quote amount_b if not provided ---
-    let amount_b_desired = if args.amount_b_desired == 0 {
+    let amount_b_desired_raw = parse_human_amount(&args.amount_b_desired, decimals_b)?;
+    let amount_b_desired = if amount_b_desired_raw == 0 {
         let (_, quoted_b, _) = router_quote_add_liquidity(
             router, &token_a, &token_b, args.stable, factory,
-            args.amount_a_desired, u128::MAX / 2,
+            amount_a_desired, u128::MAX / 2,
             rpc
         ).await.unwrap_or((0, 0, 0));
         println!("Auto-quoted amountBDesired: {}", quoted_b);
         quoted_b
     } else {
-        args.amount_b_desired
+        amount_b_desired_raw
     };
 
     // --- 3. Resolve recipient ---
@@ -82,14 +90,14 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
 
     println!(
         "Adding liquidity: {}/{} stable={} amountA={} amountB={}",
-        token_a, token_b, args.stable, args.amount_a_desired, amount_b_desired
+        token_a, token_b, args.stable, amount_a_desired, amount_b_desired
     );
     println!("Please confirm the add-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
 
     // --- 4. Approve token A if needed ---
     if !args.dry_run {
         let allowance_a = get_allowance(&token_a, &recipient, router, rpc).await?;
-        if allowance_a < args.amount_a_desired {
+        if allowance_a < amount_a_desired {
             println!("Approving tokenA ({}) for Router...", token_a);
             let approve_data = build_approve_calldata(router, u128::MAX);
             let res = wallet_contract_call(CHAIN_ID, &token_a, &approve_data, args.confirm, false).await?;
@@ -114,10 +122,10 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         &token_a,
         &token_b,
         args.stable,
-        args.amount_a_desired,
+        amount_a_desired,
         amount_b_desired,
-        args.amount_a_min,
-        args.amount_b_min,
+        amount_a_min,
+        amount_b_min,
         &recipient,
         deadline,
     );
@@ -127,7 +135,7 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
     let tx_hash = extract_tx_hash(&result);
     println!(
         "{{\"ok\":true,\"txHash\":\"{}\",\"tokenA\":\"{}\",\"tokenB\":\"{}\",\"stable\":{},\"amountADesired\":{},\"amountBDesired\":{}}}",
-        tx_hash, token_a, token_b, args.stable, args.amount_a_desired, amount_b_desired
+        tx_hash, token_a, token_b, args.stable, amount_a_desired, amount_b_desired
     );
 
     Ok(())

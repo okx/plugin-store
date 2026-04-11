@@ -1,6 +1,6 @@
 schema_version: 1
 name: velodrome-v2
-version: 0.1.0
+version: 0.1.1
 description: Swap tokens and manage classic AMM (volatile/stable) LP positions on
   Velodrome V2 on Optimism
 author:
