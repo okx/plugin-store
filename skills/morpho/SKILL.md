@@ -1,7 +1,7 @@
 ---
 name: morpho
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.0"
+version: "0.2.1"
 author: "GeoGu360"
 tags:
   - lending
@@ -33,7 +33,9 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install morpho binary (auto-injected)
 
 ```bash
-if ! command -v morpho >/dev/null 2>&1; then
+REQUIRED_VERSION="0.2.1"
+INSTALLED_VERSION=$(morpho --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -49,7 +51,7 @@ if ! command -v morpho >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho@0.2.0/morpho-${TARGET}${EXT}" -o ~/.local/bin/morpho${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho@${REQUIRED_VERSION}/morpho-${TARGET}${EXT}" -o ~/.local/bin/morpho${EXT}
   chmod +x ~/.local/bin/morpho${EXT}
 fi
 ```
@@ -147,7 +149,7 @@ Please connect your wallet first: run `onchainos wallet login`
 | Borrow from Morpho Blue market | `morpho borrow --market-id <hex> --amount <n>` |
 | Repay Morpho Blue debt | `morpho repay --market-id <hex> --amount <n>` |
 | Repay all Morpho Blue debt | `morpho repay --market-id <hex> --all` |
-| View positions and health factor | `morpho positions` |
+| View positions (borrow, supply, collateral) | `morpho positions` |
 | List markets with APYs | `morpho markets` |
 | Filter markets by asset | `morpho markets --asset USDC` |
 | Supply collateral to Blue market | `morpho supply-collateral --market-id <hex> --amount <n>` |
@@ -360,7 +362,7 @@ morpho --chain 1 repay --market-id 0xb323... --all
 
 ---
 
-### positions — View positions and health factors
+### positions — View positions
 
 **Trigger phrases:** "my morpho positions", "morpho portfolio", "morpho health factor", "我的Morpho仓位", "Morpho持仓", "健康因子"
 
@@ -373,8 +375,10 @@ morpho --chain 8453 positions
 
 **What it does:**
 - Queries the Morpho GraphQL API for Morpho Blue market positions and MetaMorpho vault positions
-- Returns health factors, borrow/supply amounts, and collateral for each position
+- Returns borrow/supply amounts and collateral for each position
 - Read-only — no confirmation needed
+
+**Health factor (agent-computed):** The binary returns raw position data. To assess liquidation risk, cross-reference `borrowAssets` and `collateral` with the market's `lltv` from `morpho markets`. A position is at risk when `collateral * lltv ≤ borrowAssets` (both in USD terms).
 
 **Expected output:**
 <external-content>
@@ -390,9 +394,7 @@ morpho --chain 8453 positions
       "collateralAsset": "WETH",
       "supplyAssets": "0",
       "borrowAssets": "1000.0",
-      "collateral": "1.5",
-      "healthFactor": "1.8500",
-      "healthFactorStatus": "safe"
+      "collateral": "1.5"
     }
   ],
   "vaultPositions": [
