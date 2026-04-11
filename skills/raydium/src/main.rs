@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "raydium",
     about = "Raydium AMM plugin — swap, price, and pool queries on Solana",
-    version = "0.1.0"
+    version
 )]
 struct Cli {
     /// Simulate without broadcasting on-chain (no onchainos call)
