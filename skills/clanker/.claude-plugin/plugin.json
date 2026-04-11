@@ -1,7 +1,7 @@
 {
   "name": "clanker",
   "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "author": {"name": "GeoGu360", "github": "GeoGu360"},
   "homepage": "https://github.com/okx/plugin-store",
   "repository": "https://github.com/okx/plugin-store",

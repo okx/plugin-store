@@ -1,6 +1,6 @@
 schema_version: 1
 name: clanker
-version: "0.1.0"
+version: "0.1.1"
 description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards"
 author:
   name: GeoGu360
