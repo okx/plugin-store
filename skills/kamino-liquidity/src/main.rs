@@ -8,7 +8,8 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(
     name = "kamino-liquidity",
-    about = "Kamino Liquidity plugin — deposit into and withdraw from Kamino KVault earn vaults on Solana"
+    about = "Kamino Liquidity plugin — deposit into and withdraw from Kamino KVault earn vaults on Solana",
+    version
 )]
 struct Cli {
     #[command(subcommand)]

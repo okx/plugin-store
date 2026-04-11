@@ -6,7 +6,7 @@ mod onchainos;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "kamino-lend", about = "Kamino Lend plugin — supply, borrow, and manage positions on Kamino lending markets (Solana)")]
+#[command(name = "kamino-lend", about = "Kamino Lend plugin — supply, borrow, and manage positions on Kamino lending markets (Solana)", version)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
