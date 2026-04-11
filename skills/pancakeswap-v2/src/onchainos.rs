@@ -116,6 +116,70 @@ pub async fn wait_and_check_receipt(tx_hash: &str, rpc_url: &str) -> anyhow::Res
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BSC_RPC: &str = "https://bsc-rpc.publicnode.com";
+
+    /// A real BSC transaction that reverted on-chain (status=0x0).
+    /// Verified via eth_getTransactionReceipt before adding this test.
+    const REVERTED_TX: &str =
+        "0x8b267fbff3eb29cac16e48a2a1ff920a72cce3361c74c42fd4ede04dbd28aa8f";
+
+    /// A real BSC transaction that succeeded on-chain (status=0x1).
+    /// From PR #100 T6: addLiquidityETH 0.5 USDT + 0.000825 BNB on BSC.
+    const SUCCESS_TX: &str =
+        "0xce2e4fa2d03339dc428d80bdc63ca2fc152397235abd66d21b588a96e1d86041";
+
+    /// Core bug regression: a reverted tx must return Err, not Ok.
+    /// Before this fix, wait_and_check_receipt did not exist — callers would
+    /// return {"ok":true} with the reverted txHash and report success.
+    #[tokio::test]
+    async fn receipt_reverted_returns_err() {
+        let result = wait_and_check_receipt(REVERTED_TX, BSC_RPC).await;
+        assert!(
+            result.is_err(),
+            "Expected Err for reverted tx but got Ok — false-success bug is still present"
+        );
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("reverted on-chain"),
+            "Error message should mention 'reverted on-chain', got: {msg}"
+        );
+    }
+
+    /// Happy path: a successful tx must still return Ok so normal flow is unaffected.
+    #[tokio::test]
+    async fn receipt_success_returns_ok() {
+        let result = wait_and_check_receipt(SUCCESS_TX, BSC_RPC).await;
+        assert!(
+            result.is_ok(),
+            "Expected Ok for successful tx but got Err: {:?}",
+            result.unwrap_err()
+        );
+    }
+
+    /// extract_tx_hash must work for both response shapes onchainos can return.
+    #[test]
+    fn extract_tx_hash_nested_data() {
+        let v = serde_json::json!({"data": {"txHash": "0xabc"}});
+        assert_eq!(extract_tx_hash(&v), "0xabc");
+    }
+
+    #[test]
+    fn extract_tx_hash_flat() {
+        let v = serde_json::json!({"txHash": "0xdef"});
+        assert_eq!(extract_tx_hash(&v), "0xdef");
+    }
+
+    #[test]
+    fn extract_tx_hash_missing_falls_back_to_pending() {
+        let v = serde_json::json!({"ok": false});
+        assert_eq!(extract_tx_hash(&v), "pending");
+    }
+}
+
 /// ERC-20 approve — no onchainos dex approve command; manually encode calldata.
 /// approve(address,uint256) selector = 0x095ea7b3
 pub async fn erc20_approve(
