@@ -1513,7 +1513,7 @@ dependencies = [
 
 [[package]]
 name = "morpho"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
