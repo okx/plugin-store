@@ -10,6 +10,7 @@ use commands::{
     cancel::CancelArgs,
     close::CloseArgs,
     deposit::DepositArgs,
+    leverage::LeverageArgs,
     order::OrderArgs,
     orders::OrdersArgs,
     positions::PositionsArgs,
@@ -37,6 +38,8 @@ enum Commands {
     Orders(OrdersArgs),
     /// Get current mid prices for all markets or a specific coin
     Prices(PricesArgs),
+    /// Set leverage for a coin (cross or isolated margin; requires --confirm)
+    Leverage(LeverageArgs),
     /// Place a market or limit order; optionally attach TP/SL bracket (requires --confirm)
     Order(OrderArgs),
     /// Market-close an open position in one command (requires --confirm)
@@ -58,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Positions(args) => commands::positions::run(args).await,
         Commands::Orders(args) => commands::orders::run(args).await,
         Commands::Prices(args) => commands::prices::run(args).await,
+        Commands::Leverage(args) => commands::leverage::run(args).await,
         Commands::Order(args) => commands::order::run(args).await,
         Commands::Close(args) => commands::close::run(args).await,
         Commands::Tpsl(args) => commands::tpsl::run(args).await,

@@ -1,8 +1,8 @@
 use clap::Args;
-use crate::api::{get_asset_index, get_all_mids, get_clearinghouse_state};
+use crate::api::{get_asset_meta, get_all_mids, get_clearinghouse_state};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
-use crate::signing::{build_standalone_tpsl_action, format_px, submit_exchange_request};
+use crate::signing::{build_standalone_tpsl_action, round_px, submit_exchange_request};
 
 #[derive(Args)]
 pub struct TpslArgs {
@@ -41,7 +41,7 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
     let coin = normalize_coin(&args.coin);
     let nonce = now_ms();
 
-    let asset_idx = get_asset_index(info, &coin).await?;
+    let (asset_idx, sz_decimals) = get_asset_meta(info, &coin).await?;
     let wallet = resolve_wallet(CHAIN_ID)?;
 
     // Auto-detect position direction and size
@@ -138,8 +138,8 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
         None => format!("{}", position_size),
     };
 
-    let sl_px_str = args.sl_px.map(format_px);
-    let tp_px_str = args.tp_px.map(format_px);
+    let sl_px_str = args.sl_px.map(|px| round_px(px, sz_decimals));
+    let tp_px_str = args.tp_px.map(|px| round_px(px, sz_decimals));
 
     let action = build_standalone_tpsl_action(
         asset_idx,
@@ -147,18 +147,19 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
         &size_str,
         sl_px_str.as_deref(),
         tp_px_str.as_deref(),
+        sz_decimals,
     );
 
     // Compute implied slippage limit prices for display
     let sl_limit_display = args.sl_px.map(|px| {
         let closing_is_buy = !position_is_long;
         let limit = if closing_is_buy { px * 1.1 } else { px * 0.9 };
-        format_px(limit)
+        round_px(limit, sz_decimals)
     });
     let tp_limit_display = args.tp_px.map(|px| {
         let closing_is_buy = !position_is_long;
         let limit = if closing_is_buy { px * 1.1 } else { px * 0.9 };
-        format_px(limit)
+        round_px(limit, sz_decimals)
     });
 
     println!(
@@ -173,12 +174,12 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
                 "currentMidPrice": current_price_str,
                 "liquidationPrice": liquidation_px_str,
                 "stopLoss": args.sl_px.map(|px| serde_json::json!({
-                    "triggerPx": format_px(px),
+                    "triggerPx": round_px(px, sz_decimals),
                     "executionType": "market",
                     "worstFillPx": sl_limit_display
                 })),
                 "takeProfit": args.tp_px.map(|px| serde_json::json!({
-                    "triggerPx": format_px(px),
+                    "triggerPx": round_px(px, sz_decimals),
                     "executionType": "market",
                     "worstFillPx": tp_limit_display
                 })),

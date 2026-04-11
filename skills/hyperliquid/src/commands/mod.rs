@@ -1,6 +1,7 @@
 pub mod cancel;
 pub mod close;
 pub mod deposit;
+pub mod leverage;
 pub mod order;
 pub mod orders;
 pub mod positions;

@@ -4,7 +4,7 @@ use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, AR
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{
     build_bracketed_order_action, build_limit_order_action, build_market_order_action,
-    format_px, market_slippage_px, submit_exchange_request,
+    format_px, market_slippage_px, round_px, submit_exchange_request,
 };
 
 #[derive(Args)]
@@ -41,6 +41,16 @@ pub struct OrderArgs {
     #[arg(long)]
     pub reduce_only: bool,
 
+    /// Post-only (limit orders only) — order is cancelled instead of crossing the spread;
+    /// ensures maker rebate. Uses Hyperliquid's ALO (Add Liquidity Only) TIF.
+    #[arg(long)]
+    pub post_only: bool,
+
+    /// Slippage tolerance in percent for market orders (default: 5.0).
+    /// E.g. --slippage 1.0 allows at most 1% worse than mid price.
+    #[arg(long, default_value = "5.0")]
+    pub slippage: f64,
+
     /// Dry run — preview order payload without signing or submitting
     #[arg(long)]
     pub dry_run: bool,
@@ -73,6 +83,15 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         }
     }
 
+    // --post-only only applies to limit orders
+    if args.post_only && args.r#type != "limit" {
+        anyhow::bail!("--post-only requires --type limit");
+    }
+
+    if args.slippage <= 0.0 || args.slippage > 100.0 {
+        anyhow::bail!("--slippage must be between 0 and 100 (got {})", args.slippage);
+    }
+
     let (asset_idx, sz_decimals) = get_asset_meta(info, &coin).await?;
 
     let mids = get_all_mids(info).await?;
@@ -84,7 +103,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     // Slippage-protected price for market orders — 5% tolerance, rounded to HL's
     // sz_decimals significant figures (matches Python SDK round_to_sz_decimals).
     let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
-    let slippage_px_str = market_slippage_px(mid_f, is_buy, sz_decimals);
+    let slippage_px_str = market_slippage_px(mid_f, is_buy, sz_decimals, args.slippage);
 
     let has_bracket = args.sl_px.is_some() || args.tp_px.is_some();
 
@@ -107,20 +126,21 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 let _: f64 = price_str
                     .parse()
                     .map_err(|_| anyhow::anyhow!("Invalid price '{}'", price_str))?;
+                let tif = if args.post_only { "Alo" } else { "Gtc" };
                 serde_json::json!({
                     "a": asset_idx,
                     "b": is_buy,
                     "p": price_str,
                     "s": args.size,
                     "r": args.reduce_only,
-                    "t": { "limit": { "tif": "Gtc" } }
+                    "t": { "limit": { "tif": tif } }
                 })
             }
             _ => anyhow::bail!("Unknown order type '{}'", args.r#type),
         };
 
-        let sl_px_str = args.sl_px.map(format_px);
-        let tp_px_str = args.tp_px.map(format_px);
+        let sl_px_str = args.sl_px.map(|px| round_px(px, sz_decimals));
+        let tp_px_str = args.tp_px.map(|px| round_px(px, sz_decimals));
 
         build_bracketed_order_action(
             entry_element,
@@ -129,6 +149,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             &args.size,
             sl_px_str.as_deref(),
             tp_px_str.as_deref(),
+            sz_decimals,
         )
     } else {
         match args.r#type.as_str() {
@@ -141,7 +162,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 let _: f64 = price_str
                     .parse()
                     .map_err(|_| anyhow::anyhow!("Invalid price '{}'", price_str))?;
-                build_limit_order_action(asset_idx, is_buy, price_str, &args.size, args.reduce_only)
+                let tif = if args.post_only { "Alo" } else { "Gtc" };
+                build_limit_order_action(asset_idx, is_buy, price_str, &args.size, args.reduce_only, tif)
             }
             _ => anyhow::bail!("Unknown order type '{}'", args.r#type),
         }
@@ -157,11 +179,13 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 "size": args.size,
                 "type": args.r#type,
                 "price": args.price,
-                "stopLoss": args.sl_px.map(format_px),
-                "takeProfit": args.tp_px.map(format_px),
+                "stopLoss": args.sl_px.map(|px| round_px(px, sz_decimals)),
+                "takeProfit": args.tp_px.map(|px| round_px(px, sz_decimals)),
                 "reduceOnly": args.reduce_only,
                 "currentMidPrice": current_price,
                 "grouping": if has_bracket { "normalTpsl" } else { "na" },
+                "slippagePct": args.slippage,
+                "postOnly": args.post_only,
                 "nonce": nonce
             },
             "action": action
@@ -192,8 +216,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             "side": args.side,
             "size": args.size,
             "type": args.r#type,
-            "stopLoss": args.sl_px.map(format_px),
-            "takeProfit": args.tp_px.map(format_px),
+            "stopLoss": args.sl_px.map(|px| round_px(px, sz_decimals)),
+            "takeProfit": args.tp_px.map(|px| round_px(px, sz_decimals)),
             "result": result
         }))?
     );

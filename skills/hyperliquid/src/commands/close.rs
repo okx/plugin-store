@@ -14,6 +14,11 @@ pub struct CloseArgs {
     #[arg(long)]
     pub size: Option<String>,
 
+    /// Slippage tolerance in percent (default: 5.0).
+    /// E.g. --slippage 1.0 allows at most 1% worse than mid price.
+    #[arg(long, default_value = "5.0")]
+    pub slippage: f64,
+
     /// Dry run — show payload without signing or submitting
     #[arg(long)]
     pub dry_run: bool,
@@ -95,7 +100,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let closing_side = if position_is_long { "sell" } else { "buy" };
     let close_is_buy = !position_is_long;
     let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
-    let slippage_px_str = market_slippage_px(mid_f, close_is_buy, sz_decimals);
+    let slippage_px_str = market_slippage_px(mid_f, close_is_buy, sz_decimals, args.slippage);
 
     let action = build_close_action(asset_idx, position_is_long, &close_size, &slippage_px_str);
 
@@ -111,6 +116,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
                 "currentMidPrice": current_price,
                 "type": "market",
                 "reduceOnly": true,
+                "slippagePct": args.slippage,
                 "nonce": nonce
             },
             "action": action

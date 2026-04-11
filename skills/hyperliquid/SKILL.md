@@ -1,7 +1,7 @@
 ---
 name: hyperliquid
 description: Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).
-version: 0.2.1
+version: 0.2.2
 author: GeoGu360
 tags:
   - perps
@@ -50,7 +50,7 @@ if ! command -v hyperliquid >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.2.1/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.2.2/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
   chmod +x ~/.local/bin/hyperliquid${EXT}
 fi
 ```
@@ -72,7 +72,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid","version":"0.2.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -220,7 +220,46 @@ hyperliquid positions --show-orders
 
 ---
 
-### 2. `prices` — Get Market Mid Prices
+### 2. `orders` — List Open Orders
+
+Lists all open perpetual orders (limit, TP/SL, stop-loss). Optionally filter by coin.
+
+**Read-only — no signing required.**
+
+```bash
+# List all open orders
+hyperliquid orders
+
+# Filter by coin
+hyperliquid orders --coin BTC
+hyperliquid orders --coin ETH
+```
+
+**Output:**
+```json
+{
+  "ok": true,
+  "count": 2,
+  "orders": [
+    {
+      "coin": "BTC",
+      "side": "sell",
+      "orderType": "Stop Market",
+      "origSz": "0.00016",
+      "limitPx": "58245",
+      "triggerPx": "58245",
+      "tpsl": "sl",
+      "oid": 91490942
+    }
+  ]
+}
+```
+
+**Display:** `coin`, `side`, `orderType`, `origSz`, `limitPx`, `triggerPx`, `tpsl`, `oid`. Use `oid` with `cancel --order-id` to remove an order.
+
+---
+
+### 3. `prices` — Get Market Mid Prices
 
 Returns current mid prices for all Hyperliquid perpetual markets, or a specific coin.
 
@@ -263,7 +302,7 @@ hyperliquid prices --market SOL
 
 ---
 
-### 3. `order` — Place Perpetual Order
+### 5. `order` — Place Perpetual Order
 
 Places a market or limit perpetual order. Optionally attach a **stop-loss and/or take-profit bracket** in one shot (OCO). **Requires `--confirm` to execute.**
 
@@ -288,7 +327,33 @@ hyperliquid order \
   --coin BTC --side buy --size 0.01 --type limit --price 100000 \
   --sl-px 95000 \
   --confirm
+
+# Limit order with post-only (maker rebate, cancelled if it would cross spread)
+hyperliquid order --coin ETH --side buy --size 0.1 --type limit --price 3000 --post-only --confirm
+
+# Market order with custom slippage tolerance (1% instead of default 5%)
+hyperliquid order --coin BTC --side buy --size 0.001 --slippage 1.0 --confirm
+
+# Reduce-only order (close existing position, never increase it)
+hyperliquid order --coin BTC --side sell --size 0.001 --reduce-only --confirm
 ```
+
+**Parameters:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--coin` | — | Coin symbol |
+| `--side` | — | `buy` or `sell` |
+| `--size` | — | Size in base units |
+| `--type` | `market` | `market` or `limit` |
+| `--price` | — | Required for limit orders |
+| `--sl-px` | — | Stop-loss trigger price (attaches bracket) |
+| `--tp-px` | — | Take-profit trigger price (attaches bracket) |
+| `--slippage` | `5.0` | Market order slippage tolerance in % |
+| `--post-only` | off | ALO TIF — cancelled instead of crossing spread (limit only) |
+| `--reduce-only` | off | Never increase position, only reduce |
+| `--dry-run` | off | Show payload without signing |
+| `--confirm` | off | Sign and submit |
 
 **Output (executed with bracket):**
 ```json
@@ -314,7 +379,7 @@ hyperliquid order \
 
 ---
 
-### 4. `close` — Market-Close an Open Position
+### 6. `close` — Market-Close an Open Position
 
 One-command market close. Automatically reads your current position direction and size. **Requires `--confirm` to execute.**
 
@@ -327,7 +392,20 @@ hyperliquid close --coin BTC --confirm
 
 # Close only half the position
 hyperliquid close --coin BTC --size 0.005 --confirm
+
+# Close with tighter slippage tolerance (1% instead of default 5%)
+hyperliquid close --coin BTC --slippage 1.0 --confirm
 ```
+
+**Parameters:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--coin` | — | Coin to close |
+| `--size` | full | Partial close size in base units |
+| `--slippage` | `5.0` | Market order slippage tolerance in % |
+| `--dry-run` | off | Show payload without signing |
+| `--confirm` | off | Sign and submit |
 
 **Output:**
 ```json
@@ -345,7 +423,7 @@ hyperliquid close --coin BTC --size 0.005 --confirm
 
 ---
 
-### 5. `tpsl` — Set Stop-Loss / Take-Profit on Existing Position
+### 7. `tpsl` — Set Stop-Loss / Take-Profit on Existing Position
 
 Place TP/SL on an already-open position. Auto-detects position size and direction. **Requires `--confirm` to execute.**
 
@@ -390,7 +468,7 @@ hyperliquid tpsl --coin BTC --tp-px 110000 --size 0.005 --confirm
 
 ---
 
-### 6. `cancel` — Cancel Open Order
+### 8. `cancel` — Cancel Open Order
 
 Cancels an open perpetual order by order ID. **Requires `--confirm` to execute.**
 
@@ -446,7 +524,7 @@ hyperliquid cancel \
 
 ---
 
-### 7. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
+### 9. `deposit` — Deposit USDC from Arbitrum to Hyperliquid
 
 Deposits USDC from your Arbitrum wallet into your Hyperliquid account via the official bridge contract.
 
@@ -491,7 +569,7 @@ hyperliquid deposit --amount 100 --dry-run
 
 ---
 
-### 8. `register` — Detect onchainos Signing Address
+### 10. `register` — Detect onchainos Signing Address
 
 Discovers your actual Hyperliquid signing address (the EOA key onchainos uses to sign EIP-712 actions) and provides setup instructions. **Run this once before placing your first order.**
 
@@ -546,6 +624,49 @@ hyperliquid register --dry-run
 </external-content>
 
 **Display:** `status`, `hl_signing_address` (if setup_required), and the recommended next step from `options.option_1_recommended.command`.
+
+---
+
+### 11. `leverage` — Set Leverage for a Coin
+
+Sets cross or isolated margin leverage for a coin. Account-level setting per asset — applies to all future orders for that coin. **Requires `--confirm` to execute.**
+
+```bash
+# Preview: set BTC to 5x cross margin
+hyperliquid leverage --coin BTC --leverage 5 --mode cross
+
+# Execute: set ETH to 10x isolated margin
+hyperliquid leverage --coin ETH --leverage 10 --mode isolated --confirm
+
+# Dry run: inspect payload without signing
+hyperliquid leverage --coin SOL --leverage 3 --mode cross --dry-run
+```
+
+**Parameters:**
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--coin` | Yes | Coin symbol (e.g. BTC, ETH, SOL) |
+| `--leverage` | Yes | Integer multiplier 1–50 |
+| `--mode` | Yes | `cross` or `isolated` |
+| `--confirm` | No | Sign and submit (default: preview only) |
+| `--dry-run` | No | Show payload without signing or submitting |
+
+**Output:**
+```json
+{
+  "ok": true,
+  "action": "leverage",
+  "coin": "BTC",
+  "leverage": 5,
+  "mode": "cross",
+  "result": { ... }
+}
+```
+
+**Display:** `coin`, `leverage`, `mode`, `result` status.
+
+**Note:** Leverage applies globally to the coin — it affects open positions and new orders.
 
 ---
 
@@ -618,7 +739,7 @@ Use `hyperliquid prices` to get a full list of available markets.
 - All on-chain write operations require **explicit user confirmation** via `--confirm`
 - Never share your private key or seed phrase
 - All signing is routed through `onchainos` (TEE-sandboxed)
-- This plugin does **not** support isolated margin configuration — use the Hyperliquid web UI for advanced margin settings
+- Use `hyperliquid leverage --mode isolated` to configure isolated margin, or `--mode cross` for cross margin
 
 ---
 
