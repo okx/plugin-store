@@ -141,22 +141,24 @@ onchainos wallet status
 5. Execute only after explicit user approval — run the command **without** `--dry-run`
 6. Report approve tx hash(es) (if any), main tx hash, and outcome
 
-### Fallback: if the binary's main tx fails or `tx_hash` is `"pending"`
+> **RPC propagation delay**: The plugin returns as soon as the transaction is broadcast (txHash received). On-chain state (positions, balances) may not reflect the change immediately — Arbitrum RPC nodes typically lag 5–30 seconds after broadcast. If `get-positions` or a balance check immediately after a write op still shows the old value, **do not treat this as a failure** — wait 15–30 seconds and re-query before concluding the transaction didn't land.
 
-The binary handles approvals and the main transaction internally. If the main transaction fails (binary returns an error, or `tx_hash` is `"pending"`/empty), use the `calldata` and `router` fields from the binary output to execute manually:
+### Fallback: if the binary returns an error
+
+The binary handles approvals and the main transaction internally. If the command exits with an error, use the `calldata` and `router` fields from a `--dry-run` output to execute manually:
 
 ```bash
 # 1. Get calldata via dry-run (includes router + calldata + requiredApprovals)
 pendle --chain <CHAIN_ID> <command> ... --dry-run
 
 # 2. Handle approvals from requiredApprovals (if any)
-onchainos wallet contract-call --chain <CHAIN_ID> --to <TOKEN_ADDR> --input-data <APPROVE_CALLDATA>
+onchainos wallet contract-call --chain <CHAIN_ID> --to <TOKEN_ADDR> --input-data <APPROVE_CALLDATA> --force
 
 # 3. Execute main transaction using calldata from dry-run output
-onchainos wallet contract-call --chain <CHAIN_ID> --to <router> --input-data <calldata>
+onchainos wallet contract-call --chain <CHAIN_ID> --to <router> --input-data <calldata> --force
 ```
 
-All write commands (`buy-pt`, `sell-pt`, `buy-yt`, `sell-yt`, `add-liquidity`, `remove-liquidity`, `mint-py`, `redeem-py`) include `router` and `calldata` in their output for this purpose.
+All write commands include `router` and `calldata` in their output for this purpose.
 
 ---
 
