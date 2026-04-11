@@ -12,7 +12,7 @@ pub struct SwapArgs {
     pub chain_id: u64,
     pub token_in: String,
     pub token_out: String,
-    pub amount_in: u128,         // in minimal units
+    pub amount_in: String,       // human-readable decimal, e.g. "1.5" or "100"
     pub slippage_bps: u64,       // e.g. 50 = 0.5%
     pub deadline_secs: u64,
     pub from: Option<String>,
@@ -43,7 +43,11 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
     if token_in_addr == token_out_addr {
         anyhow::bail!("tokenIn and tokenOut must be different tokens.");
     }
-    if args.amount_in == 0 {
+
+    // Resolve tokenIn decimals and parse human-readable amount
+    let decimals_in = rpc::get_erc20_decimals(&token_in_addr, rpc).await.unwrap_or(18);
+    let amount_in = rpc::parse_human_amount(&args.amount_in, decimals_in)?;
+    if amount_in == 0 {
         anyhow::bail!("Amount must be greater than 0.");
     }
 
@@ -64,7 +68,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
 
     // Quote for amountOutMin
     let path_refs: Vec<&str> = path.iter().map(|s| s.as_str()).collect();
-    let amounts = rpc::router_get_amounts_out(cfg.router02, args.amount_in, &path_refs, rpc).await?;
+    let amounts = rpc::router_get_amounts_out(cfg.router02, amount_in, &path_refs, rpc).await?;
     let amount_out_expected = *amounts.last().unwrap_or(&0);
     let amount_out_min = amount_out_expected * (10000 - args.slippage_bps) as u128 / 10000;
 
@@ -96,7 +100,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
             cfg.router02,
             &calldata,
             args.from.as_deref(),
-            Some(args.amount_in as u128),
+            Some(amount_in),
             args.dry_run,
         )
         .await?;
@@ -113,12 +117,12 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
         // Variant C: Token → Native ETH/BNB (swapExactTokensForETH)
         // Check and approve if needed
         let allowance = rpc::erc20_allowance(&token_in_addr, &wallet, cfg.router02, rpc).await.unwrap_or(0);
-        if allowance < args.amount_in {
+        if allowance < amount_in {
             let approve_result = erc20_approve(
                 args.chain_id,
                 &token_in_addr,
                 cfg.router02,
-                args.amount_in,
+                amount_in,
                 args.from.as_deref(),
                 args.dry_run,
             )
@@ -133,7 +137,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
         }
 
         let calldata = build_swap_exact_tokens_for_eth(
-            args.amount_in,
+            amount_in,
             amount_out_min,
             &path,
             &wallet,
@@ -161,12 +165,12 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
         // Variant A: Token → Token (swapExactTokensForTokens)
         // Check and approve if needed
         let allowance = rpc::erc20_allowance(&token_in_addr, &wallet, cfg.router02, rpc).await.unwrap_or(0);
-        if allowance < args.amount_in {
+        if allowance < amount_in {
             let approve_result = erc20_approve(
                 args.chain_id,
                 &token_in_addr,
                 cfg.router02,
-                args.amount_in,
+                amount_in,
                 args.from.as_deref(),
                 args.dry_run,
             )
@@ -181,7 +185,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
         }
 
         let calldata = build_swap_exact_tokens_for_tokens(
-            args.amount_in,
+            amount_in,
             amount_out_min,
             &path,
             &wallet,
@@ -210,7 +214,7 @@ pub async fn run(args: SwapArgs) -> Result<serde_json::Value> {
     results["data"] = json!({
         "tokenIn": token_in_addr,
         "tokenOut": token_out_addr,
-        "amountIn": args.amount_in.to_string(),
+        "amountIn": amount_in.to_string(),
         "amountOutMin": amount_out_min.to_string(),
         "amountOutExpected": amount_out_expected.to_string(),
         "path": path,

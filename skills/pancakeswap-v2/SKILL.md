@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v2
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
-version: "0.2.2"
+version: "0.2.3"
 author: "skylavis-sky"
 tags:
   - dex
@@ -36,7 +36,9 @@ npx skills add okx/plugin-store --skill plugin-store --yes --global
 ### Install pancakeswap-v2 binary (auto-injected)
 
 ```bash
-if ! command -v pancakeswap-v2 >/dev/null 2>&1; then
+REQUIRED_VERSION="0.2.3"
+INSTALLED_VERSION=$(pancakeswap-v2 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then
   OS=$(uname -s | tr A-Z a-z)
   ARCH=$(uname -m)
   EXT=""
@@ -50,9 +52,26 @@ if ! command -v pancakeswap-v2 >/dev/null 2>&1; then
     mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
     mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
+    *) echo "Unsupported platform: ${OS}_${ARCH}"; exit 1 ;;
   esac
+  BASE_URL="https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2@${REQUIRED_VERSION}"
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v2@0.2.1/pancakeswap-v2-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap-v2${EXT}
+  curl -fsSL "${BASE_URL}/checksums.txt" -o /tmp/pancakeswap-v2-checksums.txt
+  curl -fsSL "${BASE_URL}/pancakeswap-v2-${TARGET}${EXT}" -o ~/.local/bin/pancakeswap-v2${EXT}
+  EXPECTED=$(grep "pancakeswap-v2-${TARGET}${EXT}" /tmp/pancakeswap-v2-checksums.txt | awk '{print $1}')
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum ~/.local/bin/pancakeswap-v2${EXT} | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL=$(shasum -a 256 ~/.local/bin/pancakeswap-v2${EXT} | awk '{print $1}')
+  else
+    echo "Warning: cannot verify checksum (no sha256sum or shasum found)" && ACTUAL="$EXPECTED"
+  fi
+  if [ "$ACTUAL" != "$EXPECTED" ]; then
+    echo "Checksum mismatch for pancakeswap-v2-${TARGET}${EXT} — aborting install"
+    rm -f ~/.local/bin/pancakeswap-v2${EXT} /tmp/pancakeswap-v2-checksums.txt
+    exit 1
+  fi
+  rm -f /tmp/pancakeswap-v2-checksums.txt
   chmod +x ~/.local/bin/pancakeswap-v2${EXT}
 fi
 ```
@@ -71,7 +90,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-v2","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v2","version":"0.2.3"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"pancakeswap-v2","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -145,7 +164,7 @@ Do NOT use for: PancakeSwap V3 swaps (use pancakeswap skill), concentrated liqui
 
 **Usage:**
 ```
-pancakeswap-v2 --chain 56 quote --token-in USDT --token-out CAKE --amount-in 100000000000000000000
+pancakeswap-v2 --chain 56 quote --token-in USDT --token-out CAKE --amount-in 100
 ```
 
 **Parameters:**
@@ -153,7 +172,7 @@ pancakeswap-v2 --chain 56 quote --token-in USDT --token-out CAKE --amount-in 100
 |------|------|-------------|
 | tokenIn | `--token-in` | Input token: symbol (USDT, CAKE, WBNB) or hex address |
 | tokenOut | `--token-out` | Output token: symbol or hex address |
-| amountIn | `--amount-in` | Input amount in minimal units (e.g. 100e18 = 100 tokens for 18-decimal token) |
+| amountIn | `--amount-in` | Input amount as a human-readable decimal (e.g. 100, 1.5, 0.001) |
 | chain | `--chain` | Chain ID: 56 (BSC, default), 8453 (Base), or 42161 (Arbitrum) |
 
 **Example output:**
@@ -185,7 +204,7 @@ Read-only operation — no confirmation required.
 
 **Usage:**
 ```
-pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100000000000000000000
+pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 100
 ```
 
 **Parameters:**
@@ -193,7 +212,7 @@ pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 1000
 |------|------|-------------|
 | tokenIn | `--token-in` | Input token: symbol or address. Use BNB/ETH for native |
 | tokenOut | `--token-out` | Output token: symbol or address |
-| amountIn | `--amount-in` | Input amount in minimal units |
+| amountIn | `--amount-in` | Input amount as a human-readable decimal (e.g. 100, 1.5, 0.001) |
 | slippageBps | `--slippage-bps` | Slippage in basis points (default 50 = 0.5%) |
 | deadlineSecs | `--deadline-secs` | Seconds until deadline (default 300) |
 | dryRun | `--dry-run` | Preview calldata only, no broadcast |
@@ -230,10 +249,10 @@ pancakeswap-v2 --chain 56 swap --token-in USDT --token-out CAKE --amount-in 1000
 **Usage:**
 ```
 # Token + Token
-pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b USDT --amount-a 10000000000000000000 --amount-b 50000000000000000000
+pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b USDT --amount-a 10 --amount-b 50
 
 # Token + native BNB
-pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 10000000000000000000 --amount-b 50000000000000000
+pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 10 --amount-b 0.05
 ```
 
 **Parameters:**
@@ -241,8 +260,8 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 
 |------|------|-------------|
 | tokenA | `--token-a` | First token: symbol or address. Use BNB/ETH for native |
 | tokenB | `--token-b` | Second token. Use BNB/ETH for native |
-| amountA | `--amount-a` | Desired amount of tokenA in minimal units |
-| amountB | `--amount-b` | Desired amount of tokenB (or native BNB/ETH) in minimal units |
+| amountA | `--amount-a` | Desired amount of tokenA as a human-readable decimal (e.g. 10, 0.5) |
+| amountB | `--amount-b` | Desired amount of tokenB (or native BNB/ETH) as a human-readable decimal |
 | slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
 | dryRun | `--dry-run` | Preview calldata only |
 
@@ -266,7 +285,7 @@ pancakeswap-v2 --chain 56 add-liquidity --token-a CAKE --token-b BNB --amount-a 
 pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT
 
 # Remove specific amount
-pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liquidity 1000000000000000000
+pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liquidity 1.0
 ```
 
 **Parameters:**
@@ -274,7 +293,7 @@ pancakeswap-v2 --chain 56 remove-liquidity --token-a CAKE --token-b USDT --liqui
 |------|------|-------------|
 | tokenA | `--token-a` | First token |
 | tokenB | `--token-b` | Second token. Use BNB/ETH to receive native |
-| liquidity | `--liquidity` | LP tokens to burn (minimal units). Omit to remove all |
+| liquidity | `--liquidity` | LP tokens to burn as a human-readable decimal (e.g. 1.0). Omit to remove all |
 | slippageBps | `--slippage-bps` | Slippage tolerance (default 50 = 0.5%) |
 | dryRun | `--dry-run` | Preview only |
 
@@ -359,6 +378,17 @@ For Arbitrum One (42161): WETH `0x82aF49447D8a07e3bd95BD0d56f35241523fBab1`, USD
 ---
 
 ## Changelog
+
+### v0.2.3 (2026-04-11)
+
+- **fix**: `--amount-in`, `--amount-a`, `--amount-b`, and `--liquidity` now accept human-readable decimal input (e.g. `1.5`, `100`, `0.001`). Previously clap rejected decimal values at parse time with "invalid digit found in string" because those args were typed `u128`. Changed to `String` and added `parse_human_amount()` which resolves each token's ERC-20 `decimals()` on-chain and converts to raw units.
+- **feat**: `pancakeswap-v2 --version` now works (added `version` to `#[command(...)]` attribute)
+- **fix**: `.gitignore` uses `/target/` (anchored) instead of `target/`
+
+### v0.2.2 (2026-04-11)
+
+- **fix**: `remove-liquidity` overflow protection upgraded from pure f64 to `safe_mul_div` — tries `checked_mul` first (exact integer arithmetic for small pools), falls back to f64 only when `reserve × lp_balance` would overflow u128 (e.g. BSC BNB/USDT ~$17M TVL). Behavior is identical for all affected pools; change improves precision for pools below the overflow threshold.
+- **fix**: Exact-amount ERC-20 approvals (not unlimited) — approves the exact swap/LP amount rather than `uint256.max`
 
 ### v0.2.1 (2026-04-11)
 

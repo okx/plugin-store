@@ -10,7 +10,7 @@ use commands::{
 };
 
 #[derive(Parser)]
-#[command(name = "pancakeswap-v2", about = "PancakeSwap V2 AMM plugin — swap tokens and manage liquidity on BSC/Base")]
+#[command(name = "pancakeswap-v2", version, about = "PancakeSwap V2 AMM plugin — swap tokens and manage liquidity on BSC/Base")]
 struct Cli {
     /// Chain ID (56 = BSC default, 8453 = Base)
     #[arg(long, default_value = "56")]
@@ -50,9 +50,9 @@ enum Commands {
         /// Output token symbol or address
         #[arg(long)]
         token_out: String,
-        /// Amount of tokenIn in minimal units (e.g. 1000000000000000000 for 1 token with 18 dec)
+        /// Amount of tokenIn as a human-readable decimal (e.g. 1.5, 100, 0.001)
         #[arg(long)]
-        amount_in: u128,
+        amount_in: String,
     },
 
     /// Swap tokens via PancakeSwap V2 Router02
@@ -63,9 +63,9 @@ enum Commands {
         /// Output token symbol or address
         #[arg(long)]
         token_out: String,
-        /// Amount of tokenIn in minimal units
+        /// Amount of tokenIn as a human-readable decimal (e.g. 1.5, 100, 0.001)
         #[arg(long)]
-        amount_in: u128,
+        amount_in: String,
     },
 
     /// Add liquidity to a V2 pair (receive LP tokens)
@@ -76,12 +76,12 @@ enum Commands {
         /// Second token symbol or address
         #[arg(long)]
         token_b: String,
-        /// Desired amount of tokenA in minimal units
+        /// Desired amount of tokenA as a human-readable decimal (e.g. 10, 0.5)
         #[arg(long)]
-        amount_a: u128,
-        /// Desired amount of tokenB (or native BNB/ETH) in minimal units
+        amount_a: String,
+        /// Desired amount of tokenB (or native BNB/ETH) as a human-readable decimal
         #[arg(long)]
-        amount_b: u128,
+        amount_b: String,
     },
 
     /// Remove liquidity and withdraw tokens
@@ -92,9 +92,9 @@ enum Commands {
         /// Second token symbol or address
         #[arg(long)]
         token_b: String,
-        /// LP token amount to burn (omit to remove all)
+        /// LP tokens to burn as a human-readable decimal (e.g. 1.0). Omit to remove all.
         #[arg(long)]
-        liquidity: Option<u128>,
+        liquidity: Option<String>,
     },
 
     /// Get the pair contract address for two tokens

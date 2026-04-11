@@ -11,8 +11,8 @@ pub struct AddLiquidityArgs {
     pub chain_id: u64,
     pub token_a: String,
     pub token_b: String,
-    pub amount_a: u128,          // desired amount of token_a (minimal units)
-    pub amount_b: u128,          // desired amount of token_b or ETH (minimal units)
+    pub amount_a: String,        // human-readable decimal, e.g. "10" or "0.5"
+    pub amount_b: String,        // human-readable decimal
     pub slippage_bps: u64,
     pub deadline_secs: u64,
     pub from: Option<String>,
@@ -29,9 +29,6 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
 
     if native_a && native_b {
         anyhow::bail!("Cannot add liquidity with two native tokens.");
-    }
-    if args.amount_a == 0 && args.amount_b == 0 {
-        anyhow::bail!("Both amounts are zero — provide at least one non-zero amount.");
     }
 
     // Resolve wallet
@@ -53,14 +50,25 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
             .as_secs()
     ) + args.deadline_secs;
 
+    // Resolve token decimals and parse human-readable amounts
+    let token_a_for_dec = if native_a { cfg.weth.to_string() } else { resolve_token_address(&args.token_a, args.chain_id) };
+    let token_b_for_dec = if native_b { cfg.weth.to_string() } else { resolve_token_address(&args.token_b, args.chain_id) };
+    let decimals_a = rpc::get_erc20_decimals(&token_a_for_dec, rpc).await.unwrap_or(18);
+    let decimals_b = rpc::get_erc20_decimals(&token_b_for_dec, rpc).await.unwrap_or(18);
+    let amount_a = rpc::parse_human_amount(&args.amount_a, decimals_a)?;
+    let amount_b = rpc::parse_human_amount(&args.amount_b, decimals_b)?;
+    if amount_a == 0 && amount_b == 0 {
+        anyhow::bail!("Both amounts are zero — provide at least one non-zero amount.");
+    }
+
     let mut steps = vec![];
 
     if native_a || native_b {
         // addLiquidityETH variant
         let (token_sym, token_amount, eth_amount) = if native_b {
-            (&args.token_a, args.amount_a, args.amount_b)
+            (&args.token_a, amount_a, amount_b)
         } else {
-            (&args.token_b, args.amount_b, args.amount_a)
+            (&args.token_b, amount_b, amount_a)
         };
         let token_addr = resolve_token_address(token_sym, args.chain_id);
         let token_min = token_amount * (10000 - args.slippage_bps) as u128 / 10000;
@@ -80,7 +88,7 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         let calldata = build_add_liquidity_eth(&token_addr, token_amount, token_min, eth_min, &wallet, deadline);
         let result = onchainos::wallet_contract_call(
             args.chain_id, cfg.router02, &calldata,
-            args.from.as_deref(), Some(eth_amount as u128), args.dry_run,
+            args.from.as_deref(), Some(eth_amount), args.dry_run,
         ).await?;
         let tx_hash = onchainos::extract_tx_hash(&result).to_string();
         if !args.dry_run {
@@ -95,14 +103,14 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         // addLiquidity variant (token + token)
         let token_a_addr = resolve_token_address(&args.token_a, args.chain_id);
         let token_b_addr = resolve_token_address(&args.token_b, args.chain_id);
-        let amount_a_min = args.amount_a * (10000 - args.slippage_bps) as u128 / 10000;
-        let amount_b_min = args.amount_b * (10000 - args.slippage_bps) as u128 / 10000;
+        let amount_a_min = amount_a * (10000 - args.slippage_bps) as u128 / 10000;
+        let amount_b_min = amount_b * (10000 - args.slippage_bps) as u128 / 10000;
 
         // Approve tokenA if needed
         let allow_a = rpc::erc20_allowance(&token_a_addr, &wallet, cfg.router02, rpc).await.unwrap_or(0);
-        if allow_a < args.amount_a {
+        if allow_a < amount_a {
             let r = erc20_approve(
-                args.chain_id, &token_a_addr, cfg.router02, args.amount_a,
+                args.chain_id, &token_a_addr, cfg.router02, amount_a,
                 args.from.as_deref(), args.dry_run,
             ).await?;
             steps.push(json!({"step":"approve_tokenA","txHash": onchainos::extract_tx_hash(&r)}));
@@ -111,9 +119,9 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
 
         // Approve tokenB if needed
         let allow_b = rpc::erc20_allowance(&token_b_addr, &wallet, cfg.router02, rpc).await.unwrap_or(0);
-        if allow_b < args.amount_b {
+        if allow_b < amount_b {
             let r = erc20_approve(
-                args.chain_id, &token_b_addr, cfg.router02, args.amount_b,
+                args.chain_id, &token_b_addr, cfg.router02, amount_b,
                 args.from.as_deref(), args.dry_run,
             ).await?;
             steps.push(json!({"step":"approve_tokenB","txHash": onchainos::extract_tx_hash(&r)}));
@@ -122,7 +130,7 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
 
         let calldata = build_add_liquidity(
             &token_a_addr, &token_b_addr,
-            args.amount_a, args.amount_b,
+            amount_a, amount_b,
             amount_a_min, amount_b_min,
             &wallet, deadline,
         );
@@ -147,8 +155,8 @@ pub async fn run(args: AddLiquidityArgs) -> Result<serde_json::Value> {
         "data": {
             "tokenA": args.token_a,
             "tokenB": args.token_b,
-            "amountA": args.amount_a.to_string(),
-            "amountB": args.amount_b.to_string(),
+            "amountA": amount_a.to_string(),
+            "amountB": amount_b.to_string(),
             "chain": args.chain_id
         }
     }))

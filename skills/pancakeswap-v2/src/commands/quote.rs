@@ -9,7 +9,7 @@ pub struct QuoteArgs {
     pub chain_id: u64,
     pub token_in: String,
     pub token_out: String,
-    pub amount_in: u128,
+    pub amount_in: String,
     pub rpc_url: Option<String>,
 }
 
@@ -22,9 +22,6 @@ pub async fn run(args: QuoteArgs) -> Result<serde_json::Value> {
 
     if token_in == token_out {
         anyhow::bail!("tokenIn and tokenOut must be different tokens.");
-    }
-    if args.amount_in == 0 {
-        anyhow::bail!("Amount must be greater than 0.");
     }
 
     // Handle native BNB/ETH: map to WBNB/WETH for routing
@@ -39,6 +36,13 @@ pub async fn run(args: QuoteArgs) -> Result<serde_json::Value> {
         token_out.clone()
     };
 
+    // Resolve decimals for tokenIn and parse human-readable amount
+    let decimals_in = rpc::get_erc20_decimals(&token_in_addr, rpc).await.unwrap_or(18);
+    let amount_in_raw = rpc::parse_human_amount(&args.amount_in, decimals_in)?;
+    if amount_in_raw == 0 {
+        anyhow::bail!("Amount must be greater than 0.");
+    }
+
     // Determine path: try direct pair first, then route via WETH/WBNB
     let path = determine_path(
         &token_in_addr,
@@ -50,7 +54,7 @@ pub async fn run(args: QuoteArgs) -> Result<serde_json::Value> {
     .await?;
 
     let path_refs: Vec<&str> = path.iter().map(|s| s.as_str()).collect();
-    let amounts = rpc::router_get_amounts_out(cfg.router02, args.amount_in, &path_refs, rpc).await?;
+    let amounts = rpc::router_get_amounts_out(cfg.router02, amount_in_raw, &path_refs, rpc).await?;
 
     let amount_out = *amounts.last().unwrap_or(&0);
 
@@ -68,7 +72,7 @@ pub async fn run(args: QuoteArgs) -> Result<serde_json::Value> {
             "tokenOut": token_out_addr,
             "symbolIn": symbol_in,
             "symbolOut": symbol_out,
-            "amountIn": args.amount_in.to_string(),
+            "amountIn": amount_in_raw.to_string(),
             "amountOut": amount_out.to_string(),
             "amountOutHuman": format!("{:.6}", amount_out_human),
             "path": path,
