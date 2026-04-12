@@ -1,0 +1,28 @@
+schema_version: 1
+name: bobby-protocol
+version: "3.0.0"
+description: "Adversarial AI trading intelligence — 3-agent debate, Judge Mode, bounties, 15 MCP tools on X Layer"
+author:
+  name: "Bobby Protocol"
+  github: "anthonysurfermx"
+license: MIT
+category: trading-strategy
+tags:
+  - trading
+  - ai-agents
+  - mcp
+  - x402
+  - adversarial
+  - x-layer
+  - defi
+  - onchainos
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "bobbyprotocol.xyz"
+  - "web3.okx.com"
+  - "www.okx.com"
+  - "xlayerrpc.okx.com"

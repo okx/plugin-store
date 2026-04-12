@@ -1,0 +1,13 @@
+{
+  "name": "bobby-protocol",
+  "description": "Adversarial AI trading intelligence — 3-agent debate, Judge Mode, bounties, 15 MCP tools on X Layer",
+  "version": "3.0.0",
+  "author": {
+    "name": "Bobby Protocol",
+    "email": "anthonysurfermx@users.noreply.github.com"
+  },
+  "homepage": "https://bobbyprotocol.xyz",
+  "repository": "https://github.com/anthonysurfermx/Bobby-Agent-Trader",
+  "license": "MIT",
+  "keywords": ["trading", "ai-agents", "mcp", "x402", "adversarial", "x-layer", "defi", "onchainos"]
+}
