@@ -216,13 +216,14 @@ pub fn ix_add_liquidity_by_strategy(
 
     let ev_auth = event_authority();
 
-    // bin_array_bitmap_extension is OPTIONAL; pass DLMM_PROGRAM as sentinel (unused)
+    // bin_array_bitmap_extension is OPTIONAL; pass DLMM_PROGRAM as sentinel (unused).
+    // Must be readonly — passing an executable account as writable causes ProgramAccountNotFound.
     Instruction {
         program_id: DLMM_PROGRAM,
         accounts: vec![
             AccountMeta::new(*position, false),
             AccountMeta::new(*lb_pair, false),
-            AccountMeta::new(DLMM_PROGRAM, false), // bin_array_bitmap_extension (optional sentinel)
+            AccountMeta::new_readonly(DLMM_PROGRAM, false), // bin_array_bitmap_extension (optional sentinel)
             AccountMeta::new(*user_token_x, false),
             AccountMeta::new(*user_token_y, false),
             AccountMeta::new(*reserve_x, false),
@@ -409,6 +410,34 @@ pub fn ix_set_compute_unit_limit(units: u32) -> Instruction {
         program_id: COMPUTE_BUDGET,
         accounts: vec![],
         data,
+    }
+}
+
+/// Transfer native SOL from `from` to `to` via the System program.
+/// Used to fund a WSOL ATA before syncing, ensuring the token balance reflects
+/// the deposited SOL (required when token_x is the native SOL mint).
+pub fn ix_sol_transfer(from: &Pubkey, to: &Pubkey, lamports: u64) -> Instruction {
+    // SystemInstruction::Transfer discriminant = 2 (u32 LE) + lamports (u64 LE)
+    let mut data = vec![2u8, 0, 0, 0];
+    data.extend_from_slice(&lamports.to_le_bytes());
+    Instruction {
+        program_id: SYSTEM_PROGRAM,
+        accounts: vec![
+            AccountMeta::new(*from, true),
+            AccountMeta::new(*to, false),
+        ],
+        data,
+    }
+}
+
+/// Sync a WSOL (native SOL) token account so its token balance matches its lamport balance.
+/// Must be called after `ix_sol_transfer` to make newly deposited SOL spendable as tokens.
+pub fn ix_sync_native(wsol_account: &Pubkey) -> Instruction {
+    // SyncNative SPL token instruction discriminant = 17
+    Instruction {
+        program_id: TOKEN_PROGRAM,
+        accounts: vec![AccountMeta::new(*wsol_account, false)],
+        data: vec![17],
     }
 }
 

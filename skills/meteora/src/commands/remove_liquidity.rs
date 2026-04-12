@@ -183,7 +183,7 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
             "upper_bin_id": upper_bin_id,
             "pct": args.pct,
             "bps_to_remove": bps_to_remove,
-            "will_close_position": args.close,
+            "will_claim_fees_then_close": args.close && bps_to_remove == 10000,
             "token_x_mint": token_x_mint.to_string(),
             "token_y_mint": token_y_mint.to_string(),
             "user_token_x": user_token_x,
@@ -235,13 +235,15 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
     ));
 
     if args.close && bps_to_remove == 10000 {
-        instructions.push(meteora_ix::ix_close_position(
-            &wallet,
-            &position,
-            &lb_pair,
-            &bin_array_lower,
-            &bin_array_upper,
+        // Claim pending fees first — close_position_if_empty requires fee_infos == 0,
+        // which removeLiquidityByRange does NOT clear automatically.
+        instructions.push(meteora_ix::ix_claim_fee(
+            &lb_pair, &position, &bin_array_lower, &bin_array_upper,
+            &wallet, &reserve_x, &reserve_y,
+            &user_token_x_pk, &user_token_y_pk,
+            &token_x_mint, &token_y_mint,
         ));
+        instructions.push(meteora_ix::ix_close_position_if_empty(&wallet, &position));
     }
 
     // Request 600k CUs — placed last so onchainos sees the DLMM instruction first.

@@ -93,7 +93,19 @@ pub async fn account_exists(client: &Client, address: &str) -> anyhow::Result<bo
     if let Some(err) = resp.get("error") {
         anyhow::bail!("RPC error checking account {address}: {err}");
     }
-    Ok(resp["result"]["value"].is_object())
+    if resp["result"]["value"].is_object() {
+        return Ok(true);
+    }
+    // Primary returned null (may be stale/rate-limited). Cross-check with fallback.
+    // If fallback confirms existence, trust it to avoid spurious init instructions.
+    if let Ok(resp2) = client.post(SOLANA_RPC_FALLBACK).json(&body).send().await {
+        if let Ok(v) = resp2.json::<Value>().await {
+            if v["result"]["value"].is_object() {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 pub async fn get_latest_blockhash(client: &Client) -> anyhow::Result<[u8; 32]> {
@@ -165,6 +177,51 @@ pub fn parse_lb_pair(data: &[u8]) -> anyhow::Result<LbPairInfo> {
         reserve_x,
         reserve_y,
     })
+}
+
+/// Parse the 70 liquidity shares from a DLMM PositionV2 account.
+/// Shares are stored at [72..1192] as 70 × u128 LE.
+/// shares[i] corresponds to the bin at (lower_bin_id + i) within the position.
+pub fn parse_position_shares(data: &[u8]) -> [u128; 70] {
+    let mut shares = [0u128; 70];
+    if data.len() < 1192 {
+        return shares;
+    }
+    for (i, chunk) in data[72..1192].chunks_exact(16).enumerate().take(70) {
+        shares[i] = u128::from_le_bytes(chunk.try_into().unwrap_or([0u8; 16]));
+    }
+    shares
+}
+
+/// Parse (amount_x, amount_y, liquidity_supply) for one bin within a BinArray.
+///
+/// BinArray account layout (10136 bytes):
+///   [0..8]   Anchor discriminator
+///   [8..16]  index (i64 LE)
+///   [16..24] version_info (u64)
+///   [24..56] lb_pair (Pubkey, 32 bytes)
+///   [56..]   bins: [Bin; 70], each Bin = 144 bytes
+///
+/// Bin struct (Meteora DLMM source, 144 bytes total):
+///   [+0..+8]   amount_x     (u64 LE)
+///   [+8..+16]  amount_y     (u64 LE)
+///   [+16..+32] price        (u128 LE, Q64.64 fixed-point)
+///   [+32..+48] liquidity_supply (u128 LE)
+///   [+48..+144] reward/fee fields (not used here)
+pub fn parse_bin_at(data: &[u8], pos_in_array: usize) -> (u64, u64, u128) {
+    const HEADER: usize = 56;
+    const BIN_SIZE: usize = 144;
+    let base = HEADER + pos_in_array * BIN_SIZE;
+    if data.len() < base + 48 {
+        return (0, 0, 0);
+    }
+    let amount_x =
+        u64::from_le_bytes(data[base..base + 8].try_into().unwrap_or([0u8; 8]));
+    let amount_y =
+        u64::from_le_bytes(data[base + 8..base + 16].try_into().unwrap_or([0u8; 8]));
+    let liquidity_supply =
+        u128::from_le_bytes(data[base + 32..base + 48].try_into().unwrap_or([0u8; 16]));
+    (amount_x, amount_y, liquidity_supply)
 }
 
 /// Check whether a DLMM PositionV2 account has any non-zero liquidity shares.
