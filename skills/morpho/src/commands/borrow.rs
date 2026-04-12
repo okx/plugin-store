@@ -12,6 +12,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let borrower_string = onchainos::resolve_wallet(from, chain_id).await?;
@@ -31,12 +32,34 @@ pub async fn run(
     // borrow(marketParams, assets, 0, onBehalf, receiver)
     let borrow_calldata = calldata::encode_borrow(&mp, raw_amount, 0, borrower, borrower);
 
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "borrow",
+            "marketId": market_id,
+            "loanAsset": symbol,
+            "loanAssetAddress": loan_token,
+            "amount": amount,
+            "rawAmount": raw_amount.to_string(),
+            "chainId": chain_id,
+            "morphoBlue": cfg.morpho_blue,
+            "pendingTransactions": 1,
+            "transactions": [
+                {"step": 1, "description": format!("Borrow {} {} from Morpho Blue market {}", amount, symbol, market_id), "to": cfg.morpho_blue},
+            ],
+            "note": "Re-run with --confirm to execute this transaction on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
     eprintln!("[morpho] Borrowing {} {} from Morpho Blue market {}...", amount, symbol, market_id);
     if dry_run {
         eprintln!("[morpho] [dry-run] Would call: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, cfg.morpho_blue, borrow_calldata);
     }
 
-    // Ask user to confirm before executing on-chain
     let result = onchainos::wallet_contract_call(
         chain_id,
         cfg.morpho_blue,

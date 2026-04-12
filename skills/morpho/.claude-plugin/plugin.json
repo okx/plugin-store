@@ -1,7 +1,7 @@
 {
   "name": "morpho",
   "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": {"name": "GeoGu360", "github": "GeoGu360"},
   "homepage": "https://github.com/okx/plugin-store",
   "repository": "https://github.com/okx/plugin-store",

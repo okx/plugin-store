@@ -8,6 +8,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let user_string = onchainos::resolve_wallet(from, chain_id).await?;
@@ -37,12 +38,29 @@ pub async fn run(
         &merkl_data.proofs,
     );
 
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "claim-rewards",
+            "user": user,
+            "chainId": chain_id,
+            "rewardTokens": merkl_data.tokens,
+            "claimable": merkl_data.claimable,
+            "merklDistributor": cfg.merkl_distributor,
+            "pendingTransactions": 1,
+            "note": "Re-run with --confirm to execute this transaction on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
     eprintln!("[morpho] Claiming {} reward token(s) from Merkl...", merkl_data.tokens.len());
     if dry_run {
         eprintln!("[morpho] [dry-run] Would claim: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, cfg.merkl_distributor, claim_calldata);
     }
 
-    // Ask user to confirm before executing on-chain
     let result = onchainos::wallet_contract_call(
         chain_id,
         cfg.merkl_distributor,

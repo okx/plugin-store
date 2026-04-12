@@ -18,6 +18,10 @@ struct Cli {
     #[arg(long, global = true)]
     dry_run: bool,
 
+    /// Confirm and broadcast on-chain (required for write operations; omit to preview)
+    #[arg(long, global = true)]
+    confirm: bool,
+
     /// Wallet address (defaults to active onchainos wallet)
     #[arg(long, global = true)]
     from: Option<String>,
@@ -49,6 +53,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Withdraw from a MetaMorpho vault (ERC-4626)
@@ -76,6 +84,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Borrow from a Morpho Blue market
@@ -95,6 +107,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Repay Morpho Blue debt
@@ -118,6 +134,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// View user positions and health factors
@@ -147,6 +167,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Withdraw collateral from a Morpho Blue market
@@ -170,6 +194,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Claim Merkl rewards (P1)
@@ -181,6 +209,10 @@ enum Commands {
         /// Simulate without broadcasting (overrides global --dry-run)
         #[arg(long)]
         dry_run: bool,
+
+        /// Confirm and broadcast on-chain (overrides global --confirm)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// List MetaMorpho vaults with APYs (P1)
@@ -196,28 +228,33 @@ async fn main() {
     let cli = Cli::parse();
     let global_chain = cli.chain;
     let global_dry_run = cli.dry_run;
+    let global_confirm = cli.confirm;
     let from = cli.from.as_deref();
 
     let result = match cli.command {
-        Commands::Supply { vault, asset, amount, chain, dry_run } => {
+        Commands::Supply { vault, asset, amount, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::supply::run(&vault, &asset, &amount, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::supply::run(&vault, &asset, &amount, chain_id, from, dry_run, confirm).await
         }
-        Commands::Withdraw { vault, asset, amount, all, chain, dry_run } => {
+        Commands::Withdraw { vault, asset, amount, all, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::withdraw::run(&vault, &asset, amount.as_deref(), all, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::withdraw::run(&vault, &asset, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
         }
-        Commands::Borrow { market_id, amount, chain, dry_run } => {
+        Commands::Borrow { market_id, amount, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::borrow::run(&market_id, &amount, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::borrow::run(&market_id, &amount, chain_id, from, dry_run, confirm).await
         }
-        Commands::Repay { market_id, amount, all, chain, dry_run } => {
+        Commands::Repay { market_id, amount, all, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::repay::run(&market_id, amount.as_deref(), all, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::repay::run(&market_id, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
         }
         Commands::Positions => {
             commands::positions::run(global_chain, from).await
@@ -225,20 +262,23 @@ async fn main() {
         Commands::Markets { asset } => {
             commands::markets::run(global_chain, asset.as_deref()).await
         }
-        Commands::SupplyCollateral { market_id, amount, chain, dry_run } => {
+        Commands::SupplyCollateral { market_id, amount, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::supply_collateral::run(&market_id, &amount, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::supply_collateral::run(&market_id, &amount, chain_id, from, dry_run, confirm).await
         }
-        Commands::WithdrawCollateral { market_id, amount, all, chain, dry_run } => {
+        Commands::WithdrawCollateral { market_id, amount, all, chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::withdraw_collateral::run(&market_id, amount.as_deref(), all, chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::withdraw_collateral::run(&market_id, amount.as_deref(), all, chain_id, from, dry_run, confirm).await
         }
-        Commands::ClaimRewards { chain, dry_run } => {
+        Commands::ClaimRewards { chain, dry_run, confirm } => {
             let chain_id = chain.unwrap_or(global_chain);
             let dry_run = dry_run || global_dry_run;
-            commands::claim_rewards::run(chain_id, from, dry_run).await
+            let confirm = confirm || global_confirm;
+            commands::claim_rewards::run(chain_id, from, dry_run, confirm).await
         }
         Commands::Vaults { asset } => {
             commands::vaults::run(global_chain, asset.as_deref()).await

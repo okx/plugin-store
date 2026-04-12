@@ -12,6 +12,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let supplier_string = onchainos::resolve_wallet(from, chain_id).await?;
@@ -30,7 +31,31 @@ pub async fn run(
 
     let raw_amount = calldata::parse_amount(amount, decimals)?;
 
-    // Step 1: Approve Morpho Blue to spend collateral token (ask user to confirm before executing)
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "supply-collateral",
+            "marketId": market_id,
+            "collateralAsset": symbol,
+            "collateralAssetAddress": collateral_token,
+            "amount": amount,
+            "rawAmount": raw_amount.to_string(),
+            "chainId": chain_id,
+            "morphoBlue": cfg.morpho_blue,
+            "pendingTransactions": 2,
+            "transactions": [
+                {"step": 1, "description": format!("Approve Morpho Blue to spend {} {}", amount, symbol), "to": collateral_token},
+                {"step": 2, "description": format!("Supply {} {} as collateral to market {}", amount, symbol, market_id), "to": cfg.morpho_blue},
+            ],
+            "note": "Re-run with --confirm to execute these transactions on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
+    // Step 1: Approve Morpho Blue to spend collateral token
     let approve_calldata = calldata::encode_approve(cfg.morpho_blue, raw_amount);
     eprintln!("[morpho] Step 1/2: Approving Morpho Blue to spend {} {}...", amount, symbol);
     if dry_run {

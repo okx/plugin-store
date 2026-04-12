@@ -1,7 +1,7 @@
 ---
 name: morpho
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.1"
+version: "0.2.2"
 author: "GeoGu360"
 tags:
   - lending
@@ -48,7 +48,7 @@ if ! command -v morpho >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho@0.2.1/morpho-${TARGET}${EXT}" -o ~/.local/bin/morpho${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho@0.2.2/morpho-${TARGET}${EXT}" -o ~/.local/bin/morpho${EXT}
   chmod +x ~/.local/bin/morpho${EXT}
 fi
 ```
@@ -67,7 +67,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"morpho","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"morpho","version":"0.2.2"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"morpho","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -155,6 +155,7 @@ Please connect your wallet first: run `onchainos wallet login`
 - `--chain <CHAIN_ID>` — target chain: 1 (Ethereum, default) or 8453 (Base)
 - `--from <ADDRESS>` — wallet address (defaults to active onchainos wallet)
 - `--dry-run` — simulate without broadcasting
+- `--confirm` — required to actually execute write operations (supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, claim-rewards); omitting it prints a rich preview of pending transactions and exits safely
 
 ---
 
@@ -177,10 +178,14 @@ The health factor (HF) is a numeric value representing the safety of a borrowing
 
 For all write operations (supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, claim-rewards):
 
-1. Run with `--dry-run` first to preview the transaction
-2. **Ask user to confirm** before executing on-chain
-3. Execute only after receiving explicit user approval
-4. Report transaction hash(es) and outcome
+1. **Call without `--confirm`** first — the binary resolves all parameters, builds calldata, and prints a `preview` JSON showing exactly what will be executed (operation, asset, amount, pending transactions). No transactions are broadcast.
+2. **Show the preview to the user** and ask for explicit confirmation.
+3. **Re-run with `--confirm`** after the user approves. Only then are transactions broadcast.
+4. Report transaction hash(es) and outcome.
+
+> **Do NOT pass `--confirm` on the first call.** The preview mode is the safety net — it costs nothing and gives the user full visibility before any funds move.
+
+> **`--dry-run` vs `--confirm`**: `--dry-run` simulates the onchainos call and logs what would be sent, but does not show resolved token symbols or amounts. The confirm-gate preview (default without `--confirm`) resolves all values and is the recommended first step for agents.
 
 ---
 
@@ -192,10 +197,10 @@ For all write operations (supply, withdraw, borrow, repay, supply-collateral, wi
 
 **Usage:**
 ```bash
-# Always dry-run first, then ask user to confirm before proceeding
-morpho --chain 1 --dry-run supply --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 1000
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 supply --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 1000
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 supply --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 1000 --confirm
 ```
 
 **Key parameters:**
@@ -231,13 +236,13 @@ morpho --chain 1 supply --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --ass
 
 **Usage:**
 ```bash
-# Partial withdrawal — dry-run first, then ask user to confirm before proceeding
-morpho --chain 1 --dry-run withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 500
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 500
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --amount 500 --confirm
 
 # Full withdrawal — redeem all shares
-morpho --chain 1 withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --all
+morpho --chain 1 withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --asset USDC --all --confirm
 ```
 
 **Key parameters:**
@@ -272,14 +277,12 @@ morpho --chain 1 withdraw --vault 0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB --a
 
 **Trigger phrases:** "borrow from morpho", "get a loan on morpho blue", "从Morpho借款", "Morpho Blue借贷"
 
-**IMPORTANT:** Always run with `--dry-run` first, then ask user to confirm before executing.
-
 **Usage:**
 ```bash
-# Dry-run first
-morpho --chain 1 --dry-run borrow --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 1000
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 borrow --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 1000
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 borrow --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 1000 --confirm
 ```
 
 **Key parameters:**
@@ -313,17 +316,15 @@ morpho --chain 1 borrow --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccf
 
 **Trigger phrases:** "repay morpho loan", "pay back morpho debt", "还Morpho款", "偿还Morpho"
 
-**IMPORTANT:** Always run with `--dry-run` first, then ask user to confirm before proceeding.
-
 **Usage:**
 ```bash
-# Repay partial amount — dry-run first
-morpho --chain 1 --dry-run repay --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 500
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 repay --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 500
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 repay --market-id 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc --amount 500 --confirm
 
 # Repay all outstanding debt
-morpho --chain 1 repay --market-id 0xb323... --all
+morpho --chain 1 repay --market-id 0xb323... --all --confirm
 ```
 
 **Key parameters:**
@@ -422,6 +423,8 @@ morpho --chain 8453 markets --asset WETH
 - Returns supply APY, borrow APY, utilization, and LLTV for each market
 - Read-only — no confirmation needed
 
+**APY anomaly warning:** When a market's `supplyApy` or `borrowApy` exceeds 500%, the entry includes a `"warning"` field. This typically indicates an expired Pendle PT collateral position (which inflates displayed APY to thousands of percent after maturity). **Do not recommend supplying to such markets** based on the APY figure alone; inform the user of the warning and advise verifying the market on-chain before proceeding.
+
 **Expected output:**
 <external-content>
 ```json
@@ -450,14 +453,12 @@ morpho --chain 8453 markets --asset WETH
 
 **Trigger phrases:** "supply collateral to morpho", "add collateral morpho blue", "Morpho存入抵押品"
 
-**IMPORTANT:** Always run with `--dry-run` first, then ask user to confirm before executing.
-
 **Usage:**
 ```bash
-# Dry-run first
-morpho --chain 1 --dry-run supply-collateral --market-id 0xb323... --amount 1.5
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 supply-collateral --market-id 0xb323... --amount 1.5
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 supply-collateral --market-id 0xb323... --amount 1.5 --confirm
 ```
 
 **Key parameters:**
@@ -490,17 +491,17 @@ morpho --chain 1 supply-collateral --market-id 0xb323... --amount 1.5
 
 **Trigger phrases:** "withdraw collateral from morpho", "remove collateral morpho blue", "get my collateral back from morpho", "取回Morpho抵押品"
 
-**IMPORTANT:** Always run with `--dry-run` first, then ask user to confirm before executing. Ensure all debt in the market is repaid (via `morpho repay --all`) before withdrawing collateral, or only withdraw an amount that keeps the health factor safe.
+**IMPORTANT:** Ensure all debt in the market is repaid (via `morpho repay --all --confirm`) before withdrawing all collateral, or only withdraw an amount that keeps the health factor safe.
 
 **Usage:**
 ```bash
-# Withdraw specific amount — dry-run first
-morpho --chain 1 --dry-run withdraw-collateral --market-id 0xb323... --amount 1.5
-# After user confirmation:
+# Step 1: Preview (no --confirm) — resolves all params, prints pending txs, exits safely
 morpho --chain 1 withdraw-collateral --market-id 0xb323... --amount 1.5
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 withdraw-collateral --market-id 0xb323... --amount 1.5 --confirm
 
 # Withdraw all collateral (must have zero debt first)
-morpho --chain 1 withdraw-collateral --market-id 0xb323... --all
+morpho --chain 1 withdraw-collateral --market-id 0xb323... --all --confirm
 ```
 
 **Key parameters:**
@@ -536,15 +537,13 @@ morpho --chain 1 withdraw-collateral --market-id 0xb323... --all
 
 **Trigger phrases:** "claim morpho rewards", "collect morpho rewards", "领取Morpho奖励", "领取Merkl奖励"
 
-**IMPORTANT:** Always run with `--dry-run` first, then ask user to confirm before executing.
-
 **Usage:**
 ```bash
-# Dry-run first
-morpho --chain 1 --dry-run claim-rewards
-# After user confirmation:
+# Step 1: Preview (no --confirm) — fetches claimable rewards, prints pending tx, exits safely
 morpho --chain 1 claim-rewards
-morpho --chain 8453 claim-rewards
+# Step 2: Show preview to user, ask for confirmation. After approval:
+morpho --chain 1 claim-rewards --confirm
+morpho --chain 8453 claim-rewards --confirm
 ```
 
 **What it does:**
@@ -584,6 +583,8 @@ morpho --chain 8453 vaults --asset WETH
 - Queries the Morpho GraphQL API for MetaMorpho vaults ordered by TVL
 - Returns APY, total assets, and curator info for each vault
 - Read-only — no confirmation needed
+
+**APY anomaly warning:** When a vault's `apy` exceeds 500%, the entry includes a `"warning"` field. This typically indicates an expired Pendle PT position within the vault's underlying markets. **Do not recommend supplying to such vaults** based on the APY figure alone; inform the user of the warning and advise verifying the vault on-chain before proceeding.
 
 **Expected output:**
 <external-content>
@@ -654,8 +655,8 @@ morpho --chain 8453 vaults --asset WETH
 
 ## Safety Rules
 
-1. **Dry-run first**: Always simulate with `--dry-run` before any on-chain write
-2. **Ask user to confirm**: Show the user what will happen and wait for explicit confirmation before executing
+1. **Preview before executing**: Always call write commands without `--confirm` first. The binary resolves all parameters, builds calldata, and prints a `preview` JSON — no transactions are broadcast. Show this to the user and wait for explicit confirmation before re-running with `--confirm`.
+2. **`--confirm` is required to broadcast**: Omitting `--confirm` is always safe; adding it is the explicit approval step.
 3. **Never borrow without checking collateral**: Ensure sufficient collateral is supplied first
 4. **Warn at low HF**: Explicitly warn user when health factor < 1.1 after simulated borrow
 5. **Full repay with shares**: Use `--all` for full repayment to avoid dust from interest rounding
@@ -678,4 +679,19 @@ morpho --chain 8453 vaults --asset WETH
 | `Unknown asset symbol` | Provide the ERC-20 contract address instead of symbol |
 | `execution reverted: transferFrom reverted` on supply/repay | The approve tx was not yet confirmed when the main operation ran. This should not occur in v0.2.0+ (the plugin waits for approve confirmation). If it does, retry after a few seconds. |
 | `--all` withdraw-collateral fails with `insufficient collateral` | The GraphQL API may lag behind on-chain state by a few blocks. Use `--amount` with the exact balance from `morpho positions` instead. |
+
+---
+
+## Changelog
+
+### v0.2.2
+- **Safety: `--confirm` gate for all write operations** — Supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, and claim-rewards now require `--confirm` to broadcast. Calling without `--confirm` prints a rich `preview` JSON (operation, asset, amount, pending transactions) and exits safely. This prevents accidental on-chain execution.
+- **APY anomaly warnings** — `morpho markets` and `morpho vaults` now emit a `"warning"` field on any entry where supply or borrow APY exceeds 500%. This surfaces expired Pendle PT positions (which inflate APY to thousands of percent after maturity) so agents and users are not misled.
+
+### v0.2.1
+- Initial public release
+- Supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, claim-rewards
+- MetaMorpho vault listing and Morpho Blue market listing with APY/utilization data
+- Positions view with Blue and vault balances
+- Ethereum Mainnet and Base support
 

@@ -15,6 +15,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     // Resolve the active wallet address (used as owner/receiver)
@@ -44,11 +45,32 @@ pub async fn run(
         eprintln!("[morpho] Withdrawing {} {} from vault {}...", amt_str, symbol, vault);
     }
 
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "withdraw",
+            "vault": vault,
+            "asset": symbol,
+            "assetAddress": asset_addr,
+            "amount": display_amount,
+            "withdrawAll": all,
+            "chainId": chain_id,
+            "pendingTransactions": 1,
+            "transactions": [
+                {"step": 1, "description": format!("Withdraw {} {} from vault {}", display_amount, symbol, vault), "to": vault},
+            ],
+            "note": "Re-run with --confirm to execute this transaction on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
     if dry_run {
         eprintln!("[morpho] [dry-run] Would call: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, vault, calldata_hex);
     }
 
-    // Ask user to confirm before executing on-chain
     let result = onchainos::wallet_contract_call(chain_id, vault, &calldata_hex, from, None, dry_run, false).await?;
     let tx_hash = onchainos::extract_tx_hash_or_err(&result)?;
 

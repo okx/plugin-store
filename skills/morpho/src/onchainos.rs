@@ -80,7 +80,12 @@ pub async fn wait_for_tx(tx_hash: &str, rpc_url: &str, chain_id: u64) -> anyhow:
             }
         }
     }
-    Ok(()) // proceed anyway after timeout
+    anyhow::bail!(
+        "Approval tx {} not confirmed within {}s — network may be congested. \
+         Check the tx on-chain and retry the command once it confirms.",
+        tx_hash,
+        max_attempts * 2
+    )
 }
 
 /// Extract txHash from wallet contract-call response, returning an error if the call failed.
@@ -123,16 +128,6 @@ pub async fn wallet_balance(chain_id: u64) -> anyhow::Result<Value> {
     let chain_str = chain_id.to_string();
     let output = tokio::process::Command::new("onchainos")
         .args(["wallet", "balance", "--chain", &chain_str])
-        .output()
-        .await?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
-}
-
-/// Query wallet status to get the active address.
-pub async fn wallet_status() -> anyhow::Result<Value> {
-    let output = tokio::process::Command::new("onchainos")
-        .args(["wallet", "status", "--output", "json"])
         .output()
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
