@@ -13,6 +13,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let owner_string = onchainos::resolve_wallet(from, chain_id).await?;
@@ -51,6 +52,29 @@ pub async fn run(
 
     // withdrawCollateral(marketParams, assets, onBehalf, receiver)
     let withdraw_calldata = calldata::encode_withdraw_collateral(&mp, raw_amount, owner, owner);
+
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "withdraw-collateral",
+            "marketId": market_id,
+            "collateralAsset": symbol,
+            "collateralAssetAddress": collateral_token,
+            "amount": display_amount,
+            "withdrawAll": all,
+            "chainId": chain_id,
+            "morphoBlue": cfg.morpho_blue,
+            "pendingTransactions": 1,
+            "transactions": [
+                {"step": 1, "description": format!("Withdraw {} {} collateral from market {}", display_amount, symbol, market_id), "to": cfg.morpho_blue},
+            ],
+            "note": "Re-run with --confirm to execute this transaction on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
 
     if dry_run {
         eprintln!("[morpho] [dry-run] Would call: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, cfg.morpho_blue, withdraw_calldata);

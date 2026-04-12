@@ -15,6 +15,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
     let borrower_string = onchainos::resolve_wallet(from, chain_id).await?;
@@ -67,7 +68,31 @@ pub async fn run(
         eprintln!("[morpho] Repaying {} {} to Morpho Blue market {}...", amt_str, symbol, market_id);
     }
 
-    // Step 1: Approve Morpho Blue to spend loan token (ask user to confirm before executing)
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "repay",
+            "marketId": market_id,
+            "loanAsset": symbol,
+            "loanAssetAddress": loan_token,
+            "amount": display_amount,
+            "repayAll": all,
+            "chainId": chain_id,
+            "morphoBlue": cfg.morpho_blue,
+            "pendingTransactions": 2,
+            "transactions": [
+                {"step": 1, "description": format!("Approve Morpho Blue to spend {} {}", display_amount, symbol), "to": loan_token},
+                {"step": 2, "description": format!("Repay {} {} to Morpho Blue market {}", display_amount, symbol, market_id), "to": cfg.morpho_blue},
+            ],
+            "note": "Re-run with --confirm to execute these transactions on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
+    // Step 1: Approve Morpho Blue to spend loan token
     // Add a small buffer (0.5%) to the approval amount to cover accrued interest
     let approve_amount = if all && repay_assets == 0 {
         // For full repay via shares, approve actual borrow amount + 1% buffer for accrued interest

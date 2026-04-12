@@ -13,6 +13,7 @@ pub async fn run(
     chain_id: u64,
     from: Option<&str>,
     dry_run: bool,
+    confirm: bool,
 ) -> anyhow::Result<()> {
     let cfg = get_chain_config(chain_id)?;
 
@@ -27,18 +28,43 @@ pub async fn run(
     // Resolve the caller's wallet address (used as receiver in deposit)
     let wallet_addr = onchainos::resolve_wallet(from, chain_id).await?;
 
-    // Step 1: Approve vault to spend asset (ask user to confirm before executing)
+    // Build calldatas (needed for both preview and execution)
     let approve_calldata = calldata::encode_approve(vault, raw_amount);
+    let deposit_calldata = calldata::encode_vault_deposit(raw_amount, &wallet_addr);
+
+    // Confirm gate: show preview and exit if --confirm not given
+    if !dry_run && !confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "supply",
+            "vault": vault,
+            "asset": symbol,
+            "assetAddress": asset_addr,
+            "amount": amount,
+            "rawAmount": raw_amount.to_string(),
+            "chainId": chain_id,
+            "pendingTransactions": 2,
+            "transactions": [
+                {"step": 1, "description": format!("Approve {} to spend {} {}", vault, amount, symbol), "to": asset_addr},
+                {"step": 2, "description": format!("Deposit {} {} into vault {}", amount, symbol, vault), "to": vault},
+            ],
+            "note": "Re-run with --confirm to execute these transactions on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
+    // Step 1: Approve vault to spend asset
     eprintln!("[morpho] Step 1/2: Approving {} to spend {} {}...", vault, amount, symbol);
     if dry_run {
         eprintln!("[morpho] [dry-run] Would approve: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, asset_addr, approve_calldata);
     }
-    let approve_result = onchainos::wallet_contract_call(chain_id, &asset_addr, &approve_calldata, from, None, dry_run, true).await?;  // --force: approval is a prerequisite step
+    let approve_result = onchainos::wallet_contract_call(chain_id, &asset_addr, &approve_calldata, from, None, dry_run, true).await?;
     let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result)?;
     onchainos::wait_for_tx(&approve_tx, cfg.rpc_url, chain_id).await?;
 
-    // Step 2: Deposit to vault (ask user to confirm before executing)
-    let deposit_calldata = calldata::encode_vault_deposit(raw_amount, &wallet_addr);
+    // Step 2: Deposit to vault
     eprintln!("[morpho] Step 2/2: Depositing {} {} into vault {}...", amount, symbol, vault);
     if dry_run {
         eprintln!("[morpho] [dry-run] Would deposit: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, vault, deposit_calldata);
