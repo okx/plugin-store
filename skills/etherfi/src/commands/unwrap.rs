@@ -33,7 +33,17 @@ pub async fn run(args: UnwrapArgs) -> anyhow::Result<()> {
 
     // Preview: how much eETH will be returned.
     // weETH.convertToAssets() reverts on this contract; use getRate() instead.
-    let rate = crate::rpc::weeth_get_rate(weeth, rpc).await.unwrap_or(0.0);
+    let rate = crate::rpc::weeth_get_rate(weeth, rpc).await
+        .map_err(|e| anyhow::anyhow!(
+            "Failed to fetch weETH exchange rate: {}. Check RPC connectivity and retry.",
+            e
+        ))?;
+    if rate == 0.0 {
+        anyhow::bail!(
+            "weETH exchange rate returned 0 — RPC may be unavailable or contract unresponsive. \
+             Retry in a moment or check https://ethereum-rpc.publicnode.com connectivity."
+        );
+    }
     let eeth_expected = (weeth_wei as f64 * rate) as u128;
 
     println!(
@@ -63,8 +73,8 @@ pub async fn run(args: UnwrapArgs) -> anyhow::Result<()> {
         }
     }
 
-    // Build weETH.redeem(shares, receiver, owner) calldata — ERC-4626 redeem
-    // No approve needed: weETH.redeem() only requires `owner == msg.sender`
+    // Build weETH.unwrap(uint256 _weETHAmount) calldata
+    // No approve needed: unwrap() burns caller's weETH directly
     let calldata = build_unwrap_calldata(weeth_wei, &wallet);
 
     let result = wallet_contract_call(

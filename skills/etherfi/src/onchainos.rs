@@ -89,8 +89,19 @@ pub async fn wallet_contract_call(
         .output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)
-        .unwrap_or_else(|_| serde_json::json!({"ok": false, "raw": stdout.to_string()})))
+    let result: Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|_| serde_json::json!({"ok": false, "raw": stdout.to_string()}));
+
+    // Propagate ok:false as an error — prevents "pending" txHash on simulation rejection
+    if result["ok"].as_bool() == Some(false) {
+        let msg = result["message"].as_str()
+            .or_else(|| result["data"]["message"].as_str())
+            .or_else(|| result["raw"].as_str())
+            .unwrap_or("onchainos wallet contract-call failed (ok: false)");
+        anyhow::bail!("{}", msg);
+    }
+
+    Ok(result)
 }
 
 /// Extract txHash from a wallet_contract_call response.

@@ -1,6 +1,6 @@
 schema_version: 1
 name: etherfi
-version: 0.2.2
+version: 0.2.3
 description: Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap/unwrap eETH/weETH (ERC-4626), unstake eETH back to ETH, and check positions with APY
 author:
   name: GeoGu360
@@ -27,4 +27,5 @@ chain:
 api_calls:
 - ethereum-rpc.publicnode.com
 - yields.llama.fi
+- coins.llama.fi
 - etherscan.io

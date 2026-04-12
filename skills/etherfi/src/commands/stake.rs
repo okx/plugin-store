@@ -28,6 +28,16 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
         anyhow::bail!("Amount must be greater than zero.");
     }
 
+    // ether.fi LiquidityPool enforces a minimum deposit of 0.001 ETH on-chain.
+    // Catch it here to give a clear message instead of a cryptic on-chain revert.
+    const MIN_STAKE_WEI: u128 = 1_000_000_000_000_000; // 0.001 ETH
+    if eth_wei < MIN_STAKE_WEI {
+        anyhow::bail!(
+            "ether.fi minimum deposit is 0.001 ETH. Got {} ETH ({} wei). Please increase the amount.",
+            args.amount, eth_wei
+        );
+    }
+
     // Resolve wallet address
     let wallet = resolve_wallet(CHAIN_ID)?;
 

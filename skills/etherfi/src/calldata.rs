@@ -19,22 +19,18 @@ pub fn build_wrap_calldata(assets: u128, _receiver: &str) -> String {
     format!("0xea598cb0{}", pad_u256(assets))
 }
 
-/// Build calldata for weETH.redeem(uint256 shares, address receiver, address owner)
-/// This is the ERC-4626 redeem: unwraps weETH → eETH.
-/// Selector: 0xba087652 (keccak256("redeem(uint256,address,address)")[0..4])
+/// Build calldata for weETH.unwrap(uint256 _weETHAmount)
+/// Unwraps weETH → eETH on the ether.fi weETH contract.
+/// Selector: 0xde0e9a3e (keccak256("unwrap(uint256)")[0..4])
+///
+/// Note: weETH does NOT implement ERC-4626 redeem(uint256,address,address).
+/// The contract only exposes wrap(uint256) and unwrap(uint256).
 ///
 /// ABI layout:
-///   [0..4]    selector 0xba087652
-///   [4..36]   shares (uint256 = weETH amount in wei)
-///   [36..68]  receiver (address, padded to 32 bytes)
-///   [68..100] owner (address, padded to 32 bytes — same as receiver for self-redeem)
-pub fn build_unwrap_calldata(shares: u128, receiver: &str) -> String {
-    format!(
-        "0xba087652{}{}{}",
-        pad_u256(shares),
-        pad_address(receiver),
-        pad_address(receiver),
-    )
+///   [0..4]   selector 0xde0e9a3e
+///   [4..36]  _weETHAmount (uint256 = weETH amount in wei)
+pub fn build_unwrap_calldata(shares: u128, _receiver: &str) -> String {
+    format!("0xde0e9a3e{}", pad_u256(shares))
 }
 
 /// Build calldata for LiquidityPool.requestWithdraw(address recipient, uint256 amountOfEEth)

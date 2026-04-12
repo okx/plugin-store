@@ -2,18 +2,18 @@
 # etherfi -- Skill Summary
 
 ## Overview
-The ether.fi plugin enables liquid restaking on Ethereum through a comprehensive workflow: deposit ETH to receive eETH liquid staking tokens, wrap eETH into weETH (ERC-4626 yield-bearing tokens) to earn auto-compounded staking and EigenLayer restaking rewards, and monitor positions with real-time APY data. All write operations use onchainos wallet integration with mandatory confirmation gates for secure transaction execution.
+The etherfi plugin enables liquid restaking on Ethereum through the ether.fi protocol. Users can deposit ETH to receive eETH tokens, wrap them into yield-bearing weETH (ERC-4626) tokens that auto-compound staking and EigenLayer restaking rewards, and manage withdrawals through a two-step finalization process. The plugin provides real-time position tracking with APY data and USD valuations.
 
 ## Usage
-Run commands without `--confirm` to preview transactions, then add `--confirm` to broadcast. Use `etherfi positions` to check balances and APY anytime.
+Install the plugin and ensure onchainos CLI is configured with your wallet. Use `etherfi positions` to check balances and APY, then `etherfi stake --amount <ETH> --confirm` to deposit ETH for eETH tokens.
 
 ## Commands
-| Command | Description |
-|---------|-------------|
-| `etherfi positions [--owner ADDRESS]` | View eETH/weETH balances and protocol APY (read-only) |
-| `etherfi stake --amount ETH [--confirm]` | Deposit ETH to receive eETH |
-| `etherfi wrap --amount EETH [--confirm]` | Wrap eETH into yield-bearing weETH |
-| `etherfi unwrap --amount WEETH [--confirm]` | Redeem weETH back to eETH |
+- `etherfi positions [--owner <address>]` - View eETH/weETH balances, APY, and USD values
+- `etherfi stake --amount <ETH> [--confirm]` - Deposit ETH to receive eETH tokens
+- `etherfi wrap --amount <eETH> [--confirm]` - Wrap eETH into yield-bearing weETH
+- `etherfi unwrap --amount <weETH> [--confirm]` - Unwrap weETH back to eETH
+- `etherfi unstake --amount <eETH> [--confirm]` - Request ETH withdrawal (step 1)
+- `etherfi unstake --claim --token-id <id> [--confirm]` - Claim ETH after finalization (step 2)
 
 ## Triggers
-Activate when users want to stake ETH on ether.fi, wrap/unwrap between eETH and weETH, check ether.fi positions or APY, or engage with liquid restaking protocols. Also trigger for phrases like "get weETH", "ether.fi liquid restaking", or similar DeFi staking requests.
+Activate when users want to stake ETH for liquid restaking rewards, wrap/unwrap between eETH and weETH tokens, withdraw staked ETH, or check their ether.fi positions and current APY rates. Also triggered by mentions of liquid restaking, EigenLayer rewards, or weETH tokens.
