@@ -1,7 +1,7 @@
 ---
 name: gmx-v2
 description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions. Trigger phrases: open position GMX, close position GMX, GMX trade, GMX leverage, GMX liquidity, deposit GM pool, withdraw GM pool, GMX stop loss, GMX take profit, cancel order GMX, claim funding fees GMX."
-version: 0.2.1
+version: 0.2.2
 author: "GeoGu360"
 tags:
   - perpetuals
@@ -49,7 +49,7 @@ if ! command -v gmx-v2 >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2@0.2.1/gmx-v2-${TARGET}${EXT}" -o ~/.local/bin/gmx-v2${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2@0.2.2/gmx-v2-${TARGET}${EXT}" -o ~/.local/bin/gmx-v2${EXT}
   chmod +x ~/.local/bin/gmx-v2${EXT}
 fi
 ```
@@ -71,7 +71,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"gmx-v2","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"gmx-v2","version":"0.2.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -101,11 +101,11 @@ fi
 
 ## Architecture
 
-**Source code**: https://github.com/GeoGu360/plugin-store/tree/main/skills/gmx-v2
+**Source code**: https://github.com/okx/plugin-store/tree/main/skills/gmx-v2
 
 - Read ops (list-markets, get-prices, get-positions, get-orders) → direct `eth_call` via public RPC or GMX REST API; no confirmation needed
 - Write ops (open-position, close-position, place-order, cancel-order, deposit-liquidity, withdraw-liquidity, claim-funding-fees) → after user confirmation, submits via `onchainos wallet contract-call`
-- Write commands use `--force` flag internally — the binary broadcasts immediately once invoked; **agent confirmation is the sole safety gate** before calling any write command
+- Write commands require `--confirm` flag to broadcast — without `--confirm` (or `--dry-run`), the binary returns a preview JSON only; **agent confirmation is the sole safety gate** before passing `--confirm` to any write command
 - All write ops support `--dry-run` to preview calldata without broadcasting
 
 ## Supported Chains
@@ -126,10 +126,11 @@ Default: `--chain arbitrum`
 
 ## Execution Flow for Write Operations
 
-1. Run with `--dry-run` first to preview calldata
-2. **Ask user to confirm** the operation details (market, direction, size, fees) before executing
-3. Execute only after explicit user approval
-4. Report transaction hash and note that keeper execution follows within 1–30 seconds
+1. Run with `--dry-run` first to preview calldata (no broadcast, no approval needed)
+2. Without `--dry-run` and without `--confirm`: binary returns a preview JSON (`"status":"preview"`) — **never broadcasts**
+3. **Ask user to confirm** the operation details (market, direction, size, fees) before executing
+4. Execute with `--confirm` flag only after explicit user approval
+5. Report transaction hash and note that keeper execution follows within 1–30 seconds
 
 ---
 
@@ -158,7 +159,7 @@ gmx-v2 --chain arbitrum list-markets
 gmx-v2 --chain avalanche list-markets --trading-only false
 ```
 
-**Output fields:** name, marketToken, indexToken, longToken, shortToken, availableLiquidityLong_usd, availableLiquidityShort_usd, openInterestLong_usd, openInterestShort_usd, fundingRateLong, fundingRateShort
+**Output fields:** name, marketToken, indexToken, longToken, shortToken, availableLiquidityLong_usd, availableLiquidityShort_usd, openInterestLong_usd, openInterestShort_usd, fundingRateLong_annual (e.g. "0.0123%"), fundingRateShort_annual, borrowingRateLong_annual, borrowingRateShort_annual
 
 No confirmation needed (read-only).
 
@@ -208,7 +209,7 @@ gmx-v2 --chain arbitrum get-orders
 gmx-v2 --chain arbitrum get-orders --address 0xYourWallet
 ```
 
-**Output fields per order:** index, orderKey (bytes32), market (address), marketName, orderType (e.g. "LimitIncrease", "StopLossDecrease")
+**Output fields per order:** index, orderKey (bytes32), market (address), marketName, orderType (e.g. "LimitIncrease", "StopLossDecrease"), direction (LONG/SHORT), sizeUsd, collateralDelta, triggerPrice_usd, acceptablePrice_usd, collateralToken
 
 > Use `orderKey` directly as `--key` when calling `cancel-order`.
 
@@ -301,10 +302,13 @@ gmx-v2 --chain arbitrum close-position \
 - `--slippage-bps`: Acceptable slippage in basis points (default: 100 = 1%)
 
 **Flow:**
-1. Run `--dry-run` to preview
-2. **Ask user to confirm** position details before closing
-3. Submits via `onchainos wallet contract-call`
-4. Position closes within 1–30 seconds via keeper
+1. Run `--dry-run` to preview calldata, acceptable price, and execution fee
+2. Pre-flight: checks wallet ETH balance — returns `{"ok":false,"error":"INSUFFICIENT_ETH_FOR_EXECUTION"}` if ETH < execution fee + gas buffer
+3. **Ask user to confirm** position details before closing
+4. Submits with `--confirm` via `onchainos wallet contract-call`
+5. Position closes within 1–30 seconds via keeper
+
+**Output fields:** ok, dry_run, chain, txHash, market, collateralToken, sizeDeltaUsd, collateralToWithdraw (human-readable), isLong, acceptablePrice_usd, executionFee_eth, calldata (dry_run only)
 
 ---
 
@@ -342,9 +346,14 @@ gmx-v2 --chain arbitrum place-order \
 
 **Flow:**
 1. Run `--dry-run` to preview trigger and acceptable prices
-2. **Ask user to confirm** order type, trigger price, and size before placing
-3. Submits via `onchainos wallet contract-call`
-4. Order monitored by keeper and executed when trigger is reached
+2. Pre-flight: checks wallet ETH balance — returns `{"ok":false,"error":"INSUFFICIENT_ETH_FOR_EXECUTION"}` if insufficient
+3. Pre-flight (increase orders): checks collateral token balance — returns `{"ok":false,"error":"INSUFFICIENT_TOKEN_BALANCE"}` if insufficient
+4. **Ask user to confirm** order type, trigger price, and size before placing
+5. Submits with `--confirm` via `onchainos wallet contract-call`
+6. Returns `orderKey` (bytes32) of the newly created order — use with `cancel-order --key`
+7. Order monitored by keeper and executed when trigger is reached
+
+**Output fields:** ok, dry_run, chain, txHash, orderKey (null on dry-run), orderType, market, collateralToken, sizeDeltaUsd, triggerPrice_usd, acceptablePrice_usd, isLong, executionFee_eth, calldata (dry_run only)
 
 ---
 
@@ -358,9 +367,10 @@ gmx-v2 --chain arbitrum cancel-order \
 ```
 
 **Flow:**
-1. Run `--dry-run` to verify the key
+1. Run `--dry-run` to verify the key and preview calldata
 2. **Ask user to confirm** the order key before cancellation
-3. Submits `cancelOrder(bytes32)` via `onchainos wallet contract-call`
+3. Submits `cancelOrder(bytes32)` with `--confirm` via `onchainos wallet contract-call`
+4. Waits for tx confirmation on-chain before reporting `ok:true`
 
 ---
 
@@ -383,11 +393,14 @@ gmx-v2 --chain arbitrum deposit-liquidity \
 ```
 
 **Flow:**
-1. Run `--dry-run` to preview GM tokens to receive
-2. **Ask user to confirm** deposit amounts, market, and execution fee
-3. Plugin auto-approves tokens if allowance insufficient
-4. Submits multicall via `onchainos wallet contract-call`
-5. GM tokens minted within 1–30 seconds by keeper
+1. Run `--dry-run` to preview GM tokens to receive and execution fee
+2. Pre-flight: checks wallet ETH balance — returns `{"ok":false,"error":"INSUFFICIENT_ETH_FOR_EXECUTION"}` if insufficient
+3. Pre-flight: checks long token balance (if `--long-amount > 0`) — returns `{"ok":false,"error":"INSUFFICIENT_LONG_TOKEN_BALANCE"}` if insufficient
+4. Pre-flight: checks short token balance (if `--short-amount > 0`) — returns `{"ok":false,"error":"INSUFFICIENT_SHORT_TOKEN_BALANCE"}` if insufficient
+5. **Ask user to confirm** deposit amounts, market, and execution fee
+6. If token allowance is insufficient, binary prints a NOTE — re-run with `--confirm` to approve and deposit in one step
+7. Submits multicall with `--confirm` via `onchainos wallet contract-call`
+8. GM tokens minted within 1–30 seconds by keeper
 
 ---
 
@@ -404,11 +417,13 @@ gmx-v2 --chain arbitrum withdraw-liquidity \
 ```
 
 **Flow:**
-1. Run `--dry-run` to preview calldata
-2. **Ask user to confirm** GM amount to burn and minimum output amounts
-3. Plugin auto-approves GM token if allowance insufficient
-4. Submits multicall via `onchainos wallet contract-call`
-5. Underlying tokens returned within 1–30 seconds by keeper
+1. Run `--dry-run` to preview calldata and execution fee
+2. Pre-flight: checks wallet ETH balance — returns `{"ok":false,"error":"INSUFFICIENT_ETH_FOR_EXECUTION"}` if insufficient
+3. Pre-flight: checks GM token balance — returns `{"ok":false,"error":"INSUFFICIENT_GM_TOKEN_BALANCE"}` if wallet GM balance < `--gm-amount`
+4. **Ask user to confirm** GM amount to burn and minimum output amounts
+5. If GM token allowance is insufficient, binary prints a NOTE — re-run with `--confirm` to approve and withdraw in one step
+6. Submits multicall with `--confirm` via `onchainos wallet contract-call`
+7. Underlying tokens returned within 1–30 seconds by keeper
 
 ---
 
@@ -433,7 +448,10 @@ No execution fee ETH value needed for claims.
 **Flow:**
 1. Run `--dry-run` to verify the markets and tokens arrays
 2. **Ask user to confirm** the markets and receiver address before claiming
-3. Submits `claimFundingFees(address[],address[],address)` via `onchainos wallet contract-call`
+3. Submits `claimFundingFees(address[],address[],address)` with `--confirm` via `onchainos wallet contract-call`
+4. Returns `claimed` array — each entry has the token address and raw amount delta detected via pre/post ERC-20 balance diff
+
+**Output fields:** ok, dry_run, chain, txHash, claimed (array of `{token, claimedRaw}`, empty on dry-run)
 
 ---
 

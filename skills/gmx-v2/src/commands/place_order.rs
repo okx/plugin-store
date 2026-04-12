@@ -86,9 +86,6 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
     let order_type_u8 = args.order_type.to_u8();
 
     // Look up index token decimals so we can convert USD → raw GMX price format.
-    // GMX price format: price_usd × 10^(30 - token_decimals)
-    //   BTC (8 dec)  → × 10^22
-    //   ETH (18 dec) → × 10^12
     let markets = crate::api::fetch_markets(cfg).await?;
     let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
     let market_info = markets.iter().find(|m| {
@@ -115,7 +112,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
     let trigger_price = usd_to_raw(args.trigger_price_usd);
     let acceptable_price = usd_to_raw(args.acceptable_price_usd);
 
-    // size_delta_usd is in GMX's 10^30 USD precision (not token-decimal-adjusted)
+    // size_delta_usd is in GMX's 10^30 USD precision
     let size_delta_usd = {
         let int_part = args.size_usd.floor() as u128;
         let frac_part = args.size_usd - args.size_usd.floor();
@@ -167,6 +164,42 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
     let multicall_hex = crate::abi::encode_multicall(&inner_calls);
     let calldata = format!("0x{}", multicall_hex);
 
+    // Pre-flight: ETH balance for execution fee + gas
+    let eth_balance = crate::rpc::get_eth_balance(&wallet, cfg.rpc_url).await;
+    let gas_margin: u128 = 200_000_000_000_000; // 0.0002 ETH
+    let eth_required = execution_fee.saturating_add(gas_margin);
+    if eth_balance < eth_required {
+        println!("{}", serde_json::to_string_pretty(&json!({
+            "ok": false,
+            "error": "INSUFFICIENT_ETH_FOR_EXECUTION",
+            "reason": "Wallet does not have enough ETH to cover execution fee + gas.",
+            "eth_balance": format!("{:.8}", eth_balance as f64 / 1e18),
+            "execution_fee_eth": format!("{:.8}", execution_fee as f64 / 1e18),
+            "gas_buffer_eth": format!("{:.8}", gas_margin as f64 / 1e18),
+            "eth_required": format!("{:.8}", eth_required as f64 / 1e18),
+            "suggestion": format!("Top up wallet {} with at least {:.6} ETH.", wallet, (eth_required.saturating_sub(eth_balance)) as f64 / 1e18)
+        }))?);
+        return Ok(());
+    }
+
+    // Pre-flight: for increase orders, check collateral token balance
+    if matches!(order_type_u8, 3 | 8) && args.collateral_amount > 0 {
+        let bal = crate::rpc::check_erc20_balance(cfg.rpc_url, &args.collateral_token, &wallet).await.unwrap_or(u128::MAX);
+        if bal < args.collateral_amount {
+            println!("{}", serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "INSUFFICIENT_COLLATERAL_BALANCE",
+                "reason": "Wallet collateral token balance is less than the required collateral amount.",
+                "collateral_token": args.collateral_token,
+                "wallet_balance": bal.to_string(),
+                "required_amount": args.collateral_amount.to_string(),
+                "suggestion": format!("Reduce --collateral-amount to at most {} or top up the collateral token.", bal)
+            }))?);
+            return Ok(());
+        }
+    }
+
+    let execution_fee_eth = execution_fee as f64 / 1e18;
     eprintln!("=== Place Order Preview ===");
     eprintln!("Order type: {}", args.order_type.name());
     eprintln!("Market token: {}", args.market_token);
@@ -176,11 +209,45 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
     eprintln!("Acceptable price: ${:.4} (raw: {})", args.acceptable_price_usd, acceptable_price);
     eprintln!("Index token decimals: {}", index_decimals);
     eprintln!("Current price: ${:.4}", current_price_usd);
-    eprintln!("Execution fee: {} wei", execution_fee);
-    eprintln!("Ask user to confirm before proceeding.");
+    eprintln!("Execution fee: {:.6} ETH", execution_fee_eth);
+    if !confirm { eprintln!("Add --confirm to broadcast."); }
+
+    if !confirm && !dry_run {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": true,
+                "status": "preview",
+                "message": "Add --confirm to broadcast this transaction",
+                "chain": chain,
+                "orderType": args.order_type.name(),
+                "marketToken": args.market_token,
+                "direction": if args.long { "long" } else { "short" },
+                "sizeUsd": args.size_usd,
+                "triggerPrice_usd": args.trigger_price_usd,
+                "acceptablePrice_usd": args.acceptable_price_usd,
+                "executionFee_eth": format!("{:.6}", execution_fee_eth),
+                "calldata": calldata
+            }))?
+        );
+        return Ok(());
+    }
+
+    // G19: snapshot existing order keys so we can diff after tx to find the new orderKey
+    let orders_calldata = {
+        let ds = cfg.datastore.trim_start_matches("0x");
+        let wlt = wallet.trim_start_matches("0x");
+        format!("0x42a6f8d3{:0>64}{:0>64}{:064x}{:064x}", ds, wlt, 0u128, 20u128)
+    };
+    let pre_keys: std::collections::HashSet<String> = if confirm && !dry_run {
+        let raw = crate::rpc::eth_call(cfg.reader, &orders_calldata, cfg.rpc_url).await.unwrap_or_default();
+        crate::commands::get_orders::extract_order_keys(&raw).into_iter().collect()
+    } else {
+        Default::default()
+    };
 
     // For increase orders, check/approve collateral first
-    if !dry_run && matches!(order_type_u8, 3 | 8) {
+    if confirm && !dry_run && matches!(order_type_u8, 3 | 8) {
         let allowance = crate::onchainos::check_allowance(
             cfg.rpc_url,
             &args.collateral_token,
@@ -217,6 +284,16 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);
 
+    // G19: after tx confirms, query orders and find the newly created orderKey
+    let new_order_key: Option<String> = if confirm && !dry_run {
+        crate::onchainos::wait_for_tx(cfg.chain_id, &tx_hash, &wallet, 60)?;
+        let raw_after = crate::rpc::eth_call(cfg.reader, &orders_calldata, cfg.rpc_url).await.unwrap_or_default();
+        let post_keys: std::collections::HashSet<String> = crate::commands::get_orders::extract_order_keys(&raw_after).into_iter().collect();
+        post_keys.difference(&pre_keys).next().cloned()
+    } else {
+        None
+    };
+
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -224,13 +301,14 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: PlaceOrderArgs
             "dry_run": dry_run,
             "chain": chain,
             "txHash": tx_hash,
+            "orderKey": new_order_key,
             "orderType": args.order_type.name(),
             "marketToken": args.market_token,
             "direction": if args.long { "long" } else { "short" },
             "sizeUsd": args.size_usd,
             "triggerPrice_usd": args.trigger_price_usd,
             "acceptablePrice_usd": args.acceptable_price_usd,
-            "executionFeeWei": execution_fee,
+            "executionFee_eth": format!("{:.6}", execution_fee_eth),
             "note": "Order will be executed by keeper when trigger price is reached",
             "calldata": if dry_run { Some(calldata.as_str()) } else { None }
         }))?
