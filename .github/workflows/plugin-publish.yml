@@ -468,16 +468,14 @@ jobs:
           find artifacts -type f | sort
           echo "=== End ==="
 
-      - name: Pull latest main before creating releases
-        run: |
-          git pull origin main --rebase 2>/dev/null || git pull origin main || true
-          echo "Checked out latest main: $(git rev-parse HEAD | head -c 12)"
-
       - name: Create releases
         env:
           BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # DO NOT git pull here. Use the same commit that build used.
+          # Pulling latest main causes version mismatch: tag gets new version
+          # but binary was compiled from old Cargo.toml version.
           REPO_ROOT="$(pwd)"
           echo "$BUILD_PLUGINS" | jq -r '.[] | @base64' | while read ENCODED; do
             PLUGIN=$(echo "$ENCODED" | base64 -d)
@@ -489,7 +487,6 @@ jobs:
               echo "::warning::$YAML_FILE not found, skipping release for $NAME"
               continue
             fi
-            # Read version from LATEST main (not from detect-time cache)
             VERSION=$(yq '.version' "$YAML_FILE")
 
             RELEASE_DIR="${REPO_ROOT}/release-${NAME}"
