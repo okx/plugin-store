@@ -210,6 +210,20 @@ pub async fn fetch_tokens(cfg: &crate::config::ChainConfig) -> anyhow::Result<Ve
     Ok(vec![])
 }
 
+/// Format a raw token amount into human-readable form (up to 6 decimal places).
+pub fn format_token_amount(amount: u128, decimals: u8) -> String {
+    if decimals == 0 {
+        return amount.to_string();
+    }
+    let display_decimals = (decimals as u32).min(6);
+    let divisor = 10u128.pow(decimals as u32);
+    let whole = amount / divisor;
+    let frac_full = amount % divisor;
+    let scale = (decimals as u32).saturating_sub(display_decimals);
+    let frac_display = frac_full / 10u128.pow(scale);
+    format!("{}.{:0>width$}", whole, frac_display, width = display_decimals as usize)
+}
+
 /// Convert raw GMX price to USD given token decimals.
 /// GMX stores prices as: price_usd * 10^(30 - token_decimals)
 /// So: price_usd = raw / 10^(30 - token_decimals)

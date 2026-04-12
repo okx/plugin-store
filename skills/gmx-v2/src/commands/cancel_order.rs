@@ -34,7 +34,22 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: CancelOrderArg
     eprintln!("=== Cancel Order Preview ===");
     eprintln!("Order key: {}", args.key);
     eprintln!("Exchange router: {}", cfg.exchange_router);
-    eprintln!("Ask user to confirm before proceeding.");
+    if !confirm { eprintln!("Add --confirm to broadcast."); }
+
+    if !confirm && !dry_run {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": true,
+                "status": "preview",
+                "message": "Add --confirm to broadcast this transaction",
+                "chain": chain,
+                "orderKey": args.key,
+                "calldata": calldata
+            }))?
+        );
+        return Ok(());
+    }
 
     let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
@@ -48,6 +63,24 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: CancelOrderArg
     ).await?;
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);
+
+    // G17: verify the cancel tx actually landed on-chain before reporting ok:true
+    if !dry_run {
+        if tx_hash == "pending" || tx_hash.is_empty() {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({
+                    "ok": false,
+                    "error": "TX_NOT_SUBMITTED",
+                    "reason": "onchainos did not return a tx hash — transaction may not have been submitted",
+                    "chain": chain,
+                    "orderKey": args.key
+                }))?
+            );
+            return Ok(());
+        }
+        crate::onchainos::wait_for_tx(cfg.chain_id, &tx_hash, &wallet, 60)?;
+    }
 
     println!(
         "{}",
