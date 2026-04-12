@@ -533,6 +533,24 @@ jobs:
 
               echo "Creating release: $TAG with ${PLATFORM_COUNT} binaries"
 
+              # Verify binary version matches tag version before publishing.
+              # This catches cases where Cargo.toml version != plugin.yaml version.
+              NATIVE_BIN="${BIN}-x86_64-unknown-linux-gnu"
+              if [ -f "$NATIVE_BIN" ]; then
+                chmod +x "$NATIVE_BIN"
+                BIN_VERSION=$("./$NATIVE_BIN" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+                if [ -n "$BIN_VERSION" ] && [ "$BIN_VERSION" != "$VERSION" ]; then
+                  echo "::error::Version mismatch for ${NAME}: tag=${VERSION} but binary=${BIN_VERSION}. Cargo.toml version may not match plugin.yaml. Skipping release."
+                  cd "$REPO_ROOT"
+                  continue
+                fi
+                if [ -n "$BIN_VERSION" ]; then
+                  echo "  Version verified: binary=${BIN_VERSION} tag=${VERSION} ✓"
+                else
+                  echo "  Version check: --version not supported, skipping verification"
+                fi
+              fi
+
               # Strategy: create new release FIRST, then delete old one.
               # This ensures users always have a working release during transitions.
               # If the old tag exists, we need to delete it before creating (GitHub requires unique tags).
