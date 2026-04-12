@@ -139,15 +139,19 @@ New to Polymarket? Follow these 3 steps to go from zero to placing your first tr
 
 ### Step 1 — Connect your wallet
 
-Polymarket trades are signed by an onchainos wallet on Polygon. **Wallet setup and connection is handled by the onchainos plugin** — use it to connect whichever wallet type you prefer (agentic wallet, hardware wallet, imported key, etc.).
+Polymarket trades are signed by an onchainos wallet on Polygon. The default method is:
 
-Once your wallet is connected, verify a Polygon address is available:
+```bash
+onchainos wallet login
+```
+
+This sets up an onchainos agentic wallet (no seed phrase to manage). For other wallet types (hardware wallet, imported key, etc.), refer to the onchainos plugin — wallet connection and management is handled entirely there.
+
+Once connected, verify a Polygon address is active:
 
 ```bash
 onchainos wallet addresses --chain 137
 ```
-
-If no address is returned, set up your wallet via the onchainos plugin first, then come back here.
 
 Your wallet address is your Polymarket identity — all orders are signed from it, and your positions are attached to it. No Polymarket account or web UI sign-up needed.
 
@@ -211,7 +215,7 @@ If onchainos is not installed, direct the user to https://github.com/okx/onchain
 onchainos wallet addresses --chain 137
 ```
 
-If no address is returned, the user needs to connect a wallet via the **onchainos plugin** first. Wallet connection and management (including which wallet type to use) is handled entirely by onchainos — it is out of scope for the polymarket plugin.
+If no address is returned, connect a wallet first — the default method is `onchainos wallet login`. For other wallet types, refer to the onchainos plugin.
 
 ### Step 4 — Check USDC.e balance (buy only)
 
