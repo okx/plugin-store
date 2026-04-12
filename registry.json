@@ -7,20 +7,38 @@
       "version": "0.2.1",
       "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum",
-        "defi"
+        "lending",
+        "borrowing",
+        "defi",
+        "earn",
+        "aave",
+        "collateral",
+        "health-factor"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/aave-v3-plugin"
+          "asset_pattern": "aave-v3-plugin-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/aave-v3-plugin@0.2.1"
         }
       },
+      "api_calls": [
+        "https://ethereum.publicnode.com",
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://arbitrum-one-rpc.publicnode.com",
+        "https://base-rpc.publicnode.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -36,19 +54,36 @@
       "version": "0.2.1",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "trading"
+        "token-launch",
+        "meme",
+        "erc20",
+        "uniswap-v4",
+        "base"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/clanker"
+          "asset_pattern": "clanker-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/clanker@0.2.1"
         }
       },
+      "api_calls": [
+        "https://clanker.world/api",
+        "https://base-rpc.publicnode.com",
+        "https://arb1.arbitrum.io/rpc",
+        "https://basescan.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -63,20 +98,38 @@
       "version": "0.2.1",
       "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards",
       "author": {
-        "name": "skylavis-sky"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum",
-        "defi"
+        "lending",
+        "borrowing",
+        "defi",
+        "compound",
+        "comet"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/compound-v3"
+          "asset_pattern": "compound-v3-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/compound-v3@0.2.1"
         }
       },
+      "api_calls": [
+        "https://ethereum.publicnode.com",
+        "https://base-rpc.publicnode.com",
+        "https://arbitrum-one-rpc.publicnode.com",
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://plugin-store-dun.vercel.app/install",
+        "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -92,19 +145,40 @@
       "version": "0.2.3",
       "description": "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC.",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum"
+        "dex",
+        "swap",
+        "stablecoin",
+        "amm",
+        "liquidity"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/curve"
+          "asset_pattern": "curve-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/curve@0.2.3"
         }
       },
+      "api_calls": [
+        "https://api.curve.finance/api/getPools",
+        "https://ethereum.publicnode.com",
+        "https://arbitrum-one-rpc.publicnode.com",
+        "https://base-rpc.publicnode.com",
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://bsc-rpc.publicnode.com",
+        "https://plugin-store-dun.vercel.app/install",
+        "https://www.okx.com/priapi/v1/wallet/plugins/download/report"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -118,22 +192,39 @@
     {
       "name": "etherfi",
       "version": "0.2.2",
-      "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY",
+      "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap/unwrap eETH/weETH (ERC-4626), unstake eETH back to ETH, and check positions with APY",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
+        "liquid-staking",
+        "restaking",
+        "eigenlayer",
+        "eeth",
+        "weeth",
         "ethereum",
-        "defi"
+        "erc4626"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/etherfi"
+          "asset_pattern": "etherfi-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/etherfi@0.2.2"
         }
       },
+      "api_calls": [
+        "ethereum-rpc.publicnode.com",
+        "yields.llama.fi",
+        "etherscan.io"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -147,21 +238,41 @@
     {
       "name": "gmx-v2",
       "version": "0.2.1",
-      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions",
+      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "trading"
+        "perpetuals",
+        "trading",
+        "leverage",
+        "arbitrum",
+        "avalanche"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/gmx-v2"
+          "asset_pattern": "gmx-v2-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/gmx-v2@0.2.1"
         }
       },
+      "api_calls": [
+        "https://arbitrum-api.gmxinfra.io",
+        "https://arbitrum-api.gmxinfra2.io",
+        "https://avalanche-api.gmxinfra.io",
+        "https://avalanche-api.gmxinfra2.io",
+        "https://gmx.squids.live",
+        "https://arbitrum.publicnode.com",
+        "https://avalanche-c-chain-rpc.publicnode.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -174,24 +285,39 @@
     {
       "name": "hyperliquid",
       "version": "0.3.0",
-      "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+      "description": "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana",
-        "ethereum",
+        "perpetuals",
         "trading",
-        "defi"
+        "hyperliquid",
+        "derivatives"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/hyperliquid"
+          "asset_pattern": "hyperliquid-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/hyperliquid@0.3.0"
         }
       },
+      "api_calls": [
+        "https://api.hyperliquid.xyz",
+        "https://api.hyperliquid-testnet.xyz",
+        "https://arbitrum-one-rpc.publicnode.com",
+        "https://app.hyperliquid.xyz",
+        "https://rpc.hyperliquid.xyz",
+        "https://api.relay.link"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -208,19 +334,33 @@
       "version": "0.1.1",
       "description": "Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana"
+        "lending",
+        "borrowing",
+        "solana",
+        "kamino",
+        "defi"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/kamino-lend"
+          "asset_pattern": "kamino-lend-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/kamino-lend@0.1.1"
         }
       },
+      "api_calls": [
+        "api.kamino.finance"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -236,19 +376,37 @@
       "version": "0.1.0",
       "description": "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to earn yield, withdraw shares, and track positions.",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana"
+        "solana",
+        "yield",
+        "liquidity",
+        "kamino"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/kamino-liquidity"
+          "asset_pattern": "kamino-liquidity-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/kamino-liquidity@0.1.0"
         }
       },
+      "api_calls": [
+        "api.kamino.finance/kvaults/vaults",
+        "api.kamino.finance/kvaults/users",
+        "api.kamino.finance/ktx/kvault/deposit",
+        "api.kamino.finance/ktx/kvault/withdraw",
+        "api.kamino.finance",
+        "solscan.io/tx"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -262,22 +420,37 @@
     {
       "name": "lido",
       "version": "0.2.3",
-      "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
+      "description": "Stake ETH with Lido liquid staking protocol — stake, manage withdrawals, and track staking rewards on Ethereum mainnet",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum",
-        "defi"
+        "staking",
+        "liquid-staking",
+        "lido",
+        "steth",
+        "ethereum"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/lido"
+          "asset_pattern": "lido-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/lido@0.2.3"
         }
       },
+      "api_calls": [
+        "yields.llama.fi",
+        "wq-api.lido.fi",
+        "ethereum.publicnode.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -290,26 +463,23 @@
     },
     {
       "name": "meme-trench-scanner",
-      "version": "1.0",
+      "version": "1.0.0",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "author": {
-        "name": "yz06276"
+        "name": "yz06276",
+        "github": "yz06276"
       },
+      "license": "MIT",
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "trading",
-        "signal",
-        "scanner",
-        "sniper",
-        "defi",
-        "memepump"
+        "onchainos",
+        "trading-bot"
       ],
-      "type": "community-developer",
+      "type": "community",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/meme-trench-scanner"
+          "dir": "."
         }
       },
       "link": "https://github.com/okx/plugin-store",
@@ -325,21 +495,37 @@
     {
       "name": "meteora",
       "version": "0.3.1",
-      "description": "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, add and remove liquidity",
+      "description": "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana"
+        "solana",
+        "dex",
+        "liquidity",
+        "dlmm",
+        "swap"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/meteora"
+          "asset_pattern": "meteora-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/meteora@0.3.1"
         }
       },
+      "api_calls": [
+        "https://dlmm.datapi.meteora.ag",
+        "api.mainnet-beta.solana.com",
+        "rpc.ankr.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -353,23 +539,39 @@
     {
       "name": "morpho",
       "version": "0.2.1",
-      "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults.",
+      "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum",
-        "trading",
-        "defi"
+        "lending",
+        "borrowing",
+        "defi",
+        "earn",
+        "morpho",
+        "collateral"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/morpho"
+          "asset_pattern": "morpho-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/morpho@0.2.1"
         }
       },
+      "api_calls": [
+        "https://blue-api.morpho.org/graphql",
+        "https://ethereum-rpc.publicnode.com",
+        "https://base-rpc.publicnode.com",
+        "https://api.merkl.xyz"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -385,22 +587,29 @@
       "version": "1.0.0",
       "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
       "author": {
-        "name": "OKX"
+        "name": "OKX",
+        "github": "MigOKG"
       },
+      "license": "MIT",
       "category": "utility",
       "tags": [
-        "trading",
-        "defi",
-        "ranking",
-        "hackathon"
+        "hackathon",
+        "xlayer",
+        "onchainos",
+        "uniswap",
+        "moltbook"
       ],
       "type": "official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/okx-buildx-hackathon-agent-track"
         }
       },
+      "api_calls": [
+        "www.moltbook.com",
+        "web3.okx.com",
+        "docs.uniswap.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -416,19 +625,35 @@
       "version": "0.1.0",
       "description": "Concentrated liquidity AMM on Solana — swap tokens and query pools via the Whirlpools CLMM program",
       "author": {
-        "name": "skylavis-sky"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "trading-strategy",
       "tags": [
-        "solana"
+        "dex",
+        "swap",
+        "clmm",
+        "concentrated-liquidity",
+        "solana",
+        "amm"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/orca"
+          "asset_pattern": "orca-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/orca@0.1.0"
         }
       },
+      "api_calls": [
+        "https://api.orca.so/v1/whirlpool/list",
+        "https://api.orca.so/v1"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -440,50 +665,41 @@
       }
     },
     {
-      "name": "pancakeswap",
-      "version": "0.2.2",
-      "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
-      "author": {
-        "name": "GeoGu360"
-      },
-      "category": "defi-protocol",
-      "tags": [
-        "defi"
-      ],
-      "type": "community-developer",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/pancakeswap"
-        }
-      },
-      "link": "https://github.com/okx/plugin-store",
-      "extra": {
-        "chains": [
-          "base"
-        ],
-        "protocols": [],
-        "risk_level": "medium"
-      }
-    },
-    {
       "name": "pancakeswap-clmm",
       "version": "0.1.0",
       "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions.",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum"
+        "dex",
+        "liquidity",
+        "clmm",
+        "farming",
+        "v3",
+        "pancakeswap"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/pancakeswap-clmm"
+          "asset_pattern": "pancakeswap-clmm-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/pancakeswap-clmm@0.1.0"
         }
       },
+      "api_calls": [
+        "https://bsc-rpc.publicnode.com",
+        "https://ethereum.publicnode.com",
+        "https://base-rpc.publicnode.com",
+        "https://arb1.arbitrum.io/rpc"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -499,17 +715,87 @@
       "version": "0.2.3",
       "description": "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair.",
       "author": {
-        "name": "skylavis-sky"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
-      "tags": [],
+      "tags": [
+        "dex",
+        "swap",
+        "liquidity",
+        "amm",
+        "pancakeswap",
+        "bsc",
+        "v2",
+        "xyk",
+        "lp",
+        "arbitrum"
+      ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/pancakeswap-v2"
+          "asset_pattern": "pancakeswap-v2-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/pancakeswap-v2@0.2.3"
         }
       },
+      "api_calls": [
+        "bsc-rpc.publicnode.com",
+        "base-rpc.publicnode.com",
+        "arbitrum-one-rpc.publicnode.com"
+      ],
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
+      "name": "pancakeswap",
+      "version": "0.2.2",
+      "description": "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
+      "author": {
+        "name": "GeoGu360",
+        "github": "GeoGu360"
+      },
+      "license": "MIT",
+      "category": "defi-protocol",
+      "tags": [
+        "dex",
+        "swap",
+        "liquidity",
+        "pancakeswap",
+        "bnb-chain",
+        "base",
+        "arbitrum"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "dir": "."
+        },
+        "binary": {
+          "repo": "okx/plugin-store",
+          "asset_pattern": "pancakeswap-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/pancakeswap@0.2.2"
+        }
+      },
+      "api_calls": [
+        "bsc-rpc.publicnode.com",
+        "base-rpc.publicnode.com",
+        "arbitrum-one-rpc.publicnode.com",
+        "api.studio.thegraph.com",
+        "api.thegraph.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -524,20 +810,33 @@
       "version": "0.2.1",
       "description": "Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "ethereum",
-        "trading"
+        "yield-trading",
+        "fixed-yield",
+        "pt",
+        "yt",
+        "liquidity"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/pendle"
+          "asset_pattern": "pendle-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/pendle@0.2.1"
         }
       },
+      "api_calls": [
+        "https://api-v2.pendle.finance/core"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -549,23 +848,27 @@
       }
     },
     {
-      "name": "plugin-store",
+      "name": "polymarket-agent-skills",
       "version": "1.0.0",
-      "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
+      "description": "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions",
       "author": {
-        "name": "OKX"
+        "name": "Polymarket",
+        "github": "Polymarket"
       },
-      "category": "trading-strategy",
+      "license": "MIT",
+      "category": "defi-protocol",
       "tags": [
+        "polymarket",
+        "prediction-market",
         "trading",
-        "defi",
-        "hackathon"
+        "polygon",
+        "gasless",
+        "bridge"
       ],
-      "type": "official",
+      "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/plugin-store"
+          "dir": "skills/polymarket-agent-skills"
         }
       },
       "link": "https://github.com/okx/plugin-store",
@@ -582,48 +885,36 @@
       "version": "0.2.3",
       "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
       "author": {
-        "name": "skylavis-sky"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
+        "prediction-market",
+        "polymarket",
+        "polygon",
         "trading",
-        "signal",
-        "defi"
+        "defi",
+        "clob"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/polymarket"
+          "asset_pattern": "polymarket-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/polymarket@0.2.3"
         }
       },
-      "link": "https://github.com/okx/plugin-store",
-      "extra": {
-        "chains": [
-          "base"
-        ],
-        "protocols": [],
-        "risk_level": "high"
-      }
-    },
-    {
-      "name": "polymarket-agent-skills",
-      "version": "1.0.0",
-      "description": "Polymarket prediction market integration: trading, market data, WebSocket streaming, cross-chain bridge, and gasless transactions",
-      "author": {
-        "name": "Polymarket"
-      },
-      "category": "defi-protocol",
-      "tags": [
-        "trading"
+      "api_calls": [
+        "https://clob.polymarket.com",
+        "https://gamma-api.polymarket.com",
+        "https://data-api.polymarket.com"
       ],
-      "type": "dapp-official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/polymarket-agent-skills"
-        }
-      },
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -638,19 +929,34 @@
       "version": "0.1.2",
       "description": "Buy and sell tokens on pump.fun bonding curves on Solana mainnet",
       "author": {
-        "name": "skylavis-sky"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana"
+        "solana",
+        "memecoins",
+        "bonding-curve",
+        "launchpad",
+        "pump-fun"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/pump-fun"
+          "asset_pattern": "pump-fun-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/pump-fun@0.1.2"
         }
       },
+      "api_calls": [
+        "https://api.mainnet-beta.solana.com",
+        "https://frontend-api.pump.fun"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -666,19 +972,35 @@
       "version": "0.1.3",
       "description": "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet. Trigger phrases: swap on raydium, raydium swap, raydium price, raydium pool, get swap quote raydium, raydium dex, swap solana raydium.",
       "author": {
-        "name": "OKX"
+        "name": "skylavis-sky",
+        "github": "skylavis-sky"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "solana"
+        "solana",
+        "dex",
+        "amm",
+        "swap",
+        "raydium"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/raydium"
+          "asset_pattern": "raydium-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/raydium@0.1.3"
         }
       },
+      "api_calls": [
+        "https://api-v3.raydium.io",
+        "https://transaction-v1.raydium.io",
+        "https://api.mainnet-beta.solana.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -691,24 +1013,23 @@
     },
     {
       "name": "smart-money-signal-copy-trade",
-      "version": "1.0",
+      "version": "1.0.0",
       "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
       "author": {
-        "name": "yz06276"
+        "name": "yz06276",
+        "github": "yz06276"
       },
+      "license": "MIT",
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "trading",
-        "signal",
-        "sniper",
-        "defi"
+        "onchainos",
+        "trading-bot"
       ],
-      "type": "community-developer",
+      "type": "community",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/smart-money-signal-copy-trade"
+          "dir": "."
         }
       },
       "link": "https://github.com/okx/plugin-store",
@@ -723,26 +1044,23 @@
     },
     {
       "name": "top-rank-tokens-sniper",
-      "version": "1.0",
+      "version": "1.0.0",
       "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
       "author": {
-        "name": "yz06276"
+        "name": "yz06276",
+        "github": "yz06276"
       },
+      "license": "MIT",
       "category": "trading-strategy",
       "tags": [
         "solana",
-        "trading",
-        "signal",
-        "scanner",
-        "sniper",
-        "defi",
-        "ranking"
+        "onchainos",
+        "trading-bot"
       ],
-      "type": "community-developer",
+      "type": "community",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/top-rank-tokens-sniper"
+          "dir": "."
         }
       },
       "link": "https://github.com/okx/plugin-store",
@@ -760,17 +1078,23 @@
       "version": "1.7.0",
       "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
       "author": {
-        "name": "Uniswap"
+        "name": "Uniswap",
+        "github": "Uniswap"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
+        "uniswap",
         "trading",
-        "defi"
+        "hooks",
+        "v2",
+        "v3",
+        "v4",
+        "multi-chain"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-ai"
         }
       },
@@ -788,16 +1112,22 @@
       "version": "1.0.0",
       "description": "Configure Continuous Clearing Auction (CCA) smart contract parameters for fair and transparent token distribution",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "defi"
+        "uniswap",
+        "cca",
+        "auction",
+        "token-distribution",
+        "smart-contracts",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-configurator"
         }
       },
@@ -815,16 +1145,23 @@
       "version": "1.0.0",
       "description": "Deploy Continuous Clearing Auction (CCA) smart contracts using the Factory pattern with CREATE2 for consistent addresses",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "defi"
+        "uniswap",
+        "cca",
+        "auction",
+        "deployment",
+        "create2",
+        "smart-contracts",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-cca-deployer"
         }
       },
@@ -842,19 +1179,29 @@
       "version": "0.2.0",
       "description": "Plan and generate deep links for creating liquidity positions on Uniswap v2, v3, and v4",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "defi"
+        "uniswap",
+        "liquidity",
+        "defi",
+        "lp-position",
+        "concentrated-liquidity",
+        "deep-links",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-liquidity-planner"
         }
       },
+      "api_calls": [
+        "trade-api.gateway.uniswap.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -869,20 +1216,29 @@
       "version": "2.0.0",
       "description": "Pay HTTP 402 payment challenges using any token via Tempo CLI and Uniswap Trading API, supporting MPP and x402 protocols",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "trading",
-        "defi"
+        "uniswap",
+        "payments",
+        "x402",
+        "mpp",
+        "tempo",
+        "defi",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-pay-with-any-token"
         }
       },
+      "api_calls": [
+        "trade-api.gateway.uniswap.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -897,20 +1253,29 @@
       "version": "1.3.0",
       "description": "Integrate Uniswap swaps into frontends, backends, and smart contracts via Trading API, Universal Router SDK, or direct contract calls",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "trading",
-        "defi"
+        "uniswap",
+        "swap",
+        "defi",
+        "trading-api",
+        "universal-router",
+        "permit2",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-integration"
         }
       },
+      "api_calls": [
+        "trade-api.gateway.uniswap.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -925,19 +1290,29 @@
       "version": "0.2.1",
       "description": "Plan token swaps and generate Uniswap deep links across all supported chains, with token discovery and research workflows",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "defi"
+        "uniswap",
+        "swap",
+        "defi",
+        "token-discovery",
+        "deep-links",
+        "ethereum",
+        "multichain"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-swap-planner"
         }
       },
+      "api_calls": [
+        "trade-api.gateway.uniswap.org"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
@@ -952,16 +1327,23 @@
       "version": "1.1.0",
       "description": "Security-first guide for building Uniswap v4 hooks covering vulnerabilities, audit requirements, and best practices",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "security",
       "tags": [
-        "defi"
+        "uniswap",
+        "v4-hooks",
+        "security",
+        "smart-contracts",
+        "audit",
+        "solidity",
+        "ethereum"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-v4-security-foundations"
         }
       },
@@ -979,16 +1361,23 @@
       "version": "1.0.0",
       "description": "Integrate EVM blockchains using viem and wagmi for TypeScript and JavaScript applications",
       "author": {
-        "name": "Uniswap Labs"
+        "name": "Uniswap Labs",
+        "github": "wkoutre"
       },
+      "license": "MIT",
       "category": "utility",
       "tags": [
-        "defi"
+        "viem",
+        "wagmi",
+        "ethereum",
+        "evm",
+        "blockchain",
+        "typescript",
+        "smart-contracts"
       ],
       "type": "dapp-official",
       "components": {
         "skill": {
-          "repo": "okx/plugin-store",
           "dir": "skills/uniswap-viem-integration"
         }
       },
@@ -1006,19 +1395,35 @@
       "version": "0.1.2",
       "description": "Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism",
       "author": {
-        "name": "GeoGu360"
+        "name": "GeoGu360",
+        "github": "GeoGu360"
       },
+      "license": "MIT",
       "category": "defi-protocol",
       "tags": [
-        "defi"
+        "dex",
+        "amm",
+        "velodrome",
+        "classic-amm",
+        "stable",
+        "volatile",
+        "optimism"
       ],
       "type": "community-developer",
       "components": {
         "skill": {
+          "dir": "."
+        },
+        "binary": {
           "repo": "okx/plugin-store",
-          "dir": "skills/velodrome-v2"
+          "asset_pattern": "velodrome-v2-{target}",
+          "checksums_asset": "checksums.txt",
+          "release_tag": "plugins/velodrome-v2@0.1.2"
         }
       },
+      "api_calls": [
+        "optimism-rpc.publicnode.com"
+      ],
       "link": "https://github.com/okx/plugin-store",
       "extra": {
         "chains": [
