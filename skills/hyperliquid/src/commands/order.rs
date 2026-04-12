@@ -4,6 +4,7 @@ use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, AR
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{
     build_bracketed_order_action, build_limit_order_action, build_market_order_action,
+    build_update_leverage_action,
     format_px, market_slippage_px, submit_exchange_request,
 };
 
@@ -37,6 +38,15 @@ pub struct OrderArgs {
     #[arg(long)]
     pub tp_px: Option<f64>,
 
+    /// Leverage multiplier before placing (e.g. 10 for 10x cross). Sets account leverage for this
+    /// coin first, then places the order. Omit to keep the current account setting.
+    #[arg(long)]
+    pub leverage: Option<u32>,
+
+    /// Use isolated margin mode when --leverage is set (default is cross margin)
+    #[arg(long)]
+    pub isolated: bool,
+
     /// Reduce only — only reduce an existing position, never increase it
     #[arg(long)]
     pub reduce_only: bool,
@@ -62,6 +72,13 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         .size
         .parse()
         .map_err(|_| anyhow::anyhow!("Invalid size '{}' — must be a number (e.g. 0.01)", args.size))?;
+
+    // Validate leverage range (Hyperliquid accepts 1–100)
+    if let Some(lev) = args.leverage {
+        if !(1..=100).contains(&lev) {
+            anyhow::bail!("--leverage must be between 1 and 100 (got {})", lev);
+        }
+    }
 
     // TP/SL bracket validation
     if let Some(sl) = args.sl_px {
@@ -147,6 +164,10 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         }
     };
 
+    let leverage_preview = args.leverage.map(|l| {
+        format!("{}x {}", l, if args.isolated { "isolated" } else { "cross" })
+    });
+
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
@@ -157,6 +178,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 "size": args.size,
                 "type": args.r#type,
                 "price": args.price,
+                "leverage": leverage_preview,
                 "stopLoss": args.sl_px.map(format_px),
                 "takeProfit": args.tp_px.map(format_px),
                 "reduceOnly": args.reduce_only,
@@ -181,6 +203,27 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     }
 
     let wallet = resolve_wallet(CHAIN_ID)?;
+
+    // Set leverage before placing the order if --leverage was provided
+    if let Some(lev) = args.leverage {
+        let is_cross = !args.isolated;
+        let lev_action = build_update_leverage_action(asset_idx, is_cross, lev);
+        let lev_nonce = now_ms();
+        let lev_signed = onchainos_hl_sign(&lev_action, lev_nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)?;
+        let lev_result = submit_exchange_request(exchange, lev_signed).await
+            .map_err(|e| anyhow::anyhow!("Leverage update failed: {}", e))?;
+        if lev_result["status"].as_str() == Some("err") {
+            anyhow::bail!(
+                "Leverage update rejected by Hyperliquid: {}",
+                lev_result["response"].as_str().unwrap_or("unknown error")
+            );
+        }
+        println!(
+            "Leverage set to {}x ({}) for {}",
+            lev, if is_cross { "cross" } else { "isolated" }, coin
+        );
+    }
+
     let signed = onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false)?;
     let result = submit_exchange_request(exchange, signed).await?;
 

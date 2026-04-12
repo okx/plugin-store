@@ -23,12 +23,19 @@ pub struct WithdrawArgs {
     pub confirm: bool,
 }
 
+/// Hyperliquid charges a fixed $1 USDC withdrawal fee on every withdrawal.
+/// The fee is deducted from your balance — the recipient receives the full requested amount.
+const WITHDRAWAL_FEE_USDC: f64 = 1.0;
+
 pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
     if args.amount <= 0.0 {
         anyhow::bail!("--amount must be positive (got {})", args.amount);
     }
     if args.amount < 2.0 {
-        eprintln!("WARNING: Minimum withdrawal is $2 USDC. Amounts below $2 will be rejected by Hyperliquid.");
+        anyhow::bail!(
+            "Minimum withdrawal is $2 USDC (got ${}).",
+            args.amount
+        );
     }
 
     let info = info_url();
@@ -46,10 +53,13 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
     let withdrawable: f64 = state["withdrawable"]
         .as_str().and_then(|s| s.parse().ok()).unwrap_or(0.0);
 
-    if args.amount > withdrawable {
+    // Check balance covers amount + $1 fee
+    let total_deducted = args.amount + WITHDRAWAL_FEE_USDC;
+    if total_deducted > withdrawable {
         anyhow::bail!(
-            "Insufficient withdrawable balance: requested {:.6} USDC, available {:.6} USDC",
-            args.amount, withdrawable
+            "Insufficient balance: withdrawal ${:.2} + $1.00 fee = ${:.2} required, \
+             but only ${:.2} USDC available.",
+            args.amount, total_deducted, withdrawable
         );
     }
 
@@ -61,14 +71,19 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
             "action": "withdraw3",
             "wallet": wallet,
             "destination": destination,
-            "amount_usd": args.amount,
+            "amountToReceive_usd": args.amount,
+            "withdrawalFee_usd": WITHDRAWAL_FEE_USDC,
+            "totalDeducted_usd": total_deducted,
             "withdrawable": format!("{:.6}", withdrawable),
-            "note": if args.confirm { "" } else { "Add --confirm to execute. Funds arrive on Arbitrum in ~2-5 minutes." }
+            "note": "A $1 USDC fee is deducted from your balance. Recipient receives the full amount. Add --confirm to execute."
         }));
         return Ok(());
     }
 
-    println!("Signing withdraw for {} USDC to {}...", args.amount, destination);
+    println!(
+        "Withdrawing {} USDC to {} (+ $1.00 fee deducted from balance)...",
+        args.amount, destination
+    );
     let signed = onchainos_hl_sign_withdraw(&destination, &amount_str, nonce, &wallet, sign_chain_id)?;
     let result = submit_exchange_request(exchange, signed).await?;
 
@@ -81,9 +96,11 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
         "action": "withdraw3",
         "wallet": wallet,
         "destination": destination,
-        "amount_usd": args.amount,
+        "amountReceived_usd": args.amount,
+        "feeDeducted_usd": WITHDRAWAL_FEE_USDC,
+        "totalDeducted_usd": total_deducted,
         "result": result,
-        "note": "USDC will arrive on Arbitrum in ~2-5 minutes."
+        "note": "USDC will arrive on Arbitrum in ~2-5 minutes. $1 fee was deducted from your Hyperliquid balance."
     }));
 
     Ok(())

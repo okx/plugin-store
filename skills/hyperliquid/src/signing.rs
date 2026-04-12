@@ -287,6 +287,20 @@ pub fn build_batch_cancel_action(orders: &[(usize, u64)]) -> Value {
     })
 }
 
+// ─── Leverage ────────────────────────────────────────────────────────────────
+
+/// Build an updateLeverage action.
+/// Sets account-level leverage for a coin before placing an order.
+/// isCross=true → cross margin; false → isolated margin.
+pub fn build_update_leverage_action(asset: usize, is_cross: bool, leverage: u32) -> Value {
+    json!({
+        "type": "updateLeverage",
+        "asset": asset,
+        "isCross": is_cross,
+        "leverage": leverage
+    })
+}
+
 // ─── Spot/Class transfer ─────────────────────────────────────────────────────
 
 /// Build a usdClassTransfer action (perp ↔ spot USDC).

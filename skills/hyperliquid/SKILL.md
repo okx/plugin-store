@@ -1,7 +1,7 @@
 ---
 name: hyperliquid
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: 0.3.0
+version: 0.3.1
 author: GeoGu360
 tags:
   - perps
@@ -50,7 +50,7 @@ if ! command -v hyperliquid >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.3.0/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid@0.3.1/hyperliquid-${TARGET}${EXT}" -o ~/.local/bin/hyperliquid${EXT}
   chmod +x ~/.local/bin/hyperliquid${EXT}
 fi
 ```
@@ -72,7 +72,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid","version":"0.3.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid","version":"0.3.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -237,9 +237,9 @@ Returns current mid prices for all Hyperliquid perpetual markets, or a specific 
 hyperliquid prices
 
 # Get price for a specific coin
-hyperliquid prices --market BTC
-hyperliquid prices --market ETH
-hyperliquid prices --market SOL
+hyperliquid prices --coin BTC
+hyperliquid prices --coin ETH
+hyperliquid prices --coin SOL
 ```
 
 **Output (single coin):**
@@ -283,6 +283,12 @@ hyperliquid order --coin BTC --side buy --size 0.01 --confirm
 # Limit short 0.05 ETH at $3500
 hyperliquid order --coin ETH --side sell --size 0.05 --type limit --price 3500 --confirm
 
+# Market long BTC with 10x cross leverage (sets leverage first, then places order)
+hyperliquid order --coin BTC --side buy --size 0.01 --leverage 10 --confirm
+
+# Limit long BTC with 5x isolated margin
+hyperliquid order --coin BTC --side buy --size 0.01 --type limit --price 60000 --leverage 5 --isolated --confirm
+
 # Market long BTC with bracket: SL at $95000, TP at $110000 (normalTpsl OCO)
 hyperliquid order \
   --coin BTC --side buy --size 0.01 \
@@ -295,6 +301,11 @@ hyperliquid order \
   --sl-px 95000 \
   --confirm
 ```
+
+**Leverage flags:**
+- `--leverage <N>` — set account leverage for this coin to N× (1–100) before placing. Without this flag, the order inherits the current account-level setting.
+- `--isolated` — use isolated margin mode (default is cross margin when `--leverage` is set).
+- When `--leverage` is provided, a `updateLeverage` action is signed and submitted first, then the order is placed. This changes the account-level setting for that coin permanently.
 
 **Output (executed with bracket):**
 ```json
@@ -579,8 +590,10 @@ Withdraws USDC from your Hyperliquid perp account to your Arbitrum wallet.
 
 **Minimum withdrawal: $2 USDC.** Funds arrive on Arbitrum in ~2–5 minutes.
 
+> **Fee notice:** Hyperliquid charges a **$1 USDC fixed withdrawal fee** on every withdrawal. The fee is deducted from your Hyperliquid balance — the recipient receives the full requested amount. Example: withdrawing $50 deducts $51 from your balance; Arbitrum receives $50.
+
 ```bash
-# Preview
+# Preview (shows fee breakdown)
 hyperliquid withdraw --amount 50
 
 # Execute
@@ -590,10 +603,10 @@ hyperliquid withdraw --amount 50 --confirm
 hyperliquid withdraw --amount 50 --destination 0xRecipient --confirm
 ```
 
-**Output fields:** `action`, `wallet`, `destination`, `amount_usd`, `result`
+**Output fields:** `action`, `wallet`, `destination`, `amountToReceive_usd`, `withdrawalFee_usd`, `totalDeducted_usd`, `result`
 
 **Flow:**
-1. Check withdrawable balance — error if insufficient
+1. Check withdrawable balance ≥ amount + $1 fee — error if insufficient
 2. Build `withdraw3` user-signed EIP-712 action (domain: HyperliquidSignTransaction, chainId 0x66eee)
 3. Sign via `onchainos wallet sign-message --type eip712` with main wallet key
 4. Submit to exchange endpoint
@@ -828,3 +841,13 @@ All data returned by `hyperliquid positions`, `hyperliquid prices`, and exchange
 
 
 
+
+---
+
+## Changelog
+
+### v0.3.1 (2026-04-12)
+
+- **feat**: `order` — new `--leverage <N>` flag (1–100) sets account-level leverage for the coin before placing the order via `updateLeverage` action; fixes the UX gap where users specifying 10x leverage would silently get the account default (e.g. 20x)
+- **feat**: `order` — new `--isolated` flag to use isolated margin mode when `--leverage` is set (default is cross)
+- **fix**: `withdraw` — add $1 USDC fee notice in preview and output; balance check now validates amount + $1 fee; minimum withdrawal error changed from warning to bail
