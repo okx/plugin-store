@@ -29,16 +29,12 @@ pub async fn run(
     post_only: bool,
     expires: Option<u64>,
 ) -> Result<()> {
-    // Parse shares and validate order flags up front (before any network calls)
-    // so dry-run output reflects the resolved effective_order_type.
+    // Parse shares and validate order flags up front (before any network calls).
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
     if share_amount <= 0.0 {
         bail!("shares must be positive");
     }
 
-    // Validate --post-only / --expires up front.
-    // GTD requires an expiration; --expires auto-selects order_type GTD.
-    // FOK is always a taker and incompatible with --post-only.
     if post_only && order_type.to_uppercase() == "FOK" {
         bail!("--post-only is incompatible with --order-type FOK: FOK orders are always takers");
     }
@@ -58,46 +54,17 @@ pub async fn run(
         (0, order_type)
     };
 
-    if dry_run {
-        println!(
-            "{}",
-            serde_json::json!({
-                "ok": true,
-                "dry_run": true,
-                "data": {
-                    "market_id": market_id,
-                    "outcome": outcome,
-                    "shares": shares,
-                    "side": "SELL",
-                    "order_type": effective_order_type.to_uppercase(),
-                    "limit_price": price,
-                    "post_only": post_only,
-                    "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
-                    "note": "dry-run: order not submitted; market resolution and GCD alignment skipped"
-                }
-            })
-        );
-        return Ok(());
-    }
-
     let client = Client::new();
 
-    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
-    let signer_addr = get_wallet_address().await?;
-
-    // Derive API credentials for the onchainos wallet
-    let creds = ensure_credentials(&client, &signer_addr).await?;
-
-    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
-    // No proxy wallet or polymarket.com onboarding required.
-    let maker_addr = signer_addr.clone();
+    // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
     let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
 
     let tick_size = get_tick_size(&client, &token_id).await?;
     let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
 
-    // Determine price
+    // Determine price.
+    let requested_price = price; // keep for adjustment warning
     let limit_price = if let Some(p) = price {
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
@@ -106,15 +73,88 @@ pub async fn run(
         if rp <= 0.0 || rp >= 1.0 {
             bail!("price {p} rounds to {rp} with tick size {tick_size} — out of range (0, 1)");
         }
+        // Warn if price was adjusted to satisfy tick size constraint.
+        if (rp - p).abs() > 1e-9 {
+            eprintln!(
+                "[polymarket] Note: price adjusted from {:.6} to {:.6} to satisfy tick size constraint ({}).",
+                p, rp, tick_size
+            );
+        }
         rp
     } else {
         let book = get_orderbook(&client, &token_id).await?;
-        // Bids are ascending in the CLOB API — iterate in reverse to start from the best bid.
         compute_sell_worst_price(&book.bids, share_amount)
             .ok_or_else(|| anyhow::anyhow!("No bids available in the order book"))?
     };
 
-    // Check CTF token balance
+    // Build order amounts (SELL) using GCD-based integer arithmetic.
+    fn gcd(mut a: u128, mut b: u128) -> u128 {
+        while b != 0 { let t = b; b = a % b; a = t; }
+        a
+    }
+    let tick_scale = (1.0 / tick_size).round() as u128;
+    let price_ticks = (limit_price / tick_size).round() as u128;
+    let g = gcd(price_ticks, tick_scale * 10_000);
+    let step_raw = tick_scale * 10_000 / g;
+    let g2 = gcd(step_raw, 100);
+    let step = step_raw / g2 * 100;
+
+    let max_maker_raw = (share_amount * 1_000_000.0).floor() as u128;
+    let maker_amount_raw = (max_maker_raw / step) * step;
+    let taker_amount_raw = price_ticks * maker_amount_raw / tick_scale;
+
+    // Guard: share amount too small to produce a valid order after GCD alignment.
+    // This check fires BEFORE any approval tx is submitted (fixes M1).
+    if maker_amount_raw == 0 || taker_amount_raw == 0 {
+        bail!(
+            "Amount too small: {:.6} shares at price {:.4} rounds to 0 after divisibility \
+             alignment. Minimum for this market/price is ~{:.6} shares. \
+             Consider using a larger amount.",
+            share_amount, limit_price, step as f64 / 1_000_000.0
+        );
+    }
+
+    let actual_shares = maker_amount_raw as f64 / 1_000_000.0;
+
+    // ── Dry-run exit — full projected order fields ────────────────────────────
+    if dry_run {
+        // Include price adjustment info in dry-run if applicable.
+        let price_adjusted = requested_price.map_or(false, |p| (limit_price - p).abs() > 1e-9);
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "dry_run": true,
+                "data": {
+                    "market_id": market_id,
+                    "condition_id": condition_id,
+                    "outcome": outcome,
+                    "token_id": token_id,
+                    "side": "SELL",
+                    "order_type": effective_order_type.to_uppercase(),
+                    "limit_price": limit_price,
+                    "limit_price_requested": requested_price,
+                    "price_adjusted": price_adjusted,
+                    "shares": actual_shares,
+                    "shares_requested": share_amount,
+                    "usdc_out": taker_amount_raw as f64 / 1_000_000.0,
+                    "fee_rate_bps": fee_rate_bps,
+                    "post_only": post_only,
+                    "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
+                    "note": "dry-run: order not submitted"
+                }
+            })
+        );
+        return Ok(());
+    }
+
+    // ── Auth phase ────────────────────────────────────────────────────────────
+
+    let signer_addr = get_wallet_address().await?;
+    let creds = ensure_credentials(&client, &signer_addr).await?;
+    let maker_addr = signer_addr.clone();
+
+    // Check CTF token balance.
     let token_balance = get_balance_allowance(&client, &signer_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;
     let balance_raw = token_balance.balance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
     let shares_needed_raw = to_token_units(share_amount);
@@ -129,57 +169,7 @@ pub async fn run(
         );
     }
 
-    // Check CTF token approval via on-chain isApprovedForAll (ERC-1155).
-    // The CLOB balance-allowance API does not reliably report ERC-1155 approval state,
-    // so we read directly from the CTF contract via a Polygon RPC eth_call.
-    // For neg_risk markets: CLOB checks approval on BOTH NEG_RISK_CTF_EXCHANGE and
-    // NEG_RISK_ADAPTER — approve both if either is missing.
-    use crate::config::Contracts;
-    let already_approved = if neg_risk {
-        is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_CTF_EXCHANGE).await
-            && is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_ADAPTER).await
-    } else {
-        is_ctf_approved_for_all(&signer_addr, Contracts::CTF_EXCHANGE).await
-    };
-    if !already_approved || auto_approve {
-        eprintln!("[polymarket] Approving CTF tokens for CTF Exchange...");
-        let tx_hash = approve_ctf(neg_risk).await?;
-        eprintln!("[polymarket] Approval tx: {}", tx_hash);
-    }
-
-    // Build order amounts (SELL) using GCD-based integer arithmetic.
-    // For SELL: maker = shares given, taker = USDC received.
-    //   taker_raw = price_ticks × maker_raw / tick_scale  (must be exact integer)
-    // Constraints: maker_raw (shares) ÷100, taker_raw (USDC) ÷10,000.
-    //   step = lcm(tick_scale × 10,000 / gcd(price_ticks, tick_scale × 10,000), 100)
-    // Snap maker_raw DOWN to nearest step; taker_raw follows exactly.
-    fn gcd(mut a: u128, mut b: u128) -> u128 {
-        while b != 0 { let t = b; b = a % b; a = t; }
-        a
-    }
-    let tick_scale = (1.0 / tick_size).round() as u128;
-    let price_ticks = (limit_price / tick_size).round() as u128;
-    let g = gcd(price_ticks, tick_scale * 10_000);
-    let step_raw = tick_scale * 10_000 / g;
-    let g2 = gcd(step_raw, 100);
-    let step = step_raw / g2 * 100; // lcm(step_raw, 100)
-
-    let max_maker_raw = (share_amount * 1_000_000.0).floor() as u128;
-    let maker_amount_raw = (max_maker_raw / step) * step;
-    let taker_amount_raw = price_ticks * maker_amount_raw / tick_scale;
-
-    // Guard: share amount too small to produce a valid order after GCD alignment.
-    if maker_amount_raw == 0 || taker_amount_raw == 0 {
-        bail!(
-            "Amount too small: {:.6} shares at price {:.4} rounds to 0 after divisibility \
-             alignment. Minimum for this market/price is ~{:.6} shares. \
-             Consider using a larger amount.",
-            share_amount, limit_price, step as f64 / 1_000_000.0
-        );
-    }
-
-    // Warn if GCD alignment reduced the share amount (remainder that can't be sold in this order).
-    let actual_shares = maker_amount_raw as f64 / 1_000_000.0;
+    // Warn if GCD alignment reduced the share amount.
     if actual_shares < share_amount - 1e-9 {
         eprintln!(
             "[polymarket] Note: share amount adjusted from {:.6} to {:.6} to satisfy \
@@ -189,11 +179,45 @@ pub async fn run(
         );
     }
 
+    // Check CTF token approval via on-chain isApprovedForAll (ERC-1155).
+    use crate::config::Contracts;
+    let already_approved = if neg_risk {
+        let ok1 = match is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_CTF_EXCHANGE).await {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("[polymarket] Note: could not verify NEG_RISK_CTF_EXCHANGE approval ({}); will re-approve (setApprovalForAll is idempotent).", e);
+                false
+            }
+        };
+        let ok2 = match is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_ADAPTER).await {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("[polymarket] Note: could not verify NEG_RISK_ADAPTER approval ({}); will re-approve (setApprovalForAll is idempotent).", e);
+                false
+            }
+        };
+        ok1 && ok2
+    } else {
+        match is_ctf_approved_for_all(&signer_addr, Contracts::CTF_EXCHANGE).await {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("[polymarket] Note: could not verify CTF_EXCHANGE approval ({}); will re-approve (setApprovalForAll is idempotent).", e);
+                false
+            }
+        }
+    };
+    if !already_approved || auto_approve {
+        let exchange_label = if neg_risk { "Neg Risk CTF Exchange" } else { "CTF Exchange" };
+        eprintln!("[polymarket] Approving CTF tokens for {}...", exchange_label);
+        let tx_hash = approve_ctf(neg_risk).await?;
+        eprintln!("[polymarket] Approval tx: {}", tx_hash);
+    }
+
     let salt = rand_salt();
 
     let params = OrderParams {
         salt,
-        maker: maker_addr.clone(),    // EOA mode: maker = signer = onchainos wallet
+        maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
@@ -209,7 +233,7 @@ pub async fn run(
     let signature = sign_order_via_onchainos(&params, neg_risk).await?;
 
     let order_body = OrderBody {
-        salt,  // serialized as JSON number per clob-client spec
+        salt,
         maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),

@@ -206,9 +206,10 @@ pub async fn ctf_redeem_positions(condition_id: &str) -> Result<String> {
 
 /// Check if the CTF contract has setApprovalForAll set for owner → operator.
 /// Makes a direct eth_call to the Polygon RPC to read isApprovedForAll(owner, operator).
-/// Returns true if already approved, false if not approved or on RPC failure (fail-open:
-/// falling back to approving is always safe — setApprovalForAll is idempotent).
-pub async fn is_ctf_approved_for_all(owner: &str, operator: &str) -> bool {
+///
+/// Returns Ok(true) if approved, Ok(false) if not approved, Err if the RPC call fails.
+/// Callers should treat Err as "unknown — approve to be safe" (setApprovalForAll is idempotent).
+pub async fn is_ctf_approved_for_all(owner: &str, operator: &str) -> Result<bool> {
     use crate::config::{Contracts, Urls};
     // isApprovedForAll(address,address) selector = 0xe985e9c5
     let data = format!("0xe985e9c5{}{}", pad_address(owner), pad_address(operator));
@@ -219,16 +220,19 @@ pub async fn is_ctf_approved_for_all(owner: &str, operator: &str) -> bool {
         "id": 1
     });
     let client = reqwest::Client::new();
-    let resp = match client.post(Urls::POLYGON_RPC).json(&body).send().await {
-        Ok(r) => r,
-        Err(_) => return false,
-    };
-    let v: serde_json::Value = match resp.json().await {
-        Ok(v) => v,
-        Err(_) => return false,
-    };
+    let resp = client
+        .post(Urls::POLYGON_RPC)
+        .json(&body)
+        .send()
+        .await
+        .context("Polygon RPC request failed")?;
+    let v: serde_json::Value = resp.json().await
+        .context("parsing Polygon RPC response")?;
+    if let Some(err) = v.get("error") {
+        anyhow::bail!("Polygon RPC error: {}", err);
+    }
     // ABI-encoded bool: 32 bytes. Approved = 0x0000...0001, Not approved = 0x0000...0000
     let hex = v["result"].as_str().unwrap_or("0x").trim_start_matches("0x");
-    !hex.is_empty() && hex.trim_start_matches('0') == "1"
+    Ok(!hex.is_empty() && hex.trim_start_matches('0') == "1")
 }
 

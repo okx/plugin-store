@@ -1,5 +1,18 @@
 # Polymarket Plugin Changelog
 
+### v0.2.6 (2026-04-12)
+
+- **fix (critical) [C1]**: `buy` on `neg_risk: true` markets no longer approves the wrong contract. Root cause: `get_gamma_market_by_slug` omits `negRisk` for many markets, causing the field to default to `false` and `approve_usdc` to target `CTF_EXCHANGE` instead of `NEG_RISK_CTF_EXCHANGE`. Fix: `resolve_market_token` now fetches the CLOB market by `condition_id` after the Gamma lookup to get the authoritative `neg_risk`. Falls back to the Gamma value if the CLOB is unreachable. Same fix applied in `redeem`.
+- **fix (major) [M1 buy]**: Approval tx no longer fires when the wallet has insufficient USDC.e balance. After computing the exact order amount, the plugin reads `balance` from the `/balance-allowance` response and bails with a clear error before submitting any on-chain tx.
+- **fix (major) [M1 sell]**: GCD alignment and zero-amount guard now run before the CTF approval tx. Previously, `setApprovalForAll` could fire for an order that would immediately fail the divisibility check (e.g. `--shares 0.001`). Sell is fully restructured: public-API work (market lookup, tick size, price, GCD) happens first; auth operations (balance check, approval, signing) happen after.
+- **fix [N1]**: `buy --dry-run` now returns full projected order fields: `condition_id`, `token_id`, `side`, `order_type`, `limit_price`, `usdc_amount`, `shares`, `fee_rate_bps`, `post_only`, `expires`. Market resolution and GCD alignment run in dry-run mode; only wallet and signing operations are skipped.
+- **fix [N2]**: `sell --dry-run` now runs GCD alignment and shows the adjusted `limit_price`, `shares`, and `usdc_out`. Output includes `limit_price_requested` and `price_adjusted: true/false` so the user can see exactly what the live command would execute.
+- **fix [N3]**: `is_ctf_approved_for_all` now returns `Result<bool>` instead of `bool`. Callers log a warning to stderr when the Polygon RPC check fails (previously silent) and proceed to re-approve (setApprovalForAll is idempotent). Approval log messages now include the specific exchange name (e.g. "Neg Risk CTF Exchange" vs "CTF Exchange").
+- **fix [N4]**: `sell` logs a `[polymarket] Note: price adjusted from X to Y` warning to stderr when the user's `--price` is rounded to satisfy the market's tick size constraint. Matches the existing adjustment warning in `buy`.
+- **fix [N5]**: `get-positions` output now includes a `redeemable_note` field. For `redeemable: true` positions: "resolved — winning outcome, redeem to collect USDC.e" or "resolved — losing outcome, redemption would receive $0" (when `current_value ≈ 0`). Prevents agents from routing users to the `redeem` command for losing positions.
+- **fix [S1]**: `redeem` now checks the wallet's positions for the target market before submitting the tx. If all redeemable positions show `current_value ≈ $0`, a clear warning is logged to stderr: "This market resolved against your positions — redeeming will cost gas and receive nothing."
+- **fix [N6]**: Added betting-vocabulary trigger phrases to plugin description: `place a bet on`, `buy prediction market`, `bet on`, `trade on prediction markets`, `prediction trading`, `place a prediction market bet`, `i want to bet on`.
+
 ### v0.2.5 (2026-04-12)
 
 - **fix**: Stale credentials auto-cleared on 401 — `buy` and `sell` now detect `NOT AUTHORIZED`/`UNAUTHORIZED` responses from the CLOB, delete `~/.config/polymarket/creds.json` automatically, and return a clear error asking the user to re-run. Previously the user had to find and delete the file manually.

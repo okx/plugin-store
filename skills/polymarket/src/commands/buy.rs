@@ -31,8 +31,6 @@ pub async fn run(
     }
 
     // Validate --post-only / --expires up front (no network calls needed).
-    // GTD requires an expiration; --expires auto-selects order_type GTD.
-    // FOK is always a taker and incompatible with --post-only.
     if post_only && order_type.to_uppercase() == "FOK" {
         bail!("--post-only is incompatible with --order-type FOK: FOK orders are always takers");
     }
@@ -54,47 +52,20 @@ pub async fn run(
 
     let client = Client::new();
 
+    // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
+
     // Resolve market (no auth required — public API)
     let (condition_id, token_id, neg_risk) =
         resolve_market_token(&client, market_id, outcome).await?;
 
-    // Fetch the order book. min_order_size is enforced by the CLOB for resting limit orders
-    // (limit price below the current best ask). The plugin pre-validates this below and
-    // fires a clear error before submitting. Market (FOK) orders are exempt.
+    // Fetch the order book.
     let book = get_orderbook(&client, &token_id).await?;
 
-    if dry_run {
-        println!(
-            "{}",
-            serde_json::json!({
-                "ok": true,
-                "dry_run": true,
-                "data": {
-                    "market_id": market_id,
-                    "outcome": outcome,
-                    "amount": amount,
-                    "note": "dry-run: order not submitted"
-                }
-            })
-        );
-        return Ok(());
-    }
-
-    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
-    let signer_addr = get_wallet_address().await?;
-
-    // Derive API credentials for the onchainos wallet
-    let creds = ensure_credentials(&client, &signer_addr).await?;
-
-    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
-    // No proxy wallet or polymarket.com onboarding required.
-    let maker_addr = signer_addr.clone();
-
-    // Get tick size and market fee rate
+    // Get tick size and market fee rate.
     let tick_size = get_tick_size(&client, &token_id).await?;
     let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
 
-    // Determine price (limit or market)
+    // Determine price (limit or market).
     let limit_price = if let Some(p) = price {
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
@@ -109,41 +80,27 @@ pub async fn run(
             .ok_or_else(|| anyhow::anyhow!("No asks available in the order book"))?
     };
 
-    // Build order amounts using integer arithmetic to guarantee maker/taker == limit_price exactly.
-    //
-    // Polymarket requires:
-    //   maker_raw (USDC, 6 dec) divisible by 10,000  → max 2 USDC decimal places
-    //   taker_raw (shares, 6 dec) divisible by 100   → max 4 share decimal places
-    //   maker_raw / taker_raw == limit_price exactly
-    //
-    // Express price as integer ticks: price_ticks = round(price / tick_size).
-    // tick_scale = round(1 / tick_size) — e.g. 100 for tick=0.01, 1000 for tick=0.001.
-    //   maker_raw = price_ticks × taker_raw / tick_scale
-    // For maker_raw to be divisible by 10,000 and taker_raw to be divisible by 100:
-    //   step = lcm(tick_scale × 10,000 / gcd(price_ticks, tick_scale × 10,000), 100)
-    // We snap taker_raw DOWN to the nearest step, then maker_raw follows exactly.
+    // Build order amounts using integer arithmetic.
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 { let t = b; b = a % b; a = t; }
         a
     }
-    let tick_scale = (1.0 / tick_size).round() as u128; // 100 for tick=0.01, 1000 for tick=0.001
+    let tick_scale = (1.0 / tick_size).round() as u128;
     let price_ticks = (limit_price / tick_size).round() as u128;
     let g = gcd(price_ticks, tick_scale * 10_000);
     let step_raw = tick_scale * 10_000 / g;
     let g2 = gcd(step_raw, 100);
-    let step = step_raw / g2 * 100; // lcm(step_raw, 100)
+    let step = step_raw / g2 * 100;
 
     let max_taker_raw = (usdc_amount / limit_price * 1_000_000.0).floor() as u128;
     let mut taker_amount_raw = if round_up {
-        // Ceiling: snap UP to the nearest valid step (may spend slightly more than requested)
         ((max_taker_raw + step - 1) / step) * step
     } else {
-        // Floor: never spend more than requested
         (max_taker_raw / step) * step
     };
     let mut maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
 
-    // Guard: amount too small to satisfy divisibility constraints — bail before approval.
+    // Guard: amount too small.
     if taker_amount_raw == 0 || maker_amount_raw == 0 {
         let min_usdc = step as f64 / 1_000_000.0 * limit_price;
         bail!(
@@ -154,19 +111,15 @@ pub async fn run(
         );
     }
 
-    // Guard: resting orders below the CLOB min_order_size are rejected.
-    // A resting order is a limit order priced below the current best ask (won't fill immediately).
-    // Market orders (FOK, no --price) are exempt from this minimum.
+    // Guard: resting orders below CLOB min_order_size are rejected.
     let min_order_size: f64 = book.min_order_size.as_deref()
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.0);
-    // best ask: asks are descending in the CLOB API, so .last() = lowest price = best ask for buyer
     let best_ask_float: Option<f64> = book.asks.last().and_then(|a| a.price.parse().ok());
     let is_resting = price.is_some() && best_ask_float.map_or(false, |ba| limit_price < ba);
     let computed_shares = taker_amount_raw as f64 / 1_000_000.0;
     if is_resting && min_order_size > 0.0 && computed_shares < min_order_size {
         if round_up {
-            // Snap up to the market's minimum order size
             let min_taker_raw = (min_order_size * 1_000_000.0).ceil() as u128;
             taker_amount_raw = ((min_taker_raw + step - 1) / step) * step;
             maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
@@ -184,7 +137,6 @@ pub async fn run(
         }
     }
 
-    // Notify if amount was adjusted from what was requested
     let actual_usdc = maker_amount_raw as f64 / 1_000_000.0;
     if round_up && actual_usdc > usdc_amount + 1e-6 {
         eprintln!(
@@ -200,13 +152,64 @@ pub async fn run(
         );
     }
 
-    // Check USDC allowance and auto-approve if needed.
-    // Use maker_amount_raw as the needed amount (accounts for any round-up).
-    // For neg_risk markets the CLOB checks allowance on BOTH NEG_RISK_CTF_EXCHANGE and
-    // NEG_RISK_ADAPTER — take the minimum so we re-approve if either is insufficient.
+    // ── Dry-run exit — full projected order fields ────────────────────────────
+    if dry_run {
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "dry_run": true,
+                "data": {
+                    "market_id": market_id,
+                    "condition_id": condition_id,
+                    "outcome": outcome,
+                    "token_id": token_id,
+                    "side": "BUY",
+                    "order_type": effective_order_type.to_uppercase(),
+                    "limit_price": limit_price,
+                    "usdc_amount": actual_usdc,
+                    "usdc_requested": usdc_amount,
+                    "shares": taker_amount_raw as f64 / 1_000_000.0,
+                    "fee_rate_bps": fee_rate_bps,
+                    "post_only": post_only,
+                    "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
+                    "note": "dry-run: order not submitted"
+                }
+            })
+        );
+        return Ok(());
+    }
+
+    // ── Auth phase ────────────────────────────────────────────────────────────
+
+    // onchainos wallet is the signer.
+    let signer_addr = get_wallet_address().await?;
+    let creds = ensure_credentials(&client, &signer_addr).await?;
+    let maker_addr = signer_addr.clone();
+
+    // Check USDC balance and allowance.
+    // Balance check fires BEFORE the approval tx to avoid wasting gas on orders
+    // that would be rejected for insufficient funds.
     use crate::config::Contracts;
     let allowance_info =
         get_balance_allowance(&client, &signer_addr, &creds, "COLLATERAL", None).await?;
+
+    let usdc_needed_raw = maker_amount_raw as u64;
+
+    // Pre-flight: bail if wallet USDC.e balance is insufficient.
+    if let Some(bal_str) = &allowance_info.balance {
+        if let Ok(bal) = bal_str.parse::<u64>() {
+            if bal < usdc_needed_raw {
+                bail!(
+                    "Insufficient USDC.e balance: have ${:.6}, need ${:.6}. \
+                     Top up USDC.e on Polygon before placing this order.",
+                    bal as f64 / 1_000_000.0,
+                    actual_usdc
+                );
+            }
+        }
+    }
+
     let allowance_raw = if neg_risk {
         let a_exchange = allowance_info.allowance_for(Contracts::NEG_RISK_CTF_EXCHANGE);
         let a_adapter  = allowance_info.allowance_for(Contracts::NEG_RISK_ADAPTER);
@@ -214,10 +217,10 @@ pub async fn run(
     } else {
         allowance_info.allowance_for(Contracts::CTF_EXCHANGE)
     };
-    let usdc_needed_raw = maker_amount_raw as u64;
 
     if allowance_raw < usdc_needed_raw || auto_approve {
-        eprintln!("[polymarket] Approving {:.6} USDC.e for CTF Exchange...", actual_usdc);
+        let exchange_label = if neg_risk { "Neg Risk CTF Exchange" } else { "CTF Exchange" };
+        eprintln!("[polymarket] Approving {:.6} USDC.e for {}...", actual_usdc, exchange_label);
         let tx_hash = approve_usdc(neg_risk, usdc_needed_raw).await?;
         eprintln!("[polymarket] Approval tx: {}", tx_hash);
     }
@@ -226,7 +229,7 @@ pub async fn run(
 
     let params = OrderParams {
         salt,
-        maker: maker_addr.clone(),    // EOA mode: maker = signer = onchainos wallet
+        maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
         token_id: token_id.clone(),
@@ -242,7 +245,7 @@ pub async fn run(
     let signature = sign_order_via_onchainos(&params, neg_risk).await?;
 
     let order_body = OrderBody {
-        salt,  // serialized as JSON number per clob-client spec
+        salt,
         maker: maker_addr.clone(),
         signer: signer_addr.clone(),
         taker: "0x0000000000000000000000000000000000000000".to_string(),
@@ -313,6 +316,9 @@ pub async fn run(
 /// Resolve (condition_id, token_id, neg_risk) from a market_id and outcome string.
 /// Supports any outcome label (e.g. "yes", "no", "trump", "republican", "option-a").
 /// Bails early if the market is not accepting orders (closed, resolved, or paused).
+///
+/// neg_risk is always sourced from the CLOB API (authoritative) because the Gamma API
+/// omits the negRisk field for many markets, causing incorrect contract approval targets.
 pub async fn resolve_market_token(
     client: &Client,
     market_id: &str,
@@ -362,16 +368,22 @@ pub async fn resolve_market_token(
             .get(idx)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
-        Ok((condition_id, token_id, gamma.neg_risk))
+
+        // Get authoritative neg_risk from CLOB — Gamma API omits negRisk for many markets,
+        // which causes the wrong exchange to be approved (CTF_EXCHANGE instead of
+        // NEG_RISK_CTF_EXCHANGE), wasting gas and failing the order.
+        let neg_risk = match get_clob_market(client, &condition_id).await {
+            Ok(clob) => clob.neg_risk,
+            Err(_) => gamma.neg_risk, // fall back to gamma value if CLOB unavailable
+        };
+
+        Ok((condition_id, token_id, neg_risk))
     }
 }
 
 /// Generate a random salt within JavaScript's safe integer range (< 2^53).
-/// The clob-client sends salt as a JSON number (Number.parseInt), so we must
-/// ensure no precision loss on the server side.
 fn rand_salt() -> u64 {
     let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");
-    // Mask to 53 bits = 0x1FFFFFFFFFFFFF
     u64::from_le_bytes(bytes) & 0x001F_FFFF_FFFF_FFFF
 }
