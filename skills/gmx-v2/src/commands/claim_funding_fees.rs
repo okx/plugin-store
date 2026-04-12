@@ -55,7 +55,36 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClaimFundingFe
     eprintln!("Tokens: {:?}", token_addrs);
     eprintln!("Receiver: {}", receiver);
     eprintln!("Note: No execution fee needed for claims.");
-    eprintln!("Ask user to confirm before proceeding.");
+    if !confirm { eprintln!("Add --confirm to broadcast."); }
+
+    if !confirm && !dry_run {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": true,
+                "status": "preview",
+                "message": "Add --confirm to broadcast this transaction",
+                "chain": chain,
+                "markets": market_addrs,
+                "tokens": token_addrs,
+                "receiver": receiver,
+                "calldata": calldata
+            }))?
+        );
+        return Ok(());
+    }
+
+    // G20: snapshot balances before tx so we can report claimed amounts
+    let pre_balances: Vec<u128> = if confirm && !dry_run {
+        let mut bals = Vec::new();
+        for token in &token_addrs {
+            let bal = crate::rpc::check_erc20_balance(cfg.rpc_url, token, &receiver).await.unwrap_or(0);
+            bals.push(bal);
+        }
+        bals
+    } else {
+        vec![0u128; token_addrs.len()]
+    };
 
     let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
@@ -70,6 +99,20 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClaimFundingFe
 
     let tx_hash = crate::onchainos::extract_tx_hash(&result);
 
+    // G20: post-tx balance delta = claimed amounts
+    let claimed: Vec<serde_json::Value> = if confirm && !dry_run {
+        crate::onchainos::wait_for_tx(cfg.chain_id, &tx_hash, &wallet, 60)?;
+        let mut out = Vec::new();
+        for (i, token) in token_addrs.iter().enumerate() {
+            let post = crate::rpc::check_erc20_balance(cfg.rpc_url, token, &receiver).await.unwrap_or(0);
+            let delta = post.saturating_sub(pre_balances[i]);
+            out.push(json!({ "token": token, "claimedRaw": delta.to_string() }));
+        }
+        out
+    } else {
+        vec![]
+    };
+
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -80,6 +123,7 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: ClaimFundingFe
             "markets": market_addrs,
             "tokens": token_addrs,
             "receiver": receiver,
+            "claimed": claimed,
             "calldata": if dry_run { Some(calldata.as_str()) } else { None }
         }))?
     );

@@ -3,7 +3,6 @@ use serde_json::json;
 
 /// Convert a USD float to GMX 30-decimal u128 without floating-point precision loss.
 fn parse_usd_to_u128(val: f64) -> u128 {
-    // Split into integer and fractional parts to avoid (val * 1e30) overflow/imprecision
     let integer_part = val.floor() as u128;
     let frac_part = val - val.floor();
     let precision: u128 = 1_000_000_000_000_000_000_000_000_000_000; // 10^30
@@ -68,13 +67,17 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
 
     let min_price_raw: u128 = price_tick.min_price.as_deref().unwrap_or("0").parse().unwrap_or(0);
     let max_price_raw: u128 = price_tick.max_price.as_deref().unwrap_or("0").parse().unwrap_or(0);
-    // GMX prices are stored as price_usd * 10^(30 - token_decimals).
-    // For display, fetch token decimals to convert properly. Default to 18.
+
     let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
     let index_decimals = token_infos.iter()
         .find(|t| t.address.as_deref().map(|a| a.to_lowercase()) == Some(index_token.to_lowercase()))
         .and_then(|t| t.decimals)
         .unwrap_or(18u8);
+    let collateral_decimals = token_infos.iter()
+        .find(|t| t.address.as_deref().map(|a| a.to_lowercase()) == Some(args.collateral_token.to_lowercase()))
+        .and_then(|t| t.decimals)
+        .unwrap_or(6u8);
+
     let min_price_usd = crate::api::raw_price_to_usd(min_price_raw, index_decimals);
     let max_price_usd = crate::api::raw_price_to_usd(max_price_raw, index_decimals);
     let mid_price_usd = (min_price_usd + max_price_usd) / 2.0;
@@ -99,46 +102,9 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
 
     // Compute acceptable price with slippage
     let base_price = if args.long { min_price_raw } else { max_price_raw };
-    // Increase acceptable price (opposite of close):
-    //   LONG open:  ceiling = min_price * (1+slip) → keeper check: execution <= acceptable → pass false
-    //   SHORT open: floor   = max_price * (1-slip) → keeper check: execution >= acceptable → pass true
-    // Both cases = !args.long
     let acceptable_price = crate::abi::compute_acceptable_price(base_price, !args.long, args.slippage_bps);
 
     let execution_fee = cfg.execution_fee_wei;
-
-    // Check ERC-20 allowance and approve if needed.
-    // Guard with `confirm` so approve and the main TX are always in sync:
-    // without --confirm neither fires; with --confirm both fire.
-    if !dry_run {
-        let allowance = crate::onchainos::check_allowance(
-            cfg.rpc_url,
-            &args.collateral_token,
-            &wallet,
-            cfg.router,
-        ).await.unwrap_or(0);
-
-        if allowance < args.collateral_amount {
-            if !confirm {
-                eprintln!("NOTE: Allowance insufficient ({} < {}). Re-run with --confirm to approve and open position.",
-                    allowance, args.collateral_amount);
-            } else {
-                eprintln!("Approving {} collateral token to router {}...", args.collateral_amount, cfg.router);
-                let approve_result = crate::onchainos::erc20_approve(
-                    cfg.chain_id,
-                    &args.collateral_token,
-                    cfg.router,
-                    args.collateral_amount,
-                    Some(&wallet),
-                    false,
-                    true,
-                ).await?;
-                let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
-                eprintln!("Approval tx: {}", approve_hash);
-                crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
-            }
-        }
-    }
 
     // Build multicall: [sendWnt, sendTokens, createOrder]
     let send_wnt = crate::abi::encode_send_wnt(cfg.order_vault, execution_fee);
@@ -164,12 +130,6 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
 
     let multicall_hex = crate::abi::encode_multicall(&[send_wnt, send_tokens, create_order]);
     let calldata = format!("0x{}", multicall_hex);
-
-    let leverage = if mid_price_usd > 0.0 {
-        args.size_usd / (args.collateral_amount as f64 / 1e6)
-    } else {
-        0.0
-    };
 
     // Pre-flight check 1 — ERC-20 token balance
     let token_balance = crate::rpc::check_erc20_balance(
@@ -238,18 +198,71 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
         return Ok(());
     }
 
-    // Preview
+    let acceptable_price_usd = crate::api::raw_price_to_usd(acceptable_price, index_decimals);
+    let execution_fee_eth = execution_fee as f64 / 1e18;
+    let collateral_fmt = crate::api::format_token_amount(args.collateral_amount, collateral_decimals);
+    let leverage = if mid_price_usd > 0.0 && args.collateral_amount > 0 {
+        args.size_usd / (args.collateral_amount as f64 / 10f64.powi(collateral_decimals as i32))
+    } else {
+        0.0
+    };
+
     eprintln!("=== Open Position Preview ===");
     eprintln!("Market: {}", market.name.as_deref().unwrap_or("?"));
     eprintln!("Direction: {}", if args.long { "LONG" } else { "SHORT" });
     eprintln!("Size: ${:.2} USD", args.size_usd);
-    eprintln!("Collateral: {} units (${:.4} USD)", args.collateral_amount, collateral_usd_30 as f64 / 1e30);
+    eprintln!("Collateral: {} (${:.4} USD)", collateral_fmt, collateral_usd_30 as f64 / 1e30);
     eprintln!("Current price: ${:.4}", mid_price_usd);
-    eprintln!("Acceptable price: {}", acceptable_price);
-    eprintln!("Execution fee: {} wei", execution_fee);
+    eprintln!("Acceptable price: ${:.4}", acceptable_price_usd);
+    eprintln!("Execution fee: {:.6} ETH", execution_fee_eth);
     eprintln!("Estimated leverage: {:.1}x", leverage);
     eprintln!("⚠ GMX V2 uses a keeper model — position opens 1-30s after tx lands.");
-    eprintln!("Ask user to confirm before proceeding.");
+    if !confirm { eprintln!("Add --confirm to broadcast."); }
+
+    // G5: preview-only path — never call onchainos without --confirm
+    if !confirm && !dry_run {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": true,
+                "status": "preview",
+                "message": "Add --confirm to broadcast this transaction",
+                "chain": chain,
+                "market": market.name,
+                "marketToken": market_token,
+                "direction": if args.long { "long" } else { "short" },
+                "sizeDeltaUsd": args.size_usd,
+                "collateralAmount": collateral_fmt,
+                "entryPrice_approx_usd": format!("{:.4}", mid_price_usd),
+                "acceptablePrice_usd": format!("{:.4}", acceptable_price_usd),
+                "executionFee_eth": format!("{:.6}", execution_fee_eth),
+                "calldata": calldata
+            }))?
+        );
+        return Ok(());
+    }
+
+    // G7: allowance check only runs when about to execute (after all pre-flight passed)
+    if confirm && !dry_run {
+        let allowance = crate::onchainos::check_allowance(
+            cfg.rpc_url, &args.collateral_token, &wallet, cfg.router,
+        ).await.unwrap_or(0);
+        if allowance < args.collateral_amount {
+            eprintln!("Approving collateral token to router...");
+            let approve_result = crate::onchainos::erc20_approve(
+                cfg.chain_id,
+                &args.collateral_token,
+                cfg.router,
+                args.collateral_amount,
+                Some(&wallet),
+                false,
+                true,
+            ).await?;
+            let approve_hash = crate::onchainos::extract_tx_hash(&approve_result);
+            eprintln!("Approval tx: {}", approve_hash);
+            crate::onchainos::wait_for_tx(cfg.chain_id, approve_hash, &wallet, 60)?;
+        }
+    }
 
     let result = crate::onchainos::wallet_contract_call(
         cfg.chain_id,
@@ -274,10 +287,10 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: OpenPositionAr
             "marketToken": market_token,
             "direction": if args.long { "long" } else { "short" },
             "sizeDeltaUsd": args.size_usd,
-            "collateralAmount": args.collateral_amount.to_string(),
+            "collateralAmount": collateral_fmt,
             "entryPrice_approx_usd": format!("{:.4}", mid_price_usd),
-            "acceptablePrice": acceptable_price.to_string(),
-            "executionFeeWei": execution_fee,
+            "acceptablePrice_usd": format!("{:.4}", acceptable_price_usd),
+            "executionFee_eth": format!("{:.6}", execution_fee_eth),
             "note": "GMX V2 keeper model: position will open within 1-30s after tx confirmation",
             "calldata": if dry_run { Some(calldata.as_str()) } else { None }
         }))?

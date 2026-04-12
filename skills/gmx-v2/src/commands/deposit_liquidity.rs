@@ -50,10 +50,76 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
     let short_token = market.short_token.as_deref()
         .ok_or_else(|| anyhow::anyhow!("Market has no shortToken"))?;
 
-    let execution_fee = cfg.execution_fee_wei;
+    let token_infos = crate::api::fetch_tokens(cfg).await.unwrap_or_default();
+    let long_decimals = token_infos.iter()
+        .find(|t| t.address.as_deref().map(|a| a.to_lowercase()) == Some(long_token.to_lowercase()))
+        .and_then(|t| t.decimals).unwrap_or(18u8);
+    let short_decimals = token_infos.iter()
+        .find(|t| t.address.as_deref().map(|a| a.to_lowercase()) == Some(short_token.to_lowercase()))
+        .and_then(|t| t.decimals).unwrap_or(6u8);
+    let long_fmt = crate::api::format_token_amount(args.long_amount, long_decimals);
+    let short_fmt = crate::api::format_token_amount(args.short_amount, short_decimals);
+    let min_gm_fmt = crate::api::format_token_amount(args.min_market_tokens, 18);
 
-    // Approve long token if needed
-    if !dry_run && args.long_amount > 0 {
+    let execution_fee = cfg.execution_fee_wei;
+    let execution_fee_eth = execution_fee as f64 / 1e18;
+
+    // Pre-flight: ETH balance for execution fee + gas
+    let eth_balance = crate::rpc::get_eth_balance(&wallet, cfg.rpc_url).await;
+    let gas_margin: u128 = 200_000_000_000_000; // 0.0002 ETH
+    let eth_required = execution_fee.saturating_add(gas_margin);
+    if eth_balance < eth_required {
+        println!("{}", serde_json::to_string_pretty(&json!({
+            "ok": false,
+            "error": "INSUFFICIENT_ETH_FOR_EXECUTION",
+            "reason": "Wallet does not have enough ETH to cover execution fee + gas.",
+            "eth_balance": format!("{:.8}", eth_balance as f64 / 1e18),
+            "execution_fee_eth": format!("{:.8}", execution_fee as f64 / 1e18),
+            "gas_buffer_eth": format!("{:.8}", gas_margin as f64 / 1e18),
+            "eth_required": format!("{:.8}", eth_required as f64 / 1e18),
+            "suggestion": format!("Top up wallet {} with at least {:.6} ETH.", wallet, (eth_required.saturating_sub(eth_balance)) as f64 / 1e18)
+        }))?);
+        return Ok(());
+    }
+
+    // Pre-flight: token balance checks
+    if args.long_amount > 0 {
+        let bal = crate::rpc::check_erc20_balance(cfg.rpc_url, long_token, &wallet).await.unwrap_or(u128::MAX);
+        if bal < args.long_amount {
+            println!("{}", serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "INSUFFICIENT_LONG_TOKEN_BALANCE",
+                "reason": "Wallet long token balance is less than --long-amount.",
+                "token": long_token,
+                "wallet_balance": bal.to_string(),
+                "wallet_balance_formatted": crate::api::format_token_amount(bal, long_decimals),
+                "required_amount": args.long_amount.to_string(),
+                "required_formatted": long_fmt,
+                "suggestion": format!("Reduce --long-amount to at most {} or top up the token.", bal)
+            }))?);
+            return Ok(());
+        }
+    }
+    if args.short_amount > 0 {
+        let bal = crate::rpc::check_erc20_balance(cfg.rpc_url, short_token, &wallet).await.unwrap_or(u128::MAX);
+        if bal < args.short_amount {
+            println!("{}", serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "INSUFFICIENT_SHORT_TOKEN_BALANCE",
+                "reason": "Wallet short token balance is less than --short-amount.",
+                "token": short_token,
+                "wallet_balance": bal.to_string(),
+                "wallet_balance_formatted": crate::api::format_token_amount(bal, short_decimals),
+                "required_amount": args.short_amount.to_string(),
+                "required_formatted": short_fmt,
+                "suggestion": format!("Reduce --short-amount to at most {} or top up the token.", bal)
+            }))?);
+            return Ok(());
+        }
+    }
+
+    // Approve long token if needed (only when about to execute)
+    if confirm && !dry_run && args.long_amount > 0 {
         let allowance = crate::onchainos::check_allowance(
             cfg.rpc_url, long_token, &wallet, cfg.router,
         ).await.unwrap_or(0);
@@ -68,8 +134,8 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
         }
     }
 
-    // Approve short token if needed
-    if !dry_run && args.short_amount > 0 {
+    // Approve short token if needed (only when about to execute)
+    if confirm && !dry_run && args.short_amount > 0 {
         let allowance = crate::onchainos::check_allowance(
             cfg.rpc_url, short_token, &wallet, cfg.router,
         ).await.unwrap_or(0);
@@ -113,12 +179,35 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
     eprintln!("=== Deposit Liquidity Preview ===");
     eprintln!("Market: {}", market.name.as_deref().unwrap_or("?"));
     eprintln!("Market token: {}", market_token);
-    eprintln!("Long token amount: {}", args.long_amount);
-    eprintln!("Short token amount: {}", args.short_amount);
-    eprintln!("Min GM tokens to receive: {}", args.min_market_tokens);
-    eprintln!("Execution fee: {} wei", execution_fee);
+    eprintln!("Long token amount: {}", long_fmt);
+    eprintln!("Short token amount: {}", short_fmt);
+    eprintln!("Min GM tokens to receive: {}", min_gm_fmt);
+    if args.min_market_tokens == 0 {
+        eprintln!("⚠ min-market-tokens is 0 — no slippage protection on GM tokens received.");
+    }
+    eprintln!("Execution fee: {:.6} ETH", execution_fee_eth);
     eprintln!("⚠ GMX V2 keeper model: GM tokens minted 1-30s after tx lands.");
-    eprintln!("Ask user to confirm before proceeding.");
+    if !confirm { eprintln!("Add --confirm to broadcast."); }
+
+    if !confirm && !dry_run {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": true,
+                "status": "preview",
+                "message": "Add --confirm to broadcast this transaction",
+                "chain": chain,
+                "market": market.name,
+                "marketToken": market_token,
+                "longTokenAmount": long_fmt,
+                "shortTokenAmount": short_fmt,
+                "minGmTokens": min_gm_fmt,
+                "executionFee_eth": format!("{:.6}", execution_fee_eth),
+                "calldata": calldata
+            }))?
+        );
+        return Ok(());
+    }
 
     let result = crate::onchainos::wallet_contract_call_with_gas(
         cfg.chain_id,
@@ -142,10 +231,10 @@ pub async fn run(chain: &str, dry_run: bool, confirm: bool, args: DepositLiquidi
             "txHash": tx_hash,
             "market": market.name,
             "marketToken": market_token,
-            "longTokenAmount": args.long_amount.to_string(),
-            "shortTokenAmount": args.short_amount.to_string(),
-            "minGmTokens": args.min_market_tokens.to_string(),
-            "executionFeeWei": execution_fee,
+            "longTokenAmount": long_fmt,
+            "shortTokenAmount": short_fmt,
+            "minGmTokens": min_gm_fmt,
+            "executionFee_eth": format!("{:.6}", execution_fee_eth),
             "note": "GM tokens will be minted within 1-30s after tx confirmation by keeper",
             "calldata": if dry_run { Some(calldata.as_str()) } else { None }
         }))?

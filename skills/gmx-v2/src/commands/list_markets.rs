@@ -51,6 +51,13 @@ pub async fn run(chain: &str, args: ListMarketsArgs) -> anyhow::Result<()> {
                 .parse::<u128>()
                 .unwrap_or(0);
 
+            // GMX stats API returns rates as (annual_rate_decimal × FLOAT_PRECISION)
+            // where FLOAT_PRECISION = 10^30. So: annual_pct = raw / 10^30 * 100 = raw / 10^28
+            let to_annual = |raw: Option<&str>| -> String {
+                raw.and_then(|s| s.parse::<f64>().ok())
+                    .map(|r| format!("{:.4}%", r / 1e28))
+                    .unwrap_or_else(|| "0.0000%".to_string())
+            };
             json!({
                 "name": m.name,
                 "marketToken": m.market_token,
@@ -61,10 +68,10 @@ pub async fn run(chain: &str, args: ListMarketsArgs) -> anyhow::Result<()> {
                 "availableLiquidityShort_usd": format!("{:.2}", liq_short as f64 / 1e30),
                 "openInterestLong_usd": format!("{:.2}", oi_long as f64 / 1e30),
                 "openInterestShort_usd": format!("{:.2}", oi_short as f64 / 1e30),
-                "fundingRateLong": m.funding_rate_long,
-                "fundingRateShort": m.funding_rate_short,
-                "borrowingRateLong": m.borrowing_rate_long,
-                "borrowingRateShort": m.borrowing_rate_short,
+                "fundingRateLong_annual": to_annual(m.funding_rate_long.as_deref()),
+                "fundingRateShort_annual": to_annual(m.funding_rate_short.as_deref()),
+                "borrowingRateLong_annual": to_annual(m.borrowing_rate_long.as_deref()),
+                "borrowingRateShort_annual": to_annual(m.borrowing_rate_short.as_deref()),
             })
         })
         .collect();
