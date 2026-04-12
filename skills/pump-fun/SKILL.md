@@ -217,3 +217,4 @@ pump-fun sell --mint <MINT>
 |-----------|---------|-------------|
 | `slippage_bps` | 100 | 1% slippage tolerance |
 | `fee_bps` | 100 | pump.fun trade fee (1%) |
+

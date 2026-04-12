@@ -678,3 +678,4 @@ morpho --chain 8453 vaults --asset WETH
 | `Unknown asset symbol` | Provide the ERC-20 contract address instead of symbol |
 | `execution reverted: transferFrom reverted` on supply/repay | The approve tx was not yet confirmed when the main operation ran. This should not occur in v0.2.0+ (the plugin waits for approve confirmation). If it does, retry after a few seconds. |
 | `--all` withdraw-collateral fails with `insufficient collateral` | The GraphQL API may lag behind on-chain state by a few blocks. Use `--amount` with the exact balance from `morpho positions` instead. |
+

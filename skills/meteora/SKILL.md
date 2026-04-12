@@ -341,3 +341,4 @@ meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --p
 # Step 3: Ask user to confirm, then remove all and close position
 meteora remove-liquidity --pool 8skykrYgFFpQNMhqhKbZoVKXFss55uGPUXhVMfnCzqJv --position <position_addr> --close
 ```
+

@@ -215,3 +215,4 @@ orca swap \
 - Swaps with estimated price impact > 10% are automatically rejected
 - Always run `--dry-run` first and show the quote to the user before asking for confirmation
 - If pool TVL < $10,000, warn user about high slippage risk
+
