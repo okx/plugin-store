@@ -58,13 +58,9 @@ pub async fn run(
     let (condition_id, token_id, neg_risk) =
         resolve_market_token(&client, market_id, outcome).await?;
 
-    // Fetch the order book (reused for market price calculation below).
-    // Note: min_order_size is intentionally not enforced here — the CLOB API
-    // exposes this field but does not actually reject orders below it
-    // (confirmed by pre-v0.2.3 orders at $1 resolving normally). Polymarket's
-    // own official client likewise ignores this field. If the CLOB ever does
-    // enforce a minimum, it will return INVALID_ORDER_MIN_SIZE which is caught
-    // in the error handler below.
+    // Fetch the order book. min_order_size is enforced by the CLOB for resting limit orders
+    // (limit price below the current best ask). The plugin pre-validates this below and
+    // fires a clear error before submitting. Market (FOK) orders are exempt.
     let book = get_orderbook(&client, &token_id).await?;
 
     if dry_run {
@@ -138,14 +134,14 @@ pub async fn run(
     let step = step_raw / g2 * 100; // lcm(step_raw, 100)
 
     let max_taker_raw = (usdc_amount / limit_price * 1_000_000.0).floor() as u128;
-    let taker_amount_raw = if round_up {
+    let mut taker_amount_raw = if round_up {
         // Ceiling: snap UP to the nearest valid step (may spend slightly more than requested)
         ((max_taker_raw + step - 1) / step) * step
     } else {
         // Floor: never spend more than requested
         (max_taker_raw / step) * step
     };
-    let maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
+    let mut maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
 
     // Guard: amount too small to satisfy divisibility constraints — bail before approval.
     if taker_amount_raw == 0 || maker_amount_raw == 0 {
@@ -158,11 +154,47 @@ pub async fn run(
         );
     }
 
-    // Notify if round-up increased the amount
+    // Guard: resting orders below the CLOB min_order_size are rejected.
+    // A resting order is a limit order priced below the current best ask (won't fill immediately).
+    // Market orders (FOK, no --price) are exempt from this minimum.
+    let min_order_size: f64 = book.min_order_size.as_deref()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
+    // best ask: asks are descending in the CLOB API, so .last() = lowest price = best ask for buyer
+    let best_ask_float: Option<f64> = book.asks.last().and_then(|a| a.price.parse().ok());
+    let is_resting = price.is_some() && best_ask_float.map_or(false, |ba| limit_price < ba);
+    let computed_shares = taker_amount_raw as f64 / 1_000_000.0;
+    if is_resting && min_order_size > 0.0 && computed_shares < min_order_size {
+        if round_up {
+            // Snap up to the market's minimum order size
+            let min_taker_raw = (min_order_size * 1_000_000.0).ceil() as u128;
+            taker_amount_raw = ((min_taker_raw + step - 1) / step) * step;
+            maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
+            eprintln!(
+                "[polymarket] Note: amount rounded up to market minimum of {} shares for resting order.",
+                taker_amount_raw as f64 / 1_000_000.0
+            );
+        } else {
+            let min_usdc = min_order_size * limit_price;
+            bail!(
+                "Order too small: {:.2} shares at price {:.4} is below this market's minimum of \
+                 {} shares (≈${:.2} required). Pass --round-up to place the minimum instead.",
+                computed_shares, limit_price, min_order_size, min_usdc
+            );
+        }
+    }
+
+    // Notify if amount was adjusted from what was requested
     let actual_usdc = maker_amount_raw as f64 / 1_000_000.0;
     if round_up && actual_usdc > usdc_amount + 1e-6 {
         eprintln!(
             "[polymarket] Note: amount rounded up from ${:.6} to ${:.6} to satisfy \
+             order divisibility constraints.",
+            usdc_amount, actual_usdc
+        );
+    } else if !round_up && actual_usdc < usdc_amount - 1e-6 {
+        eprintln!(
+            "[polymarket] Note: amount adjusted from ${:.6} to ${:.6} to satisfy \
              order divisibility constraints.",
             usdc_amount, actual_usdc
         );

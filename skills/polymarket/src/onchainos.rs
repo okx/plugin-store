@@ -149,11 +149,49 @@ pub async fn approve_usdc(neg_risk: bool, amount: u64) -> Result<String> {
     }
 }
 
-/// Approve CTF tokens for CTF Exchange. Used before SELL orders.
+/// Approve CTF tokens for sell orders.
+///
+/// For neg_risk=false: approves CTF_EXCHANGE only.
+/// For neg_risk=true: approves BOTH NEG_RISK_CTF_EXCHANGE and NEG_RISK_ADAPTER —
+/// the CLOB checks setApprovalForAll on both contracts for neg_risk markets (mirrors
+/// the approve_usdc pattern for USDC.e allowance).
+/// Returns the tx hash of the last approval submitted.
 pub async fn approve_ctf(neg_risk: bool) -> Result<String> {
     use crate::config::Contracts;
     let ctf = Contracts::CTF;
-    let exchange = Contracts::exchange_for(neg_risk);
-    ctf_set_approval_for_all(ctf, exchange).await
+    if neg_risk {
+        ctf_set_approval_for_all(ctf, Contracts::NEG_RISK_CTF_EXCHANGE).await?;
+        ctf_set_approval_for_all(ctf, Contracts::NEG_RISK_ADAPTER).await
+    } else {
+        ctf_set_approval_for_all(ctf, Contracts::CTF_EXCHANGE).await
+    }
+}
+
+/// Check if the CTF contract has setApprovalForAll set for owner → operator.
+/// Makes a direct eth_call to the Polygon RPC to read isApprovedForAll(owner, operator).
+/// Returns true if already approved, false if not approved or on RPC failure (fail-open:
+/// falling back to approving is always safe — setApprovalForAll is idempotent).
+pub async fn is_ctf_approved_for_all(owner: &str, operator: &str) -> bool {
+    use crate::config::{Contracts, Urls};
+    // isApprovedForAll(address,address) selector = 0xe985e9c5
+    let data = format!("0xe985e9c5{}{}", pad_address(owner), pad_address(operator));
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_call",
+        "params": [{ "to": Contracts::CTF, "data": data }, "latest"],
+        "id": 1
+    });
+    let client = reqwest::Client::new();
+    let resp = match client.post(Urls::POLYGON_RPC).json(&body).send().await {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+    let v: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    // ABI-encoded bool: 32 bytes. Approved = 0x0000...0001, Not approved = 0x0000...0000
+    let hex = v["result"].as_str().unwrap_or("0x").trim_start_matches("0x");
+    !hex.is_empty() && hex.trim_start_matches('0') == "1"
 }
 

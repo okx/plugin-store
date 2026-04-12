@@ -106,4 +106,5 @@ impl Urls {
     pub const CLOB: &'static str = "https://clob.polymarket.com";
     pub const GAMMA: &'static str = "https://gamma-api.polymarket.com";
     pub const DATA: &'static str = "https://data-api.polymarket.com";
+    pub const POLYGON_RPC: &'static str = "https://polygon-rpc.com";
 }

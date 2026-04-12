@@ -71,6 +71,10 @@ pub struct ClobMarket {
     pub min_incentive_size: Option<String>,
     #[serde(default)]
     pub max_incentive_spread: Option<String>,
+    #[serde(default)]
+    pub maker_base_fee: Option<u64>,
+    #[serde(default)]
+    pub taker_base_fee: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -523,24 +527,36 @@ pub async fn list_gamma_markets(
     offset: u32,
     keyword: Option<&str>,
 ) -> Result<Vec<GammaMarket>> {
-    let url = if let Some(kw) = keyword {
-        format!(
-            "{}/markets?q={}&active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
-            Urls::GAMMA, kw, limit, offset
-        )
-    } else {
-        format!(
-            "{}/markets?active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
-            Urls::GAMMA, limit, offset
-        )
-    };
+    // When keyword filtering is requested, fetch a larger page and filter client-side.
+    // The Gamma API's ?q= parameter does not reliably filter results — testing confirms
+    // it returns the same volume-sorted list regardless of the keyword value.
+    let fetch_limit = if keyword.is_some() { (limit * 5).min(100) } else { limit };
+    let url = format!(
+        "{}/markets?active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
+        Urls::GAMMA, fetch_limit, offset
+    );
 
-    client.get(&url)
+    let all: Vec<GammaMarket> = client.get(&url)
         .send()
         .await?
         .json()
         .await
-        .context("parsing Gamma markets list")
+        .context("parsing Gamma markets list")?;
+
+    if let Some(kw) = keyword {
+        let kw_lower = kw.to_lowercase();
+        Ok(all
+            .into_iter()
+            .filter(|m| {
+                let q = m.question.as_deref().unwrap_or("").to_lowercase();
+                let s = m.slug.as_deref().unwrap_or("").to_lowercase();
+                q.contains(&kw_lower) || s.contains(&kw_lower)
+            })
+            .take(limit as usize)
+            .collect())
+    } else {
+        Ok(all)
+    }
 }
 
 pub async fn get_gamma_market_by_slug(client: &Client, slug: &str) -> Result<GammaMarket> {

@@ -7,7 +7,7 @@ use crate::api::{
     OrderRequest,
 };
 use crate::auth::ensure_credentials;
-use crate::onchainos::{approve_ctf, get_wallet_address};
+use crate::onchainos::{approve_ctf, get_wallet_address, is_ctf_approved_for_all};
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 use super::buy::resolve_market_token;
@@ -29,41 +29,8 @@ pub async fn run(
     post_only: bool,
     expires: Option<u64>,
 ) -> Result<()> {
-    if dry_run {
-        println!(
-            "{}",
-            serde_json::json!({
-                "ok": true,
-                "dry_run": true,
-                "data": {
-                    "market_id": market_id,
-                    "outcome": outcome,
-                    "shares": shares,
-                    "estimated_price": null,
-                    "note": "dry-run: order not submitted"
-                }
-            })
-        );
-        return Ok(());
-    }
-
-    let client = Client::new();
-
-    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
-    let signer_addr = get_wallet_address().await?;
-
-    // Derive API credentials for the onchainos wallet
-    let creds = ensure_credentials(&client, &signer_addr).await?;
-
-    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
-    // No proxy wallet or polymarket.com onboarding required.
-    let maker_addr = signer_addr.clone();
-
-    let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
-
-    let tick_size = get_tick_size(&client, &token_id).await?;
-    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
-
+    // Parse shares and validate order flags up front (before any network calls)
+    // so dry-run output reflects the resolved effective_order_type.
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
     if share_amount <= 0.0 {
         bail!("shares must be positive");
@@ -90,6 +57,45 @@ pub async fn run(
     } else {
         (0, order_type)
     };
+
+    if dry_run {
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "dry_run": true,
+                "data": {
+                    "market_id": market_id,
+                    "outcome": outcome,
+                    "shares": shares,
+                    "side": "SELL",
+                    "order_type": effective_order_type.to_uppercase(),
+                    "limit_price": price,
+                    "post_only": post_only,
+                    "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
+                    "note": "dry-run: order not submitted; market resolution and GCD alignment skipped"
+                }
+            })
+        );
+        return Ok(());
+    }
+
+    let client = Client::new();
+
+    // onchainos wallet is the signer (approved operator of proxy wallet after polymarket.com onboarding)
+    let signer_addr = get_wallet_address().await?;
+
+    // Derive API credentials for the onchainos wallet
+    let creds = ensure_credentials(&client, &signer_addr).await?;
+
+    // EOA mode (signature_type=0): maker = signer = onchainos wallet.
+    // No proxy wallet or polymarket.com onboarding required.
+    let maker_addr = signer_addr.clone();
+
+    let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
+
+    let tick_size = get_tick_size(&client, &token_id).await?;
+    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
 
     // Determine price
     let limit_price = if let Some(p) = price {
@@ -123,11 +129,19 @@ pub async fn run(
         );
     }
 
-    // Check CTF token allowance and auto-approve if needed
+    // Check CTF token approval via on-chain isApprovedForAll (ERC-1155).
+    // The CLOB balance-allowance API does not reliably report ERC-1155 approval state,
+    // so we read directly from the CTF contract via a Polygon RPC eth_call.
+    // For neg_risk markets: CLOB checks approval on BOTH NEG_RISK_CTF_EXCHANGE and
+    // NEG_RISK_ADAPTER — approve both if either is missing.
     use crate::config::Contracts;
-    let exchange_addr = Contracts::exchange_for(neg_risk);
-    let allowance_raw = token_balance.allowance_for(exchange_addr);
-    if allowance_raw < shares_needed_raw || auto_approve {
+    let already_approved = if neg_risk {
+        is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_CTF_EXCHANGE).await
+            && is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_ADAPTER).await
+    } else {
+        is_ctf_approved_for_all(&signer_addr, Contracts::CTF_EXCHANGE).await
+    };
+    if !already_approved || auto_approve {
         eprintln!("[polymarket] Approving CTF tokens for CTF Exchange...");
         let tx_hash = approve_ctf(neg_risk).await?;
         eprintln!("[polymarket] Approval tx: {}", tx_hash);
@@ -153,6 +167,27 @@ pub async fn run(
     let max_maker_raw = (share_amount * 1_000_000.0).floor() as u128;
     let maker_amount_raw = (max_maker_raw / step) * step;
     let taker_amount_raw = price_ticks * maker_amount_raw / tick_scale;
+
+    // Guard: share amount too small to produce a valid order after GCD alignment.
+    if maker_amount_raw == 0 || taker_amount_raw == 0 {
+        bail!(
+            "Amount too small: {:.6} shares at price {:.4} rounds to 0 after divisibility \
+             alignment. Minimum for this market/price is ~{:.6} shares. \
+             Consider using a larger amount.",
+            share_amount, limit_price, step as f64 / 1_000_000.0
+        );
+    }
+
+    // Warn if GCD alignment reduced the share amount (remainder that can't be sold in this order).
+    let actual_shares = maker_amount_raw as f64 / 1_000_000.0;
+    if actual_shares < share_amount - 1e-9 {
+        eprintln!(
+            "[polymarket] Note: share amount adjusted from {:.6} to {:.6} to satisfy \
+             order divisibility constraints. The remaining {:.6} shares cannot be included \
+             in this order.",
+            share_amount, actual_shares, share_amount - actual_shares
+        );
+    }
 
     let salt = rand_salt();
 

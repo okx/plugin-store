@@ -38,7 +38,6 @@ fn format_market(m: &GammaMarket) -> serde_json::Value {
         "question": sanitize_opt_owned(&m.question),
         "condition_id": m.condition_id,
         "slug": sanitize_opt_owned(&m.slug),
-        "category": sanitize_opt_owned(&m.category),
         "end_date": m.end_date,
         "active": m.active,
         "closed": m.closed,

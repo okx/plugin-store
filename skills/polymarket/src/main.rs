@@ -88,7 +88,7 @@ enum Commands {
         post_only: bool,
 
         /// Cancel the order automatically at this Unix timestamp (seconds, UTC).
-        /// Minimum 60 seconds from now. Creates a GTD (Good Till Date) order.
+        /// Minimum 90 seconds from now. Creates a GTD (Good Till Date) order.
         #[arg(long)]
         expires: Option<u64>,
 
@@ -133,7 +133,7 @@ enum Commands {
         post_only: bool,
 
         /// Cancel the order automatically at this Unix timestamp (seconds, UTC).
-        /// Minimum 60 seconds from now. Creates a GTD (Good Till Date) order.
+        /// Minimum 90 seconds from now. Creates a GTD (Good Till Date) order.
         #[arg(long)]
         expires: Option<u64>,
 
