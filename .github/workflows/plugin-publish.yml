@@ -557,13 +557,20 @@ jobs:
 
                   if [ -n "$LATEST_CARGO_VER" ] && [ -n "$LATEST_YAML_VER" ] && [ "$LATEST_CARGO_VER" = "$LATEST_YAML_VER" ] && [ "$LATEST_CARGO_VER" != "$BIN_VERSION" ]; then
                     # Latest main has matching versions but different from what we built.
-                    # This binary is stale. Create issue to notify maintainer.
-                    echo "::error::Binary ${BIN_VERSION} is stale. Latest main has ${LATEST_CARGO_VER}. Creating notification issue."
-                    gh api repos/${{ github.repository }}/issues \
-                      --method POST \
-                      -f title="⚠️ ${NAME}: binary version mismatch — needs rebuild" \
-                      -f body="Phase 5 built \`${NAME}\` binary v${BIN_VERSION} but plugin.yaml requires v${LATEST_YAML_VER}. The binary was compiled from an older commit. Please trigger a rebuild by pushing a change to \`skills/${NAME}/\` or running \`workflow_dispatch\` with \`rebuild_all=true\`." \
-                      -f labels[]="bug" 2>/dev/null || true
+                    # This binary is stale. Auto-trigger rebuild by touching SKILL.md.
+                    echo "::warning::Binary ${BIN_VERSION} is stale. Latest main has ${LATEST_CARGO_VER}. Auto-triggering rebuild..."
+
+                    # Push a trivial change to trigger a new Phase 5 run with latest code
+                    git fetch origin main 2>/dev/null || true
+                    git checkout origin/main -- "skills/${NAME}/SKILL.md" 2>/dev/null || true
+                    echo "" >> "${REPO_ROOT}/skills/${NAME}/SKILL.md"
+                    git -C "$REPO_ROOT" add "skills/${NAME}/SKILL.md"
+                    git -C "$REPO_ROOT" -c user.name="plugin-store-bot" -c user.email="bot@plugin-store.local" \
+                      commit -m "auto: trigger ${NAME} rebuild (binary v${BIN_VERSION} != plugin v${LATEST_YAML_VER})" 2>/dev/null || true
+                    git -C "$REPO_ROOT" push origin HEAD:main 2>/dev/null && \
+                      echo "  Auto-rebuild triggered for ${NAME}" || \
+                      echo "::warning::Auto-rebuild push failed for ${NAME}. Manual rebuild needed."
+
                     cd "$REPO_ROOT"
                     continue
                   fi
