@@ -157,7 +157,17 @@ onchainos wallet addresses --chain 137
 
 Your wallet address is your Polymarket identity — all orders are signed from it, and your positions are attached to it. No Polymarket account or web UI sign-up needed.
 
-### Step 2 — Top up USDC.e on Polygon
+### Step 2 — Verify your region is not restricted
+
+Polymarket is unavailable in certain jurisdictions (including the United States and OFAC-sanctioned regions). Before bridging any funds, confirm you have access:
+
+```bash
+polymarket list-markets --limit 1
+```
+
+If the output includes an `access_warning` field, your IP may be geo-restricted — **do not top up USDC.e** until you have reviewed Polymarket's Terms of Use. If the command returns a list of markets with no warning, you're good to proceed.
+
+### Step 3 — Top up USDC.e on Polygon
 
 Polymarket uses **USDC.e** (bridged USDC) on Polygon as collateral. Check your balance:
 
@@ -171,10 +181,10 @@ Look for `USDC.e` (contract `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`). If yo
 - **From a CEX**: withdraw USDC to your Polygon address via the Polygon network
 - **Minimum suggested**: $5–$10 to cover a small test trade plus gas (Polygon gas is cheap, typically < $0.01 per tx)
 
-### Step 3 — Find a market and place a trade
+### Step 4 — Find a market and place a trade
 
 ```bash
-# Browse active markets (no wallet needed)
+# Browse active markets
 polymarket list-markets --keyword "trump"
 
 # Get details on a specific market
@@ -246,6 +256,8 @@ polymarket list-markets [--limit <N>] [--keyword <text>]
 **Auth required:** No
 
 **Output fields:** `question`, `condition_id`, `slug`, `end_date`, `active`, `accepting_orders`, `neg_risk`, `yes_price`, `no_price`, `yes_token_id`, `no_token_id`, `volume_24hr`, `liquidity`
+
+**Geo-access check:** Every `list-markets` call silently probes the Polymarket CLOB. If the CLOB returns HTTP 403 or 451, an `access_warning` field is added to the output. **If `access_warning` is present, immediately surface it to the user and do not proceed with `buy`, `sell`, or any USDC top-up.** The check fails open — a network error does not add a warning or block the command.
 
 **Example:**
 ```
@@ -674,6 +686,7 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ### v0.2.5 (2026-04-12)
 
+- **feat**: `list-markets` now includes a geo-access check on every call. The Polymarket CLOB is probed silently; if it returns HTTP 403 or 451, an `access_warning` field is added to the output before any markets are shown. Agents must surface this warning immediately and must not proceed with trading or USDC top-up. Fails open — network errors do not block market browsing.
 - **feat**: `redeem --market-id <id>` command — redeems winning outcome tokens after a market resolves by calling `redeemPositions` on the Gnosis CTF contract with `indexSets=[1,2]`. The CTF contract pays out winning tokens and silently no-ops for losing ones, so passing both is safe. `--dry-run` previews the call without submitting. Not supported for `neg_risk: true` markets (use Polymarket web UI).
 - **fix (critical)**: `sell` on `neg_risk: true` markets no longer always fails with "allowance not enough". `approve_ctf` now approves both `NEG_RISK_CTF_EXCHANGE` and `NEG_RISK_ADAPTER` for neg_risk markets, mirroring the `approve_usdc` pattern already used by `buy`.
 - **fix**: `sell` no longer fires a redundant `setApprovalForAll` transaction when CTF tokens are already approved. Approval state is now read via direct on-chain `isApprovedForAll` eth_call to the Polygon RPC before deciding whether to approve.

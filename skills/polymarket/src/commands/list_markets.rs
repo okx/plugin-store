@@ -1,11 +1,16 @@
 use anyhow::Result;
 use reqwest::Client;
 
-use crate::api::{list_gamma_markets, GammaMarket};
+use crate::api::{check_clob_access, list_gamma_markets, GammaMarket};
 use crate::sanitize::sanitize_opt_owned;
 
 pub async fn run(limit: u32, keyword: Option<&str>) -> Result<()> {
     let client = Client::new();
+
+    // Geo-access check: probe the CLOB before showing markets.
+    // Fail-open — a network error does not block browsing.
+    let access_warning = check_clob_access(&client).await;
+
     let markets = list_gamma_markets(&client, limit, 0, keyword).await?;
 
     let output: Vec<serde_json::Value> = markets
@@ -13,12 +18,18 @@ pub async fn run(limit: u32, keyword: Option<&str>) -> Result<()> {
         .map(|m| format_market(m))
         .collect();
 
+    let mut data = serde_json::json!({
+        "count": output.len(),
+        "markets": output
+    });
+
+    if let Some(warning) = access_warning {
+        data["access_warning"] = serde_json::Value::String(warning);
+    }
+
     let result = serde_json::json!({
         "ok": true,
-        "data": {
-            "count": output.len(),
-            "markets": output
-        }
+        "data": data
     });
     println!("{}", serde_json::to_string_pretty(&result)?);
     Ok(())

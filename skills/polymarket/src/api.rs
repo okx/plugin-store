@@ -278,6 +278,48 @@ impl BalanceAllowance {
 
 // ─── CLOB API calls ───────────────────────────────────────────────────────────
 
+/// Check whether the CLOB API is reachable and not geo-restricted.
+///
+/// Returns Ok(None) if access is confirmed, Ok(Some(warning)) if restricted,
+/// or Ok(Some(warning)) on unexpected responses. Fails open on network errors
+/// (a transient failure should not block market browsing).
+pub async fn check_clob_access(client: &Client) -> Option<String> {
+    let url = format!("{}/markets?limit=1", Urls::CLOB);
+    let resp = match client.get(&url).send().await {
+        Ok(r) => r,
+        // Network failure — don't block the command
+        Err(_) => return None,
+    };
+
+    let status = resp.status();
+
+    // HTTP 403 (Cloudflare geo-block) or 451 (legally unavailable)
+    if status == reqwest::StatusCode::FORBIDDEN || status.as_u16() == 451 {
+        return Some(format!(
+            "Polymarket CLOB returned HTTP {} — your region may be restricted. \
+             Review Polymarket's Terms of Use before topping up USDC.e.",
+            status.as_u16()
+        ));
+    }
+
+    // Any other non-200 with an HTML body → likely a Cloudflare block page
+    if !status.is_success() {
+        let ct = resp.headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        if ct.contains("text/html") {
+            return Some(format!(
+                "Polymarket CLOB returned HTTP {} (HTML) — your region may be restricted. \
+                 Review Polymarket's Terms of Use before topping up USDC.e.",
+                status.as_u16()
+            ));
+        }
+    }
+
+    None
+}
+
 pub async fn get_clob_market(client: &Client, condition_id: &str) -> Result<ClobMarket> {
     let url = format!("{}/markets/{}", Urls::CLOB, condition_id);
     client.get(&url)
