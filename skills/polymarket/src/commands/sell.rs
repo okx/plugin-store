@@ -8,6 +8,7 @@ use crate::api::{
 };
 use crate::auth::ensure_credentials;
 use crate::onchainos::{approve_ctf, get_wallet_address, is_ctf_approved_for_all};
+use crate::series;
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 use super::buy::resolve_market_token;
@@ -57,6 +58,15 @@ pub async fn run(
     let client = Client::new();
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
+
+    // Resolve series ID to current slot slug if needed (e.g. "btc-5m" → "btc-updown-5m-{ts}")
+    let resolved_market_id;
+    let market_id = if series::is_series_id(market_id) {
+        resolved_market_id = series::resolve_to_slug(&client, market_id).await?;
+        &resolved_market_id as &str
+    } else {
+        market_id
+    };
 
     let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
 

@@ -4,6 +4,7 @@ mod commands;
 mod config;
 mod onchainos;
 mod sanitize;
+mod series;
 mod signing;
 
 use clap::{Parser, Subcommand};
@@ -156,6 +157,17 @@ enum Commands {
         dry_run: bool,
     },
 
+    /// Get current and next slot for a recurring series market (e.g. btc-5m, eth-5m)
+    GetSeries {
+        /// Series ID: btc-5m, eth-5m, sol-5m, xrp-5m (or just btc, eth, sol, xrp)
+        #[arg(long)]
+        series: Option<String>,
+
+        /// List all supported series and exit
+        #[arg(long)]
+        list: bool,
+    },
+
     /// Cancel a single open order by order ID (signs via onchainos wallet)
     Cancel {
         /// Order ID (0x-prefixed hash). Omit to cancel all orders.
@@ -217,6 +229,9 @@ async fn main() {
             confirm: _confirm,
         } => {
             commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires).await
+        }
+        Commands::GetSeries { series, list } => {
+            commands::get_series::run(series.as_deref(), list).await
         }
         Commands::Redeem { market_id, dry_run } => {
             commands::redeem::run(&market_id, dry_run).await

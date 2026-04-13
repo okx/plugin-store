@@ -1,7 +1,7 @@
 ---
 name: polymarket
-description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on."
-version: "0.2.6"
+description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, bitcoin up or down, btc 5 min, crypto series market, bet on btc price, eth up down."
+version: "0.2.7"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -48,7 +48,7 @@ if ! command -v polymarket >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.6/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.7/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
   chmod +x ~/.local/bin/polymarket${EXT}
 fi
 ```
@@ -67,7 +67,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket","version":"0.2.6"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket","version":"0.2.7"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"polymarket","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -230,7 +230,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket --version
 ```
 
-Expected: `polymarket 0.2.6`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket 0.2.7`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -570,6 +570,52 @@ polymarket redeem --market-id <condition_id_or_slug> --dry-run
 
 **Output fields on success:** `condition_id`, `question`, `tx_hash`, `note`
 
+---
+
+### `get-series` — Series Markets (Recurring Short-Duration)
+
+Polymarket runs recurring **Up or Down** markets on crypto assets during NYSE trading hours
+(9:30 AM – 4:00 PM ET, Monday–Friday). Each market covers a 5-minute window and resolves
+based on whether the asset price moved up or down during that window.
+
+Supported series: `btc-5m`, `eth-5m`, `sol-5m`, `xrp-5m`
+
+**Slug pattern:** `{asset}-updown-5m-{unix_start_timestamp_utc}`
+
+```
+polymarket get-series --series btc-5m      # Current + next BTC 5-min slot
+polymarket get-series --series eth-5m      # Ethereum 5-min
+polymarket get-series --list               # Show all supported series
+```
+
+**Output fields:** `series`, `asset`, `session` (in/out of trading hours), `current_slot` (slug, condition_id, outcomes with token_ids/prices, seconds_remaining, liquidity), `next_slot`, `tip` (ready-to-use buy command)
+
+**Trading on a series (two ways):**
+
+*Option A — use the series ID directly (recommended):*
+```
+polymarket buy --market-id btc-5m --outcome up --amount 50
+polymarket buy --market-id btc-5m --outcome down --amount 50
+```
+The binary auto-resolves `btc-5m` to the current accepting slot at execution time.
+If the market is closed or outside trading hours, the command fails with a clear message.
+
+*Option B — resolve first, then trade:*
+```
+polymarket get-series --series btc-5m      # note the slug in current_slot.tip
+polymarket buy --market-id btc-updown-5m-<ts> --outcome up --amount 50
+```
+
+**When to use which:**
+- Option A is faster for single trades — one command, auto-resolves the slot
+- Option B is better when you want to inspect price/liquidity before committing
+- For repeated trades on consecutive slots, use Option A each time — it always resolves the current open slot
+
+**Outcomes:** `up` (price went higher) and `down` (price went lower) in the 5-minute window.
+Both are valid `--outcome` values for `buy` and `sell`.
+
+**Outside trading hours:** `buy --market-id btc-5m` fails with a message showing when the next session opens. Check with `get-series --series btc-5m` to see session status before placing orders.
+
 **Agent flow:**
 1. Resolve `--market-id` to a condition_id and check `neg_risk` (auto from market lookup)
 2. Offer `--dry-run` first to show the user what will happen
@@ -721,6 +767,10 @@ User wants to trade:
 | Cancel all orders for market | `polymarket cancel --market <condition_id>` |
 | Cancel all open orders | `polymarket cancel --all` |
 | Redeem winning tokens after market resolves | `polymarket redeem --market-id <slug_or_condition_id>` |
+| View current BTC/ETH/SOL/XRP 5-min slot | `polymarket get-series --series btc-5m` |
+| List all supported series | `polymarket get-series --list` |
+| Trade current BTC 5-min slot (up) | `polymarket buy --market-id btc-5m --outcome up --amount <usdc>` |
+| Trade current ETH 5-min slot (down) | `polymarket buy --market-id eth-5m --outcome down --amount <usdc>` |
 
 ---
 
@@ -751,4 +801,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.6** (2026-04-12).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.7** (2026-04-12).

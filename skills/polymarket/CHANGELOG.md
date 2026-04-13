@@ -1,5 +1,12 @@
 # Polymarket Plugin Changelog
 
+### v0.2.7 (2026-04-12)
+
+- **feat**: Series trading support for Polymarket's recurring 5-minute "Up or Down" crypto markets. Series markets run on BTC, ETH, SOL, and XRP during NYSE trading hours (9:30 AM–4:00 PM ET, Mon–Fri). Use `buy --market-id btc-5m` (or `eth`, `sol`, `xrp`) instead of a full slug — the plugin auto-resolves to the current accepting slot at trade time.
+- **feat**: `get-series [btc-5m|eth-5m|sol-5m|xrp-5m]` command — shows the current and next slot with prices, token IDs, seconds remaining, liquidity, and a ready-to-run buy hint. `--list` enumerates all supported series.
+- **feat**: DST-aware NYSE trading hours check. Outside trading hours, `buy`/`sell`/`get-series` report the exact series name and the time until the next session opens instead of a cryptic lookup failure.
+- **feat**: Slot transition gap handling — when the current slot closes and the next has not yet opened, the plugin tries the next slot automatically (± one interval) before failing, avoiding spurious "no market found" errors at the 5-minute boundary.
+
 ### v0.2.6 (2026-04-12)
 
 - **fix (critical) [C1]**: `buy` on `neg_risk: true` markets no longer approves the wrong contract. Root cause: `get_gamma_market_by_slug` omits `negRisk` for many markets, causing the field to default to `false` and `approve_usdc` to target `CTF_EXCHANGE` instead of `NEG_RISK_CTF_EXCHANGE`. Fix: `resolve_market_token` now fetches the CLOB market by `condition_id` after the Gamma lookup to get the authoritative `neg_risk`. Falls back to the Gamma value if the CLOB is unreachable. Same fix applied in `redeem`.
