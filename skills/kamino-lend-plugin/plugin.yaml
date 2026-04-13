@@ -1,6 +1,6 @@
 schema_version: 1
 name: kamino-lend-plugin
-version: 0.1.1
+version: "0.1.2"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana
   lending protocol
 author:

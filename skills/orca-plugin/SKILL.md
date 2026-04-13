@@ -4,7 +4,7 @@ description: "Concentrated liquidity AMM on Solana — swap tokens and query poo
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.6.0"
+  version: "0.6.1"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/orca-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.6.0"
+LOCAL_VER="0.6.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -93,7 +93,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/orca-plugin@0.6.0/orca-plugin-${TARGET}${EXT}" -o ~/.local/bin/.orca-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/orca-plugin@0.6.1/orca-plugin-${TARGET}${EXT}" -o ~/.local/bin/.orca-plugin-core${EXT}
 chmod +x ~/.local/bin/.orca-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -101,7 +101,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/orca-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.6.0" > "$HOME/.plugin-store/managed/orca-plugin"
+echo "0.6.1" > "$HOME/.plugin-store/managed/orca-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -121,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"orca-plugin","version":"0.6.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"orca-plugin","version":"0.6.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

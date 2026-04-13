@@ -1,6 +1,6 @@
 schema_version: 1
 name: compound-v3-plugin
-version: "0.2.1"
+version: "0.2.2"
 description: "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards"
 author:
   name: skylavis-sky

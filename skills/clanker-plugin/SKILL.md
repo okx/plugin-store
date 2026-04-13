@@ -1,7 +1,7 @@
 ---
 name: clanker
 description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum. Trigger phrases: deploy token, launch token on Clanker, create token on Base, search Clanker tokens, list latest tokens, claim LP rewards, claim Clanker fees."
-version: "0.2.1"
+version: "0.2.2"
 author: "GeoGu360"
 tags:
   - token-launch
@@ -16,6 +16,40 @@ tags:
 
 > Run once per session before first use. These checks ensure required tools are installed.
 
+### Version check (auto-injected)
+
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. If an update is applied, re-read this SKILL.md before proceeding — the instructions may have changed.
+
+```bash
+# Check for skill updates (1-hour cache)
+UPDATE_CACHE="$HOME/.plugin-store/update-cache/clanker-plugin"
+CACHE_MAX=3600
+LOCAL_VER="0.2.2"
+DO_CHECK=true
+
+if [ -f "$UPDATE_CACHE" ]; then
+  CACHE_MOD=$(stat -f %m "$UPDATE_CACHE" 2>/dev/null || stat -c %Y "$UPDATE_CACHE" 2>/dev/null || echo 0)
+  NOW=$(date +%s)
+  AGE=$(( NOW - CACHE_MOD ))
+  [ "$AGE" -lt "$CACHE_MAX" ] && DO_CHECK=false
+fi
+
+if [ "$DO_CHECK" = true ]; then
+  REMOTE_VER=$(curl -sf --max-time 3 "https://raw.githubusercontent.com/okx/plugin-store/main/skills/clanker-plugin/plugin.yaml" | grep '^version' | head -1 | tr -d '"' | awk '{print $2}')
+  if [ -n "$REMOTE_VER" ]; then
+    mkdir -p "$HOME/.plugin-store/update-cache"
+    echo "$REMOTE_VER" > "$UPDATE_CACHE"
+  fi
+fi
+
+REMOTE_VER=$(cat "$UPDATE_CACHE" 2>/dev/null || echo "$LOCAL_VER")
+if [ "$REMOTE_VER" != "$LOCAL_VER" ]; then
+  echo "Update available: clanker-plugin v$LOCAL_VER -> v$REMOTE_VER. Updating..."
+  npx skills add okx/plugin-store --skill clanker-plugin --yes --global 2>/dev/null || true
+  echo "Updated clanker-plugin to v$REMOTE_VER. Please re-read this SKILL.md."
+fi
+```
+
 ### Install onchainos CLI + Skills (auto-injected)
 
 ```bash
@@ -29,55 +63,49 @@ npx skills add okx/onchainos-skills --yes --global
 npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
-### Install clanker-plugin binary + update wrapper (auto-injected)
+### Install clanker-plugin binary + launcher (auto-injected)
 
 ```bash
-# Install update checker (shared by all plugins, only once)
+# Install shared infrastructure (launcher + update checker, only once)
+LAUNCHER="$HOME/.plugin-store/launcher.sh"
 CHECKER="$HOME/.plugin-store/update-checker.py"
-if [ ! -f "$CHECKER" ]; then
+if [ ! -f "$LAUNCHER" ]; then
   mkdir -p "$HOME/.plugin-store"
+  curl -fsSL "https://raw.githubusercontent.com/okx/plugin-store/main/scripts/launcher.sh" -o "$LAUNCHER" 2>/dev/null || true
+  chmod +x "$LAUNCHER"
+fi
+if [ ! -f "$CHECKER" ]; then
   curl -fsSL "https://raw.githubusercontent.com/okx/plugin-store/main/scripts/update-checker.py" -o "$CHECKER" 2>/dev/null || true
 fi
 
-# Clean up old installation (direct binary without wrapper)
+# Clean up old installation
 rm -f "$HOME/.local/bin/clanker-plugin" "$HOME/.local/bin/.clanker-plugin-core" 2>/dev/null
 
-# Download binary to hidden name (.clanker-plugin-core)
+# Download binary
 OS=$(uname -s | tr A-Z a-z)
-  ARCH=$(uname -m)
-  EXT=""
-  case "${OS}_${ARCH}" in
-    darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
-    darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
-    linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
-    linux_i686)    TARGET="i686-unknown-linux-gnu" ;;
-    linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
-    linux_armv7l)  TARGET="armv7-unknown-linux-gnueabihf" ;;
-    mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
-  esac
-  mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/clanker-plugin@0.2.1/clanker-plugin-${TARGET}${EXT}" -o ~/.local/bin/.clanker-plugin-core${EXT}
-  chmod +x ~/.local/bin/.clanker-plugin-core${EXT}
+ARCH=$(uname -m)
+EXT=""
+case "${OS}_${ARCH}" in
+  darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
+  darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
+  linux_x86_64)  TARGET="x86_64-unknown-linux-musl" ;;
+  linux_i686)    TARGET="i686-unknown-linux-musl" ;;
+  linux_aarch64) TARGET="aarch64-unknown-linux-musl" ;;
+  linux_armv7l)  TARGET="armv7-unknown-linux-musleabihf" ;;
+  mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
+  mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
+  mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
+esac
+mkdir -p ~/.local/bin
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/clanker-plugin@0.2.2/clanker-plugin-${TARGET}${EXT}" -o ~/.local/bin/.clanker-plugin-core${EXT}
+chmod +x ~/.local/bin/.clanker-plugin-core${EXT}
 
-# Generate wrapper script (version check + exec core binary)
-cat > ~/.local/bin/clanker-plugin << 'WRAPPER_EOF'
-#!/bin/sh
-PLUGIN_NAME="clanker-plugin"
-PLUGIN_VERSION="0.2.1"
-CHECKER="$HOME/.plugin-store/update-checker.py"
-CORE="$(dirname "$0")/.clanker-plugin-core"
-if [ -f "$CHECKER" ]; then
-  if command -v python3 >/dev/null 2>&1; then
-    python3 "$CHECKER" "$PLUGIN_NAME" "$PLUGIN_VERSION"
-  elif command -v python >/dev/null 2>&1; then
-    python "$CHECKER" "$PLUGIN_NAME" "$PLUGIN_VERSION"
-  fi
-fi
-exec "$CORE" "$@"
-WRAPPER_EOF
-chmod +x ~/.local/bin/clanker-plugin
+# Symlink CLI name to universal launcher
+ln -sf "$LAUNCHER" ~/.local/bin/clanker-plugin
+
+# Register version
+mkdir -p "$HOME/.plugin-store/managed"
+echo "0.2.2" > "$HOME/.plugin-store/managed/clanker-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -97,7 +125,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"clanker-plugin","version":"0.2.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"clanker-plugin","version":"0.2.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
