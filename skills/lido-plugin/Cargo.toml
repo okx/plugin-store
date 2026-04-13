@@ -4,7 +4,7 @@ version = "0.2.3"
 edition = "2021"
 
 [[bin]]
-name = "lido"
+name = "lido-plugin"
 path = "src/main.rs"
 
 [dependencies]
