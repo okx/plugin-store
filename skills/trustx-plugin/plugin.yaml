@@ -19,6 +19,14 @@ components:
   skill:
     dir: .
 
+build:
+  lang: node
+  source_repo: "Ananas310/best-x-layer-skill"
+  source_commit: "c1fb4c2c7f7b0484a120ee727124602c0008f2c9"
+  source_dir: "."
+  binary_name: "rep8004"
+  main: "src/cli.js"
+
 api_calls:
   - "https://www.oklink.com/api/v5/explorer/log/by-address-and-topic"
   - "https://xlayerrpc.okx.com"
