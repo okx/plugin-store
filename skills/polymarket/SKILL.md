@@ -1,6 +1,6 @@
 ---
 name: polymarket
-description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, bitcoin up or down, btc 5 min, crypto series market, bet on btc price, eth up down, quick btc trade, quick bitcoin bet, quick eth trade, quick ethereum bet, quick sol trade, quick xrp bet, bitcoin going up, btc going down, is bitcoin going up or down, will btc go up, will eth go up or down, will sol go up, trade btc direction, trade eth direction, trade crypto direction, short term bitcoin trade, short term eth trade, intraday bitcoin bet, 5 minute bitcoin market, 5 minute crypto market, 5 minute eth market, 5 minute sol market, 5 minute xrp market, next 5 minutes bitcoin, next 5 minutes ethereum, bet on bitcoin in next few minutes, trade bitcoin price direction, updown market, up down market, crypto price direction bet, bet on price movement, 5m eth, 5m btc, 5m sol, 5m xrp, eth 5m, btc 5m, sol 5m, xrp 5m, 5m market, 5m trade, 5m bet, 5m candle, 5 minute candle, trade the 5m, play the 5m, 5m ethereum, 5m bitcoin, 5m solana, ethereum 5m, bitcoin 5m, solana 5m, eth 5 minute, btc 5 minute, 5m eth market, 5m btc market, eth 5 min market, btc 5 min market, give me the 5m, eth updown, btc updown, sol updown, xrp updown, short eth, long eth, short btc, long btc, eth short term, btc short term, crypto 5m, 5min eth, 5min btc, 5min sol, 5min xrp."
+description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, <token> up or down, <token> 5m, 5m <token>, <token> 5 min, 5 minute <token> market, <token> 5 minute market, 5m <token> market, <token> 5-minute, 5min <token>, <token> 5min, trade the 5m <token>, play the 5m on <token>, give me the 5m <token>, <token> updown, quick <token> trade, quick <token> bet, <token> going up, <token> going down, is <token> going up or down, will <token> go up, will <token> go up or down, trade <token> direction, short term <token> trade, intraday <token> bet, next 5 minutes <token>, bet on <token> in next few minutes, short <token>, long <token>, <token> short term, crypto series market, 5m market, 5m trade, 5m bet, 5m candle, 5 minute candle, trade the 5m, play the 5m, updown market, up down market, crypto price direction bet, bet on price movement, crypto 5m."
 version: "0.2.8"
 author: "skylavis-sky"
 tags:
@@ -677,33 +677,32 @@ User wants to trade a series (BTC/ETH/SOL/XRP up/down):
 
 Route to series trading when the user's message combines a **supported crypto asset** with a **short time horizon or directional framing**:
 
-| Signal type | Keywords / patterns |
-|-------------|---------------------|
-| Asset | bitcoin, btc, ethereum, eth, solana, sol, xrp, ripple |
+| Signal type | Pattern |
+|-------------|---------|
+| Asset (`<token>`) | bitcoin, btc, ethereum, eth, solana, sol, xrp, ripple — any of these fills `<token>` |
 | Abbreviated time | 5m, 5min, 5-min, 5 min, 5 minute(s) |
-| Trader shorthand | `5m ETH`, `ETH 5m`, `5m BTC`, `BTC 5m`, `5m SOL`, `SOL 5m`, `5m XRP`, `XRP 5m` |
+| Trader shorthand | `5m <token>`, `<token> 5m`, `<token> 5min`, `5min <token>` |
 | Direction framing | up or down, updown, up/down, price direction, higher or lower, going up, going down |
 | Speed signals | quick trade, quick bet, short term, intraday, next few minutes, next candle, trade the 5m, play the 5m |
 
-**Phrases that map to series trading:**
-- "5m ETH market" / "ETH 5m" / "5m BTC"
-- "trade the 5m on ETH"
-- "give me the BTC 5m"
-- "5min SOL market"
-- "bet on bitcoin going up in the next 5 minutes"
-- "quick BTC trade" / "quick ETH bet"
-- "will ETH go up or down right now?"
-- "short term SOL trade"
-- "ETH updown" / "BTC updown"
-- "is BTC going up or down?"
-- "play the 5-minute candle on ETH"
+**Phrases that map to series trading** (`<token>` = btc / eth / sol / xrp or full names):
+- "5m `<token>` market" / "`<token>` 5m" / "5m `<token>`"
+- "trade the 5m on `<token>`" / "play the 5m `<token>`"
+- "give me the `<token>` 5m"
+- "5min `<token>` market"
+- "bet on `<token>` going up in the next 5 minutes"
+- "quick `<token>` trade" / "quick `<token>` bet"
+- "will `<token>` go up or down right now?"
+- "`<token>` updown" / "`<token>` up or down"
+- "is `<token>` going up or down?"
+- "play the 5-minute candle on `<token>`"
 
 **Disambiguation from regular markets:**
 
 | User phrase | Route |
 |-------------|-------|
-| "5m ETH" / "ETH 5m" / "5m BTC" / "BTC 5m" | Series — `buy --market-id eth-5m` (or btc-5m) |
-| "5min SOL market" / "trade the 5m on XRP" | Series — route to matching series |
+| "`<token>` 5m" / "5m `<token>`" / "`<token>` 5min" / "5min `<token>`" | Series — `buy --market-id <token>-5m` |
+| "trade the 5m on `<token>`" / "`<token>` updown" | Series — route to matching series |
 | "Bet on ETH price direction right now" | Series — `buy --market-id eth-5m` |
 | "Will BTC hit 100k?" | Regular market — `list-markets --keyword bitcoin` |
 | "BTC prediction market" (no time frame, no direction) | Regular market — `list-markets` first |
