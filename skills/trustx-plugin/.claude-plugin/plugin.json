@@ -1,0 +1,10 @@
+{
+  "name": "trustx-plugin",
+  "description": "ERC-8004 reputation scoring and trust-policy gating for X Layer agents",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alanas"
+  },
+  "license": "MIT",
+  "keywords": ["xlayer", "erc-8004", "reputation", "trust", "risk", "agent"]
+}
