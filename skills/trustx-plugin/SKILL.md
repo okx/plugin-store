@@ -36,20 +36,29 @@ If credentials are missing, TrustX can still run in RPC mode with lower signal c
 
 ## Install / Run
 
+Primary (plugin install path):
+
+```bash
+npx skills add okx/plugin-store --skill trustx-plugin
+```
+
+Then run the installed command:
+
+```bash
+rep8004 --agent 1 --pretty
+```
+
+Source fallback (for local development/debug):
+
 ```bash
 git clone https://github.com/Ananas310/best-x-layer-skill.git
 cd best-x-layer-skill
 npm install
 npm test
-```
-
-Quick trust check:
-
-```bash
 node src/cli.js --agent 1 --pretty
 ```
 
-Strict live check:
+Strict live check (source repo flow):
 
 ```bash
 npm run smoke:live:strict
