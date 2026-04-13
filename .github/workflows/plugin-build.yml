@@ -25,6 +25,10 @@ on:
       - 'skills/**'
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ═══════════════════════════════════════════════════════════════
   #  Security Gate — block fork PRs that modify .github/
