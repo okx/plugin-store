@@ -138,9 +138,9 @@ pip install httpx base58 solders
 │  STEP 2: SOCIAL LINKS (Optional)                                     │
 │                                                                      │
 │  ┌──────────────┬───────────────────────────────────────────────┐    │
-│  │ Website      │  https://dogwifhat.com           [Optional]   │    │
-│  │ Twitter / X  │  https://x.com/dogwifhat         [Optional]   │    │
-│  │ Telegram     │  https://t.me/dogwifhat          [Optional]   │    │
+│  │ Website      │  https://example.com           [Optional]   │    │
+│  │ Twitter / X  │  https://x.com/example         [Optional]   │    │
+│  │ Telegram     │  https://t.me/example          [Optional]   │    │
 │  └──────────────┴───────────────────────────────────────────────┘    │
 └────────────────────────────┬─────────────────────────────────────────┘
                              │
@@ -232,9 +232,9 @@ pip install httpx base58 solders
 │  │ Ticker         │ WIF                                          │   │
 │  │ Description    │ The dog with the hat                         │   │
 │  │ Image          │ wif.png (420x420, 85KB)                      │   │
-│  │ Website        │ https://dogwifhat.com                        │   │
-│  │ Twitter        │ https://x.com/dogwifhat                      │   │
-│  │ Telegram       │ https://t.me/dogwifhat                       │   │
+│  │ Website        │ https://example.com                        │   │
+│  │ Twitter        │ https://x.com/example                      │   │
+│  │ Telegram       │ https://t.me/example                       │   │
 │  │ ─────────────  │ ──────────────────────────                   │   │
 │  │ Wallet         │ 2HNq...ErwW (1.23 SOL)                      │   │
 │  │ Initial Buy    │ 0.5 SOL                                      │   │
@@ -262,9 +262,9 @@ pip install httpx base58 solders
 │        "symbol": "WIF",                                              │
 │        "description": "The dog with the hat",                        │
 │        "image": "ipfs://QmXxx...",                                   │
-│        "twitter": "https://x.com/dogwifhat",                        │
-│        "telegram": "https://t.me/dogwifhat",                        │
-│        "website": "https://dogwifhat.com"                            │
+│        "twitter": "https://x.com/example",                        │
+│        "telegram": "https://t.me/example",                        │
+│        "website": "https://example.com"                            │
 │      }                                                               │
 │      → ipfs://QmYyy... (metadata URI)                               │
 │                                                                      │
@@ -273,8 +273,8 @@ pip install httpx base58 solders
 │      Bags      → SDK createLaunchTransaction()                       │
 │      Moonit    → SDK prepareMintTx()                                 │
 │      LetsBonk  → REST API                                            │
-│      Four.Meme → onchainos wallet contract-call                      │
-│      Flap      → onchainos wallet contract-call (newTokenV6)         │
+│      Four.Meme → onchainos wallet contract-call (user confirms first) │
+│      Flap      → onchainos wallet contract-call (user confirms first) │
 │                                                                      │
 │  7d. If buyAmount > 0:                                               │
 │      • Bundle: [CreateToken IX, Buy IX] → Jito bundle (SOL)         │
@@ -573,11 +573,14 @@ POST /api/trade-local
 
 **Method**: Direct contract interaction via `onchainos wallet contract-call`
 
+**IMPORTANT**: The agent MUST display all transaction parameters and receive explicit user confirmation (typing "confirm") BEFORE executing any contract call. Never auto-execute.
+
 **Flow**:
 1. Upload image to IPFS (pump.fun free endpoint, Pinata fallback)
 2. Create metadata (description, image CID, socials)
-3. Call Four.Meme factory contract: `createToken(name, symbol, metadataURI, ...)`
-4. Include `msg.value` for initial buy (if buyAmount > 0)
+3. Display full transaction summary and wait for user to type "confirm"
+4. Call Four.Meme factory contract: `createToken(name, symbol, metadataURI, ...)`
+5. Include `msg.value` for initial buy (if buyAmount > 0)
 
 **Notes**:
 - Image upload handled by Four.Meme platform internally (if using their web UI)
@@ -590,6 +593,8 @@ POST /api/trade-local
 ### Flap.sh (BSC)
 
 **Method**: Direct contract interaction via `onchainos wallet contract-call`
+
+**IMPORTANT**: The agent MUST display all transaction parameters and receive explicit user confirmation (typing "confirm") BEFORE executing any contract call. Never auto-execute.
 
 **Portal Contract**: `0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0` (BNB Mainnet)
 
