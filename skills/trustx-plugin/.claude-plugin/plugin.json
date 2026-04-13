@@ -3,8 +3,11 @@
   "description": "ERC-8004 reputation scoring and trust-policy gating for X Layer agents",
   "version": "1.0.0",
   "author": {
-    "name": "Alanas"
+    "name": "Alanas",
+    "email": "ananas@users.noreply.github.com"
   },
+  "homepage": "https://github.com/Ananas310/best-x-layer-skill",
+  "repository": "https://github.com/Ananas310/best-x-layer-skill",
   "license": "MIT",
   "keywords": ["xlayer", "erc-8004", "reputation", "trust", "risk", "agent"]
 }
