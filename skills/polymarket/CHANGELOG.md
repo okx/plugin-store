@@ -1,19 +1,14 @@
 # Polymarket Plugin Changelog
 
-### v0.2.8 (2026-04-13)
+### v0.2.7 (2026-04-13)
 
-- **perf**: Deduplicated CLOB market fee call — `resolve_market_token` now extracts `maker_base_fee` from the `ClobMarket` it already fetches for `neg_risk` resolution, eliminating a second `GET /markets/{condition_id}` round trip. Saves ~150ms unconditionally.
-- **perf**: Eliminated separate `get_tick_size` call — the order book response (`GET /book?token_id=X`) already contains the `tick_size` field. The plugin now reads it from there, removing one CLOB round trip. Saves ~100ms unconditionally.
-- **perf**: Eliminated double Gamma API fetch for series markets — previously `resolve_to_slug` fetched the `GammaMarket` then `resolve_market_token` fetched the same slug again. The series path now calls `resolve_to_market` (returns the already-fetched `GammaMarket`) and passes it directly to `resolve_from_gamma`. Saves ~200ms on all series trades.
-- **perf**: Parallelized order book fetch + wallet address subprocess — for live (non-dry-run) orders, `get_orderbook` and `get_wallet_address` now run concurrently via `tokio::join!`. Saves ~100-200ms on the live hot path. Dry-run behavior is unchanged (wallet is never called during dry-run).
-- **feat**: `buy --token-id <id>` and `sell --token-id <id>` fast path — when the outcome token ID is known (from prior `get-series` or `get-market` output), all Gamma and CLOB market resolution is skipped. A single `GET /book?token_id=X` provides `condition_id`, `neg_risk`, and `tick_size`; only `get_market_fee` is additionally called. Combined with `--price`, this is the fastest possible trade path: ~0.5s binary execution vs ~1.5s baseline. Intended use: run `get-series btc-5m` once per slot to cache token IDs, then use `--token-id` for all buys within that slot.
-
-### v0.2.7 (2026-04-12)
-
-- **feat**: Series trading support for Polymarket's recurring 5-minute "Up or Down" crypto markets. Series markets run on BTC, ETH, SOL, and XRP during NYSE trading hours (9:30 AM–4:00 PM ET, Mon–Fri). Use `buy --market-id btc-5m` (or `eth`, `sol`, `xrp`) instead of a full slug — the plugin auto-resolves to the current accepting slot at trade time.
-- **feat**: `get-series [btc-5m|eth-5m|sol-5m|xrp-5m]` command — shows the current and next slot with prices, token IDs, seconds remaining, liquidity, and a ready-to-run buy hint. `--list` enumerates all supported series.
-- **feat**: DST-aware NYSE trading hours check. Outside trading hours, `buy`/`sell`/`get-series` report the exact series name and the time until the next session opens instead of a cryptic lookup failure.
-- **feat**: Slot transition gap handling — when the current slot closes and the next has not yet opened, the plugin tries the next slot automatically (± one interval) before failing, avoiding spurious "no market found" errors at the 5-minute boundary.
+- **feat**: Series trading for recurring "Up or Down" crypto markets. Supports 5-minute (NYSE hours), 15-minute (NYSE hours), and 4-hour (24/7) slots for BTC, ETH, SOL, and XRP. Use `buy --market-id btc-5m`, `btc-15m`, or `btc-4h` — the plugin auto-resolves to the current accepting slot at trade time.
+- **feat**: `get-series` command — shows the current and next slot with prices, token IDs, seconds remaining, liquidity, and a ready-to-run buy hint. `--list` enumerates all 12 supported series (4 assets × 3 intervals).
+- **feat**: DST-aware NYSE trading hours check. For 5m and 15m series, reports time until next session when called outside hours. 4h series runs 24/7 and bypasses the hours check.
+- **feat**: Slot transition gap handling — at the 5/15-minute boundary, tries the next slot automatically before failing.
+- **perf**: Eliminated 3 redundant HTTP calls on the buy/sell hot path: deduplicated CLOB fee fetch (~150ms), eliminated separate tick-size call by reading it from the order book response (~100ms), and avoided double Gamma fetch on series markets (~200ms).
+- **perf**: Parallelized order book fetch + wallet address subprocess via `tokio::join!` for live orders (~100-200ms saved). Dry-run still works without a configured wallet.
+- **feat**: `buy --token-id <id>` / `sell --token-id <id>` fast path — skips all market resolution when the token ID is known from a prior `get-series` call. Only 2 HTTP calls (book + fee) vs 5-6 normally. Target: ~0.5s binary execution. Token IDs change each slot so re-run `get-series` at each new slot.
 
 ### v0.2.6 (2026-04-12)
 

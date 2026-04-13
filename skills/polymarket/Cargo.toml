@@ -1,6 +1,6 @@
 [package]
 name = "polymarket"
-version = "0.2.8"
+version = "0.2.7"
 edition = "2021"
 
 [[bin]]

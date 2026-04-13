@@ -1,13 +1,21 @@
 /// Series market resolution for recurring short-duration markets.
 ///
-/// Polymarket runs "Up or Down" series markets on crypto assets during NYSE trading
-/// hours (9:30 AM – 4:00 PM ET, Monday–Friday). Each slot is a 5-minute window.
+/// Polymarket runs recurring "Up or Down" series markets on crypto assets:
 ///
-/// Slug pattern: `{asset}-updown-5m-{unix_start_timestamp_utc}`
-/// Example: `btc-updown-5m-1776054300` → Bitcoin slot starting at Unix 1776054300
+/// 5-minute slots  — NYSE trading hours only (9:30 AM – 4:00 PM ET, Mon–Fri)
+///   Slug: `{asset}-updown-5m-{unix_start_utc}`
+///   IDs:  btc-5m, eth-5m, sol-5m, xrp-5m
 ///
-/// Supported series IDs: btc-5m, eth-5m, sol-5m, xrp-5m
-/// Aliases accepted: "btc", "bitcoin", "eth", "ethereum", "sol", "solana", "xrp"
+/// 15-minute slots — NYSE trading hours only
+///   Slug: `{asset}-updown-15m-{unix_start_utc}`
+///   IDs:  btc-15m, eth-15m, sol-15m, xrp-15m
+///
+/// 4-hour slots    — runs 24/7 (6 slots per day, every 4 hours)
+///   Slug: `{asset}-updown-4h-{unix_start_utc}`
+///   IDs:  btc-4h, eth-4h, sol-4h, xrp-4h
+///
+/// Aliases accepted: "btc"/"bitcoin", "eth"/"ethereum", "sol"/"solana", "xrp"
+/// plus interval suffixes: "btc-5m", "btc-15m", "btc-4h", etc.
 use anyhow::{bail, Result};
 use reqwest::Client;
 
@@ -16,29 +24,43 @@ use crate::api::GammaMarket;
 // ─── Series registry ──────────────────────────────────────────────────────────
 
 pub struct SeriesSpec {
-    pub id: &'static str,       // canonical ID, e.g. "btc-5m"
-    pub asset: &'static str,    // slug prefix, e.g. "btc"
-    pub display: &'static str,  // human name, e.g. "Bitcoin"
-    pub interval_secs: u64,     // window length in seconds
-    pub interval_label: &'static str, // e.g. "5m"
+    pub id: &'static str,              // canonical ID, e.g. "btc-5m"
+    pub asset: &'static str,           // slug prefix, e.g. "btc"
+    pub display: &'static str,         // human name, e.g. "Bitcoin"
+    pub interval_secs: u64,            // window length in seconds
+    pub interval_label: &'static str,  // e.g. "5m", "15m", "4h"
+    pub nyse_hours_only: bool,         // if true, only active during NYSE trading hours
 }
 
 pub const SERIES: &[SeriesSpec] = &[
-    SeriesSpec { id: "btc-5m", asset: "btc", display: "Bitcoin",  interval_secs: 300, interval_label: "5m" },
-    SeriesSpec { id: "eth-5m", asset: "eth", display: "Ethereum", interval_secs: 300, interval_label: "5m" },
-    SeriesSpec { id: "sol-5m", asset: "sol", display: "Solana",   interval_secs: 300, interval_label: "5m" },
-    SeriesSpec { id: "xrp-5m", asset: "xrp", display: "XRP",     interval_secs: 300, interval_label: "5m" },
+    // 5-minute slots (NYSE hours)
+    SeriesSpec { id: "btc-5m",  asset: "btc", display: "Bitcoin",  interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
+    SeriesSpec { id: "eth-5m",  asset: "eth", display: "Ethereum", interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
+    SeriesSpec { id: "sol-5m",  asset: "sol", display: "Solana",   interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
+    SeriesSpec { id: "xrp-5m",  asset: "xrp", display: "XRP",     interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
+    // 15-minute slots (NYSE hours)
+    SeriesSpec { id: "btc-15m", asset: "btc", display: "Bitcoin",  interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
+    SeriesSpec { id: "eth-15m", asset: "eth", display: "Ethereum", interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
+    SeriesSpec { id: "sol-15m", asset: "sol", display: "Solana",   interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
+    SeriesSpec { id: "xrp-15m", asset: "xrp", display: "XRP",     interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
+    // 4-hour slots (24/7 — no NYSE hours restriction)
+    SeriesSpec { id: "btc-4h",  asset: "btc", display: "Bitcoin",  interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
+    SeriesSpec { id: "eth-4h",  asset: "eth", display: "Ethereum", interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
+    SeriesSpec { id: "sol-4h",  asset: "sol", display: "Solana",   interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
+    SeriesSpec { id: "xrp-4h",  asset: "xrp", display: "XRP",     interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
 ];
 
 /// Parse a series string into a SeriesSpec.
-/// Accepts: "btc-5m", "btc", "bitcoin", "BTC", "BTC-5M", etc.
+/// Accepts full IDs ("btc-5m", "eth-15m", "btc-4h"), bare asset names ("btc",
+/// "bitcoin"), and asset+interval combos ("btc-updown-5m", "eth-updown-15m").
+/// Bare asset names ("btc", "bitcoin") resolve to the 5-minute series.
 pub fn parse_series(s: &str) -> Option<&'static SeriesSpec> {
     let lower = s.to_lowercase();
     SERIES.iter().find(|spec| {
         lower == spec.id
-            || lower == spec.asset
-            || lower == spec.display.to_lowercase()
             || lower == format!("{}-updown-{}", spec.asset, spec.interval_label)
+            // bare asset name → default to 5m
+            || (spec.interval_label == "5m" && (lower == spec.asset || lower == spec.display.to_lowercase()))
     })
 }
 
@@ -179,18 +201,22 @@ fn floor_to_slot(unix_ts: u64, interval_secs: u64) -> u64 {
 /// Tries the current slot and the next slot (handles the brief gap between
 /// when one slot closes and the next one opens). Returns the first one
 /// that is `accepting_orders: true`.
+///
+/// For NYSE-hours-only series (5m, 15m), fails clearly outside trading hours.
+/// For 24/7 series (4h), always attempts the lookup.
 pub async fn get_current_slot(client: &Client, spec: &SeriesSpec) -> Result<GammaMarket> {
     let now = now_unix();
 
-    if !is_in_trading_hours(now) {
+    if spec.nyse_hours_only && !is_in_trading_hours(now) {
         let secs = seconds_until_trading_opens(now);
         let hours = secs / 3600;
         let mins = (secs % 3600) / 60;
         bail!(
-            "{} Up/Down 5-minute markets are only available during NYSE trading hours \
+            "{} Up/Down {}-minute markets are only available during NYSE trading hours \
              (9:30 AM – 4:00 PM ET, Monday–Friday). \
              Next session opens in ~{}h {}m.",
             spec.display,
+            spec.interval_secs / 60,
             hours,
             mins
         );
@@ -209,9 +235,10 @@ pub async fn get_current_slot(client: &Client, spec: &SeriesSpec) -> Result<Gamm
     }
 
     bail!(
-        "No open {} 5-minute market found for the current slot (around {}). \
+        "No open {} {} market found for the current slot (around {}). \
          The window may be transitioning — wait a few seconds and retry.",
         spec.display,
+        spec.id,
         chrono::DateTime::from_timestamp(current as i64, 0)
             .map(|d| d.to_rfc3339())
             .unwrap_or_else(|| current.to_string())
@@ -222,7 +249,7 @@ pub async fn get_current_slot(client: &Client, spec: &SeriesSpec) -> Result<Gamm
 /// Used by buy/sell to transparently handle series identifiers as market_ids.
 pub async fn resolve_to_slug(client: &Client, series_id: &str) -> Result<String> {
     let spec = parse_series(series_id)
-        .ok_or_else(|| anyhow::anyhow!("Unknown series '{}'. Supported: btc-5m, eth-5m, sol-5m, xrp-5m", series_id))?;
+        .ok_or_else(|| anyhow::anyhow!("Unknown series '{}'. Supported: btc-5m/15m/4h, eth-5m/15m/4h, sol-5m/15m/4h, xrp-5m/15m/4h", series_id))?;
     let market = get_current_slot(client, spec).await?;
     market.slug.ok_or_else(|| anyhow::anyhow!("Series market has no slug"))
 }
@@ -249,7 +276,9 @@ pub async fn get_series_info(
     spec: &SeriesSpec,
 ) -> Result<(bool, SlotSummary, SlotSummary)> {
     let now = now_unix();
-    let in_hours = is_in_trading_hours(now);
+    // For NYSE-restricted series, report whether we're in trading hours.
+    // For 24/7 series (4h), always treat as "in hours".
+    let in_hours = !spec.nyse_hours_only || is_in_trading_hours(now);
 
     let current_start = floor_to_slot(now, spec.interval_secs);
     let next_start = current_start + spec.interval_secs;

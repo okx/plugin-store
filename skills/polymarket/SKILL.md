@@ -1,7 +1,7 @@
 ---
 name: polymarket
-description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, <token> up or down, <token> 5m, 5m <token>, <token> 5 min, 5 minute <token> market, <token> 5 minute market, 5m <token> market, <token> 5-minute, 5min <token>, <token> 5min, trade the 5m <token>, play the 5m on <token>, give me the 5m <token>, <token> updown, quick <token> trade, quick <token> bet, <token> going up, <token> going down, is <token> going up or down, will <token> go up, will <token> go up or down, trade <token> direction, short term <token> trade, intraday <token> bet, next 5 minutes <token>, bet on <token> in next few minutes, short <token>, long <token>, <token> short term, crypto series market, 5m market, 5m trade, 5m bet, 5m candle, 5 minute candle, trade the 5m, play the 5m, updown market, up down market, crypto price direction bet, bet on price movement, crypto 5m."
-version: "0.2.8"
+description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, <token> up or down, <token> 5m, 5m <token>, <token> 5 min, 5 minute <token> market, <token> 5 minute market, 5m <token> market, <token> 5-minute, 5min <token>, <token> 5min, trade the 5m <token>, play the 5m on <token>, give me the 5m <token>, <token> updown, quick <token> trade, quick <token> bet, <token> going up, <token> going down, is <token> going up or down, will <token> go up, will <token> go up or down, trade <token> direction, short term <token> trade, intraday <token> bet, next 5 minutes <token>, bet on <token> in next few minutes, short <token>, long <token>, <token> short term, crypto series market, 5m market, 5m trade, 5m bet, 5m candle, 5 minute candle, trade the 5m, play the 5m, updown market, up down market, crypto price direction bet, bet on price movement, crypto 5m, <token> 15m, 15m <token>, <token> 15 min, 15 minute <token> market, <token> 15 minute market, 15m <token> market, <token> 15-minute, 15min <token>, <token> 15min, trade the 15m <token>, play the 15m on <token>, give me the 15m <token>, 15m market, 15m trade, 15m bet, 15m candle, 15 minute candle, trade the 15m, play the 15m, crypto 15m, <token> 4h, 4h <token>, <token> 4 hour, 4 hour <token> market, <token> 4-hour, 4h <token> market, trade the 4h <token>, play the 4h on <token>, <token> hourly, hourly <token> trade, hourly <token> bet, 4h market, 4h trade, 4h candle, 4 hour candle, trade the 4h, crypto 4h, overnight <token> trade, 24/7 <token> bet."
+version: "0.2.7"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -48,7 +48,7 @@ if ! command -v polymarket >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.8/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.7/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
   chmod +x ~/.local/bin/polymarket${EXT}
 fi
 ```
@@ -67,7 +67,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket","version":"0.2.8"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket","version":"0.2.7"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"polymarket","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -230,7 +230,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket --version
 ```
 
-Expected: `polymarket 0.2.8`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket 0.2.7`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -576,18 +576,21 @@ polymarket redeem --market-id <condition_id_or_slug> --dry-run
 
 ### `get-series` — Series Markets (Recurring Short-Duration)
 
-Polymarket runs recurring **Up or Down** markets on crypto assets during NYSE trading hours
-(9:30 AM – 4:00 PM ET, Monday–Friday). Each market covers a 5-minute window and resolves
-based on whether the asset price moved up or down during that window.
+Polymarket runs recurring **Up or Down** markets on BTC, ETH, SOL, and XRP at three intervals:
 
-Supported series: `btc-5m`, `eth-5m`, `sol-5m`, `xrp-5m`
+| Series ID | Interval | Schedule | Slug pattern |
+|-----------|----------|----------|--------------|
+| `btc-5m`, `eth-5m`, `sol-5m`, `xrp-5m` | 5 minutes | NYSE hours (9:30 AM–4:00 PM ET, Mon–Fri) | `{asset}-updown-5m-{unix_ts}` |
+| `btc-15m`, `eth-15m`, `sol-15m`, `xrp-15m` | 15 minutes | NYSE hours | `{asset}-updown-15m-{unix_ts}` |
+| `btc-4h`, `eth-4h`, `sol-4h`, `xrp-4h` | 4 hours | 24/7 | `{asset}-updown-4h-{unix_ts}` |
 
-**Slug pattern:** `{asset}-updown-5m-{unix_start_timestamp_utc}`
+Bare asset aliases (`btc`, `bitcoin`, `eth`, `ethereum`, `sol`, `solana`, `xrp`) resolve to the 5-minute series.
 
 ```
 polymarket get-series --series btc-5m      # Current + next BTC 5-min slot
-polymarket get-series --series eth-5m      # Ethereum 5-min
-polymarket get-series --list               # Show all supported series
+polymarket get-series --series eth-15m     # Ethereum 15-min
+polymarket get-series --series btc-4h      # BTC 4-hour (available 24/7)
+polymarket get-series --list               # Show all 12 supported series
 ```
 
 **Output fields:** `series`, `asset`, `session` (in/out of trading hours), `current_slot` (slug, condition_id, outcomes with token_ids/prices, seconds_remaining, liquidity), `next_slot`, `tip` (ready-to-use buy command)
@@ -675,43 +678,74 @@ User wants to trade a series (BTC/ETH/SOL/XRP up/down):
 
 ### Series intent detection
 
-Route to series trading when the user's message combines a **supported crypto asset** with a **short time horizon or directional framing**:
+Route to series trading when the user's message combines a **supported crypto asset** with a **short time horizon or directional framing**. Detect the interval first, then the asset.
 
-| Signal type | Pattern |
-|-------------|---------|
-| Asset (`<token>`) | bitcoin, btc, ethereum, eth, solana, sol, xrp, ripple — any of these fills `<token>` |
-| Abbreviated time | 5m, 5min, 5-min, 5 min, 5 minute(s) |
-| Trader shorthand | `5m <token>`, `<token> 5m`, `<token> 5min`, `5min <token>` |
-| Direction framing | up or down, updown, up/down, price direction, higher or lower, going up, going down |
-| Speed signals | quick trade, quick bet, short term, intraday, next few minutes, next candle, trade the 5m, play the 5m |
+#### Step 1 — Detect interval
 
-**Phrases that map to series trading** (`<token>` = btc / eth / sol / xrp or full names):
-- "5m `<token>` market" / "`<token>` 5m" / "5m `<token>`"
+| Interval | Trigger patterns |
+|----------|-----------------|
+| **5m** | `5m`, `5min`, `5-min`, `5 min`, `5 minute(s)`, `next 5 minutes`, `next few minutes`, `quick`, `intraday`, `short term`, `right now` (implied immediate) |
+| **15m** | `15m`, `15min`, `15-min`, `15 min`, `15 minute(s)`, `quarter hour` |
+| **4h** | `4h`, `4hr`, `4 hour`, `4-hour`, `hourly` (when no 1h is mentioned), `overnight`, `evening trade` |
+| **Ambiguous** | No time qualifier → ask user: *"Which interval — 5m, 15m, or 4h?"* then route accordingly |
+
+#### Step 2 — Detect asset
+
+`<token>` fills with: `bitcoin`/`btc`, `ethereum`/`eth`, `solana`/`sol`, `xrp`/`ripple`
+
+#### Step 3 — Route
+
+```
+asset detected + interval detected → get-series --series <token>-<interval>
+asset detected + no interval → ask interval, default offer: 5m
+no asset + interval → ask which asset (BTC, ETH, SOL, XRP)
+neither → Regular market (list-markets or get-market)
+```
+
+**Phrases that map to each series** (`<token>` = btc / eth / sol / xrp or full names):
+
+*5m series:*
+- "`<token>` 5m" / "5m `<token>`" / "`<token>` 5min"
 - "trade the 5m on `<token>`" / "play the 5m `<token>`"
-- "give me the `<token>` 5m"
-- "5min `<token>` market"
 - "bet on `<token>` going up in the next 5 minutes"
 - "quick `<token>` trade" / "quick `<token>` bet"
 - "will `<token>` go up or down right now?"
 - "`<token>` updown" / "`<token>` up or down"
-- "is `<token>` going up or down?"
 - "play the 5-minute candle on `<token>`"
+
+*15m series:*
+- "`<token>` 15m" / "15m `<token>`" / "`<token>` 15min"
+- "trade the 15m on `<token>`" / "play the 15m `<token>`"
+- "15 minute `<token>` market" / "bet on `<token>` in the next 15 minutes"
+- "give me the `<token>` 15m"
+
+*4h series (24/7):*
+- "`<token>` 4h" / "4h `<token>`" / "`<token>` 4 hour"
+- "trade the 4h on `<token>`" / "play the 4h `<token>`"
+- "hourly `<token>` trade" / "overnight `<token>` bet"
+- "4h candle on `<token>`"
 
 **Disambiguation from regular markets:**
 
 | User phrase | Route |
 |-------------|-------|
-| "`<token>` 5m" / "5m `<token>`" / "`<token>` 5min" / "5min `<token>`" | Series — `buy --market-id <token>-5m` |
-| "trade the 5m on `<token>`" / "`<token>` updown" | Series — route to matching series |
-| "Bet on ETH price direction right now" | Series — `buy --market-id eth-5m` |
+| "`<token>` 5m" / "5m `<token>`" / "`<token>` 5min" | Series — `buy --market-id <token>-5m` |
+| "`<token>` 15m" / "15m `<token>`" / "`<token>` 15min" | Series — `buy --market-id <token>-15m` |
+| "`<token>` 4h" / "4h `<token>`" / "`<token>` hourly" | Series — `buy --market-id <token>-4h` |
+| "trade the 5m/15m/4h on `<token>`" / "`<token>` updown" | Series — route to matching series |
+| "Bet on ETH price direction right now" | Series — default 5m → `buy --market-id eth-5m` |
 | "Will BTC hit 100k?" | Regular market — `list-markets --keyword bitcoin` |
 | "BTC prediction market" (no time frame, no direction) | Regular market — `list-markets` first |
-| Any named event (election, sports, etc.) | Regular market |
+| "TSLA up or down today?" / "Will NVDA go up?" | Daily stock market (not series) — `list-markets --keyword tsla` |
+| Any named event (election, sports, earnings) | Regular market |
 | "quick crypto bet" (no specific asset) | Ask which asset: BTC, ETH, SOL, or XRP |
 
-**Key rule**: `<asset> + 5m` or `5m + <asset>` in any order always means series. The "5m" (or "5 min", "5-min", "5 minute") pattern is unambiguous — Polymarket has no other 5-minute markets.
+**Key rules:**
+- `<asset> + <Nm>` or `<Nm> + <asset>` in any order always means series when N is 5, 15, or 4h
+- Stocks/equities (TSLA, NVDA, SPX, gold, oil) use date-based daily markets, **not** series — route via `list-markets`
+- 4h series runs **24/7** — no NYSE hours check needed; safe to route at any time of day
 
-**When in doubt:** call `get-series --series btc-5m` (or the relevant asset). The output clearly shows whether trading is currently possible (in/out of hours, seconds remaining, current prices), which is low-cost and resolves ambiguity before committing funds.
+**When in doubt:** call `get-series --series <token>-5m` (or the relevant interval). The output clearly shows whether trading is currently possible (in/out of hours, seconds remaining, current prices), which is low-cost and resolves ambiguity before committing funds.
 
 ---
 
@@ -826,6 +860,53 @@ User wants to trade:
 
 ---
 
+## Market Taxonomy
+
+Polymarket offers three broad categories of markets. Route user requests differently depending on which category applies:
+
+### Category 1 — Auto-resolvable series (use `get-series` / `--market-id <series-id>`)
+
+These are recurring short-duration **Up or Down** markets on BTC, ETH, SOL, and XRP. The slug contains a Unix timestamp that changes each slot — the plugin resolves the current slot automatically from the series ID.
+
+| Interval | Assets | Schedule | Auto-resolve ID |
+|----------|--------|----------|----------------|
+| 5 minutes | BTC, ETH, SOL, XRP | NYSE hours (9:30 AM–4:00 PM ET, Mon–Fri) | `btc-5m`, `eth-5m`, `sol-5m`, `xrp-5m` |
+| 15 minutes | BTC, ETH, SOL, XRP | NYSE hours | `btc-15m`, `eth-15m`, `sol-15m`, `xrp-15m` |
+| 4 hours | BTC, ETH, SOL, XRP | 24/7 | `btc-4h`, `eth-4h`, `sol-4h`, `xrp-4h` |
+
+**Use:** `polymarket buy --market-id btc-5m --outcome up --amount 50`  
+**Do not:** manually construct slug timestamps — the binary handles this.
+
+### Category 2 — Daily price direction markets (use `list-markets --keyword`)
+
+These are daily "Up or Down" markets on stocks, indices, and commodities. The slug includes the specific date (e.g. `tsla-up-or-down-on-april-13-2026`), so they cannot be auto-resolved. A new market is created each trading day.
+
+**Equities (daily, NYSE hours):** TSLA, NVDA, AAPL, COIN, PLTR, META, MSFT, AMZN, GOOGL, NFLX, HOOD, RKLB  
+**Indices (daily):** SPX, SPY, QQQ  
+**Commodities (daily):** WTI (crude oil), XAUUSD (gold), XAGUSD (silver), NG (natural gas)
+
+**Use:** `polymarket list-markets --keyword tsla` → find today's slug → `polymarket buy --market-id tsla-up-or-down-on-<date> ...`  
+**Agent flow:** Run `list-markets --keyword <ticker>` first; let the user pick the market from results; then trade by slug.
+
+### Category 3 — Event / news markets (use `list-markets --keyword` or direct slug)
+
+Binary (YES/NO) or categorical (multi-outcome) markets on elections, sports, tech, macro events, etc. Slugs are static (e.g. `will-trump-win-2024`, `nba-championship-2025`).
+
+**Use:** `polymarket list-markets --keyword <topic>` or `polymarket get-market --market-id <slug>`
+
+### Quick routing reference
+
+| User says | Category | How to route |
+|-----------|----------|-------------|
+| "BTC 5m" / "ETH 15m" / "SOL 4h" | Series (Cat 1) | `buy --market-id <token>-<interval>` |
+| "TSLA up or down today" / "Will NVDA go up?" | Daily stock (Cat 2) | `list-markets --keyword tsla` |
+| "Gold up or down today" / "Oil direction" | Daily commodity (Cat 2) | `list-markets --keyword gold` / `--keyword wti` |
+| "SPX direction today" / "QQQ trade" | Daily index (Cat 2) | `list-markets --keyword spx` |
+| "Will Trump win?" / "NBA finals winner" | Event (Cat 3) | `list-markets --keyword trump` / `--keyword nba` |
+| "TSLA 5m" (stock + short interval) | No such market — clarify | Stocks only have daily markets on Polymarket, not 5m/15m. Ask if they mean the daily TSLA market or a BTC/ETH/SOL/XRP series. |
+
+---
+
 ## Command Routing Table
 
 > **Extracting market ID from a URL**: Polymarket URLs look like `polymarket.com/event/<slug>` or `polymarket.com/event/<slug>/<condition_id>`. Use the slug (the human-readable string, e.g. `will-trump-win-2024`) directly as `--market-id`. If the URL contains a `0x`-prefixed condition_id, use that instead.
@@ -850,9 +931,15 @@ User wants to trade:
 | Cancel all open orders | `polymarket cancel --all` |
 | Redeem winning tokens after market resolves | `polymarket redeem --market-id <slug_or_condition_id>` |
 | View current BTC/ETH/SOL/XRP 5-min slot | `polymarket get-series --series btc-5m` |
+| View current BTC/ETH/SOL/XRP 15-min slot | `polymarket get-series --series btc-15m` |
+| View current BTC/ETH/SOL/XRP 4-hour slot (24/7) | `polymarket get-series --series btc-4h` |
 | List all supported series | `polymarket get-series --list` |
 | Trade current BTC 5-min slot (up) | `polymarket buy --market-id btc-5m --outcome up --amount <usdc>` |
 | Trade current ETH 5-min slot (down) | `polymarket buy --market-id eth-5m --outcome down --amount <usdc>` |
+| Trade current BTC 15-min slot | `polymarket buy --market-id btc-15m --outcome up --amount <usdc>` |
+| Trade current ETH 4-hour slot (24/7) | `polymarket buy --market-id eth-4h --outcome up --amount <usdc>` |
+| Find today's TSLA / stock daily market | `polymarket list-markets --keyword tsla` |
+| Find today's gold / commodity market | `polymarket list-markets --keyword gold` |
 | Fast repeat trade (known token ID) | `polymarket buy --token-id <id> --outcome up --amount <usdc> --price <x>` |
 
 ---
@@ -884,4 +971,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.8** (2026-04-12).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.7** (2026-04-12).

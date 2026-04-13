@@ -8,10 +8,16 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
     // --list: print all supported series and exit
     if list || series_id.is_none() {
         let supported: Vec<serde_json::Value> = SERIES.iter().map(|s| {
+            let interval_human = if s.interval_secs >= 3600 {
+                format!("{} hours", s.interval_secs / 3600)
+            } else {
+                format!("{} minutes", s.interval_secs / 60)
+            };
             serde_json::json!({
                 "id": s.id,
                 "asset": s.display,
-                "interval": format!("{} minutes", s.interval_secs / 60),
+                "interval": interval_human,
+                "trading_hours": if s.nyse_hours_only { "NYSE hours (9:30 AM – 4:00 PM ET, Mon–Fri)" } else { "24/7" },
                 "slug_pattern": format!("{}-updown-{}-{{unix_start_utc}}", s.asset, s.interval_label),
                 "usage": format!("polymarket buy --market-id {} --outcome up --amount 50", s.id),
             })
@@ -20,7 +26,7 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": true,
             "data": {
-                "trading_hours": "9:30 AM – 4:00 PM ET, Monday–Friday (NYSE hours)",
+                "note": "5m and 15m series: NYSE hours only. 4h series: 24/7.",
                 "supported_series": supported,
             }
         }))?);
