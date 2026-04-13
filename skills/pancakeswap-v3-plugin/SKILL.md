@@ -416,3 +416,4 @@ pancakeswap-v3 remove-liquidity --token-id 345455 --liquidity-pct 50 --slippage 
 - **fix**: Surface RPC errors in `pools` command instead of silently showing `tick: 0` when a node rate-limits the request.
 
 
+
