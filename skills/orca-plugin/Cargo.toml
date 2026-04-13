@@ -1,5 +1,5 @@
 [package]
-name = "orca"
+name = "orca-plugin"
 version = "0.3.0"
 edition = "2021"
 

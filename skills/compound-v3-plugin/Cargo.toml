@@ -1,5 +1,5 @@
 [package]
-name = "compound-v3"
+name = "compound-v3-plugin"
 version = "0.2.1"
 edition = "2021"
 

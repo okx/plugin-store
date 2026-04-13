@@ -1,5 +1,5 @@
 [package]
-name = "pancakeswap-clmm"
+name = "pancakeswap-clmm-plugin"
 version = "0.1.1"
 edition = "2021"
 

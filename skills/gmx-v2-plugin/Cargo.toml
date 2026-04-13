@@ -1,5 +1,5 @@
 [package]
-name = "gmx-v2"
+name = "gmx-v2-plugin"
 version = "0.2.2"
 edition = "2021"
 

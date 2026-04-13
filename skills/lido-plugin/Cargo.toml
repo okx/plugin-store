@@ -1,5 +1,5 @@
 [package]
-name = "lido"
+name = "lido-plugin"
 version = "0.2.3"
 edition = "2021"
 

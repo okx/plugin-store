@@ -1,5 +1,5 @@
 [package]
-name = "pancakeswap-v2"
+name = "pancakeswap-v2-plugin"
 version = "0.2.3"
 edition = "2021"
 

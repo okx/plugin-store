@@ -1,5 +1,5 @@
 [package]
-name = "pump-fun"
+name = "pump-fun-plugin"
 version = "0.1.2"
 edition = "2021"
 

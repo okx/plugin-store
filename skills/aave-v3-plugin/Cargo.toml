@@ -1,5 +1,5 @@
 [package]
-name = "aave-v3"
+name = "aave-v3-plugin"
 version = "0.2.1"
 edition = "2021"
 
