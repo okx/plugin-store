@@ -607,7 +607,7 @@
       }
     },
     {
-      "name": "polymarket",
+      "name": "polymarket-plugin",
       "version": "0.3.0",
       "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
       "author": {
