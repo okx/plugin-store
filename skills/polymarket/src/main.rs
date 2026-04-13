@@ -52,9 +52,10 @@ enum Commands {
 
     /// Buy YES or NO shares in a market (signs via onchainos wallet)
     Buy {
-        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        /// Market identifier: condition_id (0x-prefixed hex) or slug.
+        /// Optional when --token-id is provided (fast path skips market lookup).
         #[arg(long)]
-        market_id: String,
+        market_id: Option<String>,
 
         /// Outcome to buy: "yes" or "no"
         #[arg(long)]
@@ -108,9 +109,10 @@ enum Commands {
 
     /// Sell YES or NO shares in a market (signs via onchainos wallet)
     Sell {
-        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        /// Market identifier: condition_id (0x-prefixed hex) or slug.
+        /// Optional when --token-id is provided (fast path skips market lookup).
         #[arg(long)]
-        market_id: String,
+        market_id: Option<String>,
 
         /// Outcome to sell: "yes" or "no"
         #[arg(long)]
@@ -225,7 +227,7 @@ async fn main() {
             confirm: _confirm,
             token_id,
         } => {
-            commands::buy::run(&market_id, &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, token_id.as_deref()).await
+            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, token_id.as_deref()).await
         }
         Commands::Sell {
             market_id,
@@ -240,7 +242,7 @@ async fn main() {
             confirm: _confirm,
             token_id,
         } => {
-            commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, token_id.as_deref()).await
+            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, token_id.as_deref()).await
         }
         Commands::GetSeries { series, list } => {
             commands::get_series::run(series.as_deref(), list).await

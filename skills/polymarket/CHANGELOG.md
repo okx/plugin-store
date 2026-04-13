@@ -1,6 +1,13 @@
 # Polymarket Plugin Changelog
 
-### v0.2.7 (2026-04-13)
+### v0.2.7 (2026-04-13) — patch fixes
+
+- **fix [N1]**: `get-series` on 4h series no longer reports wrong `session` and `trading_hours`. Root cause: `session` was computed using the NYSE hours check regardless of series type, and `trading_hours` was hardcoded to `"9:30 AM – 4:00 PM ET, Monday–Friday"` for all series. Fix: for `nyse_hours_only: false` series, `session` is always `"24/7 — market open"` and `trading_hours` is `"24/7"`. Also fixes the `interval` field for 4h series (now shows `"4 hours"` instead of `"240 minutes"`).
+- **fix [N2]**: `--token-id` no longer requires `--market-id`. `--market-id` is now optional in `buy` and `sell`; it is required only when `--token-id` is not provided. When `--token-id` is given, the binary skips all market lookup and `--market-id` is unused. Attempting to call `buy`/`sell` without either flag returns a clear error.
+- **fix [N3]**: `get-series` slot output now includes `end_unix` (Unix timestamp integer) alongside the existing `end` (ISO-8601 string). SKILL.md agent caching protocol references `current_slot.end_unix` for slot-validity checks — the field now exists.
+- **fix [N4]**: `buy --market-id btc-5m` (and 15m variants) no longer blocks trading outside NYSE hours. The NYSE hours gate in `get_current_slot` has been removed; the binary now always attempts to find the current accepting slot and lets the CLOB be the source of truth. If no slot is accepting orders, a clear `"No open market found"` error is returned. Live verification confirms 5m/15m slots accept orders 24/7 on the CLOB despite the NYSE hours label.
+
+### v0.2.7 (2026-04-13) — original release
 
 - **feat**: Series trading for recurring "Up or Down" crypto markets. Supports 5-minute (NYSE hours), 15-minute (NYSE hours), and 4-hour (24/7) slots for BTC, ETH, SOL, and XRP. Use `buy --market-id btc-5m`, `btc-15m`, or `btc-4h` — the plugin auto-resolves to the current accepting slot at trade time.
 - **feat**: `get-series` command — shows the current and next slot with prices, token IDs, seconds remaining, liquidity, and a ready-to-run buy hint. `--list` enumerates all 12 supported series (4 assets × 3 intervals).

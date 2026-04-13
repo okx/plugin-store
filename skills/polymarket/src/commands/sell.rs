@@ -15,12 +15,12 @@ use super::buy::{resolve_from_gamma, resolve_market_token};
 
 /// Run the sell command.
 ///
-/// market_id: condition_id (0x-prefixed) or slug
+/// market_id: condition_id (0x-prefixed) or slug; optional when --token-id is provided
 /// outcome: outcome label, case-insensitive (e.g. "yes", "no", "trump")
 /// shares: number of token shares to sell (human-readable)
 /// price: limit price in [0, 1], or None for market order (FOK)
 pub async fn run(
-    market_id: &str,
+    market_id: Option<&str>,
     outcome: &str,
     shares: &str,
     price: Option<f64>,
@@ -85,39 +85,46 @@ pub async fn run(
             };
 
             (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
-        } else if series::is_series_id(market_id) {
-            // ── Series path: single Gamma fetch, then CLOB for neg_risk + fee ──
-            let gamma = series::resolve_to_market(&client, market_id).await?;
-            let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
-
-            // Always fetch the book (needed for tick_size and price computation).
-            let (book, wallet_opt) = if dry_run {
-                (get_orderbook(&client, &tid).await?, None)
-            } else {
-                let (b, w) = tokio::join!(
-                    get_orderbook(&client, &tid),
-                    get_wallet_address()
-                );
-                (b?, Some(w?))
-            };
-
-            (cid, tid, nr, fee, book, wallet_opt)
         } else {
-            // ── Standard path: slug or condition_id ────────────────────────────
-            let (cid, tid, nr, fee) = resolve_market_token(&client, market_id, outcome).await?;
+            // ── market_id required for non-fast-path ──────────────────────────
+            let mid = market_id.ok_or_else(|| anyhow::anyhow!(
+                "--market-id is required when --token-id is not provided"
+            ))?;
 
-            // Always fetch the book (needed for tick_size and price computation).
-            let (book, wallet_opt) = if dry_run {
-                (get_orderbook(&client, &tid).await?, None)
+            if series::is_series_id(mid) {
+                // ── Series path: single Gamma fetch, then CLOB for neg_risk + fee ──
+                let gamma = series::resolve_to_market(&client, mid).await?;
+                let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
+
+                // Always fetch the book (needed for tick_size and price computation).
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
             } else {
-                let (b, w) = tokio::join!(
-                    get_orderbook(&client, &tid),
-                    get_wallet_address()
-                );
-                (b?, Some(w?))
-            };
+                // ── Standard path: slug or condition_id ────────────────────────
+                let (cid, tid, nr, fee) = resolve_market_token(&client, mid, outcome).await?;
 
-            (cid, tid, nr, fee, book, wallet_opt)
+                // Always fetch the book (needed for tick_size and price computation).
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
+            }
         };
 
     // Extract tick_size from the order book (avoids a separate get_tick_size call).

@@ -47,8 +47,7 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
         .unwrap_or_default()
         .as_secs();
 
-    let in_trading_hours = series::is_in_trading_hours(now);
-    let (_, current, next) = series::get_series_info(&client, spec).await?;
+    let (in_hours, current, next) = series::get_series_info(&client, spec).await?;
 
     // Format a slot for JSON output
     let format_slot = |slot: &series::SlotSummary, label: &str| -> serde_json::Value {
@@ -80,6 +79,7 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
                 "question": sanitize_opt_owned(&m.question),
                 "start": start_iso,
                 "end": end_iso,
+                "end_unix": slot.end_unix,
                 "seconds_remaining": secs_remaining,
                 "accepting_orders": m.accepting_orders,
                 "outcomes": outcome_map,
@@ -95,6 +95,7 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
                 "slug": slot.slug,
                 "start": start_iso,
                 "end": end_iso,
+                "end_unix": slot.end_unix,
                 "seconds_remaining": secs_remaining,
                 "accepting_orders": false,
                 "note": "market not yet created or not found",
@@ -122,14 +123,28 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
         spec.id
     ));
 
-    let session_note = if in_trading_hours {
+    let (session_note, trading_hours_str, interval_str) = if !spec.nyse_hours_only {
+        (
+            "24/7 — market open".to_string(),
+            "24/7",
+            format!("{} hours", spec.interval_secs / 3600),
+        )
+    } else if in_hours {
         let secs = seconds_remaining_in_session(now);
-        format!("in trading hours — {}m {}s remaining in session", secs / 60, secs % 60)
+        (
+            format!("in trading hours — {}m {}s remaining in session", secs / 60, secs % 60),
+            "9:30 AM – 4:00 PM ET, Monday–Friday",
+            format!("{} minutes", spec.interval_secs / 60),
+        )
     } else {
         let secs = seconds_until_trading_opens(now);
         let h = secs / 3600;
         let m = (secs % 3600) / 60;
-        format!("outside trading hours — next session opens in ~{}h {}m", h, m)
+        (
+            format!("outside trading hours — next session opens in ~{}h {}m", h, m),
+            "9:30 AM – 4:00 PM ET, Monday–Friday",
+            format!("{} minutes", spec.interval_secs / 60),
+        )
     };
 
     println!("{}", serde_json::to_string_pretty(&serde_json::json!({
@@ -137,8 +152,8 @@ pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
         "data": {
             "series": spec.id,
             "asset": spec.display,
-            "interval": format!("{} minutes", spec.interval_secs / 60),
-            "trading_hours": "9:30 AM – 4:00 PM ET, Monday–Friday",
+            "interval": interval_str,
+            "trading_hours": trading_hours_str,
             "session": session_note,
             "current_slot": current_json,
             "next_slot": next_json,

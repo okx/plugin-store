@@ -207,21 +207,6 @@ fn floor_to_slot(unix_ts: u64, interval_secs: u64) -> u64 {
 pub async fn get_current_slot(client: &Client, spec: &SeriesSpec) -> Result<GammaMarket> {
     let now = now_unix();
 
-    if spec.nyse_hours_only && !is_in_trading_hours(now) {
-        let secs = seconds_until_trading_opens(now);
-        let hours = secs / 3600;
-        let mins = (secs % 3600) / 60;
-        bail!(
-            "{} Up/Down {}-minute markets are only available during NYSE trading hours \
-             (9:30 AM – 4:00 PM ET, Monday–Friday). \
-             Next session opens in ~{}h {}m.",
-            spec.display,
-            spec.interval_secs / 60,
-            hours,
-            mins
-        );
-    }
-
     let current = floor_to_slot(now, spec.interval_secs);
 
     // Try current slot, then next (slot may have just closed, next may be open)
