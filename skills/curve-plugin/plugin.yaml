@@ -1,5 +1,5 @@
 schema_version: 1
-name: curve
+name: curve-plugin
 version: "0.2.3"
 description: "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC."
 author:
@@ -20,7 +20,7 @@ components:
 
 build:
   lang: rust
-  binary_name: curve
+  binary_name: curve-plugin
 
 api_calls:
   - "https://api.curve.finance/api/getPools"
