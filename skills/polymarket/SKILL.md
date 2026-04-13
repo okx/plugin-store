@@ -630,20 +630,47 @@ Both are valid `--outcome` values for `buy` and `sell`.
 
 **Agent flow:**
 1. Run `get-series --series <id>` to show the user the current slot (price, liquidity, seconds remaining) and confirm they want to trade it.
-2. Once confirmed, run `buy --market-id <series-id> --outcome <up|down> --amount <usdc> --dry-run` to preview the order.
+2. Once confirmed, run `buy --token-id <token_id_from_step_1> --outcome <up|down> --amount <usdc> --price <price_from_step_1> --dry-run` to preview the order. Use the token ID from `current_slot.outcomes.Up.token_id` (or `Down`). This is faster than using `--market-id` because the market lookup is already done.
 3. After user confirms the dry-run output, run without `--dry-run` to submit.
 4. Return the `order_id` and `status` from the response.
 
 **Example:**
 ```bash
-# Show current slot
+# Step 1: Show current slot — note token_id and price in the output
 polymarket get-series --series btc-5m
+# Output includes: current_slot.outcomes.Up.token_id = "0xabc...", price = 0.52
 
-# Preview the order
-polymarket buy --market-id btc-5m --outcome up --amount 50 --dry-run
+# Step 2: Preview using cached token ID (faster — skips market lookup)
+polymarket buy --token-id 0xabc... --outcome up --amount 50 --price 0.52 --dry-run
 
-# After user confirms:
-polymarket buy --market-id btc-5m --outcome up --amount 50
+# Step 3: After user confirms:
+polymarket buy --token-id 0xabc... --outcome up --amount 50 --price 0.52
+```
+
+### Token ID caching for fast execution
+
+**Automatically activate `--token-id`** whenever a `get-series` call has already been made in the current conversation:
+
+1. After any `get-series` call, record from the output:
+   - `current_slot.outcomes.Up.token_id` and `current_slot.outcomes.Down.token_id`
+   - `current_slot.end_unix` (the Unix timestamp when this slot expires)
+
+2. Before using cached token IDs, verify the slot is still live:
+   - If current time < `end_unix - 30` seconds → slot is valid, use `--token-id`
+   - If current time ≥ `end_unix - 30` seconds → slot is expiring; re-run `get-series` to refresh
+
+3. When the slot is valid, always prefer `--token-id` over `--market-id btc-5m` — it saves 3-4 HTTP round trips from the binary (~500ms).
+
+4. Always pass `--price` when using `--token-id`. The price from `get-series` output is the current market price — use it or ask the user for their target price. Without `--price`, the binary must still fetch the order book for worst-case pricing (the main savings come when `--price` is also provided).
+
+**Decision rule:**
+
+```
+User wants to trade a series (BTC/ETH/SOL/XRP up/down):
+├── get-series output available in this conversation AND slot still live (end_unix > now + 30s)?
+│   └── YES → use: buy --token-id <cached_id> --outcome <up|down> --amount <x> --price <cached_price>
+└── NO (no prior get-series, or slot expired)
+    └── Run get-series first → then use --token-id from fresh output
 ```
 
 ### Series intent detection
