@@ -1,5 +1,5 @@
 ---
-name: polymarket
+name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on."
 version: "0.3.0"
 author: "skylavis-sky"
@@ -12,9 +12,44 @@ tags:
   - clob
 ---
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
+
+### Version check (auto-injected)
+
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. If an update is applied, re-read this SKILL.md before proceeding — the instructions may have changed.
+
+```bash
+# Check for skill updates (1-hour cache)
+UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
+CACHE_MAX=3600
+LOCAL_VER="0.3.0"
+DO_CHECK=true
+
+if [ -f "$UPDATE_CACHE" ]; then
+  CACHE_MOD=$(stat -f %m "$UPDATE_CACHE" 2>/dev/null || stat -c %Y "$UPDATE_CACHE" 2>/dev/null || echo 0)
+  NOW=$(date +%s)
+  AGE=$(( NOW - CACHE_MOD ))
+  [ "$AGE" -lt "$CACHE_MAX" ] && DO_CHECK=false
+fi
+
+if [ "$DO_CHECK" = true ]; then
+  REMOTE_VER=$(curl -sf --max-time 3 "https://raw.githubusercontent.com/okx/plugin-store/main/skills/polymarket-plugin/plugin.yaml" | grep '^version' | head -1 | tr -d '"' | awk '{print $2}')
+  if [ -n "$REMOTE_VER" ]; then
+    mkdir -p "$HOME/.plugin-store/update-cache"
+    echo "$REMOTE_VER" > "$UPDATE_CACHE"
+  fi
+fi
+
+REMOTE_VER=$(cat "$UPDATE_CACHE" 2>/dev/null || echo "$LOCAL_VER")
+if [ "$REMOTE_VER" != "$LOCAL_VER" ]; then
+  echo "Update available: polymarket-plugin v$LOCAL_VER -> v$REMOTE_VER. Updating..."
+  npx skills add okx/plugin-store --skill polymarket-plugin --yes --global 2>/dev/null || true
+  echo "Updated polymarket-plugin to v$REMOTE_VER. Please re-read this SKILL.md."
+fi
+```
 
 ### Install onchainos CLI + Skills (auto-injected)
 
@@ -29,61 +64,79 @@ npx skills add okx/onchainos-skills --yes --global
 npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
-### Install polymarket binary (auto-injected)
+### Install polymarket-plugin binary + launcher (auto-injected)
 
 ```bash
-if ! command -v polymarket >/dev/null 2>&1; then
-  OS=$(uname -s | tr A-Z a-z)
-  ARCH=$(uname -m)
-  EXT=""
-  case "${OS}_${ARCH}" in
-    darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
-    darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
-    linux_x86_64)  TARGET="x86_64-unknown-linux-gnu" ;;
-    linux_i686)    TARGET="i686-unknown-linux-gnu" ;;
-    linux_aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
-    linux_armv7l)  TARGET="armv7-unknown-linux-gnueabihf" ;;
-    mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
-    mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
-  esac
-  mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.3.0/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
-  chmod +x ~/.local/bin/polymarket${EXT}
+# Install shared infrastructure (launcher + update checker, only once)
+LAUNCHER="$HOME/.plugin-store/launcher.sh"
+CHECKER="$HOME/.plugin-store/update-checker.py"
+if [ ! -f "$LAUNCHER" ]; then
+  mkdir -p "$HOME/.plugin-store"
+  curl -fsSL "https://raw.githubusercontent.com/okx/plugin-store/main/scripts/launcher.sh" -o "$LAUNCHER" 2>/dev/null || true
+  chmod +x "$LAUNCHER"
 fi
+if [ ! -f "$CHECKER" ]; then
+  curl -fsSL "https://raw.githubusercontent.com/okx/plugin-store/main/scripts/update-checker.py" -o "$CHECKER" 2>/dev/null || true
+fi
+
+# Clean up old installation
+rm -f "$HOME/.local/bin/polymarket-plugin" "$HOME/.local/bin/.polymarket-plugin-core" 2>/dev/null
+
+# Download binary
+OS=$(uname -s | tr A-Z a-z)
+ARCH=$(uname -m)
+EXT=""
+case "${OS}_${ARCH}" in
+  darwin_arm64)  TARGET="aarch64-apple-darwin" ;;
+  darwin_x86_64) TARGET="x86_64-apple-darwin" ;;
+  linux_x86_64)  TARGET="x86_64-unknown-linux-musl" ;;
+  linux_i686)    TARGET="i686-unknown-linux-musl" ;;
+  linux_aarch64) TARGET="aarch64-unknown-linux-musl" ;;
+  linux_armv7l)  TARGET="armv7-unknown-linux-musleabihf" ;;
+  mingw*_x86_64|msys*_x86_64|cygwin*_x86_64)   TARGET="x86_64-pc-windows-msvc"; EXT=".exe" ;;
+  mingw*_i686|msys*_i686|cygwin*_i686)           TARGET="i686-pc-windows-msvc"; EXT=".exe" ;;
+  mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
+esac
+mkdir -p ~/.local/bin
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.3.0/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
+
+# Symlink CLI name to universal launcher
+ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
+
+# Register version
+mkdir -p "$HOME/.plugin-store/managed"
+echo "0.3.0" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
 
 ```bash
-REPORT_FLAG="$HOME/.plugin-store/reported/polymarket"
+REPORT_FLAG="$HOME/.plugin-store/reported/polymarket-plugin"
 if [ ! -f "$REPORT_FLAG" ]; then
   mkdir -p "$HOME/.plugin-store/reported"
+  # Device fingerprint → SHA256 → 32-char device ID
   DEV_RAW="$(hostname):$(uname -s):$(uname -m):$HOME"
   DEV_ID=$(echo -n "$DEV_RAW" | shasum -a 256 | head -c 32)
+  # HMAC signature (obfuscated key, same as CLI binary)
   _K=$(echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | base64 -d 2>/dev/null || echo 'OE9nNWFRUFdfSVJkektrMExOV2RNeTIzV2JibXo3ZWNTbExJUDFIWnVoZw==' | openssl base64 -d)
   HMAC_SIG=$(echo -n "${_K}${DEV_ID}" | shasum -a 256 | head -c 8)
   DIV_ID="${DEV_ID}${HMAC_SIG}"
   unset _K
+  # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket","version":"0.3.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.3.0"}' >/dev/null 2>&1 || true
+  # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
-    -d '{"pluginName":"polymarket","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
+    -d '{"pluginName":"polymarket-plugin","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
   touch "$REPORT_FLAG"
 fi
 ```
 
 ---
 
-## Pre-flight Dependencies
-
-> Run once per session before first use.
-
-### Install polymarket binary
-
----
 
 # Polymarket Skill
 
@@ -95,7 +148,7 @@ fi
 - Staking, lending, swapping, or non-prediction-market DeFi activities
 - Fetching real-time news or external event outcomes — use a search tool for that
 - Executing trades autonomously without user confirmation of market, outcome, amount, and price
-- **Manually constructing EIP-712 messages, running raw curl signing flows, or deriving API credentials by hand** — the plugin handles all signing and credential derivation internally. If `polymarket buy` or `polymarket sell` fails, report the error directly — do NOT attempt to replicate the plugin's internals with bash/curl.
+- **Manually constructing EIP-712 messages, running raw curl signing flows, or deriving API credentials by hand** — the plugin handles all signing and credential derivation internally. If `polymarket-plugin buy` or `polymarket-plugin sell` fails, report the error directly — do NOT attempt to replicate the plugin's internals with bash/curl.
 - **Concluding that `onchainos sign-message` is unavailable** based on `onchainos --help` or `onchainos wallet --help` output alone. `sign-message` is a subcommand of `onchainos wallet` — verify with `onchainos wallet sign-message --help` before deciding it is missing. If it is genuinely missing, run `onchainos upgrade` and re-verify. Do not give up and route the user to a workaround.
 - **Suggesting the user trade via the Polymarket website, use MetaMask, or export their private key** as a fallback when the CLI can't sign. These are not acceptable workarounds — private key export in particular is a security risk. The correct path is always to fix the onchainos version.
 
@@ -106,12 +159,12 @@ fi
 When a user signals they are **new or just installed** this plugin — e.g. "I just installed polymarket", "how do I get started", "what can I do with this", "help me set up", "I'm new to polymarket" — **do not wait for them to ask specific questions.** Proactively walk them through the Quickstart in order, one step at a time, waiting for confirmation before proceeding to the next:
 
 1. **Check wallet** — run `onchainos wallet addresses --chain 137`. If no address, direct them to connect via `onchainos wallet login`. Also verify `onchainos wallet sign-message --help` works — if missing, run `onchainos upgrade` and re-verify. Do not proceed to trading or suggest workarounds (MetaMask, private key export, manual curl signing) until sign-message is confirmed working.
-2. **Check access** — run `polymarket check-access`. If `accessible: false`, stop and show the warning. Do not proceed to funding.
+2. **Check access** — run `polymarket-plugin check-access`. If `accessible: false`, stop and show the warning. Do not proceed to funding.
 3. **Choose trading mode** — explain the two modes and ask which they prefer:
    - **EOA mode** (default): trade directly from the onchainos wallet; each buy requires a USDC.e `approve` tx (POL gas, typically < $0.01)
-   - **POLY_PROXY mode** (recommended): deploy a proxy wallet once via `polymarket setup-proxy` (one-time ~$0.01 POL), then trade without any gas. USDC.e must be deposited into the proxy via `polymarket deposit`.
-4. **Check balance** — run `polymarket balance`. Shows POL and USDC.e for both EOA and proxy wallet (if set up). If insufficient, explain bridging options (OKX Web3 bridge or CEX withdrawal to Polygon). Verify the `usdc_e_contract` field matches `0x2791...a84174` before bridging.
-5. **Find a market** — run `polymarket list-markets` and offer to help them find something interesting. Ask what topics they care about.
+   - **POLY_PROXY mode** (recommended): deploy a proxy wallet once via `polymarket setup-proxy` (one-time ~$0.01 POL), then trade without any gas. USDC.e must be deposited into the proxy via `polymarket-plugin deposit`.
+4. **Check balance** — run `polymarket-plugin balance`. Shows POL and USDC.e for both EOA and proxy wallet (if set up). If insufficient, explain bridging options (OKX Web3 bridge or CEX withdrawal to Polygon). Verify the `usdc_e_contract` field matches `0x2791...a84174` before bridging.
+5. **Find a market** — run `polymarket-plugin list-markets` and offer to help them find something interesting. Ask what topics they care about.
 6. **Place a trade** — once they pick a market, guide them through `buy` or `sell` with explicit confirmation of market, outcome, and amount before executing.
 
 Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
@@ -149,7 +202,7 @@ Polymarket is a prediction market platform on Polygon where users trade outcome 
 - **Approval model (EOA)**: `buy` uses exact-amount USDC.e `approve(exchange, amount)`. `sell` uses `setApprovalForAll(exchange, true)` for CTF tokens (blanket ERC-1155 approval; same as Polymarket's web interface). No on-chain approvals needed in POLY_PROXY mode.
 
 **How it works:**
-1. On first trading command, API credentials are auto-derived from the onchainos wallet via Polymarket's CLOB API and cached at `~/.config/polymarket/creds.json`
+1. On first trading command, API credentials are auto-derived from the onchainos wallet via Polymarket's CLOB API and cached at `~/.config/polymarket-plugin/creds.json`
 2. Plugin signs EIP-712 Order structs via `onchainos sign-message --type eip712` and submits them off-chain to Polymarket's CLOB with L2 HMAC headers
 3. When orders are matched, Polymarket's operator settles on-chain via CTF Exchange (gasless for user)
 4. USDC.e flows from the onchainos wallet (buyer); conditional tokens flow from the onchainos wallet (seller)
@@ -185,7 +238,7 @@ Your wallet address is your Polymarket identity — all orders are signed from i
 Polymarket is unavailable in certain jurisdictions (including the United States and OFAC-sanctioned regions). Before bridging any funds, confirm you have access:
 
 ```bash
-polymarket check-access
+polymarket-plugin check-access
 ```
 
 - `accessible: true` — you're good to proceed
@@ -207,7 +260,7 @@ There are two modes. Pick one before topping up:
 **POLY_PROXY mode** — one-time setup, then trade without spending POL:
 ```bash
 polymarket setup-proxy   # deploy proxy wallet (one-time ~$0.01 gas)
-polymarket deposit --amount 50   # fund it with USDC.e
+polymarket-plugin deposit --amount 50   # fund it with USDC.e
 ```
 
 ### Step 4 — Top up USDC.e on Polygon
@@ -215,7 +268,7 @@ polymarket deposit --amount 50   # fund it with USDC.e
 Check your current balances:
 
 ```bash
-polymarket balance
+polymarket-plugin balance
 ```
 
 This shows POL and USDC.e for both your EOA wallet and proxy wallet (if set up). The `usdc_e_contract` field shows the truncated contract address — verify it matches `0x2791...a84174` before bridging.
@@ -223,25 +276,25 @@ This shows POL and USDC.e for both your EOA wallet and proxy wallet (if set up).
 If balance is zero or insufficient:
 
 - **From another chain**: bridge USDC to Polygon via the OKX Web3 bridge or Polygon Bridge
-- **From a CEX**: withdraw USDC to your Polygon address (EOA) via the Polygon network, then run `polymarket deposit` to move it to the proxy wallet if using POLY_PROXY mode
+- **From a CEX**: withdraw USDC to your Polygon address (EOA) via the Polygon network, then run `polymarket-plugin deposit` to move it to the proxy wallet if using POLY_PROXY mode
 - **Minimum suggested**: $5–$10 for a small test trade. EOA mode also needs a small amount of POL for gas (typically < $0.01 per approve tx)
 
-> **EOA mode**: USDC.e is spent directly from your onchainos wallet — no deposit step needed. **POLY_PROXY mode**: run `polymarket deposit --amount <N>` to move USDC.e from EOA into the proxy wallet before trading.
+> **EOA mode**: USDC.e is spent directly from your onchainos wallet — no deposit step. **POLY_PROXY mode**: run `polymarket-plugin deposit --amount <N>` to move USDC.e from EOA into the proxy wallet before trading.
 
 ### Step 5 — Find a market and place a trade
 
 ```bash
 # Browse active markets
-polymarket list-markets --keyword "trump"
+polymarket-plugin list-markets --keyword "trump"
 
 # Get details on a specific market
-polymarket get-market --market-id <slug>
+polymarket-plugin get-market --market-id <slug>
 
 # Buy $5 of YES shares at market price
-polymarket buy --market-id <slug> --outcome yes --amount 5
+polymarket-plugin buy --market-id <slug> --outcome yes --amount 5
 
 # Check your open positions
-polymarket get-positions
+polymarket-plugin get-positions
 ```
 
 The first `buy` or `sell` automatically derives your Polymarket API credentials from your wallet and caches them — no manual setup required.
@@ -250,13 +303,13 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 
 ## Pre-flight Checks
 
-### Step 1 — Verify `polymarket` binary
+### Step 1 — Verify `polymarket-plugin` binary
 
 ```bash
-polymarket --version
+polymarket-plugin --version
 ```
 
-Expected: `polymarket 0.3.0`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.3.0`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -293,10 +346,10 @@ If no address is returned, connect a wallet first: `onchainos wallet login your@
 ### Step 4 — Check USDC.e balance (buy only)
 
 ```bash
-polymarket balance
+polymarket-plugin balance
 ```
 
-Shows both EOA and proxy wallet balances. Confirm the active mode's wallet holds sufficient USDC.e (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`). EOA mode → check `eoa_wallet.usdc_e`. POLY_PROXY mode → check `proxy_wallet.usdc_e`; top up with `polymarket deposit --amount <N>` if needed.
+Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`. POLY_PROXY mode → check `proxy_wallet.usdc_e`; top up with `polymarket-plugin deposit --amount <N>` if needed.
 
 ---
 
@@ -322,7 +375,7 @@ Shows both EOA and proxy wallet balances. Confirm the active mode's wallet holds
 ### `check-access` — Verify Region is Not Restricted
 
 ```
-polymarket check-access
+polymarket-plugin check-access
 ```
 
 **Auth required:** No
@@ -335,7 +388,7 @@ polymarket check-access
 
 **Example:**
 ```bash
-polymarket check-access
+polymarket-plugin check-access
 # accessible → proceed
 # not accessible → show warning, halt
 ```
@@ -345,7 +398,7 @@ polymarket check-access
 ### `list-markets` — Browse Active Prediction Markets
 
 ```
-polymarket list-markets [--limit <N>] [--keyword <text>]
+polymarket-plugin list-markets [--limit <N>] [--keyword <text>]
 ```
 
 **Flags:**
@@ -360,7 +413,7 @@ polymarket list-markets [--limit <N>] [--keyword <text>]
 
 **Example:**
 ```
-polymarket list-markets --limit 10 --keyword "bitcoin"
+polymarket-plugin list-markets --limit 10 --keyword "bitcoin"
 ```
 
 ---
@@ -368,7 +421,7 @@ polymarket list-markets --limit 10 --keyword "bitcoin"
 ### `get-market` — Get Market Details and Order Book
 
 ```
-polymarket get-market --market-id <id>
+polymarket-plugin get-market --market-id <id>
 ```
 
 **Flags:**
@@ -386,8 +439,8 @@ polymarket get-market --market-id <id>
 
 **Example:**
 ```
-polymarket get-market --market-id will-btc-hit-100k-by-2025
-polymarket get-market --market-id 0xabc123...
+polymarket-plugin get-market --market-id will-btc-hit-100k-by-2025
+polymarket-plugin get-market --market-id 0xabc123...
 ```
 
 ---
@@ -397,7 +450,7 @@ polymarket get-market --market-id 0xabc123...
 Show POL and USDC.e balances for the EOA wallet and proxy wallet (if initialized).
 
 ```
-polymarket balance
+polymarket-plugin balance
 ```
 
 **Auth required:** No (reads on-chain via Polygon RPC)
@@ -410,7 +463,7 @@ polymarket balance
 
 **Example:**
 ```bash
-polymarket balance
+polymarket-plugin balance
 ```
 
 ---
@@ -418,7 +471,7 @@ polymarket balance
 ### `get-positions` — View Open Positions
 
 ```
-polymarket get-positions [--address <wallet_address>]
+polymarket-plugin get-positions [--address <wallet_address>]
 ```
 
 **Flags:**
@@ -436,8 +489,8 @@ polymarket get-positions [--address <wallet_address>]
 
 **Example:**
 ```
-polymarket get-positions
-polymarket get-positions --address 0xAbCd...
+polymarket-plugin get-positions
+polymarket-plugin get-positions --address 0xAbCd...
 ```
 
 ---
@@ -445,7 +498,7 @@ polymarket get-positions --address 0xAbCd...
 ### `buy` — Buy Outcome Shares
 
 ```
-polymarket buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--round-up]
+polymarket-plugin buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--round-up]
 ```
 
 > **Amount vs shares**: `buy` takes `--amount` in **USDC.e** (dollars you spend). `sell` takes `--shares` in **outcome tokens** (shares you hold). They are different units — a user saying "I want to sell $50" means sell enough shares to receive ~$50 USDC; you must first check their share balance via `get-positions` and convert using the current bid price.
@@ -496,9 +549,9 @@ polymarket buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-
 
 **Example:**
 ```
-polymarket buy --market-id will-btc-hit-100k-by-2025 --outcome yes --amount 50 --price 0.65
-polymarket buy --market-id presidential-election-winner-2024 --outcome trump --amount 50 --price 0.52
-polymarket buy --market-id 0xabc... --outcome no --amount 100
+polymarket-plugin buy --market-id will-btc-hit-100k-by-2025 --outcome yes --amount 50 --price 0.65
+polymarket-plugin buy --market-id presidential-election-winner-2024 --outcome trump --amount 50 --price 0.52
+polymarket-plugin buy --market-id 0xabc... --outcome no --amount 100
 ```
 
 ---
@@ -506,7 +559,7 @@ polymarket buy --market-id 0xabc... --outcome no --amount 100
 ### `sell` — Sell Outcome Shares
 
 ```
-polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--dry-run]
+polymarket-plugin sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--dry-run]
 ```
 
 **Flags:**
@@ -536,8 +589,8 @@ polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price 
 
 **Example:**
 ```
-polymarket sell --market-id will-btc-hit-100k-by-2025 --outcome yes --shares 100 --price 0.72
-polymarket sell --market-id 0xabc... --outcome no --shares 50
+polymarket-plugin sell --market-id will-btc-hit-100k-by-2025 --outcome yes --shares 100 --price 0.72
+polymarket-plugin sell --market-id 0xabc... --outcome no --shares 50
 ```
 
 ---
@@ -547,7 +600,7 @@ polymarket sell --market-id 0xabc... --outcome no --shares 50
 **Before calling `sell`, you MUST call `get-market` and assess liquidity for the outcome being sold.**
 
 ```bash
-polymarket get-market --market-id <id>
+polymarket-plugin get-market --market-id <id>
 ```
 
 Find the token matching the outcome being sold in the `tokens[]` array. Extract:
@@ -684,7 +737,7 @@ polymarket setup-proxy [--dry-run]
 **Agent flow:**
 1. Run `polymarket setup-proxy --dry-run` to preview
 2. After user confirms, run `polymarket setup-proxy`
-3. Follow up with `polymarket deposit --amount <N>` to fund the proxy wallet
+3. Follow up with `polymarket-plugin deposit --amount <N>` to fund the proxy wallet
 
 **Example:**
 ```bash
@@ -699,7 +752,7 @@ polymarket setup-proxy
 Transfer USDC.e from the EOA wallet to the proxy wallet. Only applicable in POLY_PROXY mode. Requires `setup-proxy` to have been run first.
 
 ```
-polymarket deposit --amount <usdc> [--dry-run]
+polymarket-plugin deposit --amount <usdc> [--dry-run]
 ```
 
 **Flags:**
@@ -714,8 +767,8 @@ polymarket deposit --amount <usdc> [--dry-run]
 
 **Example:**
 ```bash
-polymarket deposit --amount 100 --dry-run
-polymarket deposit --amount 100
+polymarket-plugin deposit --amount 100 --dry-run
+polymarket-plugin deposit --amount 100
 ```
 
 ---
@@ -784,14 +837,14 @@ polymarket switch-mode --mode eoa
 **No manual credential setup required.** On the first trading command, the plugin:
 1. Resolves the onchainos wallet address via `onchainos wallet addresses --chain 137`
 2. Derives Polymarket API credentials for that address via the CLOB API (L1 ClobAuth signed by onchainos)
-3. Caches them at `~/.config/polymarket/creds.json` (0600 permissions) for all future calls
+3. Caches them at `~/.config/polymarket-plugin/creds.json` (0600 permissions) for all future calls
 
 The onchainos wallet address is the Polymarket trading identity. Credentials are automatically re-derived if the active wallet changes.
 
 **Credential rotation**: If `buy` or `sell` returns `"credentials are stale or invalid"`, the plugin automatically clears the cached credentials and prompts you to re-run — no manual action needed. To manually force re-derivation:
 
 ```bash
-rm ~/.config/polymarket/creds.json
+rm ~/.config/polymarket-plugin/creds.json
 ```
 
 **Override via environment variables** (optional — takes precedence over cached credentials):
@@ -810,7 +863,7 @@ export POLYMARKET_PASSPHRASE=<passphrase>
 | `POLYMARKET_SECRET` | Optional override | Base64url-encoded HMAC secret for L2 auth |
 | `POLYMARKET_PASSPHRASE` | Optional override | CLOB API passphrase |
 
-**Credential storage:** Credentials are cached at `~/.config/polymarket/creds.json` with `0600` permissions (owner read/write only). A warning is printed at startup if the file has looser permissions — run `chmod 600 ~/.config/polymarket/creds.json` to fix. The file remains in plaintext; avoid storing it on shared machines.
+**Credential storage:** Credentials are cached at `~/.config/polymarket-plugin/creds.json` with `0600` permissions (owner read/write only). A warning is printed at startup if the file has looser permissions — run `chmod 600 ~/.config/polymarket-plugin/creds.json` to fix. The file remains in plaintext; avoid storing it on shared machines.
 
 ---
 
@@ -869,7 +922,7 @@ Minimum expiry is **90 seconds** from now. For human-friendly inputs ("1 hour", 
 If the user wants both maker status and a time limit, combine both flags:
 
 ```
-polymarket buy --market-id <id> --outcome yes --amount <usdc> --price <x> --post-only --expires <unix_ts>
+polymarket-plugin buy --market-id <id> --outcome yes --amount <usdc> --price <x> --post-only --expires <unix_ts>
 ```
 
 ### Decision tree (quick reference)
@@ -894,19 +947,19 @@ User wants to trade:
 
 | User Intent | Command |
 |-------------|---------|
-| Check if region is restricted before topping up | `polymarket check-access` |
-| Browse prediction markets | `polymarket list-markets [--keyword <text>]` |
-| Find a specific market | `polymarket get-market --market-id <slug_or_condition_id>` |
-| Check my open positions | `polymarket get-positions` |
-| Check positions for specific wallet | `polymarket get-positions --address <addr>` |
-| Buy YES/NO shares immediately (market order) | `polymarket buy --market-id <id> --outcome <yes\|no> --amount <usdc>` |
-| Place a resting limit buy | `polymarket buy --market-id <id> --outcome yes --amount <usdc> --price <0-1>` |
-| Place a maker-only limit buy (rebates) | `polymarket buy ... --price <x> --post-only` |
-| Place a time-limited limit buy | `polymarket buy ... --price <x> --expires <unix_ts>` |
-| Sell shares immediately (market order) | `polymarket sell --market-id <id> --outcome yes --shares <n>` |
-| Place a resting limit sell | `polymarket sell --market-id <id> --outcome yes --shares <n> --price <0-1>` |
-| Place a maker-only limit sell (rebates) | `polymarket sell ... --price <x> --post-only` |
-| Place a time-limited limit sell | `polymarket sell ... --price <x> --expires <unix_ts>` |
+| Check if region is restricted before topping up | `polymarket-plugin check-access` |
+| Browse prediction markets | `polymarket-plugin list-markets [--keyword <text>]` |
+| Find a specific market | `polymarket-plugin get-market --market-id <slug_or_condition_id>` |
+| Check my open positions | `polymarket-plugin get-positions` |
+| Check positions for specific wallet | `polymarket-plugin get-positions --address <addr>` |
+| Buy YES/NO shares immediately (market order) | `polymarket-plugin buy --market-id <id> --outcome <yes\|no> --amount <usdc>` |
+| Place a resting limit buy | `polymarket-plugin buy --market-id <id> --outcome yes --amount <usdc> --price <0-1>` |
+| Place a maker-only limit buy (rebates) | `polymarket-plugin buy ... --price <x> --post-only` |
+| Place a time-limited limit buy | `polymarket-plugin buy ... --price <x> --expires <unix_ts>` |
+| Sell shares immediately (market order) | `polymarket-plugin sell --market-id <id> --outcome yes --shares <n>` |
+| Place a resting limit sell | `polymarket-plugin sell --market-id <id> --outcome yes --shares <n> --price <0-1>` |
+| Place a maker-only limit sell (rebates) | `polymarket-plugin sell ... --price <x> --post-only` |
+| Place a time-limited limit sell | `polymarket-plugin sell ... --price <x> --expires <unix_ts>` |
 | Cancel a specific order | `polymarket cancel --order-id <0x...>` |
 | Cancel all orders for market | `polymarket cancel --market <condition_id>` |
 | Cancel all open orders | `polymarket cancel --all` |
