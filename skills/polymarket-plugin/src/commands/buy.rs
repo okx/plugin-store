@@ -3,19 +3,21 @@ use reqwest::Client;
 
 use crate::api::{
     compute_buy_worst_price, get_balance_allowance, get_clob_market, get_market_fee, get_orderbook,
-    get_tick_size, post_order, round_price,
+    post_order, round_price,
     OrderBody, OrderRequest,
 };
 use crate::auth::ensure_credentials;
 use crate::onchainos::{approve_usdc, get_usdc_balance, get_wallet_address};
+use crate::series;
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
 /// Run the buy command.
 ///
-/// mode_override: optional one-time mode override ("eoa" or "proxy").
+/// mode_override: optional one-time trading mode override ("eoa" or "proxy").
 ///   Does not persist — use `switch-mode` to change the default.
+/// token_id_fast: skip all market resolution when token ID is known (from get-series output).
 pub async fn run(
-    market_id: &str,
+    market_id: Option<&str>,
     outcome: &str,
     amount: &str,
     price: Option<f64>,
@@ -26,15 +28,13 @@ pub async fn run(
     post_only: bool,
     expires: Option<u64>,
     mode_override: Option<&str>,
+    token_id_fast: Option<&str>,
 ) -> Result<()> {
-    // Parse USDC amount early so we can enforce the minimum order size
-    // check even on dry-run (the agent needs to know before placing).
     let usdc_amount: f64 = amount.parse().context("invalid amount")?;
     if usdc_amount <= 0.0 {
         bail!("amount must be positive");
     }
 
-    // Validate --post-only / --expires up front (no network calls needed).
     if post_only && order_type.to_uppercase() == "FOK" {
         bail!("--post-only is incompatible with --order-type FOK: FOK orders are always takers");
     }
@@ -58,18 +58,80 @@ pub async fn run(
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
-    // Resolve market (no auth required — public API)
-    let (condition_id, token_id, neg_risk) =
-        resolve_market_token(&client, market_id, outcome).await?;
+    // Three resolution paths:
+    //   1. --token-id fast path: skip all market lookup, get condition_id from book
+    //   2. Series path: resolve series → GammaMarket once (avoids double Gamma fetch)
+    //   3. Slug/condition_id standard path
 
-    // Fetch the order book.
-    let book = get_orderbook(&client, &token_id).await?;
+    let (condition_id, token_id, neg_risk, fee_rate_bps, book, signer_addr_opt) =
+        if let Some(tid) = token_id_fast {
+            // ── Fast path: token_id provided directly ──────────────────────────
+            let book = get_orderbook(&client, tid).await?;
+            let condition_id = book.market.clone()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "Order book did not return a condition_id for token {}. \
+                     Try using --market-id instead.", tid
+                ))?;
+            let neg_risk = book.neg_risk;
+            let token_id = tid.to_string();
 
-    // Get tick size and market fee rate.
-    let tick_size = get_tick_size(&client, &token_id).await?;
-    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+            let (fee_r, wallet_opt) = if dry_run {
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                (fee, None)
+            } else {
+                let (fee_res, wallet_res) = tokio::join!(
+                    get_market_fee(&client, &condition_id),
+                    get_wallet_address()
+                );
+                (fee_res.unwrap_or(0), Some(wallet_res?))
+            };
 
-    // Determine price (limit or market).
+            (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
+        } else {
+            let mid = market_id.ok_or_else(|| anyhow::anyhow!(
+                "--market-id is required when --token-id is not provided"
+            ))?;
+
+            if series::is_series_id(mid) {
+                // ── Series path ────────────────────────────────────────────────
+                let gamma = series::resolve_to_market(&client, mid).await?;
+                let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
+
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
+            } else {
+                // ── Standard path: slug or condition_id ────────────────────────
+                let (cid, tid, nr, fee) = resolve_market_token(&client, mid, outcome).await?;
+
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
+            }
+        };
+
+    // Extract tick_size from the order book (avoids a separate get_tick_size call).
+    let tick_size = book.tick_size.as_deref()
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|&t| t > 0.0)
+        .unwrap_or(0.01);
+
     let limit_price = if let Some(p) = price {
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
@@ -82,7 +144,6 @@ pub async fn run(
     } else if let Some(p) = compute_buy_worst_price(&book.asks, usdc_amount) {
         p
     } else {
-        // No asks — convert market order to GTC limit at last trade price.
         let fallback = book.last_trade_price
             .as_deref()
             .and_then(|s| s.parse::<f64>().ok())
@@ -101,7 +162,6 @@ pub async fn run(
         fp
     };
 
-    // Build order amounts using integer arithmetic.
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 { let t = b; b = a % b; a = t; }
         a
@@ -110,8 +170,8 @@ pub async fn run(
     let price_ticks = (limit_price / tick_size).round() as u128;
     let g = gcd(price_ticks, tick_scale * 10_000);
     let step_raw = tick_scale * 10_000 / g;
-    let g2 = gcd(step_raw, 100);
-    let step = step_raw / g2 * 100;
+    let g2 = gcd(step_raw, 10_000);
+    let step = step_raw / g2 * 10_000;
 
     let max_taker_raw = (usdc_amount / limit_price * 1_000_000.0).floor() as u128;
     let mut taker_amount_raw = if round_up {
@@ -121,7 +181,6 @@ pub async fn run(
     };
     let mut maker_amount_raw = price_ticks * taker_amount_raw / tick_scale;
 
-    // Guard: amount too small.
     if taker_amount_raw == 0 || maker_amount_raw == 0 {
         let min_usdc = step as f64 / 1_000_000.0 * limit_price;
         bail!(
@@ -132,7 +191,6 @@ pub async fn run(
         );
     }
 
-    // Guard: resting orders below CLOB min_order_size are rejected.
     let min_order_size: f64 = book.min_order_size.as_deref()
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.0);
@@ -173,7 +231,7 @@ pub async fn run(
         );
     }
 
-    // ── Dry-run exit — full projected order fields ────────────────────────────
+    // ── Dry-run exit ──────────────────────────────────────────────────────────
     if dry_run {
         println!(
             "{}",
@@ -205,18 +263,16 @@ pub async fn run(
 
     use crate::config::{Contracts, TradingMode};
 
-    // onchainos wallet is always the signer.
-    let signer_addr = get_wallet_address().await?;
+    // Wallet address was pre-fetched in parallel with the order book (non-dry-run path).
+    let signer_addr = signer_addr_opt.expect("signer_addr must be set in non-dry-run path");
     let creds = ensure_credentials(&client, &signer_addr).await?;
 
-    // Resolve effective trading mode (one-time override > stored default).
     let effective_mode = match mode_override {
         Some("proxy") => TradingMode::PolyProxy,
         Some("eoa")   => TradingMode::Eoa,
         _             => creds.mode.clone(),
     };
 
-    // Resolve maker address and signature type based on mode.
     let (maker_addr, sig_type) = match &effective_mode {
         TradingMode::PolyProxy => {
             let proxy = creds.proxy_wallet.as_ref().ok_or_else(|| anyhow::anyhow!(
@@ -231,21 +287,17 @@ pub async fn run(
 
     let usdc_needed_raw = maker_amount_raw as u64;
 
-    // Determine which address holds the USDC.e for this order.
     let balance_addr = match &effective_mode {
         TradingMode::PolyProxy => maker_addr.as_str(),
         TradingMode::Eoa       => signer_addr.as_str(),
     };
 
-    // Fetch on-chain USDC.e balance and CLOB allowance info in parallel.
-    // Balance uses direct eth_call (authoritative); allowance uses CLOB API.
     let (onchain_balance_result, allowance_info) = tokio::join!(
         get_usdc_balance(balance_addr),
         get_balance_allowance(&client, balance_addr, &creds, "COLLATERAL", None),
     );
     let allowance_info = allowance_info?;
 
-    // Pre-flight: bail if on-chain USDC.e balance is insufficient.
     match onchain_balance_result {
         Ok(bal_usdc) => {
             let bal_raw = (bal_usdc * 1_000_000.0).floor() as u64;
@@ -256,7 +308,6 @@ pub async fn run(
                         actual_usdc
                     ),
                     TradingMode::Eoa => {
-                        // Check if proxy wallet has enough USDC and hint mode switch.
                         let proxy_hint = crate::config::load_credentials()
                             .ok()
                             .flatten()
@@ -280,13 +331,10 @@ pub async fn run(
             }
         }
         Err(e) => {
-            // On-chain read failed — log and fall through (CLOB will catch it at settlement).
             eprintln!("[polymarket] Warning: could not verify on-chain USDC.e balance ({}); proceeding.", e);
         }
     }
 
-    // EOA mode: submit on-chain approve if allowance is insufficient.
-    // POLY_PROXY mode: approvals are set once during `setup-proxy` — no per-trade approve needed.
     if effective_mode == TradingMode::Eoa {
         let allowance_raw = if neg_risk {
             let a_exchange = allowance_info.allowance_for(Contracts::NEG_RISK_CTF_EXCHANGE);
@@ -306,8 +354,6 @@ pub async fn run(
             eprintln!("[polymarket] Approval confirmed.");
         }
     }
-    // POLY_PROXY mode: approvals are set once during `setup-proxy` and verified on-chain there.
-    // The CLOB server checks allowance independently at order submission — no pre-flight needed.
 
     let salt = rand_salt();
 
@@ -351,9 +397,6 @@ pub async fn run(
         post_only,
     };
 
-    // The order owner for L2 auth must always be the EOA (API key holder),
-    // regardless of trading mode. In POLY_PROXY mode the maker field in the
-    // order struct is the proxy, but the HTTP owner must match the API key.
     let resp = post_order(&client, &signer_addr, &creds, &order_req).await?;
 
     if resp.success != Some(true) {
@@ -400,17 +443,15 @@ pub async fn run(
     Ok(())
 }
 
-/// Resolve (condition_id, token_id, neg_risk) from a market_id and outcome string.
-/// Supports any outcome label (e.g. "yes", "no", "trump", "republican", "option-a").
-/// Bails early if the market is not accepting orders (closed, resolved, or paused).
+/// Resolve (condition_id, token_id, neg_risk, fee_rate_bps) from a market_id and outcome string.
 ///
-/// neg_risk is always sourced from the CLOB API (authoritative) because the Gamma API
-/// omits the negRisk field for many markets, causing incorrect contract approval targets.
+/// neg_risk and fee_rate_bps are always sourced from the CLOB API (authoritative) because the
+/// Gamma API omits the negRisk field for many markets, causing incorrect contract approval targets.
 pub async fn resolve_market_token(
     client: &Client,
     market_id: &str,
     outcome: &str,
-) -> Result<(String, String, bool)> {
+) -> Result<(String, String, bool, u64)> {
     let outcome_lower = outcome.to_lowercase();
     if market_id.starts_with("0x") || market_id.starts_with("0X") {
         let market = get_clob_market(client, market_id).await?;
@@ -429,7 +470,8 @@ pub async fn resolve_market_token(
                 let available: Vec<&str> = market.tokens.iter().map(|t| t.outcome.as_str()).collect();
                 anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, available)
             })?;
-        Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk))
+        let fee = market.maker_base_fee.unwrap_or(0);
+        Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk, fee))
     } else {
         let gamma = crate::api::get_gamma_market_by_slug(client, market_id).await?;
         if !gamma.accepting_orders {
@@ -456,19 +498,41 @@ pub async fn resolve_market_token(
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
 
-        // Get authoritative neg_risk from CLOB — Gamma API omits negRisk for many markets,
-        // which causes the wrong exchange to be approved (CTF_EXCHANGE instead of
-        // NEG_RISK_CTF_EXCHANGE), wasting gas and failing the order.
-        let neg_risk = match get_clob_market(client, &condition_id).await {
-            Ok(clob) => clob.neg_risk,
-            Err(_) => gamma.neg_risk, // fall back to gamma value if CLOB unavailable
+        let (neg_risk, fee) = match get_clob_market(client, &condition_id).await {
+            Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+            Err(_) => (gamma.neg_risk, 0),
         };
 
-        Ok((condition_id, token_id, neg_risk))
+        Ok((condition_id, token_id, neg_risk, fee))
     }
 }
 
-/// Generate a random salt within JavaScript's safe integer range (< 2^53).
+/// Resolve (condition_id, token_id, neg_risk, fee_rate_bps) from a pre-fetched GammaMarket.
+/// Used in the series path to avoid fetching the same Gamma market twice.
+pub async fn resolve_from_gamma(
+    client: &Client,
+    gamma: crate::api::GammaMarket,
+    outcome: &str,
+) -> Result<(String, String, bool, u64)> {
+    if !gamma.accepting_orders {
+        bail!("Series market is not currently accepting orders. It may be outside trading hours or in a transition window.");
+    }
+    let outcome_lower = outcome.to_lowercase();
+    let condition_id = gamma.condition_id.clone()
+        .ok_or_else(|| anyhow::anyhow!("No condition_id in Gamma market response"))?;
+    let token_ids = gamma.token_ids();
+    let outcomes = gamma.outcome_list();
+    let idx = outcomes.iter().position(|o| o.to_lowercase() == outcome_lower)
+        .ok_or_else(|| anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, outcomes))?;
+    let token_id = token_ids.get(idx).cloned()
+        .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
+    let (neg_risk, fee_rate_bps) = match get_clob_market(client, &condition_id).await {
+        Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+        Err(_) => (gamma.neg_risk, 0),
+    };
+    Ok((condition_id, token_id, neg_risk, fee_rate_bps))
+}
+
 fn rand_salt() -> u64 {
     let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");

@@ -48,8 +48,10 @@ pub async fn run(dry_run: bool) -> Result<()> {
         }
         // Has proxy but mode is EOA — switch mode and ensure approvals.
         let proxy = proxy.clone();
-        creds.mode = crate::config::TradingMode::PolyProxy;
-        crate::config::save_credentials(&creds)?;
+        if !dry_run {
+            creds.mode = crate::config::TradingMode::PolyProxy;
+            crate::config::save_credentials(&creds)?;
+        }
         ensure_proxy_approvals(&proxy, dry_run).await?;
         println!(
             "{}",
@@ -79,9 +81,11 @@ pub async fn run(dry_run: bool) -> Result<()> {
 
     if let Some(existing) = existing_proxy {
         eprintln!("[polymarket] Found existing proxy on-chain: {}", existing);
-        creds.proxy_wallet = Some(existing.clone());
-        creds.mode = crate::config::TradingMode::PolyProxy;
-        crate::config::save_credentials(&creds)?;
+        if !dry_run {
+            creds.proxy_wallet = Some(existing.clone());
+            creds.mode = crate::config::TradingMode::PolyProxy;
+            crate::config::save_credentials(&creds)?;
+        }
         ensure_proxy_approvals(&existing, dry_run).await?;
         println!(
             "{}",

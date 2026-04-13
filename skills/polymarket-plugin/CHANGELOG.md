@@ -1,5 +1,21 @@
 # Polymarket Plugin Changelog
 
+### v0.3.3 (2026-04-13)
+
+- **feat**: `get-series` command — lists the 12 supported recurring crypto series markets (btc/eth/sol/xrp × 5m/15m/4h) and shows current/next slot for each. Use `--series btc-5m` to inspect a specific series or `--list` to show all supported identifiers.
+- **feat**: Series fast path in `buy`/`sell` — resolves current-slot token IDs directly via Gamma API without CLOB lookup. Detects series intent from slug patterns (e.g. `btc-5m`, `eth-15m`) and queries `get-series` before falling back to standard market resolution.
+- **feat**: `buy --token-id <id>` and `sell --token-id <id>` — skip market lookup entirely when the token ID is already known (e.g. cached from `get-series`). Reduces per-trade latency by one round-trip to Gamma/CLOB.
+- **feat**: `buy` and `sell` accept `--market-id` as optional when `--token-id` is supplied.
+- **fix (critical) [C1]**: Taker amount precision error on non-standard-step markets (e.g. `tick_size = 0.016`). GCD alignment used `gcd(step_raw, 100)` scaling by 100, producing a taker amount that could have 3+ decimal places, causing CLOB "taker amount max accuracy 2 decimals" rejection. Fixed to `gcd(step_raw, 10_000)` / `step_raw / g2 * 10_000`. Affects 63 of 999 prices at 0.001-step intervals where `step_raw * 100` is not divisible by 100.
+- **fix [N1]**: `buy --dry-run` now returns full projected order fields: `condition_id`, `token_id`, `side`, `order_type`, `limit_price`, `usdc_amount`, `shares`, `fee_rate_bps`, `post_only`, `expires`.
+- **fix [N2]**: `buy --market-id` now optional when `--token-id` is supplied.
+- **fix [N3]**: `sell --dry-run` now runs GCD alignment and shows the adjusted `limit_price`, `shares`, and `usdc_out`.
+- **fix [N4]**: `sell` logs a `[polymarket] Note: price adjusted from X to Y` warning to stderr when `--price` is rounded to satisfy tick size.
+
+### v0.3.1 (2026-04-13)
+
+- **build**: Renamed package and binary to `polymarket-plugin`.
+
 ### v0.3.0 (2026-04-13)
 
 - **feat**: POLY_PROXY trading mode. New `setup-proxy` command deploys a Polymarket proxy wallet (one-time POL gas); subsequent `buy`/`sell` orders are relayer-paid (no POL per trade). `setup-proxy` runs 6 on-chain approvals (USDC.e + CTF for all 3 exchanges) idempotently at setup time — no per-trade approve calls.

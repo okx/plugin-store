@@ -4,6 +4,7 @@ mod commands;
 mod config;
 mod onchainos;
 mod sanitize;
+mod series;
 mod signing;
 
 use clap::{Parser, Subcommand};
@@ -53,11 +54,23 @@ enum Commands {
     /// Show POL and USDC.e balances for the EOA wallet (and proxy wallet if initialized)
     Balance,
 
+    /// Show current and next slot for a recurring series market (no auth required)
+    GetSeries {
+        /// Series identifier (e.g. btc-5m, eth-15m, btc-4h). Omit to list all.
+        #[arg(long)]
+        series: Option<String>,
+
+        /// List all supported series
+        #[arg(long)]
+        list: bool,
+    },
+
     /// Buy YES or NO shares in a market (signs via onchainos wallet)
     Buy {
-        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        /// Market identifier: condition_id (0x-prefixed hex) or slug.
+        /// Optional when --token-id is provided (fast path skips market lookup).
         #[arg(long)]
-        market_id: String,
+        market_id: Option<String>,
 
         /// Outcome to buy: "yes" or "no"
         #[arg(long)]
@@ -107,13 +120,18 @@ enum Commands {
         /// Confirm a previously gated action (reserved for future use)
         #[arg(long)]
         confirm: bool,
+
+        /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
+        #[arg(long)]
+        token_id: Option<String>,
     },
 
     /// Sell YES or NO shares in a market (signs via onchainos wallet)
     Sell {
-        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        /// Market identifier: condition_id (0x-prefixed hex) or slug.
+        /// Optional when --token-id is provided (fast path skips market lookup).
         #[arg(long)]
-        market_id: String,
+        market_id: Option<String>,
 
         /// Outcome to sell: "yes" or "no"
         #[arg(long)]
@@ -157,6 +175,10 @@ enum Commands {
         /// Confirm a low-price market sell that was previously gated
         #[arg(long)]
         confirm: bool,
+
+        /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
+        #[arg(long)]
+        token_id: Option<String>,
     },
 
     /// Create a Polymarket proxy wallet and switch to gasless POLY_PROXY trading mode.
@@ -244,6 +266,9 @@ async fn main() {
         Commands::Balance => {
             commands::balance::run().await
         }
+        Commands::GetSeries { series, list } => {
+            commands::get_series::run(series.as_deref(), list).await
+        }
         Commands::Buy {
             market_id,
             outcome,
@@ -257,8 +282,9 @@ async fn main() {
             expires,
             mode,
             confirm: _confirm,
+            token_id,
         } => {
-            commands::buy::run(&market_id, &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref()).await
+            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref(), token_id.as_deref()).await
         }
         Commands::Sell {
             market_id,
@@ -272,8 +298,9 @@ async fn main() {
             expires,
             mode,
             confirm: _confirm,
+            token_id,
         } => {
-            commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref()).await
+            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref(), token_id.as_deref()).await
         }
         Commands::SetupProxy { dry_run } => {
             commands::setup_proxy::run(dry_run).await

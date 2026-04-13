@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on."
-version: "0.3.2"
+version: "0.3.3"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.3.2"
+LOCAL_VER="0.3.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.3.2/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.3.3/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.3.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.3.3" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.3.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.3.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -162,7 +162,7 @@ When a user signals they are **new or just installed** this plugin — e.g. "I j
 2. **Check access** — run `polymarket-plugin check-access`. If `accessible: false`, stop and show the warning. Do not proceed to funding.
 3. **Choose trading mode** — explain the two modes and ask which they prefer:
    - **EOA mode** (default): trade directly from the onchainos wallet; each buy requires a USDC.e `approve` tx (POL gas, typically < $0.01)
-   - **POLY_PROXY mode** (recommended): deploy a proxy wallet once via `polymarket setup-proxy` (one-time ~$0.01 POL), then trade without any gas. USDC.e must be deposited into the proxy via `polymarket-plugin deposit`.
+   - **POLY_PROXY mode** (recommended): deploy a proxy wallet once via `polymarket-plugin setup-proxy` (one-time ~$0.01 POL), then trade without any gas. USDC.e must be deposited into the proxy via `polymarket-plugin deposit`.
 4. **Check balance** — run `polymarket-plugin balance`. Shows POL and USDC.e for both EOA and proxy wallet (if set up). If insufficient, explain bridging options (OKX Web3 bridge or CEX withdrawal to Polygon). Verify the `usdc_e_contract` field matches `0x2791...a84174` before bridging.
 5. **Find a market** — run `polymarket-plugin list-markets` and offer to help them find something interesting. Ask what topics they care about.
 6. **Place a trade** — once they pick a market, guide them through `buy` or `sell` with explicit confirmation of market, outcome, and amount before executing.
@@ -259,7 +259,7 @@ There are two modes. Pick one before topping up:
 
 **POLY_PROXY mode** — one-time setup, then trade without spending POL:
 ```bash
-polymarket setup-proxy   # deploy proxy wallet (one-time ~$0.01 gas)
+polymarket-plugin setup-proxy   # deploy proxy wallet (one-time ~$0.01 gas)
 polymarket-plugin deposit --amount 50   # fund it with USDC.e
 ```
 
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.3.2`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.3.3`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -360,14 +360,16 @@ Confirm the wallet holds sufficient USDC.e (contract `0x2791Bca1f2de4661ED88A30C
 | `check-access` | No | Verify region is not restricted |
 | `list-markets` | No | Browse active prediction markets |
 | `get-market` | No | Get market details and order book |
-| `get-positions` | No | View open positions |
+| `get-positions` (alias: `positions`) | No | View open positions |
 | `balance` | No | Show POL and USDC.e balances (EOA + proxy wallet) |
+| `get-series` | No | List recurring series markets and current slot |
 | `buy` | Yes | Buy YES/NO outcome shares |
 | `sell` | Yes | Sell outcome shares |
 | `cancel` | Yes | Cancel an open order |
 | `redeem` | Yes | Redeem winning tokens after market resolves |
 | `setup-proxy` | Yes | Deploy proxy wallet for gasless trading (one-time) |
 | `deposit` | Yes | Transfer USDC.e from EOA to proxy wallet |
+| `withdraw` | Yes | Withdraw USDC.e from proxy wallet back to EOA |
 | `switch-mode` | Yes | Switch default trading mode (eoa / proxy) |
 
 ---
@@ -468,6 +470,61 @@ polymarket-plugin balance
 
 ---
 
+### `get-series` — List Recurring Series Markets
+
+Show current and next slot for recurring crypto price series markets, or list all supported series identifiers.
+
+```
+polymarket-plugin get-series [--series <id>] [--list]
+```
+
+**Flags:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--series` | Series identifier (e.g. `btc-5m`, `eth-15m`, `sol-4h`). Omit to show all active slots. | — |
+| `--list` | List all 12 supported series identifiers and exit | false |
+
+**Auth required:** No
+
+**Supported series (12 total):**
+
+| ID | Asset | Interval | Trading hours |
+|----|-------|----------|---------------|
+| `btc-5m` | Bitcoin | 5 minutes | NYSE hours only (Mon–Fri 09:30–16:00 ET) |
+| `eth-5m` | Ethereum | 5 minutes | NYSE hours only |
+| `sol-5m` | Solana | 5 minutes | NYSE hours only |
+| `xrp-5m` | XRP | 5 minutes | NYSE hours only |
+| `btc-15m` | Bitcoin | 15 minutes | NYSE hours only |
+| `eth-15m` | Ethereum | 15 minutes | NYSE hours only |
+| `sol-15m` | Solana | 15 minutes | NYSE hours only |
+| `xrp-15m` | XRP | 15 minutes | NYSE hours only |
+| `btc-4h` | Bitcoin | 4 hours | 24/7 |
+| `eth-4h` | Ethereum | 4 hours | 24/7 |
+| `sol-4h` | Solana | 4 hours | 24/7 |
+| `xrp-4h` | XRP | 4 hours | 24/7 |
+
+**Output fields (per slot):** `series_id`, `slug`, `condition_id`, `yes_token_id`, `no_token_id`, `yes_price`, `no_price`, `start_time`, `end_time`, `accepting_orders`
+
+**Fast path with `--token-id`:** The `yes_token_id` / `no_token_id` from `get-series` output can be passed directly to `buy` or `sell` via `--token-id`, skipping the market lookup step entirely:
+
+```bash
+# Step 1: get current slot token IDs
+polymarket-plugin get-series --series btc-5m
+
+# Step 2: trade directly using the token ID (no market lookup)
+polymarket-plugin buy --token-id <yes_token_id> --outcome yes --amount 10 --price 0.6
+polymarket-plugin sell --token-id <no_token_id> --outcome no --shares 50
+```
+
+**Example:**
+```bash
+polymarket-plugin get-series --list           # list all 12 series IDs
+polymarket-plugin get-series --series btc-5m  # show current BTC 5m slot
+polymarket-plugin get-series                  # show all active slots
+```
+
+---
+
 ### `get-positions` — View Open Positions
 
 ```
@@ -506,9 +563,10 @@ polymarket-plugin buy --market-id <id> --outcome <outcome> --amount <usdc> [--pr
 **Flags:**
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--market-id` | Market condition_id or slug | required |
+| `--market-id` | Market condition_id or slug. Optional when `--token-id` is supplied. | required* |
 | `--outcome` | outcome label, case-insensitive (e.g. `yes`, `no`, `trump`, `republican`) | required |
 | `--amount` | USDC.e to spend, e.g. `100` = $100.00 | required |
+| `--token-id` | Skip market lookup — use a known token ID directly (from `get-series` or `get-market` output). Makes `--market-id` optional. | — |
 | `--price` | Limit price in (0, 1), representing **probability** (e.g. `0.65` = "65% chance this outcome occurs = $0.65 per share"). Omit for market order (FOK). | — |
 | `--order-type` | `GTC` (resting limit) or `FOK` (fill-or-kill) | `GTC` |
 | `--approve` | Force USDC.e approval before placing | false |
@@ -565,9 +623,10 @@ polymarket-plugin sell --market-id <id> --outcome <outcome> --shares <amount> [-
 **Flags:**
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--market-id` | Market condition_id or slug | required |
+| `--market-id` | Market condition_id or slug. Optional when `--token-id` is supplied. | required* |
 | `--outcome` | outcome label, case-insensitive (e.g. `yes`, `no`, `trump`, `republican`) | required |
 | `--shares` | Number of shares to sell, e.g. `250.5` | required |
+| `--token-id` | Skip market lookup — use a known token ID directly (from `get-series` or `get-market` output). Makes `--market-id` optional. | — |
 | `--price` | Limit price in (0, 1). Omit for market order (FOK) | — |
 | `--order-type` | `GTC` (resting limit) or `FOK` (fill-or-kill) | `GTC` |
 | `--approve` | Force CTF token approval before placing | false |
@@ -647,9 +706,9 @@ Liquidity protection for `sell` is handled at the agent level via the **Pre-sell
 ### `cancel` — Cancel Open Orders
 
 ```
-polymarket cancel --order-id <id>
-polymarket cancel --market <condition_id>
-polymarket cancel --all
+polymarket-plugin cancel --order-id <id>
+polymarket-plugin cancel --market <condition_id>
+polymarket-plugin cancel --all
 ```
 
 **Flags:**
@@ -667,9 +726,9 @@ polymarket cancel --all
 
 **Example:**
 ```
-polymarket cancel --order-id 0xdeadbeef...
-polymarket cancel --market 0xabc123...
-polymarket cancel --all
+polymarket-plugin cancel --order-id 0xdeadbeef...
+polymarket-plugin cancel --market 0xabc123...
+polymarket-plugin cancel --all
 ```
 
 ---
@@ -679,8 +738,8 @@ polymarket cancel --all
 After a market resolves, the winning side's tokens can be redeemed for USDC.e at a 1:1 rate. This calls `redeemPositions` on the Gnosis CTF contract with `indexSets=[1, 2]` (covers both YES and NO outcomes; the CTF contract no-ops silently for non-winning tokens, so passing both is safe).
 
 ```
-polymarket redeem --market-id <condition_id_or_slug>
-polymarket redeem --market-id <condition_id_or_slug> --dry-run
+polymarket-plugin redeem --market-id <condition_id_or_slug>
+polymarket-plugin redeem --market-id <condition_id_or_slug> --dry-run
 ```
 
 **Flags:**
@@ -704,10 +763,10 @@ polymarket redeem --market-id <condition_id_or_slug> --dry-run
 **Example:**
 ```bash
 # Preview first
-polymarket redeem --market-id will-trump-win-2024 --dry-run
+polymarket-plugin redeem --market-id will-trump-win-2024 --dry-run
 
 # After user confirms:
-polymarket redeem --market-id will-trump-win-2024
+polymarket-plugin redeem --market-id will-trump-win-2024
 ```
 
 ---
@@ -717,7 +776,7 @@ polymarket redeem --market-id will-trump-win-2024
 Deploy a Polymarket proxy wallet and switch to POLY_PROXY mode. One-time POL gas cost; all subsequent trading is relayer-paid (no POL needed per order).
 
 ```
-polymarket setup-proxy [--dry-run]
+polymarket-plugin setup-proxy [--dry-run]
 ```
 
 **Flags:**
@@ -735,14 +794,14 @@ polymarket setup-proxy [--dry-run]
 **Output fields:** `status` (already_configured | mode_switched | created), `proxy_wallet`, `mode`, `deploy_tx` (if new proxy was created)
 
 **Agent flow:**
-1. Run `polymarket setup-proxy --dry-run` to preview
-2. After user confirms, run `polymarket setup-proxy`
+1. Run `polymarket-plugin setup-proxy --dry-run` to preview
+2. After user confirms, run `polymarket-plugin setup-proxy`
 3. Follow up with `polymarket-plugin deposit --amount <N>` to fund the proxy wallet
 
 **Example:**
 ```bash
-polymarket setup-proxy --dry-run
-polymarket setup-proxy
+polymarket-plugin setup-proxy --dry-run
+polymarket-plugin setup-proxy
 ```
 
 ---
@@ -778,7 +837,7 @@ polymarket-plugin deposit --amount 100
 Transfer USDC.e from the proxy wallet back to the EOA wallet. Only applicable in POLY_PROXY mode.
 
 ```
-polymarket withdraw --amount <usdc> [--dry-run]
+polymarket-plugin withdraw --amount <usdc> [--dry-run]
 ```
 
 **Flags:**
@@ -793,8 +852,8 @@ polymarket withdraw --amount <usdc> [--dry-run]
 
 **Example:**
 ```bash
-polymarket withdraw --amount 50 --dry-run
-polymarket withdraw --amount 50
+polymarket-plugin withdraw --amount 50 --dry-run
+polymarket-plugin withdraw --amount 50
 ```
 
 ---
@@ -804,7 +863,7 @@ polymarket withdraw --amount 50
 Permanently change the stored default trading mode between EOA and POLY_PROXY.
 
 ```
-polymarket switch-mode --mode <eoa|proxy>
+polymarket-plugin switch-mode --mode <eoa|proxy>
 ```
 
 **Flags:**
@@ -822,8 +881,8 @@ polymarket switch-mode --mode <eoa|proxy>
 
 **Example:**
 ```bash
-polymarket switch-mode --mode proxy
-polymarket switch-mode --mode eoa
+polymarket-plugin switch-mode --mode proxy
+polymarket-plugin switch-mode --mode eoa
 ```
 
 > **Note:** `--mode eoa|proxy` on `buy`/`sell` is a one-time override for a single order. `switch-mode` changes the persistent default.
@@ -960,10 +1019,10 @@ User wants to trade:
 | Place a resting limit sell | `polymarket-plugin sell --market-id <id> --outcome yes --shares <n> --price <0-1>` |
 | Place a maker-only limit sell (rebates) | `polymarket-plugin sell ... --price <x> --post-only` |
 | Place a time-limited limit sell | `polymarket-plugin sell ... --price <x> --expires <unix_ts>` |
-| Cancel a specific order | `polymarket cancel --order-id <0x...>` |
-| Cancel all orders for market | `polymarket cancel --market <condition_id>` |
-| Cancel all open orders | `polymarket cancel --all` |
-| Redeem winning tokens after market resolves | `polymarket redeem --market-id <slug_or_condition_id>` |
+| Cancel a specific order | `polymarket-plugin cancel --order-id <0x...>` |
+| Cancel all orders for market | `polymarket-plugin cancel --market <condition_id>` |
+| Cancel all open orders | `polymarket-plugin cancel --all` |
+| Redeem winning tokens after market resolves | `polymarket-plugin redeem --market-id <slug_or_condition_id>` |
 
 ---
 
@@ -994,5 +1053,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.6** (2026-04-12).
-
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.3.3** (2026-04-13).

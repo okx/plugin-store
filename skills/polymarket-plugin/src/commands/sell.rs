@@ -2,25 +2,24 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook, get_tick_size,
+    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook,
     post_order, round_price, to_token_units, OrderBody,
     OrderRequest,
 };
 use crate::auth::ensure_credentials;
 use crate::onchainos::{approve_ctf, get_wallet_address, is_ctf_approved_for_all};
+use crate::series;
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
-use super::buy::resolve_market_token;
+use super::buy::{resolve_from_gamma, resolve_market_token};
 
 /// Run the sell command.
 ///
-/// market_id: condition_id (0x-prefixed) or slug
-/// outcome: outcome label, case-insensitive (e.g. "yes", "no", "trump")
-/// shares: number of token shares to sell (human-readable)
-/// price: limit price in [0, 1], or None for market order (FOK)
-/// mode_override: optional one-time mode override ("eoa" or "proxy").
+/// market_id: optional when --token-id is provided
+/// mode_override: optional one-time trading mode override ("eoa" or "proxy").
+/// token_id_fast: skip all market resolution when token ID is known (from get-series output).
 pub async fn run(
-    market_id: &str,
+    market_id: Option<&str>,
     outcome: &str,
     shares: &str,
     price: Option<f64>,
@@ -30,8 +29,8 @@ pub async fn run(
     post_only: bool,
     expires: Option<u64>,
     mode_override: Option<&str>,
+    token_id_fast: Option<&str>,
 ) -> Result<()> {
-    // Parse shares and validate order flags up front (before any network calls).
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
     if share_amount <= 0.0 {
         bail!("shares must be positive");
@@ -60,13 +59,76 @@ pub async fn run(
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
-    let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
+    let (condition_id, token_id, neg_risk, fee_rate_bps, book, signer_addr_opt) =
+        if let Some(tid) = token_id_fast {
+            // ── Fast path ──────────────────────────────────────────────────────
+            let book = get_orderbook(&client, tid).await?;
+            let condition_id = book.market.clone()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "Order book did not return a condition_id for token {}. \
+                     Try using --market-id instead.", tid
+                ))?;
+            let neg_risk = book.neg_risk;
+            let token_id = tid.to_string();
 
-    let tick_size = get_tick_size(&client, &token_id).await?;
-    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+            let (fee_r, wallet_opt) = if dry_run {
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                (fee, None)
+            } else {
+                let (fee_res, wallet_res) = tokio::join!(
+                    get_market_fee(&client, &condition_id),
+                    get_wallet_address()
+                );
+                (fee_res.unwrap_or(0), Some(wallet_res?))
+            };
 
-    // Determine price.
-    let requested_price = price; // keep for adjustment warning
+            (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
+        } else {
+            let mid = market_id.ok_or_else(|| anyhow::anyhow!(
+                "--market-id is required when --token-id is not provided"
+            ))?;
+
+            if series::is_series_id(mid) {
+                // ── Series path ────────────────────────────────────────────────
+                let gamma = series::resolve_to_market(&client, mid).await?;
+                let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
+
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
+            } else {
+                // ── Standard path ──────────────────────────────────────────────
+                let (cid, tid, nr, fee) = resolve_market_token(&client, mid, outcome).await?;
+
+                let (book, wallet_opt) = if dry_run {
+                    (get_orderbook(&client, &tid).await?, None)
+                } else {
+                    let (b, w) = tokio::join!(
+                        get_orderbook(&client, &tid),
+                        get_wallet_address()
+                    );
+                    (b?, Some(w?))
+                };
+
+                (cid, tid, nr, fee, book, wallet_opt)
+            }
+        };
+
+    // Extract tick_size from the order book (avoids a separate get_tick_size call).
+    let tick_size = book.tick_size.as_deref()
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|&t| t > 0.0)
+        .unwrap_or(0.01);
+
+    let requested_price = price;
     let limit_price = if let Some(p) = price {
         if p <= 0.0 || p >= 1.0 {
             bail!("price must be in range (0, 1)");
@@ -75,7 +137,6 @@ pub async fn run(
         if rp <= 0.0 || rp >= 1.0 {
             bail!("price {p} rounds to {rp} with tick size {tick_size} — out of range (0, 1)");
         }
-        // Warn if price was adjusted to satisfy tick size constraint.
         if (rp - p).abs() > 1e-9 {
             eprintln!(
                 "[polymarket] Note: price adjusted from {:.6} to {:.6} to satisfy tick size constraint ({}).",
@@ -84,11 +145,9 @@ pub async fn run(
         }
         rp
     } else {
-        let book = get_orderbook(&client, &token_id).await?;
         if let Some(p) = compute_sell_worst_price(&book.bids, share_amount) {
             p
         } else {
-            // No bids — convert market order to GTC limit at last trade price.
             let fallback = book.last_trade_price
                 .as_deref()
                 .and_then(|s| s.parse::<f64>().ok())
@@ -108,7 +167,6 @@ pub async fn run(
         }
     };
 
-    // Build order amounts (SELL) using GCD-based integer arithmetic.
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 { let t = b; b = a % b; a = t; }
         a
@@ -117,15 +175,13 @@ pub async fn run(
     let price_ticks = (limit_price / tick_size).round() as u128;
     let g = gcd(price_ticks, tick_scale * 10_000);
     let step_raw = tick_scale * 10_000 / g;
-    let g2 = gcd(step_raw, 100);
-    let step = step_raw / g2 * 100;
+    let g2 = gcd(step_raw, 10_000);
+    let step = step_raw / g2 * 10_000;
 
     let max_maker_raw = (share_amount * 1_000_000.0).floor() as u128;
     let maker_amount_raw = (max_maker_raw / step) * step;
     let taker_amount_raw = price_ticks * maker_amount_raw / tick_scale;
 
-    // Guard: share amount too small to produce a valid order after GCD alignment.
-    // This check fires BEFORE any approval tx is submitted (fixes M1).
     if maker_amount_raw == 0 || taker_amount_raw == 0 {
         bail!(
             "Amount too small: {:.6} shares at price {:.4} rounds to 0 after divisibility \
@@ -137,9 +193,8 @@ pub async fn run(
 
     let actual_shares = maker_amount_raw as f64 / 1_000_000.0;
 
-    // ── Dry-run exit — full projected order fields ────────────────────────────
+    // ── Dry-run exit ──────────────────────────────────────────────────────────
     if dry_run {
-        // Include price adjustment info in dry-run if applicable.
         let price_adjusted = requested_price.map_or(false, |p| (limit_price - p).abs() > 1e-9);
         println!(
             "{}",
@@ -173,10 +228,10 @@ pub async fn run(
 
     use crate::config::{Contracts, TradingMode};
 
-    let signer_addr = get_wallet_address().await?;
+    // Wallet address was pre-fetched in parallel with the order book (non-dry-run path).
+    let signer_addr = signer_addr_opt.expect("signer_addr must be set in non-dry-run path");
     let creds = ensure_credentials(&client, &signer_addr).await?;
 
-    // Resolve effective trading mode.
     let effective_mode = match mode_override {
         Some("proxy") => TradingMode::PolyProxy,
         Some("eoa")   => TradingMode::Eoa,
@@ -195,17 +250,13 @@ pub async fn run(
         TradingMode::Eoa => (signer_addr.clone(), 0u8),
     };
 
-    // Check CTF token balance (from maker's address).
-    // EOA mode: use CLOB API (reliable for EOA wallets).
-    // POLY_PROXY mode: CLOB API returns 0 for proxy wallets regardless of actual balance;
-    // skip the pre-flight check and let the CLOB server validate at order submission.
+    // EOA mode: check CLOB token balance. POLY_PROXY: skip (CLOB returns 0 for proxy wallets).
     if effective_mode == TradingMode::Eoa {
         let token_balance = get_balance_allowance(&client, &maker_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;
         let balance_raw = token_balance.balance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
         let shares_needed_raw = to_token_units(share_amount);
 
         if balance_raw < shares_needed_raw {
-            // Check if the proxy wallet might hold these tokens and hint mode switch.
             let proxy_hint = crate::config::load_credentials()
                 .ok()
                 .flatten()
@@ -225,7 +276,6 @@ pub async fn run(
         }
     }
 
-    // Warn if GCD alignment reduced the share amount.
     if actual_shares < share_amount - 1e-9 {
         eprintln!(
             "[polymarket] Note: share amount adjusted from {:.6} to {:.6} to satisfy \
@@ -235,8 +285,7 @@ pub async fn run(
         );
     }
 
-    // EOA mode: check and submit CTF setApprovalForAll if needed.
-    // POLY_PROXY mode: no approval tx — relayer handles settlement through the proxy.
+    // EOA mode: check and submit CTF approval. POLY_PROXY: no per-trade approval needed.
     if effective_mode == TradingMode::Eoa {
         let already_approved = if neg_risk {
             let ok1 = match is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_CTF_EXCHANGE).await {
@@ -316,9 +365,6 @@ pub async fn run(
         post_only,
     };
 
-    // The order owner for L2 auth must always be the EOA (API key holder),
-    // regardless of trading mode. In POLY_PROXY mode the maker field in the
-    // order struct is the proxy, but the HTTP owner must match the API key.
     let resp = post_order(&client, &signer_addr, &creds, &order_req).await?;
 
     if resp.success != Some(true) {
@@ -354,8 +400,6 @@ pub async fn run(
             "limit_price": limit_price,
             "shares": maker_amount_raw as f64 / 1_000_000.0,
             "usdc_out": taker_amount_raw as f64 / 1_000_000.0,
-            "maker_amount_raw": maker_amount_raw,
-            "taker_amount_raw": taker_amount_raw,
             "post_only": post_only,
             "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
             "tx_hashes": resp.tx_hashes,
@@ -365,7 +409,6 @@ pub async fn run(
     Ok(())
 }
 
-/// Generate a random salt within JavaScript's safe integer range (< 2^53).
 fn rand_salt() -> u64 {
     let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");
