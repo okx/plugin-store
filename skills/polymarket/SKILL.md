@@ -1,6 +1,6 @@
 ---
 name: polymarket
-description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, bitcoin up or down, btc 5 min, crypto series market, bet on btc price, eth up down."
+description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, bitcoin up or down, btc 5 min, crypto series market, bet on btc price, eth up down, quick btc trade, quick bitcoin bet, quick eth trade, quick ethereum bet, quick sol trade, quick xrp bet, bitcoin going up, btc going down, is bitcoin going up or down, will btc go up, will eth go up or down, will sol go up, trade btc direction, trade eth direction, trade crypto direction, short term bitcoin trade, short term eth trade, intraday bitcoin bet, 5 minute bitcoin market, 5 minute crypto market, 5 minute eth market, 5 minute sol market, 5 minute xrp market, next 5 minutes bitcoin, next 5 minutes ethereum, bet on bitcoin in next few minutes, trade bitcoin price direction, updown market, up down market, crypto price direction bet, bet on price movement."
 version: "0.2.7"
 author: "skylavis-sky"
 tags:
@@ -617,19 +617,53 @@ Both are valid `--outcome` values for `buy` and `sell`.
 **Outside trading hours:** `buy --market-id btc-5m` fails with a message showing when the next session opens. Check with `get-series --series btc-5m` to see session status before placing orders.
 
 **Agent flow:**
-1. Resolve `--market-id` to a condition_id and check `neg_risk` (auto from market lookup)
-2. Offer `--dry-run` first to show the user what will happen
-3. After user confirms, run without `--dry-run` to submit the tx
-4. Return the `tx_hash` — redemption settles once the tx confirms on Polygon (~seconds)
+1. Run `get-series --series <id>` to show the user the current slot (price, liquidity, seconds remaining) and confirm they want to trade it.
+2. Once confirmed, run `buy --market-id <series-id> --outcome <up|down> --amount <usdc> --dry-run` to preview the order.
+3. After user confirms the dry-run output, run without `--dry-run` to submit.
+4. Return the `order_id` and `status` from the response.
 
 **Example:**
 ```bash
-# Preview first
-polymarket redeem --market-id will-trump-win-2024 --dry-run
+# Show current slot
+polymarket get-series --series btc-5m
+
+# Preview the order
+polymarket buy --market-id btc-5m --outcome up --amount 50 --dry-run
 
 # After user confirms:
-polymarket redeem --market-id will-trump-win-2024
+polymarket buy --market-id btc-5m --outcome up --amount 50
 ```
+
+### Series intent detection
+
+Route to series trading when the user's message combines a **supported crypto asset** with a **short time horizon or directional framing**:
+
+| Signal type | Keywords |
+|-------------|----------|
+| Asset | bitcoin, btc, ethereum, eth, solana, sol, xrp, ripple |
+| Time / direction | 5 minutes, 5 min, 5m, next few minutes, quick trade, short term, intraday, up or down, price direction, higher or lower, going up, going down, next candle |
+
+**Phrases that map to series trading:**
+- "bet on bitcoin going up in the next 5 minutes"
+- "quick BTC trade" / "quick ETH bet"
+- "will ETH go up or down right now?"
+- "short term SOL trade"
+- "trade XRP direction"
+- "5-minute bitcoin market"
+- "is BTC going up or down?"
+- "I want to bet on the price of BTC in the next few minutes"
+
+**Disambiguation from regular markets:**
+
+| User phrase | Route |
+|-------------|-------|
+| "Will BTC hit 100k?" | Regular market — `list-markets --keyword bitcoin` |
+| "Bet on ETH price direction right now" | Series — `buy --market-id eth-5m` |
+| "BTC prediction market" (no time frame) | Regular market — `list-markets` first |
+| Any named event (election, sports, etc.) | Regular market |
+| "quick crypto bet" (no specific asset) | Ask which asset: BTC, ETH, SOL, or XRP |
+
+**When in doubt:** call `get-series --series btc-5m` (or the relevant asset). The output clearly shows whether trading is currently possible (in/out of hours, seconds remaining, current prices), which is low-cost and resolves ambiguity before committing funds.
 
 ---
 
