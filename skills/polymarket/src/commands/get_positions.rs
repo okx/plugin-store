@@ -17,6 +17,17 @@ pub async fn run(address: Option<&str>) -> Result<()> {
     let output: Vec<serde_json::Value> = positions
         .iter()
         .map(|p| {
+            // Annotate redeemable positions so agents can distinguish winning from losing.
+            // redeemable: true with current_value ≈ 0 means the market resolved against
+            // this outcome — redeeming would cost gas and receive nothing.
+            let redeemable_value = p.current_value.unwrap_or(0.0);
+            let redeemable_note = if p.redeemable && redeemable_value < 0.000_001 {
+                Some("resolved — losing outcome, redemption would receive $0")
+            } else if p.redeemable {
+                Some("resolved — winning outcome, redeem to collect USDC.e")
+            } else {
+                None
+            };
             serde_json::json!({
                 "title": p.title,
                 "slug": p.slug,
@@ -32,6 +43,7 @@ pub async fn run(address: Option<&str>) -> Result<()> {
                 "percent_pnl": p.percent_pnl,
                 "realized_pnl": p.realized_pnl,
                 "redeemable": p.redeemable,
+                "redeemable_note": redeemable_note,
                 "end_date": p.end_date,
                 "negative_risk": p.negative_risk,
             })

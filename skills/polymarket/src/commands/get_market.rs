@@ -1,7 +1,7 @@
 use anyhow::Result;
 use reqwest::Client;
 
-use crate::api::{get_clob_market, get_gamma_market_by_slug, get_orderbook};
+use crate::api::{get_clob_market, get_gamma_market_by_slug, get_market_fee, get_orderbook};
 use crate::sanitize::{sanitize_opt, sanitize_opt_owned, sanitize_str};
 
 pub async fn run(market_id: &str) -> Result<()> {
@@ -33,7 +33,9 @@ async fn run_by_condition_id(client: &Client, condition_id: &str) -> anyhow::Res
             // CLOB returns bids ascending (last = best bid) and asks descending (last = best ask)
             "best_bid": book.as_ref().and_then(|b| b.bids.last()).map(|l| l.price.clone()),
             "best_ask": book.as_ref().and_then(|b| b.asks.last()).map(|l| l.price.clone()),
-            "last_trade": book.as_ref().and_then(|b| b.last_trade_price.clone()),
+            // last_trade_price from the /book endpoint is market-level (same for all tokens)
+            // and is omitted here to avoid confusion. Use last_trade_price from the Gamma
+            // slug endpoint (market level) if needed.
         }));
     }
 
@@ -47,6 +49,7 @@ async fn run_by_condition_id(client: &Client, condition_id: &str) -> anyhow::Res
             "accepting_orders": market.accepting_orders,
             "neg_risk": market.neg_risk,
             "end_date": market.end_date_iso,
+            "fee_bps": market.maker_base_fee,
             "tokens": tokens_enriched,
         }
     }))
@@ -57,6 +60,13 @@ async fn run_by_slug(client: &Client, slug: &str) -> anyhow::Result<serde_json::
     let token_ids = market.token_ids();
     let prices = market.prices();
     let outcomes = market.outcome_list();
+
+    // Fetch fee from CLOB (Gamma fee field is consistently null)
+    let fee_bps = if let Some(cid) = market.condition_id.as_deref() {
+        get_market_fee(client, cid).await.ok()
+    } else {
+        None
+    };
 
     // Enrich each outcome token with live orderbook data
     let mut token_info = Vec::new();
@@ -74,7 +84,8 @@ async fn run_by_slug(client: &Client, slug: &str) -> anyhow::Result<serde_json::
             // CLOB returns bids ascending (last = best bid) and asks descending (last = best ask)
             "best_bid": book.as_ref().and_then(|b| b.bids.last()).map(|l| l.price.clone()),
             "best_ask": book.as_ref().and_then(|b| b.asks.last()).map(|l| l.price.clone()),
-            "last_trade": book.as_ref().and_then(|b| b.last_trade_price.clone()),
+            // last_trade_price from /book is market-level, not per-token — omitted per-token
+            // to avoid misleading output. Use market-level last_trade_price below.
         }));
     }
 
@@ -86,13 +97,12 @@ async fn run_by_slug(client: &Client, slug: &str) -> anyhow::Result<serde_json::
             "slug": sanitize_opt_owned(&market.slug),
             "question": sanitize_opt_owned(&market.question),
             "description": sanitize_opt_owned(&market.description),
-            "category": sanitize_opt_owned(&market.category),
             "end_date": market.end_date,
             "active": market.active,
             "closed": market.closed,
             "accepting_orders": market.accepting_orders,
             "neg_risk": market.neg_risk,
-            "fee": market.fee,
+            "fee_bps": fee_bps,
             "tokens": token_info,
             "volume_24hr": market.volume24hr,
             "volume": market.volume,

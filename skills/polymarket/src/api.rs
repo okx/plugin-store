@@ -71,6 +71,10 @@ pub struct ClobMarket {
     pub min_incentive_size: Option<String>,
     #[serde(default)]
     pub max_incentive_spread: Option<String>,
+    #[serde(default)]
+    pub maker_base_fee: Option<u64>,
+    #[serde(default)]
+    pub taker_base_fee: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -274,12 +278,63 @@ impl BalanceAllowance {
 
 // ─── CLOB API calls ───────────────────────────────────────────────────────────
 
+/// Check whether the CLOB trading endpoint is geo-restricted.
+///
+/// POSTs an empty request to /order (no auth headers). The CLOB applies
+/// geo-checks before auth checks on this endpoint, so:
+///   - Restricted IP  → HTTP 403 + JSON {"error":"Trading restricted in your region..."}
+///   - Unrestricted IP → HTTP 400/401/422 (invalid/unauthorized — request reached the app)
+///
+/// We match on the specific error string rather than the status code alone to avoid
+/// false positives (some endpoints return 403 for auth reasons on unrestricted IPs).
+/// Fails open on network errors or unexpected responses.
+pub async fn check_clob_access(client: &Client) -> Option<String> {
+    let url = format!("{}/order", Urls::CLOB);
+    let resp = match client
+        .post(&url)
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .body("{}")
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(_) => return None,
+    };
+
+    let status = resp.status();
+
+    // Only inspect 403/451 — anything else (400, 401, 422, 200, 5xx) is not a geo-block
+    if status != reqwest::StatusCode::FORBIDDEN && status.as_u16() != 451 {
+        return None;
+    }
+
+    // Read the body and look for Polymarket's specific geo-restriction message.
+    // Matching the string rather than the status code avoids false positives.
+    let body = match resp.text().await {
+        Ok(b) => b,
+        Err(_) => return None,
+    };
+
+    if body.contains("restricted") || body.contains("geoblock") {
+        return Some(
+            "Polymarket is not available in your region — trading is restricted. \
+             Review Polymarket's Terms of Use (https://polymarket.com/tos) \
+             before topping up USDC.e."
+                .to_string(),
+        );
+    }
+
+    // 403 for a different reason (e.g. auth policy change) — fail open
+    None
+}
+
 pub async fn get_clob_market(client: &Client, condition_id: &str) -> Result<ClobMarket> {
     let url = format!("{}/markets/{}", Urls::CLOB, condition_id);
-    client.get(&url)
-        .send()
-        .await?
-        .json()
+    let resp = client.get(&url).send().await?;
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        anyhow::bail!("Market not found: {}", condition_id);
+    }
+    resp.json()
         .await
         .context("parsing CLOB market response")
 }
@@ -523,24 +578,36 @@ pub async fn list_gamma_markets(
     offset: u32,
     keyword: Option<&str>,
 ) -> Result<Vec<GammaMarket>> {
-    let url = if let Some(kw) = keyword {
-        format!(
-            "{}/markets?q={}&active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
-            Urls::GAMMA, kw, limit, offset
-        )
-    } else {
-        format!(
-            "{}/markets?active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
-            Urls::GAMMA, limit, offset
-        )
-    };
+    // When keyword filtering is requested, fetch a larger page and filter client-side.
+    // The Gamma API's ?q= parameter does not reliably filter results — testing confirms
+    // it returns the same volume-sorted list regardless of the keyword value.
+    let fetch_limit = if keyword.is_some() { (limit * 5).min(100) } else { limit };
+    let url = format!(
+        "{}/markets?active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
+        Urls::GAMMA, fetch_limit, offset
+    );
 
-    client.get(&url)
+    let all: Vec<GammaMarket> = client.get(&url)
         .send()
         .await?
         .json()
         .await
-        .context("parsing Gamma markets list")
+        .context("parsing Gamma markets list")?;
+
+    if let Some(kw) = keyword {
+        let kw_lower = kw.to_lowercase();
+        Ok(all
+            .into_iter()
+            .filter(|m| {
+                let q = m.question.as_deref().unwrap_or("").to_lowercase();
+                let s = m.slug.as_deref().unwrap_or("").to_lowercase();
+                q.contains(&kw_lower) || s.contains(&kw_lower)
+            })
+            .take(limit as usize)
+            .collect())
+    } else {
+        Ok(all)
+    }
 }
 
 pub async fn get_gamma_market_by_slug(client: &Client, slug: &str) -> Result<GammaMarket> {

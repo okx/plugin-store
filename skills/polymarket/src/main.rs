@@ -21,6 +21,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Check whether Polymarket is accessible from your current IP (run before topping up USDC)
+    CheckAccess,
+
     /// List active prediction markets (no auth required)
     ListMarkets {
         /// Maximum number of markets to return
@@ -88,7 +91,7 @@ enum Commands {
         post_only: bool,
 
         /// Cancel the order automatically at this Unix timestamp (seconds, UTC).
-        /// Minimum 60 seconds from now. Creates a GTD (Good Till Date) order.
+        /// Minimum 90 seconds from now. Creates a GTD (Good Till Date) order.
         #[arg(long)]
         expires: Option<u64>,
 
@@ -133,13 +136,24 @@ enum Commands {
         post_only: bool,
 
         /// Cancel the order automatically at this Unix timestamp (seconds, UTC).
-        /// Minimum 60 seconds from now. Creates a GTD (Good Till Date) order.
+        /// Minimum 90 seconds from now. Creates a GTD (Good Till Date) order.
         #[arg(long)]
         expires: Option<u64>,
 
         /// Confirm a low-price market sell that was previously gated
         #[arg(long)]
         confirm: bool,
+    },
+
+    /// Redeem winning outcome tokens after a market resolves (signs via onchainos wallet)
+    Redeem {
+        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        #[arg(long)]
+        market_id: String,
+
+        /// Preview the redemption call without submitting the transaction
+        #[arg(long)]
+        dry_run: bool,
     },
 
     /// Cancel a single open order by order ID (signs via onchainos wallet)
@@ -163,6 +177,9 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::CheckAccess => {
+            commands::check_access::run().await
+        }
         Commands::ListMarkets { limit, keyword } => {
             commands::list_markets::run(limit, keyword.as_deref()).await
         }
@@ -200,6 +217,9 @@ async fn main() {
             confirm: _confirm,
         } => {
             commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires).await
+        }
+        Commands::Redeem { market_id, dry_run } => {
+            commands::redeem::run(&market_id, dry_run).await
         }
         Commands::Cancel { order_id, market, all } => {
             if all {

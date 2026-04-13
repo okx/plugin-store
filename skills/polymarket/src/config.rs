@@ -61,6 +61,15 @@ pub fn load_credentials() -> Result<Option<Credentials>> {
     Ok(Some(creds))
 }
 
+pub fn clear_credentials() -> Result<()> {
+    let path = creds_path();
+    if path.exists() {
+        std::fs::remove_file(&path)
+            .with_context(|| format!("removing {}", path.display()))?;
+    }
+    Ok(())
+}
+
 pub fn save_credentials(creds: &Credentials) -> Result<()> {
     let path = creds_path();
     if let Some(parent) = path.parent() {
@@ -106,4 +115,5 @@ impl Urls {
     pub const CLOB: &'static str = "https://clob.polymarket.com";
     pub const GAMMA: &'static str = "https://gamma-api.polymarket.com";
     pub const DATA: &'static str = "https://data-api.polymarket.com";
+    pub const POLYGON_RPC: &'static str = "https://polygon-rpc.com";
 }
