@@ -20,7 +20,7 @@ components:
     dir: .
 build:
   lang: rust
-  binary_name: pancakeswap
+  binary_name: pancakeswap-v3
 api_calls:
   - bsc-rpc.publicnode.com
   - base-rpc.publicnode.com
