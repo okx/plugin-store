@@ -473,3 +473,4 @@ The AI agent must display only the fields listed in each command's **Output** se
 - **fix**: `onchainos wallet contract-call` `ok:false` responses now propagate as errors — previously silently returned `txHash: "pending"` masking simulation rejections
 - **feat**: `positions` output redesigned as human-readable table with USD valuation (ETH price via DeFiLlama coins API); USD column omitted gracefully when price API is unavailable
 - **fix**: `wrap`/`unwrap` SKILL.md corrected — weETH uses `wrap(uint256)`/`unwrap(uint256)`, not ERC-4626 `deposit`/`redeem`
+
