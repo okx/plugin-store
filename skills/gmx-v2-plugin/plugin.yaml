@@ -1,5 +1,5 @@
 schema_version: 1
-name: gmx-v2
+name: gmx-v2-plugin
 version: "0.2.2"
 description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche"
 author:
@@ -18,7 +18,7 @@ components:
     dir: .
 build:
   lang: rust
-  binary_name: gmx-v2
+  binary_name: gmx-v2-plugin
 api_calls:
   - "https://arbitrum-api.gmxinfra.io"
   - "https://arbitrum-api.gmxinfra2.io"

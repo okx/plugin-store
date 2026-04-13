@@ -4,7 +4,7 @@ version = "0.2.2"
 edition = "2021"
 
 [[bin]]
-name = "gmx-v2"
+name = "gmx-v2-plugin"
 path = "src/main.rs"
 
 [dependencies]
