@@ -1,5 +1,13 @@
 # Polymarket Plugin Changelog
 
+### v0.2.8 (2026-04-13)
+
+- **perf**: Deduplicated CLOB market fee call — `resolve_market_token` now extracts `maker_base_fee` from the `ClobMarket` it already fetches for `neg_risk` resolution, eliminating a second `GET /markets/{condition_id}` round trip. Saves ~150ms unconditionally.
+- **perf**: Eliminated separate `get_tick_size` call — the order book response (`GET /book?token_id=X`) already contains the `tick_size` field. The plugin now reads it from there, removing one CLOB round trip. Saves ~100ms unconditionally.
+- **perf**: Eliminated double Gamma API fetch for series markets — previously `resolve_to_slug` fetched the `GammaMarket` then `resolve_market_token` fetched the same slug again. The series path now calls `resolve_to_market` (returns the already-fetched `GammaMarket`) and passes it directly to `resolve_from_gamma`. Saves ~200ms on all series trades.
+- **perf**: Parallelized order book fetch + wallet address subprocess — for live (non-dry-run) orders, `get_orderbook` and `get_wallet_address` now run concurrently via `tokio::join!`. Saves ~100-200ms on the live hot path. Dry-run behavior is unchanged (wallet is never called during dry-run).
+- **feat**: `buy --token-id <id>` and `sell --token-id <id>` fast path — when the outcome token ID is known (from prior `get-series` or `get-market` output), all Gamma and CLOB market resolution is skipped. A single `GET /book?token_id=X` provides `condition_id`, `neg_risk`, and `tick_size`; only `get_market_fee` is additionally called. Combined with `--price`, this is the fastest possible trade path: ~0.5s binary execution vs ~1.5s baseline. Intended use: run `get-series btc-5m` once per slot to cache token IDs, then use `--token-id` for all buys within that slot.
+
 ### v0.2.7 (2026-04-12)
 
 - **feat**: Series trading support for Polymarket's recurring 5-minute "Up or Down" crypto markets. Series markets run on BTC, ETH, SOL, and XRP during NYSE trading hours (9:30 AM–4:00 PM ET, Mon–Fri). Use `buy --market-id btc-5m` (or `eth`, `sol`, `xrp`) instead of a full slug — the plugin auto-resolves to the current accepting slot at trade time.

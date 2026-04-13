@@ -99,6 +99,11 @@ enum Commands {
         /// Confirm a previously gated action (reserved for future use)
         #[arg(long)]
         confirm: bool,
+
+        /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
+        /// Faster for repeated trades: resolves condition_id and neg_risk from the order book.
+        #[arg(long)]
+        token_id: Option<String>,
     },
 
     /// Sell YES or NO shares in a market (signs via onchainos wallet)
@@ -144,6 +149,11 @@ enum Commands {
         /// Confirm a low-price market sell that was previously gated
         #[arg(long)]
         confirm: bool,
+
+        /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
+        /// Faster for repeated trades: resolves condition_id and neg_risk from the order book.
+        #[arg(long)]
+        token_id: Option<String>,
     },
 
     /// Redeem winning outcome tokens after a market resolves (signs via onchainos wallet)
@@ -213,8 +223,9 @@ async fn main() {
             post_only,
             expires,
             confirm: _confirm,
+            token_id,
         } => {
-            commands::buy::run(&market_id, &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires).await
+            commands::buy::run(&market_id, &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, token_id.as_deref()).await
         }
         Commands::Sell {
             market_id,
@@ -227,8 +238,9 @@ async fn main() {
             post_only,
             expires,
             confirm: _confirm,
+            token_id,
         } => {
-            commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires).await
+            commands::sell::run(&market_id, &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, token_id.as_deref()).await
         }
         Commands::GetSeries { series, list } => {
             commands::get_series::run(series.as_deref(), list).await

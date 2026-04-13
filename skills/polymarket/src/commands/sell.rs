@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook, get_tick_size,
+    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook,
     post_order, round_price, to_token_units, OrderBody,
     OrderRequest,
 };
@@ -11,7 +11,7 @@ use crate::onchainos::{approve_ctf, get_wallet_address, is_ctf_approved_for_all}
 use crate::series;
 use crate::signing::{sign_order_via_onchainos, OrderParams};
 
-use super::buy::resolve_market_token;
+use super::buy::{resolve_from_gamma, resolve_market_token};
 
 /// Run the sell command.
 ///
@@ -29,6 +29,7 @@ pub async fn run(
     dry_run: bool,
     post_only: bool,
     expires: Option<u64>,
+    token_id_fast: Option<&str>,
 ) -> Result<()> {
     // Parse shares and validate order flags up front (before any network calls).
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
@@ -59,19 +60,71 @@ pub async fn run(
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
-    // Resolve series ID to current slot slug if needed (e.g. "btc-5m" → "btc-updown-5m-{ts}")
-    let resolved_market_id;
-    let market_id = if series::is_series_id(market_id) {
-        resolved_market_id = series::resolve_to_slug(&client, market_id).await?;
-        &resolved_market_id as &str
-    } else {
-        market_id
-    };
+    // Resolve market identifiers and fetch order book (always needed for tick_size).
+    let (condition_id, token_id, neg_risk, fee_rate_bps, book, signer_addr_opt) =
+        if let Some(tid) = token_id_fast {
+            // ── Fast path: token_id provided directly ──────────────────────────
+            let book = get_orderbook(&client, tid).await?;
+            let condition_id = book.market.clone()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "Order book did not return a condition_id for token {}. \
+                     Try using --market-id instead.", tid
+                ))?;
+            let neg_risk = book.neg_risk;
+            let token_id = tid.to_string();
 
-    let (condition_id, token_id, neg_risk) = resolve_market_token(&client, market_id, outcome).await?;
+            let (fee_r, wallet_opt) = if dry_run {
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                (fee, None)
+            } else {
+                let (fee_res, wallet_res) = tokio::join!(
+                    get_market_fee(&client, &condition_id),
+                    get_wallet_address()
+                );
+                (fee_res.unwrap_or(0), Some(wallet_res?))
+            };
 
-    let tick_size = get_tick_size(&client, &token_id).await?;
-    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+            (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
+        } else if series::is_series_id(market_id) {
+            // ── Series path: single Gamma fetch, then CLOB for neg_risk + fee ──
+            let gamma = series::resolve_to_market(&client, market_id).await?;
+            let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
+
+            // Always fetch the book (needed for tick_size and price computation).
+            let (book, wallet_opt) = if dry_run {
+                (get_orderbook(&client, &tid).await?, None)
+            } else {
+                let (b, w) = tokio::join!(
+                    get_orderbook(&client, &tid),
+                    get_wallet_address()
+                );
+                (b?, Some(w?))
+            };
+
+            (cid, tid, nr, fee, book, wallet_opt)
+        } else {
+            // ── Standard path: slug or condition_id ────────────────────────────
+            let (cid, tid, nr, fee) = resolve_market_token(&client, market_id, outcome).await?;
+
+            // Always fetch the book (needed for tick_size and price computation).
+            let (book, wallet_opt) = if dry_run {
+                (get_orderbook(&client, &tid).await?, None)
+            } else {
+                let (b, w) = tokio::join!(
+                    get_orderbook(&client, &tid),
+                    get_wallet_address()
+                );
+                (b?, Some(w?))
+            };
+
+            (cid, tid, nr, fee, book, wallet_opt)
+        };
+
+    // Extract tick_size from the order book (avoids a separate get_tick_size call).
+    let tick_size = book.tick_size.as_deref()
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|&t| t > 0.0)
+        .unwrap_or(0.01);
 
     // Determine price.
     let requested_price = price; // keep for adjustment warning
@@ -92,7 +145,7 @@ pub async fn run(
         }
         rp
     } else {
-        let book = get_orderbook(&client, &token_id).await?;
+        // No explicit price — use the book (already fetched) to compute worst price.
         if let Some(p) = compute_sell_worst_price(&book.bids, share_amount) {
             p
         } else {
@@ -179,7 +232,8 @@ pub async fn run(
 
     // ── Auth phase ────────────────────────────────────────────────────────────
 
-    let signer_addr = get_wallet_address().await?;
+    // Wallet address was already fetched in parallel with the book (non-dry-run path).
+    let signer_addr = signer_addr_opt.expect("signer_addr must be set in non-dry-run path");
     let creds = ensure_credentials(&client, &signer_addr).await?;
     let maker_addr = signer_addr.clone();
 

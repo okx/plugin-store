@@ -3,7 +3,7 @@ use reqwest::Client;
 
 use crate::api::{
     compute_buy_worst_price, get_balance_allowance, get_clob_market, get_market_fee, get_orderbook,
-    get_tick_size, post_order, round_price,
+    post_order, round_price,
     OrderBody, OrderRequest,
 };
 use crate::auth::ensure_credentials;
@@ -23,6 +23,7 @@ pub async fn run(
     round_up: bool,
     post_only: bool,
     expires: Option<u64>,
+    token_id_fast: Option<&str>,
 ) -> Result<()> {
     // Parse USDC amount early so we can enforce the minimum order size
     // check even on dry-run (the agent needs to know before placing).
@@ -55,25 +56,79 @@ pub async fn run(
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
-    // Resolve series ID to current slot slug if needed (e.g. "btc-5m" → "btc-updown-5m-{ts}")
-    let resolved_market_id;
-    let market_id = if series::is_series_id(market_id) {
-        resolved_market_id = series::resolve_to_slug(&client, market_id).await?;
-        &resolved_market_id as &str
-    } else {
-        market_id
-    };
+    // Resolve market identifiers and fetch order book.
+    // Four paths:
+    //   1. --token-id fast path: skip all market resolution, get condition_id from book
+    //   2. Series path: resolve series → GammaMarket once (avoid double Gamma fetch)
+    //   3. Slug/condition_id path: standard resolve_market_token
 
-    // Resolve market (no auth required — public API)
-    let (condition_id, token_id, neg_risk) =
-        resolve_market_token(&client, market_id, outcome).await?;
+    let (condition_id, token_id, neg_risk, fee_rate_bps, book, signer_addr_opt) =
+        if let Some(tid) = token_id_fast {
+            // ── Fast path: token_id provided directly ──────────────────────────
+            // Fetch the book (has condition_id, neg_risk, tick_size) and, in parallel
+            // with the fee call, fetch the wallet address (non-dry-run only).
+            let book = get_orderbook(&client, tid).await?;
+            let condition_id = book.market.clone()
+                .ok_or_else(|| anyhow::anyhow!(
+                    "Order book did not return a condition_id for token {}. \
+                     Try using --market-id instead.", tid
+                ))?;
+            let neg_risk = book.neg_risk;
+            let token_id = tid.to_string();
 
-    // Fetch the order book.
-    let book = get_orderbook(&client, &token_id).await?;
+            // Parallelize fee fetch + wallet (wallet only if not dry-run)
+            let (fee_r, wallet_opt) = if dry_run {
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                (fee, None)
+            } else {
+                let (fee_res, wallet_res) = tokio::join!(
+                    get_market_fee(&client, &condition_id),
+                    get_wallet_address()
+                );
+                (fee_res.unwrap_or(0), Some(wallet_res?))
+            };
 
-    // Get tick size and market fee rate.
-    let tick_size = get_tick_size(&client, &token_id).await?;
-    let fee_rate_bps = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+            (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
+        } else if series::is_series_id(market_id) {
+            // ── Series path: single Gamma fetch, then CLOB for neg_risk + fee ──
+            let gamma = series::resolve_to_market(&client, market_id).await?;
+            let (cid, tid, nr, fee) = resolve_from_gamma(&client, gamma, outcome).await?;
+
+            // Parallelize book fetch + wallet (wallet only if not dry-run)
+            let (book, wallet_opt) = if dry_run {
+                (get_orderbook(&client, &tid).await?, None)
+            } else {
+                let (b, w) = tokio::join!(
+                    get_orderbook(&client, &tid),
+                    get_wallet_address()
+                );
+                (b?, Some(w?))
+            };
+
+            (cid, tid, nr, fee, book, wallet_opt)
+        } else {
+            // ── Standard path: slug or condition_id ────────────────────────────
+            let (cid, tid, nr, fee) = resolve_market_token(&client, market_id, outcome).await?;
+
+            // Parallelize book fetch + wallet (wallet only if not dry-run)
+            let (book, wallet_opt) = if dry_run {
+                (get_orderbook(&client, &tid).await?, None)
+            } else {
+                let (b, w) = tokio::join!(
+                    get_orderbook(&client, &tid),
+                    get_wallet_address()
+                );
+                (b?, Some(w?))
+            };
+
+            (cid, tid, nr, fee, book, wallet_opt)
+        };
+
+    // Extract tick_size from the order book (avoids a separate get_tick_size call).
+    let tick_size = book.tick_size.as_deref()
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|&t| t > 0.0)
+        .unwrap_or(0.01);
 
     // Determine price (limit or market).
     let limit_price = if let Some(p) = price {
@@ -209,8 +264,8 @@ pub async fn run(
 
     // ── Auth phase ────────────────────────────────────────────────────────────
 
-    // onchainos wallet is the signer.
-    let signer_addr = get_wallet_address().await?;
+    // Wallet address was already fetched in parallel with the book (non-dry-run path).
+    let signer_addr = signer_addr_opt.expect("signer_addr must be set in non-dry-run path");
     let creds = ensure_credentials(&client, &signer_addr).await?;
     let maker_addr = signer_addr.clone();
 
@@ -340,17 +395,16 @@ pub async fn run(
     Ok(())
 }
 
-/// Resolve (condition_id, token_id, neg_risk) from a market_id and outcome string.
+/// Resolve (condition_id, token_id, neg_risk, fee_rate_bps) from a market_id and outcome string.
 /// Supports any outcome label (e.g. "yes", "no", "trump", "republican", "option-a").
 /// Bails early if the market is not accepting orders (closed, resolved, or paused).
 ///
-/// neg_risk is always sourced from the CLOB API (authoritative) because the Gamma API
-/// omits the negRisk field for many markets, causing incorrect contract approval targets.
+/// neg_risk and fee_rate_bps are always sourced from the CLOB API (authoritative).
 pub async fn resolve_market_token(
     client: &Client,
     market_id: &str,
     outcome: &str,
-) -> Result<(String, String, bool)> {
+) -> Result<(String, String, bool, u64)> {
     let outcome_lower = outcome.to_lowercase();
     if market_id.starts_with("0x") || market_id.starts_with("0X") {
         let market = get_clob_market(client, market_id).await?;
@@ -369,7 +423,8 @@ pub async fn resolve_market_token(
                 let available: Vec<&str> = market.tokens.iter().map(|t| t.outcome.as_str()).collect();
                 anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, available)
             })?;
-        Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk))
+        let fee_rate_bps = market.maker_base_fee.unwrap_or(0);
+        Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk, fee_rate_bps))
     } else {
         let gamma = crate::api::get_gamma_market_by_slug(client, market_id).await?;
         if !gamma.accepting_orders {
@@ -396,16 +451,43 @@ pub async fn resolve_market_token(
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
 
-        // Get authoritative neg_risk from CLOB — Gamma API omits negRisk for many markets,
+        // Get authoritative neg_risk and fee from CLOB — Gamma API omits negRisk for many markets,
         // which causes the wrong exchange to be approved (CTF_EXCHANGE instead of
         // NEG_RISK_CTF_EXCHANGE), wasting gas and failing the order.
-        let neg_risk = match get_clob_market(client, &condition_id).await {
-            Ok(clob) => clob.neg_risk,
-            Err(_) => gamma.neg_risk, // fall back to gamma value if CLOB unavailable
+        let (neg_risk, fee_rate_bps) = match get_clob_market(client, &condition_id).await {
+            Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+            Err(_) => (gamma.neg_risk, 0), // fall back to gamma value if CLOB unavailable
         };
 
-        Ok((condition_id, token_id, neg_risk))
+        Ok((condition_id, token_id, neg_risk, fee_rate_bps))
     }
+}
+
+/// Resolve (condition_id, token_id, neg_risk, fee_rate_bps) from a pre-fetched GammaMarket.
+/// Used in the series path to avoid fetching the same Gamma market twice.
+pub async fn resolve_from_gamma(
+    client: &Client,
+    gamma: crate::api::GammaMarket,
+    outcome: &str,
+) -> Result<(String, String, bool, u64)> {
+    if !gamma.accepting_orders {
+        bail!("Series market is not currently accepting orders. It may be outside trading hours or in a transition window.");
+    }
+    let outcome_lower = outcome.to_lowercase();
+    let condition_id = gamma.condition_id.clone()
+        .ok_or_else(|| anyhow::anyhow!("No condition_id in Gamma market response"))?;
+    let token_ids = gamma.token_ids();
+    let outcomes = gamma.outcome_list();
+    let idx = outcomes.iter().position(|o| o.to_lowercase() == outcome_lower)
+        .ok_or_else(|| anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, outcomes))?;
+    let token_id = token_ids.get(idx).cloned()
+        .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
+    // Get authoritative neg_risk + fee from CLOB
+    let (neg_risk, fee_rate_bps) = match get_clob_market(client, &condition_id).await {
+        Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+        Err(_) => (gamma.neg_risk, 0),
+    };
+    Ok((condition_id, token_id, neg_risk, fee_rate_bps))
 }
 
 /// Generate a random salt within JavaScript's safe integer range (< 2^53).

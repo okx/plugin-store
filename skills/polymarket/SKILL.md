@@ -1,7 +1,7 @@
 ---
 name: polymarket
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, and redeem winning tokens on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, bitcoin up or down, btc 5 min, crypto series market, bet on btc price, eth up down, quick btc trade, quick bitcoin bet, quick eth trade, quick ethereum bet, quick sol trade, quick xrp bet, bitcoin going up, btc going down, is bitcoin going up or down, will btc go up, will eth go up or down, will sol go up, trade btc direction, trade eth direction, trade crypto direction, short term bitcoin trade, short term eth trade, intraday bitcoin bet, 5 minute bitcoin market, 5 minute crypto market, 5 minute eth market, 5 minute sol market, 5 minute xrp market, next 5 minutes bitcoin, next 5 minutes ethereum, bet on bitcoin in next few minutes, trade bitcoin price direction, updown market, up down market, crypto price direction bet, bet on price movement."
-version: "0.2.7"
+version: "0.2.8"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -48,7 +48,7 @@ if ! command -v polymarket >/dev/null 2>&1; then
     mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
   esac
   mkdir -p ~/.local/bin
-  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.7/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
+  curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket@0.2.8/polymarket-${TARGET}${EXT}" -o ~/.local/bin/polymarket${EXT}
   chmod +x ~/.local/bin/polymarket${EXT}
 fi
 ```
@@ -67,7 +67,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   unset _K
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket","version":"0.2.7"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket","version":"0.2.8"}' >/dev/null 2>&1 || true
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
     -d '{"pluginName":"polymarket","divId":"'"$DIV_ID"'"}' >/dev/null 2>&1 || true
@@ -230,7 +230,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket --version
 ```
 
-Expected: `polymarket 0.2.7`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket 0.2.8`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -394,6 +394,7 @@ polymarket buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-
 | `--post-only` | Maker-only: reject if the order would immediately cross the spread (become a taker). Requires `--order-type GTC`. Qualifies for Polymarket maker rebates (up to 50% of fees returned daily). Incompatible with `--order-type FOK`. | false |
 | `--expires` | Unix timestamp (seconds, UTC) at which the order auto-cancels. Minimum 90 seconds in the future (CLOB enforces a "now + 1 min 30 s" security threshold). Automatically sets `order_type` to `GTD` (Good Till Date) — do not also pass `--order-type GTC`. Example: `--expires $(date -d '+1 hour' +%s)` | — |
 | `--confirm` | Confirm a previously gated action (reserved for future use) | false |
+| `--token-id` | Skip market lookup — provide the outcome token ID directly (from `get-series` or `get-market` output). Saves 3-4 HTTP round trips. Use after `get-series` to cache the token ID for repeated trades on the same slot. | — |
 
 **Auth required:** Yes — onchainos wallet; EIP-712 order signing via `onchainos sign-message --type eip712`
 
@@ -451,6 +452,7 @@ polymarket sell --market-id <id> --outcome <outcome> --shares <amount> [--price 
 | `--expires` | Unix timestamp (seconds, UTC) at which the order auto-cancels. Minimum 90 seconds in the future. Auto-sets `order_type` to `GTD`. | — |
 | `--dry-run` | Simulate without submitting the order or triggering any on-chain approval. Prints a confirmation JSON and exits. Use to verify parameters before a real sell. | false |
 | `--confirm` | Confirm a low-price market sell that was previously gated | false |
+| `--token-id` | Skip market lookup — provide the outcome token ID directly. Same fast path as `buy --token-id`. | — |
 
 **Auth required:** Yes — onchainos wallet; EIP-712 order signing via `onchainos sign-message --type eip712`
 
@@ -610,6 +612,16 @@ polymarket buy --market-id btc-updown-5m-<ts> --outcome up --amount 50
 - Option A is faster for single trades — one command, auto-resolves the slot
 - Option B is better when you want to inspect price/liquidity before committing
 - For repeated trades on consecutive slots, use Option A each time — it always resolves the current open slot
+
+*Option C — fastest path (power users):*
+```
+# 1. Get token IDs once (note the token_id for "Up" from the output)
+polymarket get-series --series btc-5m
+
+# 2. Use --token-id to skip all market resolution on subsequent trades
+polymarket buy --token-id <up_token_id_from_above> --outcome up --amount 50 --price 0.52
+```
+`--token-id` skips the Gamma and CLOB market lookup entirely — only the order book and fee are fetched. Note: token IDs change each slot (every 5 min), so re-run `get-series` at each new slot.
 
 **Outcomes:** `up` (price went higher) and `down` (price went lower) in the 5-minute window.
 Both are valid `--outcome` values for `buy` and `sell`.
@@ -805,6 +817,7 @@ User wants to trade:
 | List all supported series | `polymarket get-series --list` |
 | Trade current BTC 5-min slot (up) | `polymarket buy --market-id btc-5m --outcome up --amount <usdc>` |
 | Trade current ETH 5-min slot (down) | `polymarket buy --market-id eth-5m --outcome down --amount <usdc>` |
+| Fast repeat trade (known token ID) | `polymarket buy --token-id <id> --outcome up --amount <usdc> --price <x>` |
 
 ---
 
@@ -835,4 +848,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.7** (2026-04-12).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.2.8** (2026-04-12).

@@ -227,6 +227,13 @@ pub async fn resolve_to_slug(client: &Client, series_id: &str) -> Result<String>
     market.slug.ok_or_else(|| anyhow::anyhow!("Series market has no slug"))
 }
 
+/// Resolve a series ID to the current accepting GammaMarket (avoids double Gamma fetch in buy/sell).
+pub async fn resolve_to_market(client: &Client, series_id: &str) -> Result<crate::api::GammaMarket> {
+    let spec = parse_series(series_id)
+        .ok_or_else(|| anyhow::anyhow!("Unknown series '{}'. Supported: btc-5m, eth-5m, sol-5m, xrp-5m", series_id))?;
+    get_current_slot(client, spec).await
+}
+
 // ─── get-series output helpers ────────────────────────────────────────────────
 
 pub struct SlotSummary {
