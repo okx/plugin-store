@@ -1,5 +1,5 @@
 schema_version: 1
-name: meteora
+name: meteora-plugin
 version: "0.3.3"
 description: "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana"
 author:
@@ -20,7 +20,7 @@ components:
 
 build:
   lang: rust
-  binary_name: meteora
+  binary_name: meteora-plugin
 
 api_calls:
   - "https://dlmm.datapi.meteora.ag"
