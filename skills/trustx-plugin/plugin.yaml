@@ -1,0 +1,33 @@
+schema_version: 1
+name: trustx-plugin
+version: "1.0.0"
+description: "ERC-8004 reputation scoring and trust-policy gating for X Layer agents"
+author:
+  name: "Alanas"
+  github: "Ananas310"
+license: MIT
+category: security
+tags:
+  - xlayer
+  - erc-8004
+  - reputation
+  - trust
+  - risk
+  - agent
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: node
+  source_repo: "Ananas310/best-x-layer-skill"
+  source_commit: "c1fb4c2c7f7b0484a120ee727124602c0008f2c9"
+  source_dir: "."
+  binary_name: "rep8004"
+  main: "src/cli.js"
+
+api_calls:
+  - "https://www.oklink.com/api/v5/explorer/log/by-address-and-topic"
+  - "https://xlayerrpc.okx.com"
+  - "https://rpc.xlayer.tech"
