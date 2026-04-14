@@ -412,15 +412,23 @@ gmx-v2 --chain arbitrum place-order \
 
 Cancels a pending conditional order by its bytes32 key.
 
-```
-gmx-v2 --chain arbitrum cancel-order \
-  --key 0x1234abcd...  # 32-byte key from get-orders
+> **Important:** `--confirm` and `--dry-run` are **global flags** (before the subcommand), not subcommand flags. This applies to all write operations including `cancel-order`.
+
+```bash
+# Preview (no broadcast)
+gmx-v2 --chain arbitrum cancel-order --key 0x1234abcd...
+
+# Dry-run (preview calldata)
+gmx-v2 --chain arbitrum --dry-run cancel-order --key 0x1234abcd...
+
+# Execute (broadcast)
+gmx-v2 --chain arbitrum --confirm cancel-order --key 0x1234abcd...
 ```
 
 **Flow:**
-1. Run `--dry-run` to verify the key and preview calldata
+1. Run without flags to preview (or with `--dry-run` for calldata preview)
 2. **Ask user to confirm** the order key before cancellation
-3. Submits `cancelOrder(bytes32)` with `--confirm` via `onchainos wallet contract-call`
+3. Submits `cancelOrder(bytes32)` with global `--confirm` flag via `onchainos wallet contract-call`
 4. Waits for tx confirmation on-chain before reporting `ok:true`
 
 ---
