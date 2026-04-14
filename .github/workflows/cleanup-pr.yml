@@ -1,0 +1,31 @@
+# Cancel stale Phase 1-4 workflow runs when a PR is closed or merged.
+# This frees up GitHub Actions runner slots for Phase 5 publishing.
+
+name: "Cleanup: Cancel PR workflows"
+
+on:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Cancel Phase 1-4 runs for this PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          echo "PR #${PR_NUM} closed. Cancelling stale Phase 1-4 runs..."
+
+          CANCELLED=0
+          gh api "repos/${{ github.repository }}/actions/runs?head_sha=${HEAD_SHA}&per_page=100" \
+            --jq '.workflow_runs[] | select(.status != "completed") | select(.name | test("Phase [1-4]|Structure|Build Verification|AI Code|Summary|Generate Summary")) | .id' \
+          | while read run_id; do
+              gh api "repos/${{ github.repository }}/actions/runs/$run_id/cancel" --method POST 2>/dev/null && \
+                echo "  Cancelled run $run_id" || true
+            done
+
+          echo "Done."
