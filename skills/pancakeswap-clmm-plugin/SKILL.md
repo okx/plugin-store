@@ -163,14 +163,14 @@ Do NOT use for: PancakeSwap V3 simple swaps without farming (use pancakeswap ski
 | `--dry-run` | Show calldata and parameters without broadcasting or prompting | false |
 | `--rpc-url <url>` | Override the default public RPC endpoint (use when the default is rate-limited or unavailable) | see config |
 
-## Relationship with `pancakeswap` Plugin
+## Relationship with `pancakeswap-v3` Plugin
 
-This plugin focuses on **MasterChefV3 farming** and is complementary to the `pancakeswap` plugin (PR #82):
+This plugin focuses on **MasterChefV3 farming** and is complementary to the `pancakeswap-v3` plugin:
 
-- Use `pancakeswap add-liquidity` to create a V3 LP position and get a token ID
+- Use `pancakeswap-v3 add-liquidity` to create a V3 LP position and get a token ID
 - Use `pancakeswap-clmm farm --token-id <ID>` to stake that NFT and earn CAKE
 - Use `pancakeswap-clmm unfarm --token-id <ID>` to withdraw and stop farming
-- Swap and liquidity management remain in the `pancakeswap` plugin
+- Swap and liquidity management remain in the `pancakeswap-v3` plugin
 
 ## Note on Staked NFT Discovery
 
@@ -298,6 +298,8 @@ List all MasterChefV3 farming pools that have active CAKE incentives (`alloc_poi
 pancakeswap-clmm --chain 56 farm-pools
 pancakeswap-clmm --chain 8453 farm-pools
 ```
+
+> **Note on addresses**: The `farm-pools` output includes `token0` and `token1` as raw contract addresses (e.g. `0x55d398...`). To look up the symbol and decimals for an address, use `pancakeswap-v3 pools` or resolve via a block explorer. Common BSC/Base/Arbitrum addresses are listed in the Token Symbols tables in the `pancakeswap-v3` SKILL.md.
 
 ---
 

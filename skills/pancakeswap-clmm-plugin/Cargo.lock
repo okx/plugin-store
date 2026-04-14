@@ -793,8 +793,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pancakeswap-clmm"
-version = "0.1.1"
+name = "pancakeswap-clmm-plugin"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap",
