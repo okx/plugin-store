@@ -1,6 +1,6 @@
 schema_version: 1
 name: kamino-liquidity-plugin
-version: "0.1.2"
+version: "0.1.3"
 description: Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to earn
   yield, withdraw shares, and track positions.
 author:

@@ -37,17 +37,22 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
 
     // Dry-run early return — before wallet resolution
     if args.dry_run {
-        // Still call the API to verify it accepts our parameters
+        // Still call the API to verify it accepts our parameters and get the tx
         let dummy_wallet = "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE";
         let wallet = args.wallet.as_deref().unwrap_or(dummy_wallet);
         let tx_b64 = api::build_deposit_tx(&args.vault, wallet, &args.amount).await?;
+        // Provide human-readable preview; include raw tx as optional field
         let output = serde_json::json!({
             "ok": true,
             "dry_run": true,
-            "vault": args.vault,
-            "amount": args.amount,
-            "serialized_tx": tx_b64,
-            "data": { "txHash": "" }
+            "data": {
+                "action": "deposit",
+                "vault": args.vault,
+                "amount": args.amount,
+                "wallet": wallet,
+                "note": "dry-run: transaction built but not submitted",
+                "serialized_tx": tx_b64
+            }
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
         return Ok(());

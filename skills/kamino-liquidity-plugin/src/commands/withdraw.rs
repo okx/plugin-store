@@ -40,13 +40,18 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
         let dummy_wallet = "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE";
         let wallet = args.wallet.as_deref().unwrap_or(dummy_wallet);
         let tx_b64 = api::build_withdraw_tx(&args.vault, wallet, &args.amount).await?;
+        // Provide human-readable preview; include raw tx as optional field
         let output = serde_json::json!({
             "ok": true,
             "dry_run": true,
-            "vault": args.vault,
-            "amount": args.amount,
-            "serialized_tx": tx_b64,
-            "data": { "txHash": "" }
+            "data": {
+                "action": "withdraw",
+                "vault": args.vault,
+                "shares_to_redeem": args.amount,
+                "wallet": wallet,
+                "note": "dry-run: transaction built but not submitted",
+                "serialized_tx": tx_b64
+            }
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
         return Ok(());

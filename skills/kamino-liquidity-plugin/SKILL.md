@@ -4,8 +4,8 @@ description: "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to e
 license: MIT
 metadata:
   author: GeoGu360
-  version: "0.1.2"
-version: "0.1.2"
+  version: "0.1.3"
+version: "0.1.3"
 author: GeoGu360
 ---
 
@@ -22,7 +22,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-liquidity-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.2"
+LOCAL_VER="0.1.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -95,7 +95,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-liquidity-plugin@0.1.2/kamino-liquidity-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-liquidity-plugin@0.1.3/kamino-liquidity-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -103,7 +103,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/kamino-liquidity-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.2" > "$HOME/.plugin-store/managed/kamino-liquidity-plugin"
+echo "0.1.3" > "$HOME/.plugin-store/managed/kamino-liquidity-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -123,7 +123,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"kamino-liquidity-plugin","version":"0.1.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"kamino-liquidity-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -186,6 +186,8 @@ kamino-liquidity vaults [--chain 501] [--token <filter>] [--limit <n>]
 - "List Kamino liquidity vaults"
 - "What Kamino KVaults are available?"
 - "Show SOL vaults on Kamino"
+
+**Note on APY:** The `/kvaults/vaults` API endpoint does not return APY data. APY is not included in the `vaults` output. To see current APY, visit the Kamino Finance app at https://app.kamino.finance or use the Kamino API `/kvaults/strategies/{vault}/metrics` endpoint directly.
 
 **Example output:**
 ```json
@@ -275,7 +277,23 @@ kamino-liquidity deposit --vault <address> --amount <amount> [--chain 501] [--wa
 - **Ask user to confirm** before executing
 - Execute: `onchainos wallet contract-call --chain 501 --to KvauGMspG5k6rtzrqqn7WNh3oZdyKqLKwK2XWQ8FLjd --unsigned-tx <base58_tx> --force`
 
-**Example output:**
+**Dry-run output** (`--dry-run`):
+```json
+{
+  "ok": true,
+  "dry_run": true,
+  "data": {
+    "action": "deposit",
+    "vault": "GEodMsAREMV4JdKs1yUCTKpz4EtzxKoSDeM3NZkG1RRk",
+    "amount": "0.001",
+    "wallet": "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE",
+    "note": "dry-run: transaction built but not submitted",
+    "serialized_tx": "<base64>"
+  }
+}
+```
+
+**Confirmed output** (with `--confirm`):
 ```json
 {
   "ok": true,
@@ -317,7 +335,23 @@ kamino-liquidity withdraw --vault <address> --amount <shares> [--chain 501] [--w
 - **Ask user to confirm** before executing
 - Execute: `onchainos wallet contract-call --chain 501 --to KvauGMspG5k6rtzrqqn7WNh3oZdyKqLKwK2XWQ8FLjd --unsigned-tx <base58_tx> --force`
 
-**Example output:**
+**Dry-run output** (`--dry-run`):
+```json
+{
+  "ok": true,
+  "dry_run": true,
+  "data": {
+    "action": "withdraw",
+    "vault": "GEodMsAREMV4JdKs1yUCTKpz4EtzxKoSDeM3NZkG1RRk",
+    "shares_to_redeem": "0.5",
+    "wallet": "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE",
+    "note": "dry-run: transaction built but not submitted",
+    "serialized_tx": "<base64>"
+  }
+}
+```
+
+**Confirmed output** (with `--confirm`):
 ```json
 {
   "ok": true,
