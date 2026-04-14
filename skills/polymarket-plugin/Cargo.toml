@@ -1,6 +1,6 @@
 [package]
 name = "polymarket-plugin"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 
 [[bin]]
@@ -22,3 +22,4 @@ chrono = { version = "0.4", features = ["serde"] }
 dirs = "5"
 hex = "0.4"
 getrandom = { version = "0.2", features = ["std"] }
+futures = "0.3"

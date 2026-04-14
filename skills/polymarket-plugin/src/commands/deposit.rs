@@ -114,38 +114,25 @@ pub async fn run(
     }
 
     // ── Normal deposit — amount required ────────────────────────────────────
-    // If amount is missing, return a structured response so the upstream Agent
-    // knows exactly which parameters to ask the user for before retrying.
-    let amount_str = match amount {
-        Some(a) => a,
-        None => {
-            println!(
-                "{}",
-                serde_json::json!({
-                    "ok": false,
-                    "missing_params": ["amount"],
-                    "error": "Missing required parameter: --amount (USD value to deposit, e.g. 50 = $50).",
-                    "hint": "Please ask the user: how much USD do you want to deposit? \
-                             Also confirm: which chain to deposit from (default: polygon) \
-                             and which token to use (default: USDC)."
-                })
-            );
-            return Ok(());
-        }
-    };
+    let signer_addr = crate::onchainos::get_wallet_address().await?;
+    let creds = crate::auth::ensure_credentials(&client, &signer_addr).await?;
+    let proxy_wallet = creds.proxy_wallet.as_ref().ok_or_else(|| {
+        anyhow::anyhow!("No proxy wallet configured. Run `polymarket setup-proxy` first.")
+    })?;
 
+    // If amount is missing: run smart suggestion flow instead of plain error.
+    if amount.is_none() {
+        suggest_deposit(&client, &signer_addr).await?;
+        return Ok(());
+    }
+
+    let amount_str = amount.unwrap();
     let amount_f: f64 = amount_str
         .parse()
         .map_err(|_| anyhow::anyhow!("invalid amount: {}", amount_str))?;
     if amount_f <= 0.0 {
         bail!("amount must be positive");
     }
-
-    let signer_addr = crate::onchainos::get_wallet_address().await?;
-    let creds = crate::auth::ensure_credentials(&client, &signer_addr).await?;
-    let proxy_wallet = creds.proxy_wallet.as_ref().ok_or_else(|| {
-        anyhow::anyhow!("No proxy wallet configured. Run `polymarket setup-proxy` first.")
-    })?;
 
     // ── Resolve chain ────────────────────────────────────────────────────────
     let chain_id = resolve_chain_id(chain).ok_or_else(|| {
@@ -441,4 +428,143 @@ pub async fn run(
             }
         }
     }
+}
+
+// ── Smart deposit suggestion (called when --amount is omitted) ────────────────
+async fn suggest_deposit(client: &reqwest::Client, signer_addr: &str) -> anyhow::Result<()> {
+    const BRIDGE_CHAINS: &[(&str, &str, &str)] = &[
+        ("ethereum", "1",     "ethereum"),
+        ("arbitrum", "42161", "arbitrum"),
+        ("base",     "8453",  "base"),
+        ("optimism", "10",    "optimism"),
+        ("bnb",      "56",    "bnb"),
+        ("monad",    "143",   "monad"),
+    ];
+
+    // ── Step 1: Polygon check ────────────────────────────────────────────────
+    let (pol_bal, usdc_bal) = tokio::join!(
+        crate::onchainos::get_pol_balance(signer_addr),
+        crate::onchainos::get_usdc_balance(signer_addr),
+    );
+    let pol_balance = pol_bal.unwrap_or(0.0);
+    let usdc_e_usd = usdc_bal.unwrap_or(0.0);
+    let has_polygon_gas = pol_balance >= 0.1;
+
+    let polygon_info = serde_json::json!({
+        "usdc_e_usd": (usdc_e_usd * 100.0).round() / 100.0,
+        "pol_balance": (pol_balance * 10000.0).round() / 10000.0,
+        "has_gas": has_polygon_gas,
+        "command": format!("polymarket deposit --amount {:.0} --chain polygon --token USDC",
+                           usdc_e_usd.floor().max(1.0)),
+        "note": "Direct transfer on Polygon — no bridge fee, instant"
+    });
+
+    if usdc_e_usd >= 1.0 && has_polygon_gas {
+        let hint = format!(
+            "You have ${:.2} USDC.e on Polygon (recommended). \
+             Transfer more USDC.e to {} on Polygon if needed, then specify --amount.",
+            usdc_e_usd, signer_addr
+        );
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": true,
+            "missing_params": ["amount"],
+            "deposit_suggestions": {
+                "eoa_address": signer_addr,
+                "polygon": polygon_info,
+                "alternatives": [],
+                "recommended_command": format!(
+                    "polymarket deposit --amount {:.0} --chain polygon --token USDC",
+                    usdc_e_usd.floor().max(1.0)
+                )
+            },
+            "hint": hint
+        }))?);
+        return Ok(());
+    }
+
+    // ── Step 2: Polygon insufficient — scan bridge chains in parallel ─────────
+    eprintln!("[polymarket] Scanning balances across supported chains...");
+    let assets = crate::api::bridge_supported_assets(client).await.unwrap_or_default();
+
+    let min_usd_map: std::collections::HashMap<(String, String), f64> = assets
+        .iter()
+        .map(|a| ((a.chain_id.clone(), a.token.address.to_lowercase()), a.min_checkout_usd))
+        .collect();
+
+    let balance_futs: Vec<_> = BRIDGE_CHAINS
+        .iter()
+        .map(|(oc_chain, _, _)| crate::onchainos::get_chain_balances(oc_chain))
+        .collect();
+    let all_balances = futures::future::join_all(balance_futs).await;
+
+    let sentinel = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    let mut alternatives: Vec<serde_json::Value> = Vec::new();
+
+    for (i, balances) in all_balances.iter().enumerate() {
+        let (oc_chain, bridge_chain_id, chain_name) = BRIDGE_CHAINS[i];
+        for b in balances {
+            if b.usd_value < 1.0 { continue; }
+            let tok_addr = if b.token_address.is_empty() { sentinel.to_string() } else { b.token_address.clone() };
+            // Skip native tokens (bridge doesn't detect plain value transfers)
+            if tok_addr == sentinel { continue; }
+            let Some(&min) = min_usd_map.get(&(bridge_chain_id.to_string(), tok_addr)) else { continue };
+            if b.usd_value < min { continue; }
+            let deposit_amount = (b.usd_value * 0.98).floor().max(min);
+            alternatives.push(serde_json::json!({
+                "chain": chain_name,
+                "token": b.symbol,
+                "available_usd": (b.usd_value * 100.0).round() / 100.0,
+                "min_deposit_usd": min,
+                "command": format!(
+                    "polymarket deposit --amount {:.0} --chain {} --token {}",
+                    deposit_amount, oc_chain, b.symbol
+                )
+            }));
+        }
+    }
+
+    alternatives.sort_by(|a, b| {
+        b["available_usd"].as_f64().unwrap_or(0.0)
+            .partial_cmp(&a["available_usd"].as_f64().unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    for (i, alt) in alternatives.iter_mut().enumerate() {
+        alt["rank"] = serde_json::json!(i + 1);
+    }
+
+    let recommended_command = alternatives
+        .first()
+        .and_then(|a| a["command"].as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!(
+            "Transfer USDC.e to {} on Polygon, then: polymarket deposit --amount <X> --chain polygon --token USDC",
+            signer_addr
+        ));
+
+    let hint = if let Some(top) = alternatives.first() {
+        format!(
+            "Recommended: {} (${:.2} available). Run: {}",
+            top["token"].as_str().unwrap_or(""),
+            top["available_usd"].as_f64().unwrap_or(0.0),
+            top["command"].as_str().unwrap_or("")
+        )
+    } else {
+        format!(
+            "No eligible assets found. Transfer USDC.e to {} on Polygon (chain 137) first.",
+            signer_addr
+        )
+    };
+
+    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+        "ok": true,
+        "missing_params": ["amount"],
+        "deposit_suggestions": {
+            "eoa_address": signer_addr,
+            "polygon": polygon_info,
+            "alternatives": alternatives,
+            "recommended_command": recommended_command
+        },
+        "hint": hint
+    }))?);
+    Ok(())
 }

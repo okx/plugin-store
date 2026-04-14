@@ -862,6 +862,69 @@ pub async fn transfer_native_on_chain(chain: &str, to: &str, amount_wei: u128) -
     extract_tx_hash(&result)
 }
 
+/// A single token balance entry returned by `onchainos wallet balance`.
+#[derive(Debug, Clone)]
+pub struct ChainTokenBalance {
+    pub symbol: String,
+    pub token_address: String, // lowercase; empty string for native coin
+    pub usd_value: f64,
+    pub balance: String,
+    pub decimal: u8,
+}
+
+/// Call `onchainos wallet balance --chain <chain>` and return all token balances.
+/// Returns an empty vec on failure (non-fatal — used for best-effort suggestions).
+pub async fn get_chain_balances(chain: &str) -> Vec<ChainTokenBalance> {
+    let output = tokio::process::Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", chain])
+        .output()
+        .await;
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return vec![],
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let v: serde_json::Value = match serde_json::from_str(stdout.trim()) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let assets = match v["data"]["details"]
+        .as_array()
+        .and_then(|d| d.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+    {
+        Some(a) => a.clone(),
+        None => return vec![],
+    };
+    assets
+        .iter()
+        .filter_map(|a| {
+            let usd_value = a["usdValue"]
+                .as_str()
+                .and_then(|s| s.parse::<f64>().ok())
+                .or_else(|| a["usdValue"].as_f64())
+                .unwrap_or(0.0);
+            if usd_value <= 0.0 {
+                return None;
+            }
+            Some(ChainTokenBalance {
+                symbol: a["symbol"].as_str().unwrap_or("").to_string(),
+                token_address: a["tokenAddress"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_lowercase(),
+                usd_value,
+                balance: a["balance"].as_str().unwrap_or("0").to_string(),
+                decimal: a["decimal"]
+                    .as_str()
+                    .and_then(|s| s.parse().ok())
+                    .or_else(|| a["decimal"].as_u64().map(|n| n as u8))
+                    .unwrap_or(18),
+            })
+        })
+        .collect()
+}
+
 pub async fn is_ctf_approved_for_all(owner: &str, operator: &str) -> Result<bool> {
     use crate::config::{Contracts, Urls};
     // isApprovedForAll(address,address) selector = 0xe985e9c5
