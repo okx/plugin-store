@@ -807,18 +807,32 @@ pub async fn get_market_resolutions(
 /// Deposits: incoming USDC.e transfers TO the proxy from non-exchange addresses.
 /// Withdrawals: USDC.e transfers FROM the proxy TO the EOA.
 ///
-/// Tries progressively smaller block ranges until the RPC accepts the query.
-/// Returns an empty vec (with no error) if all ranges fail.
+/// Paginates backward through 9999-block chunks (safe on public RPCs that cap at 10 000 blocks).
+/// Uses JSON-RPC batch requests: both deposit and withdrawal queries are sent in one HTTP call
+/// per page, halving round-trips. Stops early once `limit` transfers are collected, when the
+/// RPC reports pruned history, or after MAX_CHUNKS pages.
+/// Returns an empty vec (with no error) if all pages fail or no transfers are found.
 pub async fn get_usdc_e_transfers(
     client: &Client,
     proxy_wallet: &str,
     eoa: &str,
+    limit: usize,
 ) -> Vec<serde_json::Value> {
     use crate::config::Contracts;
 
     const TRANSFER_TOPIC: &str =
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    const RPC: &str = "https://polygon.drpc.org";
+
+    // RPCs to try in order. Publicnode allows max 10 000 blocks; drpc may allow more.
+    const RPCS: &[&str] = &[
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://polygon.drpc.org",
+    ];
+
+    // 9 999 is safely under every public RPC's 10 000-block cap.
+    const CHUNK: u64 = 9_999;
+    // 30 pages × 9 999 ≈ 300 000 blocks ≈ 7 days of history.
+    const MAX_CHUNKS: usize = 30;
 
     // Exchange contracts whose transfers to the proxy are trade settlements, not user deposits.
     let exchange_addrs: Vec<String> = vec![
@@ -827,141 +841,173 @@ pub async fn get_usdc_e_transfers(
         Contracts::NEG_RISK_ADAPTER.to_lowercase(),
     ];
 
-    // Get current block number
-    let block_resp: serde_json::Value = match client
-        .post(RPC)
-        .json(&serde_json::json!({"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}))
-        .send().await
-    {
-        Ok(r) => r.json().await.unwrap_or_default(),
-        Err(_) => return vec![],
-    };
-
-    let current_block = match block_resp["result"].as_str()
-        .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
-    {
-        Some(b) if b > 0 => b,
-        _ => return vec![],
-    };
-
-    // Pad an Ethereum address to a 32-byte topic string
+    // Pad an Ethereum address to a 32-byte topic string.
     let pad = |addr: &str| -> String {
         let a = addr.to_lowercase();
         let a = a.strip_prefix("0x").unwrap_or(&a);
         format!("0x{:0>64}", a)
     };
-
     let proxy_topic = pad(proxy_wallet);
     let eoa_topic   = pad(eoa);
 
-    // Try progressively smaller ranges: ~30 days, ~7 days, ~2 days
-    // Polygon ~43 200 blocks/day
-    for &range in &[1_300_000u64, 300_000, 90_000] {
-        let from_hex = format!("0x{:x}", current_block.saturating_sub(range));
-        let to_hex   = format!("0x{:x}", current_block);
+    let parse_addr = |topic: &str| -> String {
+        let t = topic.trim_start_matches("0x");
+        if t.len() >= 40 { format!("0x{}", &t[t.len()-40..]) } else { "unknown".to_string() }
+    };
+    let parse_amount = |data: &str| -> f64 {
+        u128::from_str_radix(data.trim_start_matches("0x"), 16)
+            .unwrap_or(0) as f64 / 1_000_000.0  // USDC.e = 6 decimals
+    };
+    let block_num = |log: &serde_json::Value| -> u64 {
+        log["blockNumber"].as_str()
+            .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+            .unwrap_or(0)
+    };
 
-        // All incoming to proxy
-        let in_req = serde_json::json!({
-            "jsonrpc": "2.0", "method": "eth_getLogs", "id": 2,
-            "params": [{
-                "fromBlock": from_hex, "toBlock": to_hex,
-                "address": crate::config::Contracts::USDC_E,
-                "topics": [TRANSFER_TOPIC, serde_json::Value::Null, proxy_topic],
-            }]
-        });
-        // Outgoing proxy → EOA only
-        let out_req = serde_json::json!({
-            "jsonrpc": "2.0", "method": "eth_getLogs", "id": 3,
-            "params": [{
-                "fromBlock": from_hex, "toBlock": to_hex,
-                "address": crate::config::Contracts::USDC_E,
-                "topics": [TRANSFER_TOPIC, proxy_topic, eoa_topic],
-            }]
-        });
+    // Find a working RPC and get the current block number.
+    let mut working_rpc: Option<&str> = None;
+    let mut current_block: u64 = 0;
 
-        let (in_resp, out_resp) = tokio::join!(
-            client.post(RPC).json(&in_req).send(),
-            client.post(RPC).json(&out_req).send(),
-        );
-
-        let in_val: serde_json::Value = match in_resp {
+    for rpc in RPCS {
+        let resp: serde_json::Value = match client
+            .post(*rpc)
+            .json(&serde_json::json!({"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":0}))
+            .timeout(std::time::Duration::from_secs(8))
+            .send().await
+        {
             Ok(r) => r.json().await.unwrap_or_default(),
             Err(_) => continue,
         };
-        let out_val: serde_json::Value = match out_resp {
-            Ok(r) => r.json().await.unwrap_or_default(),
-            Err(_) => continue,
-        };
-
-        // Retry with smaller range if RPC rejected
-        if in_val.get("error").is_some() || out_val.get("error").is_some() {
-            continue;
-        }
-
-        let parse_addr = |topic: &str| -> String {
-            let t = topic.trim_start_matches("0x");
-            if t.len() >= 40 {
-                format!("0x{}", &t[t.len()-40..])
-            } else {
-                "unknown".to_string()
-            }
-        };
-
-        let parse_amount = |data: &str| -> f64 {
-            u128::from_str_radix(data.trim_start_matches("0x"), 16)
-                .unwrap_or(0) as f64 / 1_000_000.0  // USDC.e = 6 decimals
-        };
-
-        let block_num = |log: &serde_json::Value| -> u64 {
-            log["blockNumber"].as_str()
-                .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
-                .unwrap_or(0)
-        };
-
-        let mut transfers: Vec<serde_json::Value> = Vec::new();
-
-        // Incoming deposits — filter out exchange contract settlements
-        if let Some(logs) = in_val["result"].as_array() {
-            for log in logs {
-                let from_topic = log["topics"].as_array()
-                    .and_then(|t| t.get(1)).and_then(|v| v.as_str()).unwrap_or("");
-                let from_addr = parse_addr(from_topic);
-                // Skip if from an exchange contract (trade settlement, not user deposit)
-                if exchange_addrs.contains(&from_addr.to_lowercase()) {
-                    continue;
-                }
-                transfers.push(serde_json::json!({
-                    "type": "DEPOSIT",
-                    "from": from_addr,
-                    "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
-                    "block": block_num(log),
-                    "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
-                }));
+        if let Some(b) = resp["result"].as_str()
+            .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+        {
+            if b > 0 {
+                working_rpc = Some(rpc);
+                current_block = b;
+                break;
             }
         }
-
-        // Outgoing withdrawals (proxy → EOA)
-        if let Some(logs) = out_val["result"].as_array() {
-            for log in logs {
-                transfers.push(serde_json::json!({
-                    "type": "WITHDRAWAL",
-                    "to": eoa,
-                    "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
-                    "block": block_num(log),
-                    "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
-                }));
-            }
-        }
-
-        // Sort newest first
-        transfers.sort_by(|a, b| {
-            b["block"].as_u64().unwrap_or(0).cmp(&a["block"].as_u64().unwrap_or(0))
-        });
-
-        return transfers;
     }
 
-    vec![]  // all ranges failed — caller adds Polygonscan note
+    let rpc = match working_rpc {
+        Some(r) => r,
+        None => return vec![],
+    };
+
+    let mut all_transfers: Vec<serde_json::Value> = Vec::new();
+
+    // Walk backward, one chunk at a time.
+    let mut chunk_end = current_block;
+    for _ in 0..MAX_CHUNKS {
+        let chunk_start = chunk_end.saturating_sub(CHUNK);
+
+        let from_hex = format!("0x{:x}", chunk_start);
+        let to_hex   = format!("0x{:x}", chunk_end);
+
+        // JSON-RPC batch: both deposit and withdrawal in one HTTP request.
+        let batch = serde_json::json!([
+            {
+                "jsonrpc": "2.0", "id": 1, "method": "eth_getLogs",
+                "params": [{
+                    "fromBlock": from_hex, "toBlock": to_hex,
+                    "address": Contracts::USDC_E,
+                    "topics": [TRANSFER_TOPIC, serde_json::Value::Null, proxy_topic],
+                }]
+            },
+            {
+                "jsonrpc": "2.0", "id": 2, "method": "eth_getLogs",
+                "params": [{
+                    "fromBlock": from_hex, "toBlock": to_hex,
+                    "address": Contracts::USDC_E,
+                    "topics": [TRANSFER_TOPIC, proxy_topic, eoa_topic],
+                }]
+            }
+        ]);
+
+        let batch_val: serde_json::Value = match client
+            .post(rpc)
+            .json(&batch)
+            .timeout(std::time::Duration::from_secs(10))
+            .send().await
+        {
+            Ok(r) => r.json().await.unwrap_or_default(),
+            Err(_) => break,
+        };
+
+        // Batch response is an array of result objects.
+        let responses = match batch_val.as_array() {
+            Some(arr) => arr.clone(),
+            None => break,
+        };
+
+        // If any response has an error, stop gracefully — return what we have so far.
+        // This covers both block-range errors and pruned-history errors from archive-less RPCs.
+        if responses.iter().any(|r| r.get("error").is_some()) {
+            break;
+        }
+
+        // id=1 → deposits (into proxy), id=2 → withdrawals (proxy → EOA)
+        let mut page_count = 0usize;
+        'outer: for resp in &responses {
+            let id = resp["id"].as_u64().unwrap_or(0);
+            if let Some(logs) = resp["result"].as_array() {
+                page_count += logs.len();
+                for log in logs {
+                    if id == 1 {
+                        // Deposit — filter trade settlements from exchange contracts
+                        let from_topic = log["topics"].as_array()
+                            .and_then(|t| t.get(1)).and_then(|v| v.as_str()).unwrap_or("");
+                        let from_addr = parse_addr(from_topic);
+                        if exchange_addrs.contains(&from_addr.to_lowercase()) {
+                            continue;
+                        }
+                        all_transfers.push(serde_json::json!({
+                            "type": "DEPOSIT",
+                            "from": from_addr,
+                            "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
+                            "block": block_num(log),
+                            "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
+                        }));
+                    } else {
+                        // Withdrawal — proxy → EOA
+                        all_transfers.push(serde_json::json!({
+                            "type": "WITHDRAWAL",
+                            "to": eoa,
+                            "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
+                            "block": block_num(log),
+                            "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
+                        }));
+                    }
+                    // Stop collecting once we've reached the requested limit.
+                    if all_transfers.len() >= limit {
+                        break 'outer;
+                    }
+                }
+            }
+        }
+
+        // Stop if we've reached the limit or there are no more transfers to find.
+        if all_transfers.len() >= limit {
+            break;
+        }
+        // If this page was empty and we already have results, stop scanning further back.
+        if page_count == 0 && !all_transfers.is_empty() {
+            break;
+        }
+
+        if chunk_start == 0 {
+            break;
+        }
+        chunk_end = chunk_start - 1;
+    }
+
+    // Sort newest first by block number, then truncate to limit.
+    all_transfers.sort_by(|a, b| {
+        b["block"].as_u64().unwrap_or(0).cmp(&a["block"].as_u64().unwrap_or(0))
+    });
+    all_transfers.truncate(limit);
+
+    all_transfers
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

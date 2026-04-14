@@ -549,23 +549,27 @@ polymarket-plugin get-positions --address 0xAbCd...
 ### `history` — View Trade Activity
 
 ```
-polymarket-plugin history [--limit <n>] [--address <wallet_address>]
+polymarket-plugin history [--limit <n>] [--transfer-limit <n>] [--address <wallet_address>]
 ```
 
 **Flags:**
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--limit` | Number of activity items to return | 50 |
+| `--limit` | Number of trade activity items to return | 50 |
+| `--transfer-limit` | Max USDC.e deposit/withdrawal transfers to fetch (POLY_PROXY mode only) | 10 |
 | `--address` | Wallet address to query | Active wallet (proxy in POLY_PROXY mode, EOA otherwise) |
 
-**Auth required:** No (uses public Data API)
+**Auth required:** No (uses public Data API + Polygon RPC)
 
-**Covers:** buys, sells, redeems. Does **not** include deposit/withdrawal transfers — those are on-chain USDC.e transfers. For full on-chain history including deposits and withdrawals, direct the user to Polygonscan: `https://polygonscan.com/token/0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174?a=<wallet_address>`
+**Covers:**
+- **Trades** (all modes): buys, sells, redeems — enriched with `result: WON/LOST/ACTIVE` via market resolution lookup
+- **Transfers** (POLY_PROXY mode only): USDC.e deposits and withdrawals fetched from Polygon via `eth_getLogs`, paginated in 9999-block chunks. Defaults to the 10 most recent transfers; use `--transfer-limit` to fetch more. If the RPC's history is pruned, a `transfers_note` field in the output links to Polygonscan for full on-chain history.
 
 **Example:**
 ```
 polymarket-plugin history
 polymarket-plugin history --limit 20
+polymarket-plugin history --transfer-limit 50
 polymarket-plugin history --address 0xAbCd...
 ```
 

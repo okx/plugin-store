@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use std::collections::HashSet;
 
-pub async fn run(limit: u32, address: Option<&str>) -> Result<()> {
+pub async fn run(limit: u32, transfer_limit: u32, address: Option<&str>) -> Result<()> {
     let client = Client::new();
 
     // Resolve wallet: proxy wallet in POLY_PROXY mode, else EOA.
@@ -92,7 +92,7 @@ pub async fn run(limit: u32, address: Option<&str>) -> Result<()> {
 
     let (transfers, transfers_note) = if is_proxy_mode {
         eprintln!("[polymarket] Fetching USDC.e transfer history from Polygon...");
-        let t = crate::api::get_usdc_e_transfers(&client, &wallet_addr, &eoa).await;
+        let t = crate::api::get_usdc_e_transfers(&client, &wallet_addr, &eoa, transfer_limit as usize).await;
         let note = if t.is_empty() {
             Some(format!(
                 "USDC.e transfer history unavailable from RPC. Full on-chain history: \
