@@ -61,13 +61,9 @@ enum Commands {
 
     /// Show trade activity history for the active wallet (buys, sells, redeems)
     History {
-        /// Number of trade activity items to return (default: 50)
+        /// Number of activity items to return (default: 50)
         #[arg(long, default_value = "50")]
         limit: u32,
-
-        /// Maximum number of USDC.e deposit/withdrawal transfers to return in POLY_PROXY mode (default: 10)
-        #[arg(long, default_value = "10")]
-        transfer_limit: u32,
 
         /// Wallet address to query (defaults to active wallet: proxy in POLY_PROXY mode, EOA otherwise)
         #[arg(long)]
@@ -312,8 +308,8 @@ async fn main() {
         Commands::GetPositions { address } => {
             commands::get_positions::run(address.as_deref()).await
         }
-        Commands::History { limit, transfer_limit, address } => {
-            commands::history::run(limit, transfer_limit, address.as_deref()).await
+        Commands::History { limit, address } => {
+            commands::history::run(limit, address.as_deref()).await
         }
         Commands::Balance => {
             commands::balance::run().await
