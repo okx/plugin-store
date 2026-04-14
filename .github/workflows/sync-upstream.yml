@@ -1,9 +1,13 @@
 name: Sync from upstream
 
 on:
+  # Triggered by upstream via repository_dispatch
+  repository_dispatch:
+    types: [upstream-sync]
+  # Fallback: every 4 hours in case dispatch missed
   schedule:
-    - cron: '0 */4 * * *'  # Every 4 hours
-  workflow_dispatch:        # Manual trigger
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
