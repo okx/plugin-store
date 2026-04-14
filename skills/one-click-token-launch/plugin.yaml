@@ -19,14 +19,17 @@ components:
     dir: "."
 
 api_calls:
-  - https://pumpportal.fun
-  - https://pump.fun
-  - https://mainnet.block-engine.jito.wtf
-  - https://api.pinata.cloud
-  - https://gateway.pinata.cloud
+  # Launchpad APIs
+  - https://pumpportal.fun          # PumpPortal trade-local API (pump.fun + LetsBonk)
+  - https://pump.fun                # pump.fun IPFS upload (free, no key)
+  - https://bags.fm                 # Bags.fm token launch REST API
+  - https://moon.it                 # Moonit prepare-mint / submit-mint API
+  # MEV protection
+  - https://mainnet.block-engine.jito.wtf  # Jito bundle submission
+  # IPFS / metadata
+  - https://api.pinata.cloud        # Pinata IPFS upload (fallback, requires JWT)
+  - https://gateway.pinata.cloud    # Pinata IPFS gateway (read)
+  # Block explorers (read-only, for explorer links)
   - https://solscan.io
   - https://bscscan.com
-  - https://example.com
-  - https://x.com
-  - https://t.me
 type: community-developer

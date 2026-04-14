@@ -100,7 +100,7 @@ class LetsBonkAdapter(LaunchpadAdapter):
 
         # ── 3. Sign and submit ────────────────────────────────────────
         print("  [LetsBonk] Signing and submitting...")
-        tx_hash = await self._sign_and_submit(tx_data, params.wallet_address)
+        tx_hash = await self._sign_and_submit(tx_data, params.wallet_address, mint_pubkey)
 
         if not tx_hash:
             return LaunchResult(
@@ -110,7 +110,7 @@ class LetsBonkAdapter(LaunchpadAdapter):
 
         # ── 4. Wait for confirmation ──────────────────────────────────
         print(f"  [LetsBonk] TX submitted: {tx_hash}")
-        confirmed = await self._wait_confirmation(tx_hash)
+        confirmed = await self._wait_confirmation(tx_hash, params.wallet_address)
 
         return LaunchResult(
             success=confirmed,
@@ -141,43 +141,54 @@ class LetsBonkAdapter(LaunchpadAdapter):
         except ImportError:
             raise RuntimeError("Install solders or pynacl+base58 for keypair generation")
 
-    async def _sign_and_submit(self, tx_data: bytes, wallet_address: str) -> str:
-        """Sign and submit via onchainos gateway."""
-        import base64
-        tx_b64 = base64.b64encode(tx_data).decode()
+    async def _sign_and_submit(self, tx_data: bytes, wallet_address: str, mint_pubkey: str = "") -> str:
+        """Sign and submit unsigned TX via onchainos TEE wallet."""
+        import base58 as b58
+        tx_b58 = b58.b58encode(tx_data).decode()
         try:
+            cmd = [
+                onchainos_bin(), "wallet", "contract-call",
+                "--chain", "501",
+                "--to", mint_pubkey or wallet_address,
+                "--unsigned-tx", tx_b58,
+            ]
             proc = await asyncio.create_subprocess_exec(
-                onchainos_bin(), "gateway", "broadcast",
-                "--chain", "solana",
-                "--raw-tx", tx_b64,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
-                print(f"  [LetsBonk] broadcast failed: {stderr.decode().strip()}")
+                print(f"  [LetsBonk] contract-call failed: {stderr.decode().strip()}")
                 return ""
             output = json.loads(stdout.decode())
-            return output.get("data", {}).get("txHash", "") or output.get("txHash", "")
+            data = output.get("data", {})
+            if isinstance(data, list) and data:
+                data = data[0]
+            return data.get("txHash", "") or output.get("txHash", "")
         except Exception as e:
             print(f"  [LetsBonk] Sign/submit error: {e}")
             return ""
 
-    async def _wait_confirmation(self, tx_hash: str, max_retries: int = 5) -> bool:
-        """Poll for TX confirmation."""
+    async def _wait_confirmation(self, tx_hash: str, wallet_address: str, max_retries: int = 5) -> bool:
+        """Poll for TX confirmation via onchainos wallet history."""
         for i in range(max_retries):
             await asyncio.sleep(5)
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    onchainos_bin(), "gateway", "tx-status",
-                    "--chain", "solana",
+                    onchainos_bin(), "wallet", "history",
+                    "--chain", "501",
                     "--tx-hash", tx_hash,
+                    "--address", wallet_address,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 output = json.loads(stdout.decode())
-                status = output.get("data", {}).get("status", "")
+                data = output.get("data", {})
+                if isinstance(data, list) and data:
+                    data = data[0]
+                status = data.get("status", "") or data.get("txStatus", "")
                 if status in ("confirmed", "finalized", "success"):
                     print(f"  [LetsBonk] Confirmed! ({i + 1} polls)")
                     return True

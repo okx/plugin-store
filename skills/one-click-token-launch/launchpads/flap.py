@@ -112,56 +112,45 @@ class FlapAdapter(LaunchpadAdapter):
         if salt != _ZERO_BYTES32:
             print(f"  [Flap] Vanity salt: {salt[:10]}...")
 
-        # Build onchainos contract-call command
-        # newTokenV6 takes a struct param — we encode as tuple
-        func_sig = (
-            "newTokenV6("
-            "(string,string,string,uint8,bytes32,uint8,address,uint256,"
-            "address,bytes,bytes32,bytes,uint8,uint8,"
-            "uint16,uint16,uint256,uint256,"
-            "uint16,uint16,uint16,uint16,"
-            "uint256,address,address,uint8))"
+        # ABI-encode newTokenV6((tuple)) call data
+        input_data = self._encode_new_token_v6(
+            name=params.name,
+            symbol=params.symbol,
+            meta=params.metadata_cid,
+            dex_thresh=0,
+            salt=salt,
+            migrator_type=migrator_type,
+            quote_token=_ZERO_ADDR,
+            quote_amt=buy_wei,
+            beneficiary=beneficiary,
+            permit_data=b"",
+            extension_id=_ZERO_BYTES32,
+            extension_data=b"",
+            dex_id=dex_id,
+            lp_fee_profile=lp_fee_profile,
+            buy_tax=buy_tax,
+            sell_tax=sell_tax,
+            tax_duration=tax_duration,
+            anti_farmer=anti_farmer,
+            mkt_bps=mkt_bps,
+            deflation_bps=deflation_bps,
+            dividend_bps=dividend_bps,
+            lp_bps=lp_bps,
+            min_share_balance=0,
+            dividend_token=_ZERO_ADDR,
+            commission_receiver=_ZERO_ADDR,
+            token_version=token_version,
         )
-
-        args_tuple = [
-            params.name,             # name
-            params.symbol,           # symbol
-            params.metadata_cid,     # meta (IPFS CID)
-            0,                       # dexThresh
-            salt,                    # salt
-            migrator_type,           # migratorType
-            _ZERO_ADDR,             # quoteToken
-            buy_wei,                # quoteAmt
-            beneficiary,            # beneficiary
-            "0x",                   # permitData
-            _ZERO_BYTES32,          # extensionID
-            "0x",                   # extensionData
-            dex_id,                 # dexId
-            lp_fee_profile,         # lpFeeProfile
-            buy_tax,                # buyTaxRate
-            sell_tax,               # sellTaxRate
-            tax_duration,           # taxDuration
-            anti_farmer,            # antiFarmerDuration
-            mkt_bps,                # mktBps
-            deflation_bps,          # deflationBps
-            dividend_bps,           # dividendBps
-            lp_bps,                 # lpBps
-            0,                      # minimumShareBalance
-            _ZERO_ADDR,            # dividendToken
-            _ZERO_ADDR,            # commissionReceiver
-            token_version,          # tokenVersion
-        ]
 
         cmd = [
             onchainos_bin(), "wallet", "contract-call",
-            "--chain", "bsc",
+            "--chain", "56",
             "--to", portal,
-            "--function", func_sig,
-            "--args", json.dumps([args_tuple]),
+            "--input-data", input_data,
         ]
 
         if buy_wei > 0:
-            cmd.extend(["--value", str(buy_wei)])
+            cmd.extend(["--amt", str(buy_wei)])
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -189,7 +178,7 @@ class FlapAdapter(LaunchpadAdapter):
 
         # ── Wait for BSC confirmation ─────────────────────────────────
         print(f"  [Flap] TX submitted: {tx_hash}")
-        confirmed, token_address = await self._wait_and_parse(tx_hash)
+        confirmed, token_address = await self._wait_and_parse(tx_hash, params.wallet_address)
 
         return LaunchResult(
             success=confirmed,
@@ -200,7 +189,133 @@ class FlapAdapter(LaunchpadAdapter):
             error="" if confirmed else "Transaction not confirmed within timeout",
         )
 
-    async def _wait_and_parse(self, tx_hash: str, max_retries: int = 6) -> tuple:
+    @staticmethod
+    def _encode_new_token_v6(**kw) -> str:
+        """ABI-encode newTokenV6((tuple)) call data.
+
+        Selector: keccak256("newTokenV6((string,string,string,uint8,bytes32,
+        uint8,address,uint256,address,bytes,bytes32,bytes,uint8,uint8,
+        uint16,uint16,uint256,uint256,uint16,uint16,uint16,uint16,
+        uint256,address,address,uint8))")[:4] = 0x363eb8e6
+        """
+        selector = "363eb8e6"
+
+        def _pad32(val: int, signed: bool = False) -> str:
+            return val.to_bytes(32, "big", signed=signed).hex()
+
+        def _pad_addr(addr: str) -> str:
+            a = addr.lower().replace("0x", "")
+            return a.rjust(64, "0")
+
+        def _pad_bytes32(b32: str) -> str:
+            h = b32.replace("0x", "")
+            return h.ljust(64, "0")
+
+        def _encode_string(s: str) -> str:
+            data = s.encode("utf-8")
+            length = len(data)
+            padded_len = ((length + 31) // 32) * 32
+            return _pad32(length) + data.hex().ljust(padded_len * 2, "0")
+
+        def _encode_bytes(b: bytes) -> str:
+            length = len(b)
+            padded_len = ((length + 31) // 32) * 32
+            return _pad32(length) + b.hex().ljust(padded_len * 2, "0") if length else _pad32(0)
+
+        # The struct is encoded as a tuple — outer offset pointer then tuple data
+        # For a single tuple param, offset = 32 (0x20)
+        outer_offset = _pad32(32)
+
+        # Within the tuple: fixed fields inline, dynamic fields (string, bytes) as offsets
+        # Field layout (26 fields):
+        #  0: name (string, dynamic)
+        #  1: symbol (string, dynamic)
+        #  2: meta (string, dynamic)
+        #  3: dexThresh (uint8)
+        #  4: salt (bytes32)
+        #  5: migratorType (uint8)
+        #  6: quoteToken (address)
+        #  7: quoteAmt (uint256)
+        #  8: beneficiary (address)
+        #  9: permitData (bytes, dynamic)
+        # 10: extensionID (bytes32)
+        # 11: extensionData (bytes, dynamic)
+        # 12-25: uint8/uint16/uint256 (all static)
+
+        # 26 slots of 32 bytes each for heads
+        head_slots = 26
+        head_size = head_slots * 32  # bytes
+
+        # Encode dynamic data and compute offsets
+        dyn_parts = []
+        dyn_offset = head_size
+
+        def _add_dynamic(encoded: str) -> str:
+            nonlocal dyn_offset
+            offset_hex = _pad32(dyn_offset)
+            byte_len = len(encoded) // 2
+            dyn_offset += byte_len
+            dyn_parts.append(encoded)
+            return offset_hex
+
+        heads = []
+        # 0: name
+        heads.append(_add_dynamic(_encode_string(kw["name"])))
+        # 1: symbol
+        heads.append(_add_dynamic(_encode_string(kw["symbol"])))
+        # 2: meta
+        heads.append(_add_dynamic(_encode_string(kw["meta"])))
+        # 3: dexThresh
+        heads.append(_pad32(kw["dex_thresh"]))
+        # 4: salt
+        heads.append(_pad_bytes32(kw["salt"]))
+        # 5: migratorType
+        heads.append(_pad32(kw["migrator_type"]))
+        # 6: quoteToken
+        heads.append(_pad_addr(kw["quote_token"]))
+        # 7: quoteAmt
+        heads.append(_pad32(kw["quote_amt"]))
+        # 8: beneficiary
+        heads.append(_pad_addr(kw["beneficiary"]))
+        # 9: permitData
+        heads.append(_add_dynamic(_encode_bytes(kw["permit_data"])))
+        # 10: extensionID
+        heads.append(_pad_bytes32(kw["extension_id"]))
+        # 11: extensionData
+        heads.append(_add_dynamic(_encode_bytes(kw["extension_data"])))
+        # 12: dexId
+        heads.append(_pad32(kw["dex_id"]))
+        # 13: lpFeeProfile
+        heads.append(_pad32(kw["lp_fee_profile"]))
+        # 14: buyTaxRate
+        heads.append(_pad32(kw["buy_tax"]))
+        # 15: sellTaxRate
+        heads.append(_pad32(kw["sell_tax"]))
+        # 16: taxDuration
+        heads.append(_pad32(kw["tax_duration"]))
+        # 17: antiFarmerDuration
+        heads.append(_pad32(kw["anti_farmer"]))
+        # 18: mktBps
+        heads.append(_pad32(kw["mkt_bps"]))
+        # 19: deflationBps
+        heads.append(_pad32(kw["deflation_bps"]))
+        # 20: dividendBps
+        heads.append(_pad32(kw["dividend_bps"]))
+        # 21: lpBps
+        heads.append(_pad32(kw["lp_bps"]))
+        # 22: minimumShareBalance
+        heads.append(_pad32(kw["min_share_balance"]))
+        # 23: dividendToken
+        heads.append(_pad_addr(kw["dividend_token"]))
+        # 24: commissionReceiver
+        heads.append(_pad_addr(kw["commission_receiver"]))
+        # 25: tokenVersion
+        heads.append(_pad32(kw["token_version"]))
+
+        tuple_data = "".join(heads) + "".join(dyn_parts)
+        return "0x" + selector + outer_offset + tuple_data
+
+    async def _wait_and_parse(self, tx_hash: str, wallet_address: str = "", max_retries: int = 6) -> tuple:
         """Wait for BSC TX confirmation and extract token address.
 
         Flap emits TokenCreated(ts, creator, nonce, token, name, symbol, meta)
@@ -209,31 +324,34 @@ class FlapAdapter(LaunchpadAdapter):
         for i in range(max_retries):
             await asyncio.sleep(3)
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    onchainos_bin(), "gateway", "tx-status",
-                    "--chain", "bsc",
+                cmd = [
+                    onchainos_bin(), "wallet", "history",
+                    "--chain", "56",
                     "--tx-hash", tx_hash,
+                ]
+                if wallet_address:
+                    cmd.extend(["--address", wallet_address])
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 output = json.loads(stdout.decode())
                 data = output.get("data", {})
-                status = data.get("status", "")
+                if isinstance(data, list) and data:
+                    data = data[0]
+                status = data.get("status", "") or data.get("txStatus", "")
 
                 if status in ("confirmed", "finalized", "success", "1"):
-                    # Parse TokenCreated event from logs
                     token_addr = ""
                     logs = data.get("logs", [])
                     for log in logs:
                         topics = log.get("topics", [])
-                        # TokenCreated event — token address in the data field
                         if len(topics) >= 1 and log.get("address", "").lower() == C.FLAP_PORTAL.lower():
                             log_data = log.get("data", "")
-                            # Token address is typically at a known offset in the event data
-                            if len(log_data) >= 130:  # 0x + 64 chars offset
-                                # Parse address from data (offset varies by event structure)
-                                addr_hex = log_data[90:130]  # Token address field
+                            if len(log_data) >= 130:
+                                addr_hex = log_data[90:130]
                                 token_addr = "0x" + addr_hex[-40:]
 
                     if not token_addr:

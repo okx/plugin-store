@@ -26,6 +26,38 @@ triggers: >
 
 ---
 
+## Security Model
+
+### TEE Signing
+
+All on-chain write operations (token creation, buys, transfers) are signed via the onchainos Agentic Wallet running inside a Trusted Execution Environment (TEE). No private keys are stored in code or environment variables. The signing flow is:
+
+1. Adapter builds an unsigned transaction (via launchpad API or ABI encoding)
+2. Transaction is passed to `onchainos wallet contract-call --unsigned-tx` (Solana) or `--input-data` (EVM)
+3. The TEE wallet signs and broadcasts the transaction
+4. Confirmation is polled via `onchainos wallet history --tx-hash`
+
+### Untrusted Data Boundary
+
+External data enters the system at these points:
+
+| Source | Data | Validation |
+|--------|------|------------|
+| PumpPortal API | Unsigned transaction bytes | Deserialized and verified before TEE signing |
+| Bags.fm API | Token mint, metadata URL, serialized TX | Token mint checked, TX passed to TEE |
+| Moonit API | Serialized TX, token mint | TX passed to TEE for signing |
+| User input | Token name, symbol, description, image | Length limits enforced, image format validated |
+| IPFS upload | CID hash | Immutable content-addressed -- no validation needed |
+| Pinata API | Upload response (CID) | CID format validated |
+
+User-supplied strings (name, symbol, description) are passed to launchpad APIs and on-chain metadata. They are NOT used in shell commands or SQL queries. Image files are validated for format and size before IPFS upload.
+
+### Confirmation Gate
+
+Live mode (`DRY_RUN=False`) always requires explicit user confirmation (typing "confirm") before any on-chain transaction. The `auto_confirm` parameter only applies in DRY_RUN mode. This prevents accidental irreversible token creation.
+
+---
+
 ## File Structure
 
 ```
@@ -499,16 +531,18 @@ POST /api/trade-local
 }
 ```
 
-**Response**: serialized transaction → sign with onchainos wallet → submit
+**Response**: unsigned transaction bytes (with mint keypair signature embedded by PumpPortal)
 
-**Jito Bundle** (create + multi-buy):
-- Up to 5 TXs per bundle
-- TX[0] = create + dev buy (must include mint keypair signature)
-- TX[1-4] = additional buys (optional, different wallets)
-- Submit bundle to `https://mainnet.block-engine.jito.wtf/api/v1/bundles`
+**Signing flow**:
+1. Mint keypair generated locally (pump.fun protocol requirement)
+2. Mint keypair secret passed to PumpPortal -- PumpPortal embeds the mint signature
+3. Unsigned TX (needs only fee payer signature) sent to `onchainos wallet contract-call --unsigned-tx`
+4. TEE wallet adds fee payer signature and broadcasts
+5. Optional `--mev-protection` uses Jito bundle for front-run protection
 
 **Notes**:
-- Mint keypair is randomly generated client-side
+- Mint keypair is randomly generated client-side (protocol requirement)
+- User wallet is the fee payer -- no ephemeral keypairs needed
 - IPFS upload via pump.fun `/api/ipfs` (free, no API key) with Pinata fallback
 - No platform fee on creation, standard fee on dev buy
 - Pool options: "pump" (default) or "bonk" (LetsBonk pool)

@@ -95,32 +95,9 @@ class MoonitAdapter(LaunchpadAdapter):
 
             print(f"  [Moonit] Token mint: {token_mint}")
 
-            # ── 2. Sign via onchainos ─────────────────────────────────
-            print("  [Moonit] Signing transaction...")
-            signed_tx = await self._sign_tx(serialized_tx, params.wallet_address)
-
-            if not signed_tx:
-                return LaunchResult(
-                    success=False,
-                    error="Failed to sign via onchainos wallet",
-                )
-
-            # ── 3. Submit via Moonit API ──────────────────────────────
-            # Moonit SDK's submitMintTx()
-            print("  [Moonit] Submitting mint transaction...")
-
-            submit_resp = await client.post(
-                f"{api}/v1/token/submit-mint",
-                json={"signedTransaction": signed_tx},
-            )
-
-            if submit_resp.status_code != 200:
-                # Fallback: submit via onchainos gateway
-                print("  [Moonit] Moonit submit failed, trying onchainos gateway...")
-                tx_hash = await self._broadcast_via_onchainos(signed_tx)
-            else:
-                submit_data = submit_resp.json()
-                tx_hash = submit_data.get("txHash", "") or submit_data.get("signature", "")
+            # ── 2-3. Sign and broadcast via onchainos TEE wallet ─────
+            print("  [Moonit] Signing and broadcasting via TEE wallet...")
+            tx_hash = await self._sign_and_broadcast(serialized_tx, params.wallet_address, token_mint)
 
             if not tx_hash:
                 return LaunchResult(
@@ -130,7 +107,7 @@ class MoonitAdapter(LaunchpadAdapter):
 
             # ── 4. Wait for confirmation ──────────────────────────────
             print(f"  [Moonit] TX submitted: {tx_hash}")
-            confirmed = await self._wait_confirmation(tx_hash)
+            confirmed = await self._wait_confirmation(tx_hash, params.wallet_address)
 
             return LaunchResult(
                 success=confirmed,
@@ -141,61 +118,56 @@ class MoonitAdapter(LaunchpadAdapter):
                 error="" if confirmed else "Transaction not confirmed within timeout",
             )
 
-    async def _sign_tx(self, serialized_tx: str, wallet_address: str) -> str:
-        """Sign serialized TX via onchainos wallet. Returns signed TX base64."""
+    async def _sign_and_broadcast(self, serialized_tx: str, wallet_address: str, to_address: str = "") -> str:
+        """Sign unsigned TX via onchainos TEE wallet and broadcast."""
         try:
+            cmd = [
+                onchainos_bin(), "wallet", "contract-call",
+                "--chain", "501",
+                "--to", to_address or wallet_address,
+                "--unsigned-tx", serialized_tx,
+            ]
             proc = await asyncio.create_subprocess_exec(
-                onchainos_bin(), "gateway", "sign",
-                "--chain", "solana",
-                "--raw-tx", serialized_tx,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
-                print(f"  [Moonit] sign failed: {stderr.decode().strip()}")
+                print(f"  [Moonit] contract-call failed: {stderr.decode().strip()}")
                 return ""
             output = json.loads(stdout.decode())
-            return output.get("data", {}).get("signedTx", "") or output.get("signedTx", "")
+            data = output.get("data", {})
+            if isinstance(data, list) and data:
+                data = data[0]
+            return data.get("txHash", "") or output.get("txHash", "")
         except Exception as e:
-            print(f"  [Moonit] Sign error: {e}")
+            print(f"  [Moonit] Sign/broadcast error: {e}")
             return ""
 
-    async def _broadcast_via_onchainos(self, signed_tx: str) -> str:
-        """Broadcast signed TX via onchainos gateway."""
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                onchainos_bin(), "gateway", "broadcast",
-                "--chain", "solana",
-                "--raw-tx", signed_tx,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await proc.communicate()
-            if proc.returncode != 0:
-                print(f"  [Moonit] broadcast failed: {stderr.decode().strip()}")
-                return ""
-            output = json.loads(stdout.decode())
-            return output.get("data", {}).get("txHash", "") or output.get("txHash", "")
-        except Exception as e:
-            print(f"  [Moonit] Broadcast error: {e}")
-            return ""
-
-    async def _wait_confirmation(self, tx_hash: str, max_retries: int = 5) -> bool:
-        """Poll for TX confirmation."""
+    async def _wait_confirmation(self, tx_hash: str, wallet_address: str = "", max_retries: int = 5) -> bool:
+        """Poll for TX confirmation via onchainos wallet history."""
         for i in range(max_retries):
             await asyncio.sleep(5)
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    onchainos_bin(), "gateway", "tx-status",
-                    "--chain", "solana",
+                cmd = [
+                    onchainos_bin(), "wallet", "history",
+                    "--chain", "501",
                     "--tx-hash", tx_hash,
+                ]
+                if wallet_address:
+                    cmd.extend(["--address", wallet_address])
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 output = json.loads(stdout.decode())
-                status = output.get("data", {}).get("status", "")
+                data = output.get("data", {})
+                if isinstance(data, list) and data:
+                    data = data[0]
+                status = data.get("status", "") or data.get("txStatus", "")
                 if status in ("confirmed", "finalized", "success"):
                     print(f"  [Moonit] Confirmed! ({i + 1} polls)")
                     return True

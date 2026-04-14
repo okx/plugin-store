@@ -61,35 +61,24 @@ class FourMemeAdapter(LaunchpadAdapter):
         category = params.extras.get("category", C.FOURMEME_CATEGORY)
         gas_price = params.extras.get("gas_price", C.FOURMEME_GAS_PRICE)
 
-        # Build contract call data
-        # Four.Meme createToken function — ABI encoded
-        # The exact function signature depends on the factory version
-        # Typical: createToken(string name, string symbol, string metadataURI, uint256 category)
-        # with msg.value = buyAmount (in BNB wei)
-
         buy_wei = int(params.buy_amount * 10**18) if params.buy_amount > 0 else 0
 
-        # Use onchainos wallet contract-call for BSC
+        # ABI-encode createToken(string,string,string,string) call data
+        input_data = self._encode_create_token(
+            params.name, params.symbol, params.metadata_uri, category,
+        )
+
         print("  [Four.Meme] Calling factory contract...")
 
         cmd = [
             onchainos_bin(), "wallet", "contract-call",
-            "--chain", "bsc",
+            "--chain", "56",
             "--to", factory,
-            "--function", "createToken(string,string,string,string)",
-            "--args", json.dumps([
-                params.name,
-                params.symbol,
-                params.metadata_uri,
-                category,
-            ]),
+            "--input-data", input_data,
         ]
 
         if buy_wei > 0:
-            cmd.extend(["--value", str(buy_wei)])
-
-        if gas_price:
-            cmd.extend(["--gas-price", gas_price])
+            cmd.extend(["--amt", str(buy_wei)])
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -117,7 +106,7 @@ class FourMemeAdapter(LaunchpadAdapter):
 
         # ── Wait for confirmation (~3-5s on BSC) ──────────────────────
         print(f"  [Four.Meme] TX submitted: {tx_hash}")
-        confirmed, token_address = await self._wait_and_parse(tx_hash)
+        confirmed, token_address = await self._wait_and_parse(tx_hash, params.wallet_address)
 
         return LaunchResult(
             success=confirmed,
@@ -128,7 +117,37 @@ class FourMemeAdapter(LaunchpadAdapter):
             error="" if confirmed else "Transaction not confirmed within timeout",
         )
 
-    async def _wait_and_parse(self, tx_hash: str, max_retries: int = 6) -> tuple:
+    @staticmethod
+    def _encode_create_token(name: str, symbol: str, metadata_uri: str, category: str) -> str:
+        """ABI-encode createToken(string,string,string,string) call data."""
+        # Function selector: keccak256("createToken(string,string,string,string)")[:4]
+        selector = "a0769659"
+
+        def _encode_string(s: str) -> str:
+            data = s.encode("utf-8")
+            length = len(data)
+            # 32-byte length prefix + data padded to 32-byte boundary
+            padded_len = ((length + 31) // 32) * 32
+            return (
+                length.to_bytes(32, "big").hex()
+                + data.hex().ljust(padded_len * 2, "0")
+            )
+
+        # 4 dynamic params → 4 offset pointers, then data
+        strings = [name, symbol, metadata_uri, category]
+        encoded_strings = [_encode_string(s) for s in strings]
+
+        # Calculate offsets (each pointer is 32 bytes = 64 hex chars)
+        base_offset = len(strings) * 32  # offset area size in bytes
+        offsets = []
+        running = base_offset
+        for es in encoded_strings:
+            offsets.append(running.to_bytes(32, "big").hex())
+            running += len(es) // 2  # bytes = hex chars / 2
+
+        return "0x" + selector + "".join(offsets) + "".join(encoded_strings)
+
+    async def _wait_and_parse(self, tx_hash: str, wallet_address: str = "", max_retries: int = 6) -> tuple:
         """Wait for BSC TX confirmation and parse token address from logs.
 
         Returns (confirmed: bool, token_address: str).
@@ -136,17 +155,24 @@ class FourMemeAdapter(LaunchpadAdapter):
         for i in range(max_retries):
             await asyncio.sleep(3)  # BSC is ~3s blocks
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    onchainos_bin(), "gateway", "tx-status",
-                    "--chain", "bsc",
+                cmd = [
+                    onchainos_bin(), "wallet", "history",
+                    "--chain", "56",
                     "--tx-hash", tx_hash,
+                ]
+                if wallet_address:
+                    cmd.extend(["--address", wallet_address])
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 output = json.loads(stdout.decode())
                 data = output.get("data", {})
-                status = data.get("status", "")
+                if isinstance(data, list) and data:
+                    data = data[0]
+                status = data.get("status", "") or data.get("txStatus", "")
 
                 if status in ("confirmed", "finalized", "success", "1"):
                     # Try to extract token address from logs
@@ -156,13 +182,11 @@ class FourMemeAdapter(LaunchpadAdapter):
                         # TokenCreated event contains the new token address
                         topics = log.get("topics", [])
                         if len(topics) >= 2:
-                            # Token address is typically in the event data
                             addr = log.get("address", "")
                             if addr and addr != C.FOURMEME_FACTORY:
                                 token_addr = addr
                                 break
 
-                    # Fallback: check contractAddress in receipt
                     if not token_addr:
                         token_addr = data.get("contractAddress", "")
 

@@ -162,7 +162,7 @@ class BagsAdapter(LaunchpadAdapter):
 
             # ── 4. Sign and submit via onchainos ──────────────────────
             print("  [Bags] Signing and submitting...")
-            tx_hash = await self._sign_and_submit(serialized_tx, params.wallet_address)
+            tx_hash = await self._sign_and_submit(serialized_tx, params.wallet_address, token_mint)
 
             if not tx_hash:
                 return LaunchResult(
@@ -172,7 +172,7 @@ class BagsAdapter(LaunchpadAdapter):
 
             # ── 5. Wait for confirmation ──────────────────────────────
             print(f"  [Bags] TX submitted: {tx_hash}")
-            confirmed = await self._wait_confirmation(tx_hash)
+            confirmed = await self._wait_confirmation(tx_hash, params.wallet_address)
 
             return LaunchResult(
                 success=confirmed,
@@ -183,41 +183,52 @@ class BagsAdapter(LaunchpadAdapter):
                 error="" if confirmed else "Transaction not confirmed within timeout",
             )
 
-    async def _sign_and_submit(self, serialized_tx: str, wallet_address: str) -> str:
-        """Sign and submit serialized transaction via onchainos."""
+    async def _sign_and_submit(self, serialized_tx: str, wallet_address: str, to_address: str = "") -> str:
+        """Sign and submit unsigned transaction via onchainos TEE wallet."""
         try:
+            cmd = [
+                onchainos_bin(), "wallet", "contract-call",
+                "--chain", "501",
+                "--to", to_address or wallet_address,
+                "--unsigned-tx", serialized_tx,
+            ]
             proc = await asyncio.create_subprocess_exec(
-                onchainos_bin(), "gateway", "broadcast",
-                "--chain", "solana",
-                "--raw-tx", serialized_tx,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
-                print(f"  [Bags] broadcast failed: {stderr.decode().strip()}")
+                print(f"  [Bags] contract-call failed: {stderr.decode().strip()}")
                 return ""
             output = json.loads(stdout.decode())
-            return output.get("data", {}).get("txHash", "") or output.get("txHash", "")
+            data = output.get("data", {})
+            if isinstance(data, list) and data:
+                data = data[0]
+            return data.get("txHash", "") or output.get("txHash", "")
         except Exception as e:
             print(f"  [Bags] Sign/submit error: {e}")
             return ""
 
-    async def _wait_confirmation(self, tx_hash: str, max_retries: int = 5) -> bool:
-        """Poll for TX confirmation."""
+    async def _wait_confirmation(self, tx_hash: str, wallet_address: str, max_retries: int = 5) -> bool:
+        """Poll for TX confirmation via onchainos wallet history."""
         for i in range(max_retries):
             await asyncio.sleep(5)
             try:
                 proc = await asyncio.create_subprocess_exec(
-                    onchainos_bin(), "gateway", "tx-status",
-                    "--chain", "solana",
+                    onchainos_bin(), "wallet", "history",
+                    "--chain", "501",
                     "--tx-hash", tx_hash,
+                    "--address", wallet_address,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, _ = await proc.communicate()
                 output = json.loads(stdout.decode())
-                status = output.get("data", {}).get("status", "")
+                data = output.get("data", {})
+                if isinstance(data, list) and data:
+                    data = data[0]
+                status = data.get("status", "") or data.get("txStatus", "")
                 if status in ("confirmed", "finalized", "success"):
                     print(f"  [Bags] Confirmed! ({i + 1} polls)")
                     return True

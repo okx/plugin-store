@@ -348,8 +348,10 @@ async def quick_launch(
     if telegram: print(f"  Telegram:  {telegram}")
     print(f"{'─' * 54}\n")
 
-    # ── 6. Confirmation gate (enforced in LIVE mode) ──────────────────
-    if C.CONFIRM_REQUIRED and not C.DRY_RUN and not auto_confirm:
+    # ── 6. Confirmation gate (always enforced in LIVE mode) ────────────
+    # auto_confirm only applies in DRY_RUN -- live mode always requires
+    # explicit user confirmation to prevent accidental on-chain TX.
+    if C.CONFIRM_REQUIRED and not C.DRY_RUN:
         print("  ⚠  LIVE MODE — token creation is IRREVERSIBLE.")
         print('  Type "confirm" to proceed, anything else to abort.')
         try:
