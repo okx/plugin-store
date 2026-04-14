@@ -1,7 +1,7 @@
 ---
 name: kairos-floor-score
-version: 1.0.0
-description: "Institutional-grade ML trade scoring for AI agents. Regime classification, microstructure analysis, confluence scoring, GO/REDUCE/REJECT recommendation. Trigger on: trade scoring, market analysis, regime detection, risk assessment, entry quality, VPIN, order flow."
+version: 1.1.0
+description: "Institutional-grade ML trade scoring for AI agents. Regime classification, microstructure analysis, confluence scoring, GO/REDUCE/REJECT recommendation. Now with native Uniswap V3 pool scoring. Trigger on: trade scoring, market analysis, regime detection, risk assessment, entry quality, VPIN, order flow, Uniswap pool analysis, DEX trade scoring, AMM liquidity, pool depth check, ethereum pool, polygon pool, base pool, arbitrum pool."
 author: Valisthea
 ---
 
@@ -18,6 +18,10 @@ Invoke this skill whenever you need to determine the quality of a trade entry. C
 - "Check confluence for this entry"
 - "What's the VPIN / order flow saying?"
 - "Evaluate this trade for risk"
+- "Score this Uniswap pool"
+- "Should I trade on this Uniswap V3 pool?"
+- "Analyze ETH-USDC pool on ethereum"
+- "Check DEX liquidity before swapping"
 
 ## How to Call
 
@@ -87,6 +91,30 @@ The regime classifier identifies 5 states: `trending_up`, `trending_down`, `rang
 - **Kyle Lambda high**: Thin liquidity, expect slippage
 - **Order Imbalance > 0.3**: Strong directional pressure
 
+## Uniswap V3 Integration
+
+Score any Uniswap V3 pool directly by pool address — no manual candle data needed:
+
+```bash
+# ETH-USDC 0.30% pool on Ethereum
+kairos-floor-score analyze \
+  --symbol ETH-USDC \
+  --side long \
+  --source uniswap \
+  --pool 0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8 \
+  --chain ethereum
+
+# Any pool on Polygon, Base, Arbitrum, Optimism
+kairos-floor-score analyze \
+  --symbol MATIC-USDC \
+  --side long \
+  --source uniswap \
+  --pool <pool-address> \
+  --chain polygon
+```
+
+Supported chains: `ethereum`, `polygon`, `base`, `arbitrum`, `optimism`
+
 ## Integration with OKX Onchain OS
 
 If `onchainos` CLI is installed, data can be fetched directly:
@@ -96,14 +124,14 @@ kairos-floor-score analyze \
   --symbol BTC-USDT \
   --side long \
   --source onchainos \
-  --chain solana
+  --chain ethereum
 ```
 
 ## Agent Workflow
 
 1. Receive trade signal from upstream strategy
-2. Call `kairos-floor-score analyze` with current market data
-3. If recommendation is `GO`, proceed to position sizing
+2. Call `kairos-floor-score analyze` with current market data or `--source uniswap --pool <addr>`
+3. If recommendation is `GO`, proceed to position sizing or submit swap
 4. If `REDUCE`, cut position size by 50%
 5. If `REJECT`, skip this trade entirely
 6. Log the full score result for post-trade analysis
