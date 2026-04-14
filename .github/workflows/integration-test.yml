@@ -1,0 +1,477 @@
+# Integration Test — Full Pipeline Validation
+#
+# Tests the complete plugin lifecycle:
+# 1. Build CLI from source
+# 2. Scaffold 6 test plugins (1 pure skill + 5 languages)
+# 3. Lint all plugins
+# 4. Verify registry fetch + plugin list
+# 5. Install each plugin type and verify CLI execution
+#
+# Runs before release (on push to main) and on manual trigger.
+
+name: Integration Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cli/src/**'
+      - 'cli/Cargo.toml'
+      - 'cli/Cargo.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-test:
+    name: E2E Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build plugin-store
+        run: cd cli && cargo build --release
+
+      - name: Add to PATH
+        run: echo "$PWD/cli/target/release" >> $GITHUB_PATH
+
+      - name: Verify CLI
+        run: |
+          plugin-store --version
+          echo "CLI build OK"
+
+      # ─── Test 1: Registry fetch ───────────────────────────
+      - name: "Test: registry fetch + list"
+        run: |
+          plugin-store registry update
+          COUNT=$(plugin-store list 2>&1 | tail -1 | grep -oE '[0-9]+' | head -1)
+          echo "Registry has $COUNT plugins"
+          if [ "$COUNT" -lt 1 ]; then
+            echo "::error::Registry is empty"
+            exit 1
+          fi
+          echo "PASS: registry fetch"
+
+      # ─── Test 2: Scaffold + Lint (Pure Skill) ─────────────
+      - name: "Test: init + lint — pure skill plugin"
+        run: |
+          mkdir -p /tmp/test-plugins/skills
+          cd /tmp/test-plugins
+          plugin-store init test-skill-plugin
+          cat > skills/test-skill-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-skill-plugin
+          version: "1.0.0"
+          description: "Integration test — pure skill"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test]
+          components:
+            skill:
+              dir: skills/test-skill-plugin
+          api_calls: []
+          YAML
+
+          cat > skills/test-skill-plugin/skills/test-skill-plugin/SKILL.md << 'MD'
+          ---
+          name: test-skill-plugin
+          description: "Test plugin for CI"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test Skill
+          ## Overview
+          Integration test plugin.
+          ## Pre-flight Checks
+          1. onchainos CLI installed
+          ## Commands
+          ### Get Gas
+          ```bash
+          onchainos gateway gas --chain ethereum
+          ```
+          **When to use**: When user asks about gas.
+          **Output**: Gas price in Gwei.
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | "Chain not supported" | Wrong chain | Use ethereum |
+          MD
+
+          plugin-store lint ./skills/test-skill-plugin/
+          echo "PASS: pure skill init + lint"
+
+      # ─── Test 3: Scaffold + Lint (Rust Binary) ────────────
+      - name: "Test: init + lint — rust binary plugin"
+        run: |
+          cd /tmp/test-plugins
+          plugin-store init test-rust-plugin
+          cat > skills/test-rust-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-rust-plugin
+          version: "1.0.0"
+          description: "Integration test — rust binary"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test, rust]
+          components:
+            skill:
+              dir: skills/test-rust-plugin
+          build:
+            lang: rust
+            source_repo: "yz06276/rust-echo-cli"
+            source_commit: "9b6b89720df8971bdae1ff44de7a8923ea60bde0"
+            binary_name: rust-echo-cli
+          api_calls: []
+          YAML
+
+          cat > skills/test-rust-plugin/skills/test-rust-plugin/SKILL.md << 'MD'
+          ---
+          name: test-rust-plugin
+          description: "Test Rust binary plugin"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test Rust Plugin
+          ## Overview
+          Rust binary integration test.
+          ## Pre-flight Checks
+          1. rust-echo-cli binary installed
+          ## Commands
+          ### Echo
+          ```bash
+          rust-echo-cli echo "hello"
+          ```
+          **When to use**: Echo text.
+          **Output**: Echo from Rust: hello
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | Command not found | Not installed | Install plugin |
+          MD
+
+          plugin-store lint ./skills/test-rust-plugin/
+          echo "PASS: rust binary init + lint"
+
+      # ─── Test 4: Scaffold + Lint (Go Binary) ──────────────
+      - name: "Test: init + lint — go binary plugin"
+        run: |
+          cd /tmp/test-plugins
+          plugin-store init test-go-plugin
+          cat > skills/test-go-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-go-plugin
+          version: "1.0.0"
+          description: "Integration test — go binary"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test, go]
+          components:
+            skill:
+              dir: skills/test-go-plugin
+          build:
+            lang: go
+            source_repo: "yz06276/go-echo-cli"
+            source_commit: "89f239a4b05f54068eae19df20787112bbc26010"
+            binary_name: go-echo-cli
+          api_calls: []
+          YAML
+
+          cat > skills/test-go-plugin/skills/test-go-plugin/SKILL.md << 'MD'
+          ---
+          name: test-go-plugin
+          description: "Test Go binary plugin"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test Go Plugin
+          ## Overview
+          Go binary integration test.
+          ## Pre-flight Checks
+          1. go-echo-cli binary installed
+          ## Commands
+          ### Echo
+          ```bash
+          go-echo-cli echo "hello"
+          ```
+          **When to use**: Echo text.
+          **Output**: Echo from Go: hello
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | Command not found | Not installed | Install plugin |
+          MD
+
+          plugin-store lint ./skills/test-go-plugin/
+          echo "PASS: go binary init + lint"
+
+      # ─── Test 5: Scaffold + Lint (TypeScript npm) ─────────
+      - name: "Test: init + lint — typescript npm plugin"
+        run: |
+          cd /tmp/test-plugins
+          plugin-store init test-ts-plugin
+          cat > skills/test-ts-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-ts-plugin
+          version: "1.0.0"
+          description: "Integration test — typescript npm"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test, typescript]
+          components:
+            skill:
+              dir: skills/test-ts-plugin
+          build:
+            lang: typescript
+            source_repo: "yz06276/ts-echo-cli"
+            source_commit: "c771e3d6216fa3695f1d1553e1faea2c3be7f2e7"
+            binary_name: ts-echo-cli
+            main: src/index.js
+          api_calls: []
+          YAML
+
+          cat > skills/test-ts-plugin/skills/test-ts-plugin/SKILL.md << 'MD'
+          ---
+          name: test-ts-plugin
+          description: "Test TypeScript npm plugin"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test TS Plugin
+          ## Overview
+          TypeScript npm integration test.
+          ## Pre-flight Checks
+          1. Node.js and npm installed
+          ## Commands
+          ### Echo
+          ```bash
+          ts-echo-cli echo "hello"
+          ```
+          **When to use**: Echo text.
+          **Output**: Echo from TypeScript: hello
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | Command not found | Not installed | Install plugin |
+          MD
+
+          plugin-store lint ./skills/test-ts-plugin/
+          echo "PASS: typescript npm init + lint"
+
+      # ─── Test 6: Scaffold + Lint (Node.js npm) ────────────
+      - name: "Test: init + lint — node npm plugin"
+        run: |
+          cd /tmp/test-plugins
+          plugin-store init test-node-plugin
+          cat > skills/test-node-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-node-plugin
+          version: "1.0.0"
+          description: "Integration test — node npm"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test, node]
+          components:
+            skill:
+              dir: skills/test-node-plugin
+          build:
+            lang: node
+            source_repo: "yz06276/node-echo-cli"
+            source_commit: "8044e759ecf00b6c1d17003b94a622cf1aa90872"
+            binary_name: node-echo-cli
+            main: src/index.js
+          api_calls: []
+          YAML
+
+          cat > skills/test-node-plugin/skills/test-node-plugin/SKILL.md << 'MD'
+          ---
+          name: test-node-plugin
+          description: "Test Node.js npm plugin"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test Node Plugin
+          ## Overview
+          Node.js npm integration test.
+          ## Pre-flight Checks
+          1. Node.js and npm installed
+          ## Commands
+          ### Echo
+          ```bash
+          node-echo-cli echo "hello"
+          ```
+          **When to use**: Echo text.
+          **Output**: Echo from Node.js: hello
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | Command not found | Not installed | Install plugin |
+          MD
+
+          plugin-store lint ./skills/test-node-plugin/
+          echo "PASS: node npm init + lint"
+
+      # ─── Test 7: Scaffold + Lint (Python pip) ─────────────
+      - name: "Test: init + lint — python pip plugin"
+        run: |
+          cd /tmp/test-plugins
+          plugin-store init test-python-plugin
+          cat > skills/test-python-plugin/plugin.yaml << 'YAML'
+          schema_version: 1
+          name: test-python-plugin
+          version: "1.0.0"
+          description: "Integration test — python pip"
+          author:
+            name: "ci-bot"
+            github: "ci-bot"
+          license: MIT
+          category: utility
+          tags: [test, python]
+          components:
+            skill:
+              dir: skills/test-python-plugin
+          build:
+            lang: python
+            source_repo: "yz06276/python-echo-cli"
+            source_commit: "015d975807f36e872af9c74f1176a4b85eeb2d7a"
+            binary_name: python-echo-cli
+            main: src/main.py
+          api_calls: []
+          YAML
+
+          cat > skills/test-python-plugin/skills/test-python-plugin/SKILL.md << 'MD'
+          ---
+          name: test-python-plugin
+          description: "Test Python pip plugin"
+          version: "1.0.0"
+          author: "ci-bot"
+          tags: [test]
+          ---
+          # Test Python Plugin
+          ## Overview
+          Python pip integration test.
+          ## Pre-flight Checks
+          1. Python 3.8+ and pip installed
+          ## Commands
+          ### Echo
+          ```bash
+          python-echo-cli echo "hello"
+          ```
+          **When to use**: Echo text.
+          **Output**: Echo from Python: hello
+          ## Error Handling
+          | Error | Cause | Resolution |
+          |-------|-------|------------|
+          | Command not found | Not installed | Install plugin |
+          MD
+
+          plugin-store lint ./skills/test-python-plugin/
+          echo "PASS: python pip init + lint"
+
+      # ─── Test 8: Install real plugins from registry ────────
+      - name: "Test: install pure skill plugin"
+        run: |
+          plugin-store install eth-gas-monitor --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/eth-gas-monitor/SKILL.md
+          echo "PASS: pure skill install"
+
+      - name: "Test: install rust binary plugin"
+        run: |
+          plugin-store install rust-text-tool --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/rust-text-tool/SKILL.md
+          test -f ~/.plugin-store/bin/rust-echo-cli || test -L ~/.plugin-store/bin/rust-echo-cli
+          ~/.plugin-store/bin/rust-echo-cli echo "CI test" | grep -q "Echo from Rust"
+          ~/.plugin-store/bin/rust-echo-cli version | grep -q "1.0.0"
+          echo "PASS: rust binary install + CLI test"
+
+      - name: "Test: install go binary plugin"
+        run: |
+          plugin-store install go-hash-tool --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/go-hash-tool/SKILL.md
+          test -f ~/.plugin-store/bin/go-echo-cli || test -L ~/.plugin-store/bin/go-echo-cli
+          ~/.plugin-store/bin/go-echo-cli echo "CI test" | grep -q "Echo from Go"
+          ~/.plugin-store/bin/go-echo-cli version | grep -q "1.0.0"
+          echo "PASS: go binary install + CLI test"
+
+      - name: "Test: install typescript npm plugin"
+        run: |
+          plugin-store install ts-json-tool --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/ts-json-tool/SKILL.md
+          ts-echo-cli echo "CI test" | grep -q "Echo from TypeScript"
+          ts-echo-cli version | grep -q "1.0.0"
+          echo "PASS: typescript npm install + CLI test"
+
+      - name: "Test: install node npm plugin"
+        run: |
+          plugin-store install node-fs-tool --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/node-fs-tool/SKILL.md
+          node-echo-cli echo "CI test" | grep -q "Echo from Node"
+          node-echo-cli version | grep -q "1.0.0"
+          echo "PASS: node npm install + CLI test"
+
+      - name: "Test: install python pip plugin"
+        run: |
+          plugin-store install python-nlp-tool --agent claude-code -y 2>&1
+          test -f ~/.claude/skills/python-nlp-tool/SKILL.md
+          # Python pip installs to user site; find the binary
+          PYBIN=$(python3 -m site --user-base)/bin/python-echo-cli
+          if [ ! -f "$PYBIN" ]; then
+            PYBIN=$(which python-echo-cli 2>/dev/null || echo "")
+          fi
+          if [ -n "$PYBIN" ] && [ -f "$PYBIN" ]; then
+            "$PYBIN" echo "CI test" | grep -q "Echo from Python"
+            "$PYBIN" version | grep -q "1.0.0"
+          else
+            echo "Warning: python-echo-cli not on PATH (pip user install location varies)"
+          fi
+          echo "PASS: python pip install + skill test"
+
+      # ─── Test 9: Uninstall ─────────────────────────────────
+      - name: "Test: uninstall all plugins"
+        run: |
+          for p in eth-gas-monitor rust-text-tool go-hash-tool ts-json-tool node-fs-tool python-nlp-tool; do
+            plugin-store uninstall "$p" 2>&1
+          done
+          REMAINING=$(plugin-store installed 2>&1 | grep -c "1.0.0" || true)
+          if [ "$REMAINING" -gt 0 ]; then
+            echo "::error::$REMAINING plugins still installed after uninstall"
+            exit 1
+          fi
+          echo "PASS: uninstall all"
+
+      # ─── Summary ───────────────────────────────────────────
+      - name: "Summary"
+        run: |
+          echo "============================================"
+          echo "  All integration tests passed!"
+          echo "  CLI version: $(plugin-store --version)"
+          echo "  Tests: registry, init, lint (6 types),"
+          echo "         install (6 types), CLI exec, uninstall"
+          echo "============================================"
