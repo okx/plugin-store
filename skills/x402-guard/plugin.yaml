@@ -1,0 +1,26 @@
+schema_version: 1
+name: x402-guard
+version: "1.0.0"
+description: "AI Bot Spending Firewall — enforce per-bot spending limits, get real-time alerts, and kill rogue agents instantly. Built for OKX OnchainOS on X Layer."
+author:
+  name: Mintttch
+  github: mintttch2
+license: MIT
+category: security
+tags:
+  - security
+  - spending-limits
+  - x-layer
+  - onchainos
+  - firewall
+  - ai-agents
+  - xlayer
+
+components:
+  skill:
+    dir: .
+
+api_calls:
+  - "http://localhost:8000"
+  - "https://testrpc.xlayer.tech"
+  - "https://www.oklink.com"

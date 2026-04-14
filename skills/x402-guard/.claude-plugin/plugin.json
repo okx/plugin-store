@@ -1,0 +1,11 @@
+{
+  "name": "x402-guard",
+  "description": "AI Bot Spending Firewall — enforce per-bot spending limits, get real-time alerts, and kill rogue agents instantly. Built for OKX OnchainOS on X Layer.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mintttch",
+    "github": "mintttch2"
+  },
+  "license": "MIT",
+  "keywords": ["security", "spending-limits", "x-layer", "onchainos", "firewall", "ai-agents", "xlayer"]
+}
