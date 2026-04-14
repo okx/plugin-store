@@ -1,5 +1,30 @@
 # Polymarket Plugin Changelog
 
+### v0.4.2 (2026-04-14)
+
+- **feat**: `get-series` command — get current/next slot for 12 recurring Up/Down series markets (BTC/ETH/SOL/XRP × 5m/15m/4h). Returns `condition_id`, `up_token_id`, `down_token_id`, prices, and window times. NYSE trading hours enforced for 5m/15m series; 4h runs 24/7.
+- **feat**: Series ID routing in `buy` and `sell` — pass `--market-id btc-5m` (or any series ID) directly; resolves current active slot automatically.
+- **feat**: `--token-id` fast path for `buy` and `sell` — skip all market resolution when token ID is known (from `get-series` output). `--market-id` optional when `--token-id` provided.
+- **fix (C1)**: GCD amount alignment bug fixed in both `buy` and `sell`. `gcd(step_raw, 100)*100` → `gcd(step_raw, 10_000)*10_000`. Fixes order rejection on `tick_size=0.001` markets.
+- **fix (M2)**: `setup-proxy --dry-run` no longer writes credentials or switches mode. Both `mode_switched` and `recovered` branches guarded by `if !dry_run`.
+- **fix (N6)**: `sell` output no longer includes `maker_amount_raw`/`taker_amount_raw` raw fields.
+- **docs**: SKILL.md — `get-series` section added; `--token-id` flag in buy/sell tables; `--market-id` marked optional*; `positions`, `list-5m`, `withdraw` added to command table.
+
+### v0.4.1 (2026-04-14)
+
+- **feat**: `deposit` smart advisor — when `--amount` is omitted, scans Polygon and all bridge chains in parallel, returns alternatives ranked by available USD value with `recommended_command` and `hint` fields.
+- **fix**: `deposit` blocks native coin deposits (ETH, BNB, sentinel `0xEeee...`) before any on-chain action; error message suggests wrapped alternative (WETH, WBNB).
+- **feat**: `onchainos::get_chain_balances(chain)` — calls onchainos wallet balance and returns token list with `usd_value`; silent on failure.
+
+### v0.4.0 (2026-04-14)
+
+- **feat**: `list-5m` command — list upcoming 5-minute crypto Up/Down markets for BTC, ETH, SOL, XRP, BNB, DOGE, HYPE.
+- **feat**: Multi-chain `deposit` — `--chain`, `--token`, `--list` flags. Supports bridging from Ethereum, Arbitrum, Base, Optimism, BNB, Monad.
+- **feat**: `list-markets --breaking` — filter by 24h volume hottest events.
+- **feat**: `list-markets --category <sports|elections|crypto>` — filter markets by category.
+- **feat**: Geo check added to `buy` and `sell` — hard fail before any trading attempt if region is restricted.
+- **feat**: EOA POL balance check in `buy` and `sell` — warns before approval/signing if POL < 0.01.
+
 ### v0.3.0 (2026-04-13)
 
 - **feat**: POLY_PROXY trading mode. New `setup-proxy` command deploys a Polymarket proxy wallet (one-time POL gas); subsequent `buy`/`sell` orders are relayer-paid (no POL per trade). `setup-proxy` runs 6 on-chain approvals (USDC.e + CTF for all 3 exchanges) idempotently at setup time — no per-trade approve calls.

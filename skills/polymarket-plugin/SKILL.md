@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit."
-version: "0.4.1"
+version: "0.4.2"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.1"
+LOCAL_VER="0.4.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.1/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.2/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.1" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.3.0`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.4.2`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -1067,4 +1067,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.3.0** (2026-04-13).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.2** (2026-04-14).

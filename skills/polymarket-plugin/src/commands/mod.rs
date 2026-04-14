@@ -6,6 +6,7 @@ pub mod check_access;
 pub mod deposit;
 pub mod get_market;
 pub mod get_positions;
+pub mod get_series;
 pub mod list_5m;
 pub mod list_markets;
 pub mod redeem;

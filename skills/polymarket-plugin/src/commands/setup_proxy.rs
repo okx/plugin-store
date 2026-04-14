@@ -55,18 +55,21 @@ pub async fn run(dry_run: bool) -> Result<()> {
         }
         // Has proxy but mode is EOA — switch mode and ensure approvals.
         let proxy = proxy.clone();
-        creds.mode = crate::config::TradingMode::PolyProxy;
-        crate::config::save_credentials(&creds)?;
+        if !dry_run {
+            creds.mode = crate::config::TradingMode::PolyProxy;
+            crate::config::save_credentials(&creds)?;
+        }
         ensure_proxy_approvals(&proxy, dry_run).await?;
         println!(
             "{}",
             serde_json::json!({
                 "ok": true,
+                "dry_run": dry_run,
                 "data": {
                     "status": "mode_switched",
                     "proxy_wallet": proxy,
                     "mode": "poly_proxy",
-                    "note": "Switched to POLY_PROXY mode. Deposit USDC.e with `polymarket deposit --amount <N>`."
+                    "note": if dry_run { "dry-run: would switch to POLY_PROXY mode (no state written)" } else { "Switched to POLY_PROXY mode. Deposit USDC.e with `polymarket deposit --amount <N>`." }
                 }
             })
         );
@@ -86,19 +89,22 @@ pub async fn run(dry_run: bool) -> Result<()> {
 
     if let Some(existing) = existing_proxy {
         eprintln!("[polymarket] Found existing proxy on-chain: {}", existing);
-        creds.proxy_wallet = Some(existing.clone());
-        creds.mode = crate::config::TradingMode::PolyProxy;
-        crate::config::save_credentials(&creds)?;
+        if !dry_run {
+            creds.proxy_wallet = Some(existing.clone());
+            creds.mode = crate::config::TradingMode::PolyProxy;
+            crate::config::save_credentials(&creds)?;
+        }
         ensure_proxy_approvals(&existing, dry_run).await?;
         println!(
             "{}",
             serde_json::json!({
                 "ok": true,
+                "dry_run": dry_run,
                 "data": {
                     "status": "recovered",
                     "proxy_wallet": existing,
                     "mode": "poly_proxy",
-                    "note": "Existing proxy wallet found on-chain and saved to creds. No new deployment needed."
+                    "note": if dry_run { "dry-run: found proxy on-chain; would save to creds (no state written)" } else { "Existing proxy wallet found on-chain and saved to creds. No new deployment needed." }
                 }
             })
         );
