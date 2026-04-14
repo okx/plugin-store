@@ -7,7 +7,7 @@ mod commands;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "pancakeswap-v3", about = "Swap tokens and manage liquidity on PancakeSwap V3")]
+#[command(name = "pancakeswap-v3", version, about = "Swap tokens and manage liquidity on PancakeSwap V3")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
