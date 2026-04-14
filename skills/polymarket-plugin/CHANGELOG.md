@@ -1,5 +1,13 @@
 # Polymarket Plugin Changelog
 
+### v0.4.3 (2026-04-14)
+
+- **fix (C1)**: `deposit` bridge auto-send broken on all non-Polygon chains — `onchainos wallet send` was called with `--recipient` (non-existent flag); corrected to `--receipt` in both ERC-20 and native transfer functions.
+- **fix (C2)**: Bridge auto-send sent to wrong chain — `onchainos_chain_arg()` mapped numeric chain IDs to human names (`"42161"` → `"arbitrum"`) but `onchainos wallet send` only accepts numeric IDs. Removed name mapping; chain ID is now passed directly.
+- **fix (M1)**: `deposit --chain solana/tron/bitcoin` no longer silently resolves to wrong bridge chain IDs. Non-EVM chains are now explicitly unsupported — `resolve_chain_id()` returns `None` for Bitcoin, Tron, and Solana, producing a clear "unsupported chain" error.
+- **fix (N1)**: BNB Chain USDC (18 decimals) incorrectly triggered a DeFiLlama price fetch. Stablecoin detection now matches by symbol only, without requiring `decimals <= 6`.
+- **docs**: SKILL.md — `deposit` section now explicitly states that only EVM chains are supported; BTC/SOL/TRX users directed to bridge to an EVM chain first.
+
 ### v0.4.2 (2026-04-14)
 
 - **feat**: `get-series` command — get current/next slot for 12 recurring Up/Down series markets (BTC/ETH/SOL/XRP × 5m/15m/4h). Returns `condition_id`, `up_token_id`, `down_token_id`, prices, and window times. NYSE trading hours enforced for 5m/15m series; 4h runs 24/7.

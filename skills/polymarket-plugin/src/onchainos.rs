@@ -809,7 +809,7 @@ pub async fn transfer_erc20_on_chain(
         .args([
             "wallet", "send",
             "--chain", chain,
-            "--recipient", to,
+            "--receipt", to,
             "--amt", &amount.to_string(),
             "--contract-token", token_contract,
             "--force",
@@ -841,7 +841,7 @@ pub async fn transfer_native_on_chain(chain: &str, to: &str, amount_wei: u128) -
         .args([
             "wallet", "send",
             "--chain", chain,
-            "--recipient", to,
+            "--receipt", to,
             "--amt", &amount_wei.to_string(),
             "--force",
         ])

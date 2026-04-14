@@ -46,24 +46,16 @@ fn resolve_chain_id(chain: &str) -> Option<&'static str> {
         "optimism" | "op" | "10" => Some("10"),
         "bnb" | "bsc" | "56" => Some("56"),
         "monad" | "143" => Some("143"),
-        "bitcoin" | "btc" => Some("btc"),
-        "tron" | "trx" => Some("tron"),
-        "solana" | "sol" => Some("sol"),
+        // Non-EVM chains (Bitcoin, Tron, Solana) are not supported.
+        // The plugin only signs on EVM chains via onchainos. Direct users to deposit
+        // USDC from an EVM chain (Ethereum, Arbitrum, Base, Optimism, BNB, or Polygon).
         _ => None,
     }
 }
 
-/// Map bridge chainId → onchainos chain argument (name or numeric ID).
+/// Map bridge chainId → onchainos chain argument. onchainos wallet send accepts numeric chain IDs.
 fn onchainos_chain_arg(chain_id: &str) -> &str {
-    match chain_id {
-        "1" => "ethereum",
-        "42161" => "arbitrum",
-        "8453" => "base",
-        "10" => "optimism",
-        "56" => "bnb",
-        "143" => "monad",
-        other => other,
-    }
+    chain_id
 }
 
 pub async fn run(
@@ -244,14 +236,14 @@ pub async fn run(
     let min_usd = asset.min_checkout_usd;
 
     // Stablecoins: 1 token ≈ $1, no price fetch needed.
-    let is_stablecoin = asset.token.decimals <= 6
-        && matches!(
-            asset.token.symbol.to_uppercase().as_str(),
-            "USDC" | "USDC.E" | "USDCE" | "USDT" | "USDT0"
-                | "USD\u{20AE}0" | "DAI" | "BUSD" | "USDP" | "PYUSD"
-                | "USDS" | "USDE" | "USDG" | "MUSD" | "USDBC"
-                | "EURC" | "EUROC" | "EUR24"
-        );
+    // No decimals check — some chains (e.g. BNB USDC) use 18 decimals for the same token.
+    let is_stablecoin = matches!(
+        asset.token.symbol.to_uppercase().as_str(),
+        "USDC" | "USDC.E" | "USDCE" | "USDT" | "USDT0"
+            | "USD\u{20AE}0" | "DAI" | "BUSD" | "USDP" | "PYUSD"
+            | "USDS" | "USDE" | "USDG" | "MUSD" | "USDBC"
+            | "EURC" | "EUROC" | "EUR24"
+    );
 
     let token_price_usd: f64 = if is_stablecoin {
         1.0
