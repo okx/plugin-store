@@ -769,6 +769,15 @@ pub async fn wait_for_tx_receipt(tx_hash: &str, max_wait_secs: u64) -> Result<()
             if let Ok(v) = r.json::<serde_json::Value>().await {
                 // receipt is an object (not null) once the tx is mined
                 if v["result"].is_object() {
+                    // status "0x1" = success, "0x0" = reverted
+                    let status = v["result"]["status"].as_str().unwrap_or("0x1");
+                    if status == "0x0" {
+                        anyhow::bail!(
+                            "Transaction {} was mined but reverted (status 0x0). \
+                             Check Polygonscan for details.",
+                            tx_hash
+                        );
+                    }
                     return Ok(());
                 }
             }
@@ -781,6 +790,62 @@ pub async fn wait_for_tx_receipt(tx_hash: &str, max_wait_secs: u64) -> Result<()
             );
         }
         sleep(Duration::from_millis(2000)).await;
+    }
+}
+
+/// Poll eth_getTransactionReceipt on any supported EVM chain until mined or timeout.
+///
+/// `chain` is the onchainos chain name (e.g. "bnb", "ethereum", "arbitrum").
+/// Resolves to the correct public RPC endpoint per chain.
+pub async fn wait_for_receipt_on_chain(chain: &str, tx_hash: &str, max_wait_secs: u64) -> Result<()> {
+    use crate::config::Urls;
+    use std::time::{Duration, Instant};
+    use tokio::time::sleep;
+
+    let rpc = match chain {
+        "ethereum"  => Urls::ETHEREUM_RPC,
+        "arbitrum"  => Urls::ARBITRUM_RPC,
+        "base"      => Urls::BASE_RPC,
+        "optimism"  => Urls::OPTIMISM_RPC,
+        "bnb"       => Urls::BNB_RPC,
+        "polygon" | "137" => Urls::POLYGON_RPC,
+        other => anyhow::bail!("No RPC configured for chain '{}'", other),
+    };
+
+    let deadline = Instant::now() + Duration::from_secs(max_wait_secs);
+    loop {
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "eth_getTransactionReceipt",
+            "params": [tx_hash],
+            "id": 1
+        });
+        let resp = reqwest::Client::new()
+            .post(rpc)
+            .json(&body)
+            .send()
+            .await;
+        if let Ok(r) = resp {
+            if let Ok(v) = r.json::<serde_json::Value>().await {
+                if v["result"].is_object() {
+                    let status = v["result"]["status"].as_str().unwrap_or("0x1");
+                    if status == "0x0" {
+                        anyhow::bail!(
+                            "Transaction {} was mined but reverted on {} (status 0x0).",
+                            tx_hash, chain
+                        );
+                    }
+                    return Ok(());
+                }
+            }
+        }
+        if Instant::now() >= deadline {
+            anyhow::bail!(
+                "Tx {} not confirmed on {} within {}s. Check a block explorer and retry.",
+                tx_hash, chain, max_wait_secs
+            );
+        }
+        sleep(Duration::from_millis(3000)).await;
     }
 }
 
@@ -874,6 +939,66 @@ pub struct ChainTokenBalance {
 
 /// Call `onchainos wallet balance --chain <chain>` and return all token balances.
 /// Returns an empty vec on failure (non-fatal — used for best-effort suggestions).
+/// Estimate the gas cost of a standard ERC-20 transfer on the given chain, in native token units.
+///
+/// Uses `eth_gasPrice` (or `eth_maxFeePerGas` for EIP-1559 chains) from the public RPC,
+/// multiplied by 65,000 gas (standard ERC-20 transfer) with a 20% buffer.
+/// Falls back to conservative static minimums if the RPC call fails.
+pub async fn estimate_erc20_gas_cost(chain: &str) -> f64 {
+    use crate::config::Urls;
+
+    let rpc = match chain {
+        "ethereum"  => Urls::ETHEREUM_RPC,
+        "arbitrum"  => Urls::ARBITRUM_RPC,
+        "base"      => Urls::BASE_RPC,
+        "optimism"  => Urls::OPTIMISM_RPC,
+        "bnb"       => Urls::BNB_RPC,
+        "polygon" | "137" => Urls::POLYGON_RPC,
+        _ => return 0.001, // unknown chain: conservative fallback
+    };
+
+    // Try eth_feeHistory (EIP-1559) first, fall back to eth_gasPrice
+    let body = serde_json::json!({
+        "jsonrpc": "2.0", "method": "eth_gasPrice", "params": [], "id": 1
+    });
+    let gas_price_wei: u128 = match async {
+        let resp = reqwest::Client::new().post(rpc).json(&body).send().await.ok()?;
+        let v: serde_json::Value = resp.json().await.ok()?;
+        let hex = v["result"].as_str()?;
+        let price = u128::from_str_radix(hex.trim_start_matches("0x"), 16).ok()?;
+        if price > 0 { Some(price) } else { None }
+    }.await
+    {
+        Some(p) => p,
+        None => {
+            // RPC unreachable — use static fallback per chain
+            return match chain {
+                "ethereum"  => 0.005,
+                "arbitrum" | "base" | "optimism" => 0.0002,
+                "bnb"       => 0.001,
+                _           => 0.001,
+            };
+        }
+    };
+
+    const ERC20_GAS_UNITS: u128 = 65_000;
+    const BUFFER: f64 = 1.2; // 20% headroom
+    let cost_wei = gas_price_wei * ERC20_GAS_UNITS;
+    (cost_wei as f64 / 1e18) * BUFFER
+}
+
+/// Return the native gas token balance (ETH, BNB, etc.) on a given chain.
+/// Returns 0.0 if the chain cannot be queried or no native balance is found.
+pub async fn get_native_gas_balance(chain: &str) -> f64 {
+    let balances = get_chain_balances(chain).await;
+    // Native token has an empty token_address in the onchainos balance output.
+    balances
+        .iter()
+        .find(|b| b.token_address.is_empty())
+        .map(|b| b.balance.parse::<f64>().unwrap_or(0.0))
+        .unwrap_or(0.0)
+}
+
 pub async fn get_chain_balances(chain: &str) -> Vec<ChainTokenBalance> {
     let output = tokio::process::Command::new("onchainos")
         .args(["wallet", "balance", "--chain", chain])

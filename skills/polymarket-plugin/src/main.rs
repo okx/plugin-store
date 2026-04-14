@@ -205,7 +205,7 @@ enum Commands {
         #[arg(long)]
         amount: Option<String>,
 
-        /// Source chain (default: polygon). Examples: polygon, ethereum, arbitrum, base, optimism, bnb, monad
+        /// Source chain (default: polygon). Examples: polygon, ethereum, arbitrum, base, optimism, bnb
         #[arg(long, default_value = "polygon")]
         chain: String,
 

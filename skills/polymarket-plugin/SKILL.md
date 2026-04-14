@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit."
-version: "0.4.2"
+version: "0.4.3"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.2"
+LOCAL_VER="0.4.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.2/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.3/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.3" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.4.2`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.4.3`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -397,7 +397,9 @@ polymarket-plugin check-access
 
 ### `list-5m` — List 5-Minute Crypto Up/Down Markets
 
-**Trigger phrases:** 5-minute market, 5m market, 5分钟市场, 短线市场, BTC 5分钟, 哪个 5 分钟, 5m, updown market, 五分钟
+**Trigger phrases:** 5-minute market, 5m market, 5分钟市场, 短线市场, BTC 5分钟, 哪个 5 分钟, updown market, 五分钟, 5min, BTC 5min, ETH 5min, SOL 5min
+
+**Priority:** This command takes precedence over `list-markets` whenever the query contains `5m`, `5min`, `5分钟`, `5-minute`, `updown`, or `五分钟`, regardless of which coin is mentioned.
 
 List upcoming 5-minute Bitcoin/Crypto Up or Down markets. Shows the next N rounds (ET time), current Up/Down prices, and `conditionId` for direct trading.
 
@@ -430,6 +432,8 @@ polymarket-plugin list-5m --coin ETH --count 3  # next 3 ETH 5-minute markets
 ### `list-markets` — Browse Active Prediction Markets
 
 **Trigger phrases (general):** list markets, 列出市场, 有哪些市场, 看看市场, 有什么可以买, browse markets
+
+**Do NOT use for:** any query containing `5m`, `5min`, `5分钟`, `5-minute`, `updown`, `五分钟` — those must route to `list-5m` instead.
 
 **Trigger phrases (breaking):** breaking, 热门, 最热, 最新市场, 有什么新市场, 当前热点, 最近在炒什么, 爆款, 热点, 有什么好玩的, what's hot, what's trending, breaking news market
 
@@ -801,7 +805,7 @@ polymarket setup-proxy
 
 **Trigger phrases:** deposit, 充值, 充钱, 转入, 打钱进去, fund, top up, add funds, recharge, 充 USDC, 往钱包充, 存钱, 入金
 
-Fund the proxy wallet from any supported chain. Supports Polygon direct transfer (fastest) and multi-chain bridge (ETH/ARB/BASE/OP/BNB/Monad). `--amount` is always in **USD** — non-stablecoins are auto-converted at live price.
+Fund the proxy wallet from any supported chain. Supports Polygon direct transfer (fastest) and multi-chain bridge (ETH/ARB/BASE/OP/BNB). `--amount` is always in **USD** — non-stablecoins are auto-converted at live price.
 
 ```
 polymarket-plugin deposit --amount <usd> [--chain <chain>] [--token <symbol>] [--dry-run]
@@ -812,14 +816,14 @@ polymarket-plugin deposit --list
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--amount` | USD amount to deposit, e.g. `50` = $50 | required |
-| `--chain` | Source chain: `polygon`, `ethereum`, `arbitrum`, `base`, `optimism`, `bnb`, `monad` | `polygon` |
+| `--chain` | Source chain: `polygon`, `ethereum`, `arbitrum`, `base`, `optimism`, `bnb` | `polygon` |
 | `--token` | Token symbol: `USDC`, `USDC.e`, `ETH`, `WETH`, `WBTC`, … | `USDC` |
 | `--list` | List all supported chains and tokens, then exit | — |
 | `--dry-run` | Preview without submitting any transaction | — |
 
 **Bridge minimums (enforced before any on-chain action):**
 - Ethereum mainnet: **$7** minimum
-- All other chains (ARB, BASE, OP, BNB, Monad): **$2** minimum
+- All other chains (ARB, BASE, OP, BNB): **$2** minimum
 - Polygon direct: no minimum
 
 **Smart suggestion when `--amount` is omitted:** Instead of a plain error, the command runs a deposit advisor:
@@ -1067,4 +1071,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.2** (2026-04-14).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.3** (2026-04-14).

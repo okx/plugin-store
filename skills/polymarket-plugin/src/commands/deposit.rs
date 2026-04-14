@@ -5,7 +5,7 @@
 /// the proxy wallet on Polygon (chain 137). No bridge involved.
 ///
 /// ## Bridge path (other EVM chains)
-/// For chains where onchainos can sign (ETH/ARB/BASE/OP/BNB/Monad), the command:
+/// For chains where onchainos can sign (ETH/ARB/BASE/OP/BNB), the command:
 ///   1. Gets a bridge deposit address (POST /deposit with proxy wallet)
 ///   2. Sends tokens from the EOA to the bridge deposit address via onchainos
 ///   3. Polls bridge status until COMPLETED
@@ -33,7 +33,6 @@ const BRIDGE_ONCHAINOS_CHAIN_IDS: &[&str] = &[
     "8453",  // Base
     "10",    // Optimism
     "56",    // BNB Chain
-    "143",   // Monad
 ];
 
 /// Map common user-input chain names to the chainId used by the bridge API.
@@ -45,7 +44,7 @@ fn resolve_chain_id(chain: &str) -> Option<&'static str> {
         "base" | "8453" => Some("8453"),
         "optimism" | "op" | "10" => Some("10"),
         "bnb" | "bsc" | "56" => Some("56"),
-        "monad" | "143" => Some("143"),
+
         "bitcoin" | "btc" => Some("btc"),
         "tron" | "trx" => Some("tron"),
         "solana" | "sol" => Some("sol"),
@@ -61,7 +60,7 @@ fn onchainos_chain_arg(chain_id: &str) -> &str {
         "8453" => "base",
         "10" => "optimism",
         "56" => "bnb",
-        "143" => "monad",
+
         other => other,
     }
 }
@@ -137,7 +136,7 @@ pub async fn run(
     // ── Resolve chain ────────────────────────────────────────────────────────
     let chain_id = resolve_chain_id(chain).ok_or_else(|| {
         anyhow::anyhow!(
-            "Unknown chain '{}'. Use --list to see supported chains, or try: polygon, ethereum, arbitrum, base, optimism, bnb, monad",
+            "Unknown chain '{}'. Use --list to see supported chains, or try: polygon, ethereum, arbitrum, base, optimism, bnb",
             chain
         )
     })?;
@@ -155,6 +154,24 @@ pub async fn run(
         }
         let amount_raw = (amount_f * 1_000_000.0).round() as u128;
 
+        // ── Gas pre-flight: check EOA has enough POL to pay for the ERC-20 transfer.
+        // Estimate dynamically from current Polygon gas price × 65,000 gas × 1.2 buffer.
+        let (pol_balance, min_pol_for_gas) = tokio::join!(
+            async { crate::onchainos::get_pol_balance(&signer_addr).await.unwrap_or(0.0) },
+            crate::onchainos::estimate_erc20_gas_cost("polygon"),
+        );
+        if pol_balance < min_pol_for_gas {
+            let decimals = if min_pol_for_gas < 0.0001 { 8 } else if min_pol_for_gas < 0.01 { 6 } else { 4 };
+            bail!(
+                "Insufficient POL for gas. Your wallet {} has {:.6} POL but ~{:.prec$} POL \
+                 is needed (current gas price × 65,000 gas + 20% buffer).\n\
+                 Add POL to your wallet first (e.g. bridge some MATIC/POL from Ethereum), \
+                 then retry.",
+                signer_addr, pol_balance, min_pol_for_gas,
+                prec = decimals,
+            );
+        }
+
         if dry_run {
             println!(
                 "{}",
@@ -168,6 +185,7 @@ pub async fn run(
                         "token": "USDC.e",
                         "amount": amount_f,
                         "amount_raw": amount_raw,
+                        "pol_balance": (pol_balance * 1e6).round() / 1e6,
                         "note": "dry-run: no transaction submitted"
                     }
                 })
@@ -180,6 +198,12 @@ pub async fn run(
             amount_f, proxy_wallet
         );
         let tx_hash = crate::onchainos::transfer_usdc_to_proxy(proxy_wallet, amount_raw).await?;
+        eprintln!("[polymarket] tx submitted: {}. Waiting for on-chain confirmation...", tx_hash);
+
+        // Wait for the tx to be mined (Polygon ~2s blocks, up to 60s).
+        // This prevents returning a success response for a tx that never lands on-chain.
+        crate::onchainos::wait_for_tx_receipt(&tx_hash, 60).await
+            .map_err(|e| anyhow::anyhow!("Transfer tx {} failed to confirm: {}", tx_hash, e))?;
 
         println!(
             "{}",
@@ -192,7 +216,7 @@ pub async fn run(
                     "to": proxy_wallet,
                     "token": "USDC.e",
                     "amount": amount_f,
-                    "note": "USDC.e deposited to proxy wallet."
+                    "note": "USDC.e deposited to proxy wallet. Transaction confirmed on-chain."
                 }
             })
         );
@@ -244,14 +268,15 @@ pub async fn run(
     let min_usd = asset.min_checkout_usd;
 
     // Stablecoins: 1 token ≈ $1, no price fetch needed.
-    let is_stablecoin = asset.token.decimals <= 6
-        && matches!(
-            asset.token.symbol.to_uppercase().as_str(),
-            "USDC" | "USDC.E" | "USDCE" | "USDT" | "USDT0"
-                | "USD\u{20AE}0" | "DAI" | "BUSD" | "USDP" | "PYUSD"
-                | "USDS" | "USDE" | "USDG" | "MUSD" | "USDBC"
-                | "EURC" | "EUROC" | "EUR24"
-        );
+    // Stablecoin detection is based on symbol only — BNB-chain stablecoins use 18 decimals
+    // (e.g. USDC/USDT/DAI on BSC), so checking decimals <= 6 would incorrectly skip them.
+    let is_stablecoin = matches!(
+        asset.token.symbol.to_uppercase().as_str(),
+        "USDC" | "USDC.E" | "USDCE" | "USDT" | "USDT0"
+            | "USD\u{20AE}0" | "DAI" | "BUSD" | "USDP" | "PYUSD"
+            | "USDS" | "USDE" | "USDG" | "MUSD" | "USDBC"
+            | "EURC" | "EUROC" | "EUR24"
+    );
 
     let token_price_usd: f64 = if is_stablecoin {
         1.0
@@ -336,8 +361,33 @@ pub async fn run(
     }
 
     let tx_hash: Option<String> = if can_auto_send {
-        // onchainos can sign on this chain — send automatically
+        // ── Gas pre-flight for bridge EVM chains ─────────────────────────────
+        // Estimate required gas dynamically: eth_gasPrice × 65,000 gas × 1.2 buffer.
         let oc_chain = onchainos_chain_arg(chain_id);
+        let native_sym = match chain_id {
+            "56" => "BNB",
+            _    => "ETH",
+        };
+        let (native_bal, min_native_gas) = tokio::join!(
+            crate::onchainos::get_native_gas_balance(oc_chain),
+            crate::onchainos::estimate_erc20_gas_cost(oc_chain),
+        );
+        if native_bal < min_native_gas {
+            // Use enough decimal places so the needed amount shows at least 2 sig figs.
+            let decimals = if min_native_gas < 0.0001 { 8 } else if min_native_gas < 0.01 { 6 } else { 4 };
+            bail!(
+                "Insufficient {} for gas on {}. Your wallet has {:.6} {} but ~{:.prec$} {} \
+                 is needed (current gas price × 65,000 gas + 20% buffer).\n\
+                 Add {} to your wallet on {} first, then retry.",
+                native_sym, asset.chain_name,
+                native_bal, native_sym,
+                min_native_gas, native_sym,
+                native_sym, asset.chain_name,
+                prec = decimals,
+            );
+        }
+
+        // onchainos can sign on this chain — send automatically
         eprintln!(
             "[polymarket] Sending {} {} on {} → bridge deposit address {}...",
             amount_f, asset.token.symbol, asset.chain_name, bridge_deposit_addr
@@ -349,7 +399,16 @@ pub async fn run(
             amount_raw,
         )
         .await?;
-        eprintln!("[polymarket] Sent. tx_hash: {}", hash);
+        eprintln!("[polymarket] Sent. tx_hash: {}. Waiting for on-chain confirmation...", hash);
+
+        // Wait for source-chain tx to be mined before handing off to bridge poller.
+        // BNB/ETH block times are 3–12s; 120s budget is more than sufficient.
+        // (The bridge won't detect the deposit until it's confirmed on-chain anyway.)
+        if let Err(e) = crate::onchainos::wait_for_receipt_on_chain(oc_chain, &hash, 120).await {
+            bail!("Source-chain tx {} failed to confirm: {}", hash, e);
+        }
+
+        eprintln!("[polymarket] Source-chain tx confirmed.");
         Some(hash)
     } else {
         // Manual chain (BTC, Tron, Solana, etc.) — show address, user sends manually
@@ -438,7 +497,7 @@ async fn suggest_deposit(client: &reqwest::Client, signer_addr: &str) -> anyhow:
         ("base",     "8453",  "base"),
         ("optimism", "10",    "optimism"),
         ("bnb",      "56",    "bnb"),
-        ("monad",    "143",   "monad"),
+
     ];
 
     // ── Step 1: Polygon check ────────────────────────────────────────────────

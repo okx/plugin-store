@@ -131,5 +131,10 @@ impl Urls {
     pub const GAMMA: &'static str = "https://gamma-api.polymarket.com";
     pub const DATA: &'static str = "https://data-api.polymarket.com";
     pub const BRIDGE: &'static str = "https://bridge.polymarket.com";
-    pub const POLYGON_RPC: &'static str = "https://polygon.drpc.org";
+    pub const POLYGON_RPC:  &'static str = "https://polygon.drpc.org";
+    pub const ETHEREUM_RPC: &'static str = "https://ethereum.publicnode.com";
+    pub const ARBITRUM_RPC: &'static str = "https://arbitrum.drpc.org";
+    pub const BASE_RPC:     &'static str = "https://base.drpc.org";
+    pub const OPTIMISM_RPC: &'static str = "https://optimism.drpc.org";
+    pub const BNB_RPC:      &'static str = "https://bsc.publicnode.com";
 }
