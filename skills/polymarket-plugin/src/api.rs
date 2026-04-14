@@ -765,6 +765,205 @@ pub async fn get_positions(client: &Client, user_address: &str) -> Result<Vec<Po
         .context("parsing positions response")
 }
 
+/// Batch-resolve outcome results for a set of condition IDs.
+///
+/// Fetches each market from the CLOB API in parallel (max 8 concurrent).
+/// Returns a map: condition_id → Some(winning_outcome_index) if resolved, None if still active.
+pub async fn get_market_resolutions(
+    client: &Client,
+    condition_ids: &[String],
+) -> std::collections::HashMap<String, Option<u32>> {
+    use futures::stream::{self, StreamExt};
+
+    let results: Vec<(String, Option<u32>)> = stream::iter(condition_ids.iter().cloned())
+        .map(|cid| {
+            let client = client.clone();
+            async move {
+                let url = format!("{}/markets/{}", Urls::CLOB, cid);
+                let market: serde_json::Value = match client.get(&url).send().await {
+                    Ok(r) => r.json().await.unwrap_or_default(),
+                    Err(_) => return (cid, None),
+                };
+                // tokens array: each token has winner: bool
+                let winner_idx = market["tokens"].as_array().and_then(|tokens| {
+                    tokens.iter().enumerate()
+                        .find(|(_, t)| t["winner"].as_bool().unwrap_or(false))
+                        .map(|(i, _)| i as u32)
+                });
+                // Distinguish: closed+no winner = pending; not closed = active
+                // Return Some(idx) only when a winner is definitively set
+                (cid, winner_idx)
+            }
+        })
+        .buffer_unordered(8)
+        .collect()
+        .await;
+
+    results.into_iter().collect()
+}
+
+/// Fetch USDC.e deposit and withdrawal events for a proxy wallet via eth_getLogs.
+///
+/// Deposits: incoming USDC.e transfers TO the proxy from non-exchange addresses.
+/// Withdrawals: USDC.e transfers FROM the proxy TO the EOA.
+///
+/// Tries progressively smaller block ranges until the RPC accepts the query.
+/// Returns an empty vec (with no error) if all ranges fail.
+pub async fn get_usdc_e_transfers(
+    client: &Client,
+    proxy_wallet: &str,
+    eoa: &str,
+) -> Vec<serde_json::Value> {
+    use crate::config::Contracts;
+
+    const TRANSFER_TOPIC: &str =
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    const RPC: &str = "https://polygon.drpc.org";
+
+    // Exchange contracts whose transfers to the proxy are trade settlements, not user deposits.
+    let exchange_addrs: Vec<String> = vec![
+        Contracts::CTF_EXCHANGE.to_lowercase(),
+        Contracts::NEG_RISK_CTF_EXCHANGE.to_lowercase(),
+        Contracts::NEG_RISK_ADAPTER.to_lowercase(),
+    ];
+
+    // Get current block number
+    let block_resp: serde_json::Value = match client
+        .post(RPC)
+        .json(&serde_json::json!({"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}))
+        .send().await
+    {
+        Ok(r) => r.json().await.unwrap_or_default(),
+        Err(_) => return vec![],
+    };
+
+    let current_block = match block_resp["result"].as_str()
+        .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+    {
+        Some(b) if b > 0 => b,
+        _ => return vec![],
+    };
+
+    // Pad an Ethereum address to a 32-byte topic string
+    let pad = |addr: &str| -> String {
+        let a = addr.to_lowercase();
+        let a = a.strip_prefix("0x").unwrap_or(&a);
+        format!("0x{:0>64}", a)
+    };
+
+    let proxy_topic = pad(proxy_wallet);
+    let eoa_topic   = pad(eoa);
+
+    // Try progressively smaller ranges: ~30 days, ~7 days, ~2 days
+    // Polygon ~43 200 blocks/day
+    for &range in &[1_300_000u64, 300_000, 90_000] {
+        let from_hex = format!("0x{:x}", current_block.saturating_sub(range));
+        let to_hex   = format!("0x{:x}", current_block);
+
+        // All incoming to proxy
+        let in_req = serde_json::json!({
+            "jsonrpc": "2.0", "method": "eth_getLogs", "id": 2,
+            "params": [{
+                "fromBlock": from_hex, "toBlock": to_hex,
+                "address": crate::config::Contracts::USDC_E,
+                "topics": [TRANSFER_TOPIC, serde_json::Value::Null, proxy_topic],
+            }]
+        });
+        // Outgoing proxy → EOA only
+        let out_req = serde_json::json!({
+            "jsonrpc": "2.0", "method": "eth_getLogs", "id": 3,
+            "params": [{
+                "fromBlock": from_hex, "toBlock": to_hex,
+                "address": crate::config::Contracts::USDC_E,
+                "topics": [TRANSFER_TOPIC, proxy_topic, eoa_topic],
+            }]
+        });
+
+        let (in_resp, out_resp) = tokio::join!(
+            client.post(RPC).json(&in_req).send(),
+            client.post(RPC).json(&out_req).send(),
+        );
+
+        let in_val: serde_json::Value = match in_resp {
+            Ok(r) => r.json().await.unwrap_or_default(),
+            Err(_) => continue,
+        };
+        let out_val: serde_json::Value = match out_resp {
+            Ok(r) => r.json().await.unwrap_or_default(),
+            Err(_) => continue,
+        };
+
+        // Retry with smaller range if RPC rejected
+        if in_val.get("error").is_some() || out_val.get("error").is_some() {
+            continue;
+        }
+
+        let parse_addr = |topic: &str| -> String {
+            let t = topic.trim_start_matches("0x");
+            if t.len() >= 40 {
+                format!("0x{}", &t[t.len()-40..])
+            } else {
+                "unknown".to_string()
+            }
+        };
+
+        let parse_amount = |data: &str| -> f64 {
+            u128::from_str_radix(data.trim_start_matches("0x"), 16)
+                .unwrap_or(0) as f64 / 1_000_000.0  // USDC.e = 6 decimals
+        };
+
+        let block_num = |log: &serde_json::Value| -> u64 {
+            log["blockNumber"].as_str()
+                .and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+                .unwrap_or(0)
+        };
+
+        let mut transfers: Vec<serde_json::Value> = Vec::new();
+
+        // Incoming deposits — filter out exchange contract settlements
+        if let Some(logs) = in_val["result"].as_array() {
+            for log in logs {
+                let from_topic = log["topics"].as_array()
+                    .and_then(|t| t.get(1)).and_then(|v| v.as_str()).unwrap_or("");
+                let from_addr = parse_addr(from_topic);
+                // Skip if from an exchange contract (trade settlement, not user deposit)
+                if exchange_addrs.contains(&from_addr.to_lowercase()) {
+                    continue;
+                }
+                transfers.push(serde_json::json!({
+                    "type": "DEPOSIT",
+                    "from": from_addr,
+                    "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
+                    "block": block_num(log),
+                    "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
+                }));
+            }
+        }
+
+        // Outgoing withdrawals (proxy → EOA)
+        if let Some(logs) = out_val["result"].as_array() {
+            for log in logs {
+                transfers.push(serde_json::json!({
+                    "type": "WITHDRAWAL",
+                    "to": eoa,
+                    "amount_usdc": parse_amount(log["data"].as_str().unwrap_or("0x0")),
+                    "block": block_num(log),
+                    "tx_hash": log["transactionHash"].as_str().unwrap_or(""),
+                }));
+            }
+        }
+
+        // Sort newest first
+        transfers.sort_by(|a, b| {
+            b["block"].as_u64().unwrap_or(0).cmp(&a["block"].as_u64().unwrap_or(0))
+        });
+
+        return transfers;
+    }
+
+    vec![]  // all ranges failed — caller adds Polygonscan note
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Compute the worst price for a BUY by walking the asks best-to-worst until cumulative USDC is covered.
