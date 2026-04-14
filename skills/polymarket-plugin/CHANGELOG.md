@@ -1,5 +1,9 @@
 # Polymarket Plugin Changelog
 
+### v0.4.4 (2026-04-14)
+
+- **feat**: `history` command — view trade activity (buys, sells, redeems) for the active wallet. Queries `data-api.polymarket.com/activity`. In POLY_PROXY mode, auto-queries the proxy wallet. Supports `--limit` and `--address` override. Deposit/withdrawal history directed to Polygonscan.
+
 ### v0.4.3 (2026-04-14)
 
 - **fix (C1)**: `deposit` bridge auto-send broken on all non-Polygon chains — `onchainos wallet send` was called with `--recipient` (non-existent flag); corrected to `--receipt` in both ERC-20 and native transfer functions.

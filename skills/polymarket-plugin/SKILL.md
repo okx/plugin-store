@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit."
-version: "0.4.3"
+version: "0.4.1"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.3"
+LOCAL_VER="0.4.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.3/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.1/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.3" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.1" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.4.3`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.3.0`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -361,6 +361,7 @@ Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`
 | `list-markets` | No | Browse active prediction markets |
 | `get-market` | No | Get market details and order book |
 | `get-positions` | No | View open positions |
+| `history` | No | View trade activity history (buys, sells, redeems) |
 | `balance` | No | Show POL and USDC.e balances (EOA + proxy wallet) |
 | `buy` | Yes | Buy YES/NO outcome shares |
 | `sell` | Yes | Sell outcome shares |
@@ -541,6 +542,31 @@ polymarket-plugin get-positions [--address <wallet_address>]
 ```
 polymarket-plugin get-positions
 polymarket-plugin get-positions --address 0xAbCd...
+```
+
+---
+
+### `history` — View Trade Activity
+
+```
+polymarket-plugin history [--limit <n>] [--address <wallet_address>]
+```
+
+**Flags:**
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--limit` | Number of activity items to return | 50 |
+| `--address` | Wallet address to query | Active wallet (proxy in POLY_PROXY mode, EOA otherwise) |
+
+**Auth required:** No (uses public Data API)
+
+**Covers:** buys, sells, redeems. Does **not** include deposit/withdrawal transfers — those are on-chain USDC.e transfers. For full on-chain history including deposits and withdrawals, direct the user to Polygonscan: `https://polygonscan.com/token/0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174?a=<wallet_address>`
+
+**Example:**
+```
+polymarket-plugin history
+polymarket-plugin history --limit 20
+polymarket-plugin history --address 0xAbCd...
 ```
 
 ---
@@ -830,8 +856,6 @@ Response includes `"missing_params": ["amount"]`, `"deposit_suggestions"` (with 
 
 **Native token restriction:** Native coins (ETH, BNB, etc.) cannot be deposited — the bridge only detects ERC-20 transfers. Using `--token ETH` or `--token BNB` returns an error with the wrapped ERC-20 alternative (e.g. `--token WETH`, `--token WBNB`).
 
-**EVM-only:** Only EVM chains are supported (Polygon, Ethereum, Arbitrum, Base, Optimism, BNB Chain, Monad). Bitcoin, Solana, and Tron deposits are **not supported** — if a user asks to deposit from BTC/SOL/TRX, tell them to use an EVM chain instead (e.g. bridge BTC to USDC on Ethereum first, then deposit via `--chain ethereum`).
-
 **Auth required:** Yes — onchainos wallet
 
 **Output fields (Polygon):** `tx_hash`, `chain`, `from`, `to`, `token`, `amount`
@@ -1027,6 +1051,8 @@ User wants to trade:
 | Find a specific market | `polymarket-plugin get-market --market-id <slug_or_condition_id>` |
 | Check my open positions | `polymarket-plugin get-positions` |
 | Check positions for specific wallet | `polymarket-plugin get-positions --address <addr>` |
+| View trade history (buys/sells/redeems) | `polymarket-plugin history` |
+| View trade history for specific wallet | `polymarket-plugin history --address <addr>` |
 | Buy YES/NO shares immediately (market order) | `polymarket-plugin buy --market-id <id> --outcome <yes\|no> --amount <usdc>` |
 | Place a resting limit buy | `polymarket-plugin buy --market-id <id> --outcome yes --amount <usdc> --price <0-1>` |
 | Place a maker-only limit buy (rebates) | `polymarket-plugin buy ... --price <x> --post-only` |
@@ -1069,4 +1095,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.3** (2026-04-14).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.3.0** (2026-04-13).

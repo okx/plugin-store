@@ -27,6 +27,7 @@ $ plugin-store list
 Name                                Version    Source          Description
 ------------------------------------------------------------------------------------------
 uniswap-ai                          1.7.0      dapp-official   AI-powered Uniswap developer tools...
+polymarket-agent-skills              1.0.0      dapp-official   Polymarket prediction market integration...
 
 2 plugins available.
 ```
@@ -53,6 +54,7 @@ $ plugin-store search trading
 Name                                Version    Source          Description
 ------------------------------------------------------------------------------------------
 uniswap-ai                          1.7.0      dapp-official   AI-powered Uniswap developer tools...
+polymarket-agent-skills              1.0.0      dapp-official   Polymarket prediction market integration...
 
 2 plugins found.
 ```
@@ -320,6 +322,7 @@ $ plugin-store installed
 Name                                Version    Agents               Components
 -------------------------------------------------------------------------------------
 uniswap-ai                          1.7.0      claude-code          skill
+polymarket-agent-skills              1.0.0      claude-code, cursor  skill
 
 2 plugins installed.
 ```
@@ -474,4 +477,5 @@ plugin-store installed                              # Verify remaining
 
 ```bash
 plugin-store search prediction                 # Find prediction market plugins
+plugin-store install polymarket-agent-skills    # Install the match
 ```
