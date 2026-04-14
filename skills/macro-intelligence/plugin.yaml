@@ -1,0 +1,23 @@
+schema_version: 1
+name: "macro-intelligence"
+version: "1.0.0"
+description: "Unified macro intelligence feed — reads 7 sources, classifies events, scores sentiment, generates AI insights, exposes signals via HTTP API"
+author:
+  name: "victorlee"
+  github: "VibeCodeDaddy69"
+license: MIT
+category: trading-strategy
+tags:
+  - macro
+  - news-aggregator
+  - sentiment
+  - signals
+  - fred
+  - finnhub
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
+type: community-developer
