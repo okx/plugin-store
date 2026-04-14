@@ -836,8 +836,13 @@ Response includes `"missing_params": ["amount"]`, `"deposit_suggestions"` (with 
 
 **Auth required:** Yes — onchainos wallet
 
-**Output fields (Polygon):** `tx_hash`, `chain`, `from`, `to`, `token`, `amount`
-**Output fields (bridge):** `status`, `chain`, `token`, `amount_usd`, `token_qty`, `token_price_usd`, `bridge_deposit_address`, `tx_hash`, `proxy_wallet`
+**Output fields (Polygon confirmed):** `tx_hash`, `chain`, `from`, `to`, `token`, `amount`
+
+**Output fields (Polygon `--dry-run`):** `chain`, `from`, `to`, `token`, `amount`, `amount_raw`, `pol_balance`, `note`
+
+**Output fields (bridge confirmed):** `status`, `chain`, `token`, `amount_usd`, `token_qty`, `token_price_usd`, `bridge_deposit_address`, `tx_hash`, `proxy_wallet`
+
+**Output fields (bridge `--dry-run`):** `chain`, `chain_id`, `token`, `amount_usd`, `token_qty`, `token_price_usd`, `amount_raw`, `bridge_deposit_address`, `from`, `auto_send`, `note`
 
 **Example:**
 ```bash
@@ -845,7 +850,8 @@ polymarket-plugin deposit --amount 50                              # Polygon USD
 polymarket-plugin deposit --amount 50 --chain arbitrum             # ARB USDC via bridge
 polymarket-plugin deposit --amount 50 --chain base --token ETH     # Base ETH via bridge ($50 worth)
 polymarket-plugin deposit --list                                   # show all supported chains/tokens
-polymarket-plugin deposit --amount 100 --dry-run                   # preview without submitting
+polymarket-plugin deposit --amount 100 --dry-run                   # preview without submitting (Polygon)
+polymarket-plugin deposit --amount 50 --chain arbitrum --dry-run   # preview bridge deposit
 ```
 
 ---
