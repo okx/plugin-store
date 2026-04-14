@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit."
-version: "0.4.0"
+version: "0.4.1"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.0"
+LOCAL_VER="0.4.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.0/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.1/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.0" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.1" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.0"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.1"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -822,7 +822,13 @@ polymarket-plugin deposit --list
 - All other chains (ARB, BASE, OP, BNB, Monad): **$2** minimum
 - Polygon direct: no minimum
 
-**Missing parameters:** If `--amount` is not provided, the command returns `"missing_params": ["amount"]` and a `"hint"` field. The Agent **must ask the user** for the missing value before retrying — do not assume or default the amount.
+**Smart suggestion when `--amount` is omitted:** Instead of a plain error, the command runs a deposit advisor:
+1. Checks EOA USDC.e + POL balance on Polygon — if sufficient, recommends direct Polygon deposit.
+2. If Polygon is insufficient, scans all bridge-supported EVM chains in parallel and returns ranked alternatives sorted by available USD value.
+
+Response includes `"missing_params": ["amount"]`, `"deposit_suggestions"` (with `polygon` status + `alternatives` array), `"recommended_command"`, and `"hint"`. The Agent should present `hint` and `recommended_command` to the user, then ask how much to deposit.
+
+**Native token restriction:** Native coins (ETH, BNB, etc.) cannot be deposited — the bridge only detects ERC-20 transfers. Using `--token ETH` or `--token BNB` returns an error with the wrapped ERC-20 alternative (e.g. `--token WETH`, `--token WBNB`).
 
 **Auth required:** Yes — onchainos wallet
 
