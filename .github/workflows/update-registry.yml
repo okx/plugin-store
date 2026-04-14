@@ -1,0 +1,233 @@
+# Auto-update registry.json and marketplace.json after official plugin changes
+#
+# Triggers when skills/ changes are pushed to main (after PR merge).
+# Scans all skills/*/plugin.json to regenerate the official plugin entries
+# in registry.json and marketplace.json.
+#
+# Community plugin entries in registry.json are preserved — only official
+# entries (type: "official") are regenerated.
+
+name: "Update Registry"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+
+permissions:
+  contents: write
+
+jobs:
+  update-registry:
+    name: Update registry & marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate official plugin entries
+        run: |
+          # Scan all skills/*/plugin.json and SKILL.md to build registry entries
+          python3 << 'PYEOF'
+          import json, os, re
+
+          # ── Read current registry (preserve community entries) ──
+          with open("registry.json") as f:
+              registry = json.load(f)
+
+          # Build a map of existing plugin metadata to preserve type/trust/risk
+          existing_meta = {}
+          for p in registry["plugins"]:
+              existing_meta[p["name"]] = {
+                  "type": p.get("type", "official"),
+                  "trust_source": p.get("trust_source"),
+                  "risk_level": p.get("risk_level"),
+                  "category": p.get("category"),
+              }
+
+          # ── Scan skills/ for official plugins ──
+          official_plugins = []
+          marketplace_plugins = []
+
+          for skill_name in sorted(os.listdir("skills")):
+              skill_dir = f"skills/{skill_name}"
+              if not os.path.isdir(skill_dir):
+                  continue
+
+              pjson_path = f"{skill_dir}/.claude-plugin/plugin.json"
+              pyaml_path = f"{skill_dir}/plugin.yaml"
+              skill_path = f"{skill_dir}/SKILL.md"
+
+              if not os.path.exists(skill_path):
+                  continue
+
+              # Read plugin.json if exists
+              pjson = {}
+              if os.path.exists(pjson_path):
+                  with open(pjson_path) as f:
+                      pjson = json.load(f)
+              elif os.path.exists(pyaml_path):
+                  # Community plugins use plugin.yaml instead of plugin.json
+                  import yaml
+                  with open(pyaml_path) as f:
+                      pyaml_data = yaml.safe_load(f) or {}
+                  pjson = {
+                      "name": pyaml_data.get("name", skill_name),
+                      "version": str(pyaml_data.get("version", "1.0.0")),
+                      "description": pyaml_data.get("description", ""),
+                      "author": pyaml_data.get("author", {}),
+                      "category": pyaml_data.get("category", "utility"),
+                      "tags": pyaml_data.get("tags", []),
+                  }
+
+              # Read SKILL.md frontmatter
+              description = pjson.get("description", "")
+              version = pjson.get("version", "1.0.0")
+              skill_desc = ""
+              with open(skill_path) as f:
+                  content = f.read()
+                  # Extract frontmatter
+                  fm_match = re.search(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+                  if fm_match:
+                      fm = fm_match.group(1)
+                      for line in fm.split('\n'):
+                          if line.startswith('version:'):
+                              v = line.split(':', 1)[1].strip().strip('"').strip("'")
+                              if v:
+                                  version = v
+                          if line.startswith('description:'):
+                              skill_desc = line.split(':', 1)[1].strip().strip('"')
+
+              name = pjson.get("name", skill_name)
+              desc = description or skill_desc or f"Official OKX plugin: {name}"
+
+              # Detect tags from SKILL.md content
+              tags = []
+              lower_content = content.lower()
+              for tag in ["solana", "ethereum", "trading", "signal", "scanner",
+                          "sniper", "defi", "memepump", "ranking", "hackathon"]:
+                  if tag in lower_content:
+                      tags.append(tag)
+
+              # Detect category
+              category = "utility"
+              if any(t in tags for t in ["trading", "signal", "scanner", "sniper"]):
+                  category = "trading-strategy"
+              elif any(t in tags for t in ["defi"]):
+                  category = "defi-protocol"
+
+              # Detect chains
+              chains = []
+              for chain in ["solana", "ethereum", "base", "xlayer"]:
+                  if chain in lower_content:
+                      chains.append(chain)
+
+              # Detect risk level
+              risk = "medium"
+              if any(t in tags for t in ["trading", "signal", "scanner", "sniper"]):
+                  risk = "high"
+
+              # Check if has Python scripts
+              has_scripts = os.path.isdir(f"{skill_dir}/scripts") and \
+                  any(f.endswith(".py") for f in os.listdir(f"{skill_dir}/scripts"))
+
+              # Determine type: plugin.yaml > existing registry > infer
+              existing = existing_meta.get(name, {})
+              plugin_type = "official"
+              if os.path.exists(pyaml_path):
+                  import yaml as _y
+                  with open(pyaml_path) as _f:
+                      _yd = _y.safe_load(_f) or {}
+                  plugin_type = _yd.get("type", existing.get("type", "official"))
+              else:
+                  plugin_type = existing.get("type", "official")
+
+              # Preserve trust_source and risk_level from existing registry
+              trust_source = existing.get("trust_source")
+              top_risk = existing.get("risk_level")
+
+              # Build registry entry
+              reg_entry = {
+                  "name": name,
+                  "version": version,
+                  "description": desc,
+                  "author": {"name": pjson.get("author", {}).get("name", "OKX")},
+                  "category": existing.get("category") or category,
+                  "tags": tags[:10],
+                  "type": plugin_type,
+                  "components": {
+                      "skill": {
+                          "repo": "okx/plugin-store",
+                          "dir": f"skills/{skill_name}"
+                      }
+                  },
+                  "link": "https://github.com/okx/plugin-store"
+              }
+
+              if trust_source:
+                  reg_entry["trust_source"] = trust_source
+              if top_risk:
+                  reg_entry["risk_level"] = top_risk
+
+              if chains:
+                  reg_entry["extra"] = {
+                      "chains": chains,
+                      "protocols": [],
+                      "risk_level": top_risk or risk
+                  }
+
+              # Alias from plugin.json or generate from name
+              alias = pjson.get("alias")
+              if alias:
+                  reg_entry["alias"] = alias
+
+              official_plugins.append(reg_entry)
+
+              # Build marketplace entry
+              mp_entry = {
+                  "name": name,
+                  "description": desc,
+                  "source": f"./skills/{skill_name}",
+                  "category": category,
+                  "author": {"name": pjson.get("author", {}).get("name", "OKX")}
+              }
+              marketplace_plugins.append(mp_entry)
+
+              print(f"  ✓ {name} v{version} ({category})")
+
+          # ── Write registry ──
+          registry["plugins"] = official_plugins
+          with open("registry.json", "w") as f:
+              json.dump(registry, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+
+          print(f"\nRegistry: {len(official_plugins)} plugins total")
+
+          # ── Update marketplace.json ──
+          mp_path = ".claude-plugin/marketplace.json"
+          with open(mp_path) as f:
+              marketplace = json.load(f)
+
+          marketplace["plugins"] = marketplace_plugins
+
+          with open(mp_path, "w") as f:
+              json.dump(marketplace, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+
+          print(f"Marketplace: {len(marketplace_plugins)} plugins")
+
+          PYEOF
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "plugin-store-bot"
+          git config user.email "bot@plugin-store.local"
+          git add registry.json .claude-plugin/marketplace.json
+          git diff --staged --quiet && echo "No registry changes" && exit 0
+
+          git commit -m "auto: update registry.json + marketplace.json from skills/"
+          git push
+          echo "Registry updated"
