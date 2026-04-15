@@ -97,6 +97,24 @@
       }
     },
     {
+      "name": "macro-intelligence",
+      "description": "Unified macro intelligence feed — reads 7 sources, classifies events, scores sentiment, generates AI insights, exposes signals via HTTP API",
+      "source": "./skills/macro-intelligence",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
+    },
+    {
+      "name": "mainstream-spot-order",
+      "description": "Multi-chain DEX spot trading system with 6-signal ensemble, auto-research strategy optimization, and per-pair backtesting across SOL, ETH, BTC, BNB, AVAX, DOGE",
+      "source": "./skills/mainstream-spot-order",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
+    },
+    {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
       "source": "./skills/meme-trench-scanner",
