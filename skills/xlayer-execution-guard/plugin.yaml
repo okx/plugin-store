@@ -1,0 +1,28 @@
+schema_version: 1
+name: xlayer-execution-guard
+version: "1.0.0"
+description: "Complete pre-execution judgment + post-execution proof pipeline for autonomous AI agents with closed-loop validation"
+author:
+  name: "Richard"
+  github: "ritsuyan"
+license: MIT
+category: defi-protocol
+tags:
+  - xlayer
+  - onchainos
+  - execution
+  - trading
+  - arbitrage
+  - honeypot
+  - route-referee
+  - proof-kit
+  - agent
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - /api/v6/dex/aggregator/all-tokens
+  - /api/v6/dex/aggregator/get-liquidity
+  - /api/v6/dex/aggregator/quote
