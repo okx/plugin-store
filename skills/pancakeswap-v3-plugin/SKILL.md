@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v3-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on Ethereum, BNB Chain, Base, Arbitrum, and Linea"
-version: "1.0.2"
+version: "1.0.1"
 author: "GeoGu360"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="1.0.2"
+LOCAL_VER="1.0.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
