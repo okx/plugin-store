@@ -1,6 +1,6 @@
 schema_version: 1
 name: pump-fun-plugin
-version: "0.1.3"
+version: "0.1.4"
 description: "Buy and sell tokens on pump.fun bonding curves on Solana mainnet"
 author:
   name: skylavis-sky

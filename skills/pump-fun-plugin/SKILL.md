@@ -4,7 +4,7 @@ description: "Interact with pump.fun bonding curves on Solana: buy tokens, sell 
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pump-fun-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -93,7 +93,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pump-fun-plugin@0.1.3/pump-fun-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pump-fun-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pump-fun-plugin@0.1.4/pump-fun-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pump-fun-plugin-core${EXT}
 chmod +x ~/.local/bin/.pump-fun-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -101,7 +101,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pump-fun-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.3" > "$HOME/.plugin-store/managed/pump-fun-plugin"
+echo "0.1.4" > "$HOME/.plugin-store/managed/pump-fun-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -121,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pump-fun-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"pump-fun-plugin","version":"0.1.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -253,8 +253,4 @@ pump-fun sell --mint <MINT>
 |-----------|---------|-------------|
 | `slippage_bps` | 100 | 1% slippage tolerance |
 | `fee_bps` | 100 | pump.fun trade fee (1%) |
-
-
-
-
 

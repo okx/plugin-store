@@ -1,19 +1,19 @@
 
-# pump-fun -- Skill Summary
+# pump-fun-plugin -- Skill Summary
 
 ## Overview
-This skill enables AI agents to interact with pump.fun's bonding curve mechanism on Solana mainnet, allowing for token trading, price discovery, and market analysis. It provides both read-only operations for price checking and bonding curve state monitoring, as well as write operations for buying and selling tokens through the pump.fun protocol and graduated DEX pools.
+This skill enables AI agents to interact with pump.fun bonding curves on Solana mainnet, providing capabilities to buy and sell memecoins, check token prices, and monitor bonding curve graduation progress. It integrates with onchainos for secure transaction execution and supports both tokens still on bonding curves and those that have graduated to DEX trading.
 
 ## Usage
-Use commands like `pump-fun get-price` to check token prices, `pump-fun buy` to purchase tokens, and `pump-fun sell` to trade back to SOL. All write operations support dry-run previews and require user confirmation before execution.
+Install the plugin via the auto-injected setup commands, then use CLI commands like `pump-fun get-token-info --mint <address>` to check token status or `pump-fun buy --mint <address> --sol-amount 0.01` to purchase tokens. Always run operations with `--dry-run` first and confirm with users before executing transactions.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `get-token-info --mint <ADDRESS>` | Fetch bonding curve state, reserves, and graduation progress |
-| `get-price --mint <ADDRESS> --direction <buy/sell> --amount <AMOUNT>` | Calculate expected output for buy/sell operations |
-| `buy --mint <ADDRESS> --sol-amount <AMOUNT> [--dry-run]` | Buy tokens on bonding curve with SOL |
-| `sell --mint <ADDRESS> [--token-amount <AMOUNT>] [--dry-run]` | Sell tokens back to bonding curve for SOL |
+| `pump-fun get-token-info --mint <address>` | Fetch bonding curve state, reserves, and graduation progress |
+| `pump-fun get-price --mint <address> --direction <buy/sell> --amount <value>` | Calculate expected output for buy/sell operations |
+| `pump-fun buy --mint <address> --sol-amount <value> [--dry-run]` | Buy tokens on bonding curve (preview with --dry-run) |
+| `pump-fun sell --mint <address> [--token-amount <value>] [--dry-run]` | Sell tokens back to bonding curve (preview with --dry-run) |
 
 ## Triggers
-Activate this skill when users want to trade memecoins on pump.fun, check bonding curve prices, monitor token graduation progress, or interact with Solana-based token launchpads. Trigger phrases include "buy pump.fun token," "sell pump.fun token," "check pump.fun price," and "pump.fun bonding curve."
+Activate this skill when users mention buying or selling pump.fun tokens, checking pump.fun prices, or monitoring bonding curve progress. Also trigger for Chinese phrases like "购买pump.fun代币" or "查询pump.fun价格".

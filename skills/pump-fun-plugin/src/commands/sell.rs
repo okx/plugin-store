@@ -18,6 +18,10 @@ pub struct SellArgs {
     /// Slippage tolerance in basis points (default: 100 = 1%)
     #[arg(long, default_value_t = DEFAULT_SLIPPAGE_BPS)]
     pub slippage_bps: u64,
+
+    /// Confirm execution — required to execute on-chain. Without this flag, shows a preview.
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 #[derive(Serialize, Debug)]
@@ -29,14 +33,18 @@ struct SellOutput {
     tx_hash: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     dry_run: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    preview: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<String>,
 }
 
 pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
-    // Resolve amount: explicit or full balance
+    // Resolve amount: explicit or placeholder/balance
     let amount = match &args.token_amount {
         Some(a) => a.clone(),
         None => {
-            if dry_run {
+            if dry_run || !args.confirm {
                 "<full balance>".to_string()
             } else {
                 onchainos::get_token_balance(&args.mint)?
@@ -45,7 +53,12 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
         }
     };
 
-    if dry_run {
+    if dry_run || !args.confirm {
+        let (is_dry_run, is_preview, note) = if dry_run {
+            (Some(true), None, "dry_run=true — no transaction submitted. Pass --confirm to execute.".to_string())
+        } else {
+            (None, Some(true), "Preview: re-run with --confirm to execute on-chain.".to_string())
+        };
         println!(
             "{}",
             serde_json::to_string_pretty(&SellOutput {
@@ -54,7 +67,9 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
                 token_amount: amount,
                 slippage_bps: args.slippage_bps,
                 tx_hash: String::new(),
-                dry_run: Some(true),
+                dry_run: is_dry_run,
+                preview: is_preview,
+                note: Some(note),
             })?
         );
         return Ok(());
@@ -74,6 +89,8 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
             slippage_bps: args.slippage_bps,
             tx_hash,
             dry_run: None,
+            preview: None,
+            note: None,
         })?
     );
     Ok(())

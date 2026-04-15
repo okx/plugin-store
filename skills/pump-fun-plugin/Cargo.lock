@@ -2759,8 +2759,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pump-fun"
-version = "0.1.2"
+name = "pump-fun-plugin"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "clap",

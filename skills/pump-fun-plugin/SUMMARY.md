@@ -1,13 +1,13 @@
-# pump-fun
-A Solana-based DeFi skill for trading tokens on pump.fun bonding curves with buy/sell operations and price checking.
+# pump-fun-plugin
+Interact with pump.fun bonding curves on Solana to buy tokens, sell tokens, and check prices/bonding progress.
 
 ## Highlights
-- Trade tokens on pump.fun bonding curves on Solana mainnet
-- Check token prices and bonding curve progress in real-time
-- Buy tokens with SOL through bonding curve mechanics
-- Sell tokens back to bonding curve or graduated DEX pools
-- Preview operations with dry-run mode before execution
-- Automatic slippage protection and fee calculation
-- Support for both bonding curve and graduated tokens
-- Real-time market cap and graduation progress tracking
+- Buy and sell tokens on pump.fun bonding curves via Solana mainnet
+- Check real-time token prices and bonding curve state
+- Calculate expected output for buy/sell operations before execution
+- Support for both bonding curve tokens and graduated tokens (DEX routing)
+- Preview operations with `--dry-run` before committing transactions
+- Monitor graduation progress and market cap in real-time
+- Seamless integration with onchainos MPC wallet for secure transactions
+- Built-in slippage protection and fee calculation
 
