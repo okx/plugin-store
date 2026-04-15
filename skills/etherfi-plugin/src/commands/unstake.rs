@@ -1,11 +1,10 @@
 use clap::Args;
-use tokio::time::{sleep, Duration};
 use crate::calldata::{build_request_withdraw_calldata, build_claim_withdraw_calldata};
 use crate::config::{
     build_approve_calldata, eeth_address, format_units, liquidity_pool_address,
     parse_units, rpc_url, withdraw_request_nft_address, CHAIN_ID,
 };
-use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
+use crate::onchainos::{extract_tx_hash, resolve_wallet, wait_for_tx, wallet_contract_call};
 use crate::rpc::{get_allowance, get_balance, is_withdrawal_finalized};
 
 #[derive(Args)]
@@ -111,10 +110,11 @@ async fn run_request(args: UnstakeArgs) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let approve_tx = extract_tx_hash(&approve_result);
-            println!("Approve tx: {}", approve_tx);
-            // Wait for approve to be mined before requestWithdraw (Ethereum ~12s per block)
-            sleep(Duration::from_secs(15)).await;
+            let approve_tx = extract_tx_hash(&approve_result).to_string();
+            println!("Approve tx: {} — waiting for confirmation...", approve_tx);
+            wait_for_tx(approve_tx, wallet.clone()).await
+                .map_err(|e| anyhow::anyhow!("Approve tx did not confirm: {}", e))?;
+            println!("Approve confirmed.");
         }
     }
 

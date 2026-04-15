@@ -4,7 +4,7 @@ description: >
   Liquid restaking on Ethereum. Deposit ETH into ether.fi LiquidityPool to receive eETH,
   wrap eETH into weETH (ERC-4626 yield-bearing token) to earn staking + EigenLayer
   restaking rewards, unstake eETH back to ETH, check balances, and view current APY.
-version: "0.2.6"
+version: "0.2.7"
 author: GeoGu360
 tags:
   - liquid-staking
@@ -29,7 +29,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/etherfi-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.6"
+LOCAL_VER="0.2.7"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -102,7 +102,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/etherfi-plugin@0.2.6/etherfi-plugin-${TARGET}${EXT}" -o ~/.local/bin/.etherfi-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/etherfi-plugin@0.2.7/etherfi-plugin-${TARGET}${EXT}" -o ~/.local/bin/.etherfi-plugin-core${EXT}
 chmod +x ~/.local/bin/.etherfi-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -110,7 +110,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/etherfi-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.6" > "$HOME/.plugin-store/managed/etherfi-plugin"
+echo "0.2.7" > "$HOME/.plugin-store/managed/etherfi-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -130,7 +130,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"etherfi-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
+    -d '{"name":"etherfi-plugin","version":"0.2.7"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -199,28 +199,14 @@ etherfi positions
 etherfi positions --owner 0xYourWalletAddress
 ```
 
-**Output (human-readable table):**
-```
-ether.fi Positions
-  Wallet: 0x...
-─────────────────────────────────────────────────────────────
-Token             Balance        As eETH      USD Value
-─────────────────────────────────────────────────────────────
-eETH             1.500000       1.500000       $3,321.60
-weETH            0.980000       1.070534       $2,372.02
-─────────────────────────────────────────────────────────────
-Total                           2.570534       $5,693.62
-
-Protocol Stats:
-  weETH/eETH rate:  1.09238163
-  APY:              2.30%
-  TVL:              $5825437011
-  ETH price:        $2214.40
+**Output:**
+```json
+{"ok":true,"wallet":"0x...","eeth_balance":"1.500000","eeth_balance_raw":"1500000000000000000","weeth_balance":"0.980000","weeth_balance_raw":"980000000000000000","weeth_as_eeth":"1.070534","total_eeth":"2.570534","total_usd":"5693.62","rate":"1.09238163","apy_pct":"2.30","tvl_usd":"5825437011","eth_price_usd":"2214.40"}
 ```
 
-USD column is omitted if the ETH price API is unavailable.
+`total_usd`, `apy_pct`, `tvl_usd`, `eth_price_usd` are `null` if the external price/stats API is unavailable. Balance and rate errors fail-fast with a clear message (RPC failure should not silently show 0).
 
-**Display fields:** Token balances, eETH-equivalent totals, USD valuations (when available), APY, TVL, exchange rate.
+**Output fields:** `ok`, `wallet`, `eeth_balance`, `eeth_balance_raw`, `weeth_balance`, `weeth_balance_raw`, `weeth_as_eeth`, `total_eeth`, `total_usd`, `rate`, `apy_pct`, `tvl_usd`, `eth_price_usd`
 
 ---
 
@@ -291,7 +277,7 @@ etherfi unstake --amount 1.0 --dry-run
 1. Parse eETH amount to wei (18 decimals)
 2. Resolve wallet address via `onchainos wallet addresses`
 3. Validate eETH balance is sufficient
-4. Check eETH allowance for LiquidityPool; if insufficient, approve `u128::MAX` first (selector `0x095ea7b3`) — **displays explicit warning before proceeding** (3-second delay after approve)
+4. Check eETH allowance for LiquidityPool; if insufficient, approve `u128::MAX` first — **waits for on-chain confirmation before proceeding** (polls `onchainos wallet history`, up to 90s)
 5. **Requires `--confirm`** — without it, prints preview JSON and exits
 6. Call `LiquidityPool.requestWithdraw(recipient, amountOfEEth)` (selector `0x397a1b28`)
 7. WithdrawRequestNFT is minted — token ID is in the tx receipt (check Etherscan)
@@ -345,17 +331,18 @@ etherfi wrap --amount 1.0 --dry-run
 
 **Output:**
 ```json
-{"ok":true,"txHash":"0xdef...","action":"wrap","eETHWrapped":"1.0","eETHWei":"1000000000000000000","weETHBalance":"0.96"}
+{"ok":true,"txHash":"0xdef...","action":"wrap","eETHWrapped":"1.0","eETHWei":"1000000000000000000","weETHExpected":"0.915226","weETHBalance":"0.915226"}
 ```
 
-**Display:** `txHash` (abbreviated), `eETHWrapped`, `weETHBalance` (updated balance).
+**Display:** `txHash` (abbreviated), `eETHWrapped`, `weETHExpected` (preview of weETH to receive), `weETHBalance` (updated balance after tx).
 
 **Flow:**
 1. Parse eETH amount to wei
-2. Resolve wallet; check eETH balance is sufficient
-3. Check eETH allowance for weETH contract; approve `u128::MAX` if needed — **displays an explicit warning about unlimited approval before proceeding** (3-second delay)
-4. **Requires `--confirm`** for each step (approve + wrap)
-5. Call `weETH.wrap(uint256)` via `onchainos wallet contract-call` (selector `0xea598cb0`)
+2. Fetch `weETH.getRate()` and compute `weETHExpected = eETH / rate` — shown in preview before confirm
+3. Resolve wallet; check eETH balance is sufficient
+4. Check eETH allowance for weETH contract; approve `u128::MAX` if needed — **waits for on-chain confirmation before proceeding** (polls `onchainos wallet history`, up to 90s)
+5. **Requires `--confirm`** for each step (approve + wrap)
+6. Call `weETH.wrap(uint256)` via `onchainos wallet contract-call` (selector `0xea598cb0`)
 
 ---
 

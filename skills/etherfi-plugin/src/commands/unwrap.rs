@@ -105,12 +105,16 @@ pub async fn run(args: UnwrapArgs) -> anyhow::Result<()> {
     };
 
     println!(
-        "{{\"ok\":true,\"txHash\":\"{}\",\"action\":\"unwrap\",\"weETHRedeemed\":\"{}\",\"weETHWei\":\"{}\",\"eETHExpected\":\"{}\",\"eETHBalance\":\"{}\"}}",
-        tx_hash,
-        args.amount,
-        weeth_wei,
-        format_units(eeth_expected, 18),
-        eeth_balance_str
+        "{}",
+        serde_json::json!({
+            "ok":           true,
+            "txHash":       tx_hash,
+            "action":       "unwrap",
+            "weETHRedeemed": args.amount,
+            "weETHWei":     weeth_wei.to_string(),
+            "eETHExpected": format!("{:.6}", eeth_expected as f64 / 1e18),
+            "eETHBalance":  eeth_balance_str,
+        })
     );
 
     Ok(())

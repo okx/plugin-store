@@ -1,11 +1,10 @@
 use clap::Args;
-use tokio::time::{sleep, Duration};
 use crate::calldata::build_wrap_calldata;
 use crate::config::{
     build_approve_calldata, eeth_address, format_units, parse_units,
     rpc_url, weeth_address, CHAIN_ID,
 };
-use crate::onchainos::{extract_tx_hash, resolve_wallet, wallet_contract_call};
+use crate::onchainos::{extract_tx_hash, resolve_wallet, wait_for_tx, wallet_contract_call};
 use crate::rpc::{get_allowance, get_balance};
 
 #[derive(Args)]
@@ -36,6 +35,15 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     // Resolve wallet address
     let wallet = resolve_wallet(CHAIN_ID)?;
 
+    // Preview: expected weETH output via getRate() — 1 weETH = rate eETH → weETH = eETH / rate
+    let weeth_expected_str = match crate::rpc::weeth_get_rate(weeth, rpc).await {
+        Ok(rate) if rate > 0.0 => {
+            let expected = (eeth_wei as f64 / rate) as u128;
+            format!("{:.6}", expected as f64 / 1e18)
+        }
+        _ => "N/A".to_string(),
+    };
+
     println!(
         "Wrapping {} eETH ({} wei) → weETH",
         args.amount, eeth_wei
@@ -43,6 +51,7 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     println!("  eETH contract:  {}", eeth);
     println!("  weETH contract: {}", weeth);
     println!("  Wallet: {}", wallet);
+    println!("  Expected weETH to receive: {}", weeth_expected_str);
     println!("  Run with --confirm to broadcast. (Proceeding automatically in non-interactive mode.)");
 
     // Step 1: Check eETH balance
@@ -84,10 +93,11 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let approve_tx = extract_tx_hash(&approve_result);
-            println!("Approve tx: {}", approve_tx);
-            // Wait for approve nonce to clear before wrapping
-            sleep(Duration::from_secs(3)).await;
+            let approve_tx = extract_tx_hash(&approve_result).to_string();
+            println!("Approve tx: {} — waiting for confirmation...", approve_tx);
+            wait_for_tx(approve_tx, wallet.clone()).await
+                .map_err(|e| anyhow::anyhow!("Approve tx did not confirm: {}", e))?;
+            println!("Approve confirmed.");
         }
     }
 
@@ -122,8 +132,16 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     };
 
     println!(
-        "{{\"ok\":true,\"txHash\":\"{}\",\"action\":\"wrap\",\"eETHWrapped\":\"{}\",\"eETHWei\":\"{}\",\"weETHBalance\":\"{}\"}}",
-        tx_hash, args.amount, eeth_wei, weeth_balance_str
+        "{}",
+        serde_json::json!({
+            "ok":            true,
+            "txHash":        tx_hash,
+            "action":        "wrap",
+            "eETHWrapped":   args.amount,
+            "eETHWei":       eeth_wei.to_string(),
+            "weETHExpected": weeth_expected_str,
+            "weETHBalance":  weeth_balance_str,
+        })
     );
 
     Ok(())

@@ -213,8 +213,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "etherfi"
-version = "0.2.3"
+name = "etherfi-plugin"
+version = "0.2.7"
 dependencies = [
  "anyhow",
  "clap",
