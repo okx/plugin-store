@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v3-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on Ethereum, BNB Chain, Base, Arbitrum, and Linea"
-version: "1.0.1"
+version: "1.0.2"
 author: "GeoGu360"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="1.0.1"
+LOCAL_VER="1.0.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.1/pancakeswap-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.2/pancakeswap-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "1.0.1" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
+echo "1.0.2" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-v3-plugin","version":"1.0.1"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v3-plugin","version":"1.0.2"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -161,7 +161,7 @@ Do NOT use for: PancakeSwap V2 AMM swaps (use pancakeswap-v2 skill), concentrate
 
 Before executing any write command, verify:
 
-1. **Binary installed**: `pancakeswap --version` — if not found, run the install script above
+1. **Binary installed**: `pancakeswap-v3 --version` — if not found, run the install script above
 2. **Wallet connected**: `onchainos wallet addresses` — confirm wallet is logged in and active address is set
 3. **Chain supported**: target chain must be BNB Chain (56), Base (8453), or Arbitrum (42161)
 
@@ -310,7 +310,20 @@ pancakeswap-v3 add-liquidity \
   [--tick-upper <int>] \
   [--slippage 1.0] \
   [--chain 1|56|8453|42161|59144] \
-  [--dry-run]
+  [--dry-run] \
+  [--confirm]
+```
+
+**Examples:**
+```
+# Preview — shows token pair, amounts, fee tier, tick range, estimated deposit (no tx)
+pancakeswap-v3 add-liquidity --token-a WBNB --token-b USDT --fee 500 --amount-a 0.1 --amount-b 30 --chain 56
+
+# Execute — broadcasts all 3 transactions (approve0, approve1, mint)
+pancakeswap-v3 add-liquidity --token-a WBNB --token-b USDT --fee 500 --amount-a 0.1 --amount-b 30 --chain 56 --confirm
+
+# Dry-run — shows calldata for all 3 steps without broadcasting
+pancakeswap-v3 add-liquidity --token-a WBNB --token-b USDT --fee 500 --amount-a 0.1 --amount-b 30 --chain 56 --dry-run
 ```
 
 **Execution flow:**
@@ -320,8 +333,8 @@ pancakeswap-v3 add-liquidity \
 3. **Tick range**: if `--tick-lower`/`--tick-upper` are omitted, auto-compute ±10% price range (~±1000 ticks) from the current pool tick, aligned to tickSpacing. If provided, validate they are multiples of tickSpacing.
 4. **Balance check**: verify wallet holds sufficient token0 and token1 before submitting any transaction. Fails early with a clear message if balance is insufficient.
 5. **Slippage minimums**: compute the actual deposit amounts using V3 liquidity math (based on current sqrtPrice and tick range), then apply slippage tolerance to those amounts. This prevents "Price slippage check" reverts caused by applying slippage to `desired` amounts instead of actual amounts.
-6. Present the full plan (amounts, tick range, expected deposit, min amounts, NPM address).
-7. Submit Step 1 — approve token0 for NonfungiblePositionManager.
+6. Without `--confirm`: print a JSON preview (token pair, amounts, fee tier, tick range, estimated LP, NPM address) and exit. **No transactions are submitted.**
+7. With `--confirm`: submit Step 1 — approve token0 for NonfungiblePositionManager.
 8. Submit Step 2 — approve token1 for NonfungiblePositionManager.
 9. Submit Step 3 — `mint(MintParams)` to NonfungiblePositionManager.
 10. Report tokenId and transaction hash.
@@ -354,7 +367,8 @@ pancakeswap-v3 remove-liquidity \
   [--liquidity-pct 100] \
   [--slippage 0.5] \
   [--chain 1|56|8453|42161|59144] \
-  [--dry-run]
+  [--dry-run] \
+  [--confirm]
 ```
 
 **Example:**
@@ -440,6 +454,12 @@ pancakeswap-v3 remove-liquidity --token-id 345455 --liquidity-pct 50 --slippage 
 
 ## Changelog
 
+### v1.0.2 (2026-04-14)
+
+- **fix (CRITICAL)**: Added `version` to `#[command(...)]` in `main.rs` — `pancakeswap-v3 --version` now works correctly. Previously the flag was not registered and returned an error.
+- **fix (MAJOR)**: `add-liquidity` confirm gate — without `--confirm`, the command now prints a JSON preview (token pair, amounts, fee tier, tick range, estimated deposit) and exits. Previously it printed misleading "Step 1: Approving..." messages suggesting execution was in progress.
+- **docs**: Added `--version` to pre-flight check example; added `--confirm` to all `add-liquidity` usage examples; clarified dry-run vs confirm flow in execution flow section.
+
 ### v1.0.0 (2026-04-12)
 
 - **breaking**: Skill renamed from `pancakeswap` to `pancakeswap-v3` — binary name and plugin directory updated accordingly.
@@ -462,6 +482,4 @@ pancakeswap-v3 remove-liquidity --token-id 345455 --liquidity-pct 50 --slippage 
 ### v0.2.1 (2026-04-11)
 
 - **fix**: Surface RPC errors in `pools` command instead of silently showing `tick: 0` when a node rate-limits the request.
-
-
 

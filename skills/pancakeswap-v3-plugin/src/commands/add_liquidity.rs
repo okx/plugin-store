@@ -1,6 +1,7 @@
 /// `pancakeswap add-liquidity` — mint a new V3 LP position via NonfungiblePositionManager.
 
 use anyhow::Result;
+use serde_json;
 
 pub struct AddLiquidityArgs {
     pub token_a: String,
@@ -118,6 +119,37 @@ pub async fn run(args: AddLiquidityArgs) -> Result<()> {
             );
         }
         println!("Balance check OK: {} {} available, {} {} available", bal0, sym0, bal1, sym1);
+    }
+
+    // Confirm gate: if not dry-run and not confirmed, print preview and exit
+    if !args.dry_run && !args.confirm {
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "add-liquidity",
+            "chain": args.chain,
+            "token0": { "address": token0, "symbol": sym0, "amount": amount_a_str },
+            "token1": { "address": token1, "symbol": sym1, "amount": amount_b_str },
+            "feeTier": format!("{}%", args.fee as f64 / 10000.0),
+            "tickRange": { "lower": tick_lower, "upper": tick_upper },
+            "expectedDeposit": {
+                "amount0": actual0.to_string(),
+                "amount1": actual1.to_string(),
+                "amount0Min": amount0_min.to_string(),
+                "amount1Min": amount1_min.to_string(),
+                "slippagePct": args.slippage
+            },
+            "npm": cfg.npm,
+            "pendingTransactions": 3,
+            "transactions": [
+                {"step": 1, "description": format!("Approve {} {} for NonfungiblePositionManager", amount_a_str, sym0), "to": token0},
+                {"step": 2, "description": format!("Approve {} {} for NonfungiblePositionManager", amount_b_str, sym1), "to": token1},
+                {"step": 3, "description": "Mint V3 LP position via NonfungiblePositionManager.mint", "to": cfg.npm},
+            ],
+            "note": "Re-run with --confirm to execute these transactions on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
     }
 
     println!("Add Liquidity (chain {}):", args.chain);

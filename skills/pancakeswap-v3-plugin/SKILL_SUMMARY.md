@@ -1,11 +1,11 @@
 
-# pancakeswap -- Skill Summary
+# pancakeswap-v3-plugin -- Skill Summary
 
 ## Overview
-This skill enables token swapping and concentrated liquidity management on PancakeSwap V3, the leading decentralized exchange on BNB Chain and Base. It provides comprehensive DEX functionality including real-time quotes, token swaps via SmartRouter, liquidity position minting/burning, pool analytics, and portfolio tracking. All operations integrate with the onchainos wallet system and include safety checks with user confirmation steps for write operations.
+This plugin provides comprehensive DeFi functionality for PancakeSwap V3, the leading decentralized exchange on multiple EVM chains. It enables token swaps through the SmartRouter with optimal price discovery across all fee tiers, concentrated liquidity position management with automatic tick range calculation, and real-time market data queries. The plugin integrates seamlessly with onchainos wallet infrastructure for secure transaction execution and supports BNB Chain, Base, Arbitrum, Ethereum, and Linea networks.
 
 ## Usage
-Install the plugin via OKX plugin store, ensure your onchainos wallet is connected, then use commands like `pancakeswap quote`, `pancakeswap swap`, or `pancakeswap add-liquidity`. All write operations require explicit user confirmation before broadcasting transactions.
+Install the plugin using the auto-injected setup commands, ensure your onchainos wallet is connected, then use commands like `pancakeswap-v3 quote`, `pancakeswap-v3 swap`, or `pancakeswap-v3 add-liquidity`. All write operations require the `--confirm` flag for execution.
 
 ## Commands
 | Command | Description |
@@ -13,9 +13,9 @@ Install the plugin via OKX plugin store, ensure your onchainos wallet is connect
 | `quote` | Get swap quotes without executing transactions |
 | `swap` | Execute token swaps via SmartRouter |
 | `pools` | List available pools for token pairs |
-| `positions` | View LP positions for a wallet address |
+| `positions` | View LP positions for a wallet |
 | `add-liquidity` | Mint new concentrated liquidity positions |
-| `remove-liquidity` | Remove liquidity and collect tokens from positions |
+| `remove-liquidity` | Remove liquidity and collect tokens |
 
 ## Triggers
-Activate this skill when users mention PancakeSwap operations like "swap on pancake", "add liquidity pancakeswap", "PCS swap", or want to manage V3 concentrated liquidity positions. Do not use for PancakeSwap V2 AMM operations.
+An AI agent should activate this skill when users mention PancakeSwap operations, token swapping, liquidity provision, or when they use trigger phrases like "pancakeswap", "swap on pancake", "add liquidity pancakeswap", or "PancakeSwap V3". It should also activate for general DEX operations on supported chains when PancakeSwap would be the optimal choice.
