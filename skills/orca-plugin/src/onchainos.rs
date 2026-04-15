@@ -28,6 +28,60 @@ pub fn resolve_wallet_solana() -> anyhow::Result<String> {
     )
 }
 
+/// Return native SOL balance in lamports for the given wallet.
+pub async fn get_sol_balance(wallet: &str, rpc_url: &str) -> anyhow::Result<u64> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getBalance",
+        "params": [wallet]
+    });
+    let resp: serde_json::Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    resp["result"]["value"]
+        .as_u64()
+        .ok_or_else(|| anyhow::anyhow!("Failed to parse SOL balance: {}", resp))
+}
+
+/// Return SPL token balance in UI units (f64) for the given wallet and mint.
+/// Returns 0.0 if the wallet holds no token accounts for this mint.
+pub async fn get_spl_balance(wallet: &str, mint: &str, rpc_url: &str) -> anyhow::Result<f64> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getTokenAccountsByOwner",
+        "params": [
+            wallet,
+            { "mint": mint },
+            { "encoding": "jsonParsed" }
+        ]
+    });
+    let resp: serde_json::Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    let accounts = resp["result"]["value"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("Unexpected RPC response: {}", resp))?;
+    if accounts.is_empty() {
+        return Ok(0.0);
+    }
+    let ui_amount = accounts[0]["account"]["data"]["parsed"]["info"]["tokenAmount"]["uiAmount"]
+        .as_f64()
+        .unwrap_or(0.0);
+    Ok(ui_amount)
+}
+
 /// Execute a Solana DEX swap via `onchainos dex swap execute`.
 /// This is the primary swap path — onchainos handles routing, signing, and broadcasting.
 /// NOTE: Solana dex swap does NOT require --force.

@@ -4,7 +4,7 @@ description: "Concentrated liquidity AMM on Solana — swap tokens and query poo
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.6.2"
+  version: "0.6.3"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/orca-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.6.2"
+LOCAL_VER="0.6.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -93,7 +93,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/orca-plugin@0.6.2/orca-plugin-${TARGET}${EXT}" -o ~/.local/bin/.orca-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/orca-plugin@0.6.3/orca-plugin-${TARGET}${EXT}" -o ~/.local/bin/.orca-plugin-core${EXT}
 chmod +x ~/.local/bin/.orca-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -101,7 +101,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/orca-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.6.2" > "$HOME/.plugin-store/managed/orca-plugin"
+echo "0.6.3" > "$HOME/.plugin-store/managed/orca-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -121,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"orca-plugin","version":"0.6.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"orca-plugin","version":"0.6.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -211,9 +211,10 @@ orca get-quote \
 Execute a token swap on Orca via `onchainos dex swap execute`.
 
 **Pre-swap safety checks:**
-1. Security scan of output token via `onchainos security token-scan`
-2. Price impact check: warns at >2%, blocks at >10%
-3. **Ask user to confirm** before executing on-chain
+1. Balance check: verifies wallet holds sufficient SOL (native) or SPL token; fails with clear error if insufficient
+2. Security scan of output token via `onchainos security token-scan`
+3. Price impact check: warns at >2%, blocks at >10%
+4. **Ask user to confirm** before executing on-chain
 
 ```bash
 orca swap \
@@ -236,7 +237,7 @@ orca swap \
 **Execution Flow:**
 1. Run with `--dry-run` first to preview
 2. **Ask user to confirm** the swap details (amount, tokens, slippage) before proceeding
-3. Execute only after explicit user approval
+3. Execute only after explicit user approval — pre-flight balance check runs automatically before swap
 4. Report transaction hash and Solscan link
 
 **Example:**
@@ -255,7 +256,7 @@ orca swap \
   --slippage-bps 100
 ```
 
-**Output fields:** `ok`, `tx_hash`, `solscan_url`, `from_token`, `to_token`, `amount`, `slippage_bps`, `estimated_price_impact_pct`
+**Output fields:** `ok`, `tx_hash`, `solscan_url`, `from_token`, `to_token`, `amount`, `amount_display` (2 decimal places), `slippage_bps`, `estimated_price_impact_pct`
 
 ---
 

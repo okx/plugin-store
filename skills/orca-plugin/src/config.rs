@@ -21,6 +21,9 @@ pub const WHIRLPOOL_PROGRAM: &str = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc
 // Orca REST API base URL (v1 — the publicly working endpoint)
 pub const ORCA_API_BASE: &str = "https://api.orca.so/v1";
 
+// Solana public RPC endpoint
+pub const SOLANA_RPC_URL: &str = "https://api.mainnet-beta.solana.com";
+
 // Default configuration
 pub const DEFAULT_SLIPPAGE_BPS: u64 = 50; // 0.5%
 pub const DEFAULT_MIN_POOL_TVL_USD: f64 = 10_000.0;

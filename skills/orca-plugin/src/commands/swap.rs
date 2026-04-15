@@ -1,7 +1,7 @@
 use crate::api;
 use crate::config::{
     DEFAULT_SLIPPAGE_BPS, PRICE_IMPACT_BLOCK_THRESHOLD, PRICE_IMPACT_WARN_THRESHOLD,
-    SOL_NATIVE_MINT, WSOL_MINT,
+    SOL_DECIMALS, SOL_NATIVE_MINT, SOLANA_RPC_URL, WSOL_MINT,
 };
 use crate::onchainos;
 use clap::Args;
@@ -43,6 +43,7 @@ struct SwapOutput {
     from_token: String,
     to_token: String,
     amount: f64,
+    amount_display: String,
     slippage_bps: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     estimated_price_impact_pct: Option<f64>,
@@ -65,6 +66,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
             from_token: args.from_token.clone(),
             to_token: args.to_token.clone(),
             amount: args.amount,
+            amount_display: format!("{:.2}", args.amount),
             slippage_bps: args.slippage_bps,
             estimated_price_impact_pct: None,
             warning: Some("dry_run=true — transaction not submitted".to_string()),
@@ -73,6 +75,37 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
         };
         println!("{}", serde_json::to_string_pretty(&output)?);
         return Ok(());
+    }
+
+    // ─── Resolve wallet and pre-flight balance check ───
+    let wallet = onchainos::resolve_wallet_solana()?;
+
+    if args.from_token == SOL_NATIVE_MINT {
+        let lamports = onchainos::get_sol_balance(&wallet, SOLANA_RPC_URL)
+            .await
+            .unwrap_or(0);
+        let lamports_needed = (args.amount * 10u64.pow(SOL_DECIMALS) as f64) as u64;
+        if lamports < lamports_needed {
+            anyhow::bail!(
+                "Insufficient SOL balance: need {:.6} SOL, have {:.6} SOL. \
+                 Add funds to your wallet before swapping.",
+                args.amount,
+                lamports as f64 / 10u64.pow(SOL_DECIMALS) as f64,
+            );
+        }
+    } else {
+        let ui_balance = onchainos::get_spl_balance(&wallet, &args.from_token, SOLANA_RPC_URL)
+            .await
+            .unwrap_or(0.0);
+        if ui_balance < args.amount {
+            anyhow::bail!(
+                "Insufficient token balance: need {:.6}, have {:.6} for mint {}. \
+                 Add funds to your wallet before swapping.",
+                args.amount,
+                ui_balance,
+                args.from_token,
+            );
+        }
     }
 
     // ─── Security scan of output token ───
@@ -92,6 +125,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
                     from_token: args.from_token.clone(),
                     to_token: args.to_token.clone(),
                     amount: args.amount,
+                    amount_display: format!("{:.2}", args.amount),
                     slippage_bps: args.slippage_bps,
                     estimated_price_impact_pct: None,
                     warning: None,
@@ -164,6 +198,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
             from_token: args.from_token.clone(),
             to_token: args.to_token.clone(),
             amount: args.amount,
+            amount_display: format!("{:.2}", args.amount),
             slippage_bps: args.slippage_bps,
             estimated_price_impact_pct: Some(price_impact),
             warning: None,
@@ -182,6 +217,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
     let slippage_pct = format!("{:.4}", args.slippage_bps as f64 / 100.0);
 
     let result = execute_swap_onchainos(
+        &wallet,
         &args.from_token,
         &args.to_token,
         args.amount,
@@ -204,6 +240,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
         from_token: args.from_token.clone(),
         to_token: args.to_token.clone(),
         amount: args.amount,
+        amount_display: format!("{:.2}", args.amount),
         slippage_bps: args.slippage_bps,
         estimated_price_impact_pct: Some(price_impact),
         warning: pool_warning,
@@ -225,13 +262,12 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
 /// Execute swap via `onchainos swap execute`.
 /// This is the primary path — onchainos handles routing, signing, and broadcasting.
 async fn execute_swap_onchainos(
+    wallet: &str,
     from_token: &str,
     to_token: &str,
     amount: f64,
     slippage_pct: &str,
 ) -> anyhow::Result<serde_json::Value> {
-    // Resolve wallet address
-    let wallet = crate::onchainos::resolve_wallet_solana()?;
     let amount_str = amount.to_string();
     let output = Command::new("onchainos")
         .args([

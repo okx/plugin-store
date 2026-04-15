@@ -625,8 +625,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "orca"
-version = "0.3.0"
+name = "orca-plugin"
+version = "0.6.3"
 dependencies = [
  "anyhow",
  "clap",
