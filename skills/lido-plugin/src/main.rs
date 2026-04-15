@@ -6,7 +6,7 @@ mod rpc;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "lido", about = "Lido liquid staking plugin for onchainos")]
+#[command(name = "lido", about = "Lido liquid staking plugin for onchainos", version)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

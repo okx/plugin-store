@@ -670,8 +670,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48f5d2a454e16a5ea0f4ced81bd44e4cfc7bd3a507b61887c99fd3538b28e4af"
 
 [[package]]
-name = "lido"
-version = "0.2.3"
+name = "lido-plugin"
+version = "0.2.6"
 dependencies = [
  "anyhow",
  "clap",

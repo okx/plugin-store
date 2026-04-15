@@ -1,21 +1,21 @@
 
-# lido -- Skill Summary
+# lido-plugin -- Skill Summary
 
 ## Overview
-This plugin enables interaction with the Lido liquid staking protocol on Ethereum mainnet, allowing users to stake ETH to receive stETH (a rebasing liquid staking token), request withdrawals back to ETH, and claim finalized withdrawals. All write operations require user confirmation before submission and route through the onchainos CLI for secure transaction handling.
+The lido-plugin enables seamless interaction with Lido's liquid staking protocol on Ethereum mainnet. Users can stake ETH to receive rebasing stETH tokens, request withdrawals back to ETH, monitor withdrawal queues, and claim finalized ETH withdrawals. All operations include transaction previews with user confirmation and integrate with the onchainos wallet system for secure signing.
 
 ## Usage
-Ensure onchainos CLI ≥ 2.0.0 is installed and log in with `onchainos wallet login` for write operations. Use commands like `lido stake --amount-eth 1.0` to stake ETH or `lido balance` to check stETH holdings.
+Install via the Plugin Store, ensure onchainos CLI is logged in for write operations, then use commands like `lido stake --amount-eth 1.0` or `lido get-apy` to interact with the protocol.
 
 ## Commands
 | Command | Description |
-|---|---|
-| `lido stake` | Stake ETH to receive stETH (requires --confirm) |
-| `lido get-apy` | Get current stETH staking APR |
-| `lido balance` | Check stETH balance for an address |
-| `lido request-withdrawal` | Request withdrawal of stETH for ETH (requires --confirm) |
-| `lido get-withdrawals` | List pending and past withdrawal requests |
-| `lido claim-withdrawal` | Claim finalized withdrawal(s) (requires --confirm) |
+|---------|-------------|
+| `lido stake --amount-eth <amount>` | Stake ETH to receive stETH tokens |
+| `lido get-apy` | Get current stETH staking APR and TVL data |
+| `lido balance [--address <addr>]` | Check stETH balance for an address |
+| `lido request-withdrawal --amount-eth <amount>` | Request withdrawal of stETH for ETH |
+| `lido get-withdrawals [--address <addr>]` | List pending and past withdrawal requests |
+| `lido claim-withdrawal --ids <id1,id2>` | Claim finalized withdrawal(s) |
 
 ## Triggers
-Activate when users want to stake ETH for liquid staking rewards, check stETH balances or APR, or manage withdrawal requests on the Lido protocol. Use for any Ethereum liquid staking operations involving stETH tokens.
+Activate this skill when users want to stake ETH with Lido, check staking rewards/APY, manage liquid staking positions, or handle ETH withdrawals from the Lido protocol. Use for any Lido-related operations on Ethereum mainnet.

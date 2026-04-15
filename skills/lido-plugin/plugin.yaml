@@ -1,6 +1,6 @@
 schema_version: 1
 name: lido-plugin
-version: "0.2.5"
+version: "0.2.6"
 description: "Stake ETH with Lido liquid staking protocol — stake, manage withdrawals, and track staking rewards on Ethereum mainnet"
 author:
   name: GeoGu360
