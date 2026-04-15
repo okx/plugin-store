@@ -1,13 +1,15 @@
 # aave-v3-plugin
-Lend and borrow crypto assets on Aave V3, the leading decentralized liquidity protocol with over $43B TVL.
+
+A comprehensive DeFi plugin for lending, borrowing, and earning yield on Aave V3 — the leading decentralized liquidity protocol with over $43B TVL.
 
 ## Highlights
-- Supply assets to earn yield across Ethereum, Polygon, Arbitrum, and Base
-- Borrow against collateral with variable interest rates
-- Real-time health factor monitoring to prevent liquidations
-- Enable efficiency mode (E-Mode) for correlated assets like stablecoins
-- Claim protocol rewards automatically
-- Support for collateral management and position tracking
-- Built-in safety checks with dry-run simulation before transactions
-- Direct integration with onchainos wallet for secure transaction execution
+
+- **Multi-chain support** - Works on Ethereum, Polygon, Arbitrum, and Base networks
+- **Complete lending operations** - Supply assets to earn yield and withdraw anytime
+- **Flexible borrowing** - Borrow against collateral with variable interest rates
+- **Health factor monitoring** - Real-time position safety checks and liquidation risk alerts
+- **Market data access** - View current supply/borrow APYs across all supported assets
+- **Collateral management** - Enable/disable assets as collateral and manage E-Mode categories
+- **Reward claiming** - Collect AAVE token incentives and platform rewards
+- **Safety-first design** - Simulation mode by default with confirmation required for execution
 
