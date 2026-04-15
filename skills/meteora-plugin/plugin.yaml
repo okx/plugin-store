@@ -1,6 +1,6 @@
 schema_version: 1
 name: meteora-plugin
-version: "0.3.6"
+version: "0.3.7"
 description: "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana"
 author:
   name: "skylavis-sky"

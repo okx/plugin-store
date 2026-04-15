@@ -164,8 +164,14 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
         solana_rpc::find_token_account(&client, &wallet_str, &mint_y_str, &ata_y_str).await?;
 
     // ── 5. Derive bin array PDAs ─────────────────────────────────────────────
+    // Derive from the position's stored lower/upper bin IDs (always covers the full
+    // position range). Edge case: if both fall in the same array (position width 70
+    // aligned to boundary), use adjacent array to avoid passing same account twice.
     let lower_idx = meteora_ix::bin_array_index(lower_bin_id);
-    let upper_idx = meteora_ix::bin_array_index(upper_bin_id);
+    let upper_idx = {
+        let idx = meteora_ix::bin_array_index(upper_bin_id);
+        if idx == lower_idx { lower_idx + 1 } else { idx }
+    };
     let bin_array_lower = meteora_ix::bin_array_pda(&lb_pair, lower_idx);
     let bin_array_upper = meteora_ix::bin_array_pda(&lb_pair, upper_idx);
 

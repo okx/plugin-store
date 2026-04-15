@@ -256,13 +256,9 @@ pub fn ix_add_liquidity_by_strategy(
 /// For X-only: pass user_token_x / reserve_x / token_x_mint, range = [active_id, max_bin_id].
 /// For Y-only: pass user_token_y / reserve_y / token_y_mint, range = [min_bin_id, active_id-1].
 ///
-/// `bin_array_lower` and `bin_array_upper` must satisfy lower.index < upper.index.
-/// When both range bounds fall in the same bin array, pass the adjacent array as the
-/// "other" account — it will not be accessed for out-of-range bins.
-///
-/// Y-only bin array ordering rule: pass (actual_array - 1, actual_array) so that the
-/// real Y bins are in the "upper" account. Using (actual_array, actual_array + 1) fails
-/// because array+1 starts at bins above active_id, causing the program to reject the range.
+/// `bin_array_lower` and `bin_array_upper` must satisfy lower.index < upper.index and
+/// together span the position's FULL bin range (position.lower_bin_id..position.upper_bin_id).
+/// Derive these from pos_lower / pos_upper in the caller, not from the deposit range.
 #[allow(clippy::too_many_arguments)]
 pub fn ix_add_liquidity_by_strategy_one_side(
     position: &Pubkey,

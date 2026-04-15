@@ -255,49 +255,30 @@ pub async fn execute(args: &AddLiquidityArgs, dry_run: bool) -> anyhow::Result<(
     // ── 6. Derive PDAs ───────────────────────────────────────────────────────
     let position = meteora_ix::position_pda(&lb_pair, &wallet, pos_lower, width);
     // DLMM requires bin_array_lower.index < bin_array_upper.index (program cannot
-    // borrow the same account twice). Determine the two bin array indices:
+    // borrow the same account twice).
     //
-    // For X-only / Y-only: the range often falls within a single bin array.
-    // In those cases use the adjacent array on the OTHER side as a structurally
-    // required second account — the program simply won't access it for those bins.
+    // The Meteora program validates that the passed bin arrays span the POSITION's
+    // full bin range (pos_lower..pos_upper), not just the deposit range
+    // (liq_lower..liq_upper). Derive indices from pos_lower / pos_upper so the
+    // arrays always cover the entire position even for narrow X-only / Y-only deposits.
     //
-    // For two-sided: if both bounds are already in different arrays, use them directly;
-    // otherwise extend liq_lower into the previous array (or liq_upper into the next).
-    let lower_idx_raw = meteora_ix::bin_array_index(liq_lower);
-    let upper_idx_raw = meteora_ix::bin_array_index(liq_upper);
-    let (lower_idx, upper_idx, effective_liq_lower, effective_liq_upper) =
-        if lower_idx_raw == upper_idx_raw {
-            if amount_x_raw > 0 && amount_y_raw == 0 {
-                // X-only: all bins are >= active_id (upper side). Use the adjacent
-                // lower array as a structural placeholder; min_bin_id stays at active_id.
-                (lower_idx_raw - 1, lower_idx_raw, liq_lower, liq_upper)
-            } else if amount_y_raw > 0 && amount_x_raw == 0 {
-                // Y-only: all bins are in bin_array at upper_idx_raw.
-                // Use (upper_idx_raw - 1) as the structural lower placeholder.
-                // Key: DO NOT use upper_idx_raw + 1 as the placeholder because
-                // that bin array starts at higher bin IDs (above active_id), and
-                // the program might validate bins from it, failing the Y-only check.
-                // With lower=(actual-1), upper=(actual), bins are found in "upper".
-                (upper_idx_raw - 1, upper_idx_raw, liq_lower, liq_upper)
-            } else {
-                // Two-sided: extend liq_lower into previous bin array (clamped to pos_lower),
-                // or liq_upper into the next bin array if that's the only option.
-                let prev_idx = upper_idx_raw - 1;
-                let prev_last_bin = (prev_idx * 70 + 69) as i32;
-                let adj_lower = prev_last_bin.max(pos_lower);
-                let new_lower_idx = meteora_ix::bin_array_index(adj_lower);
-                if new_lower_idx != upper_idx_raw {
-                    (new_lower_idx, upper_idx_raw, adj_lower, liq_upper)
-                } else {
-                    let next_idx = upper_idx_raw + 1;
-                    let next_first_bin = (next_idx * 70) as i32;
-                    let adj_upper = next_first_bin.min(pos_upper);
-                    (lower_idx_raw, meteora_ix::bin_array_index(adj_upper), liq_lower, adj_upper)
-                }
-            }
+    // Edge case: if pos_lower and pos_upper fall in the same bin array (happens when
+    // pos_lower lands exactly at an array boundary so all 70 bins stay in one array),
+    // use the adjacent array on the appropriate side as the structural second account.
+    let pos_lower_arr = meteora_ix::bin_array_index(pos_lower);
+    let pos_upper_arr = meteora_ix::bin_array_index(pos_upper);
+    let (lower_idx, upper_idx) = if pos_lower_arr == pos_upper_arr {
+        if amount_x_raw > 0 && amount_y_raw == 0 {
+            // X-only (bins go up): placeholder is the next-higher array
+            (pos_lower_arr, pos_lower_arr + 1)
         } else {
-            (lower_idx_raw, upper_idx_raw, liq_lower, liq_upper)
-        };
+            // Y-only or two-sided (bins go down / both sides): placeholder is lower
+            (pos_lower_arr - 1, pos_lower_arr)
+        }
+    } else {
+        (pos_lower_arr, pos_upper_arr)
+    };
+    let (effective_liq_lower, effective_liq_upper) = (liq_lower, liq_upper);
     let bin_array_lower = meteora_ix::bin_array_pda(&lb_pair, lower_idx);
     let bin_array_upper = meteora_ix::bin_array_pda(&lb_pair, upper_idx);
     // Precompute ATAs to use as hints for find_token_account
