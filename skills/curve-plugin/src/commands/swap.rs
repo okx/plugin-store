@@ -68,6 +68,10 @@ pub async fn run(
         .and_then(|c| c.decimals.as_deref())
         .and_then(|d| d.parse().ok())
         .unwrap_or(18);
+    let out_decimals: u32 = out_coin
+        .and_then(|c| c.decimals.as_deref())
+        .and_then(|d| d.parse().ok())
+        .unwrap_or(18);
 
     // Convert human-readable amount to minimal units
     let amount_minimal = (amount_in * 10f64.powi(in_decimals as i32)) as u128;
@@ -107,8 +111,11 @@ pub async fn run(
                 "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
                 "token_in": { "symbol": in_symbol, "address": token_in_addr, "index": in_idx },
                 "token_out": { "symbol": out_symbol, "address": token_out_addr, "index": out_idx },
+                "amount_in": format!("{:.6}", amount_minimal as f64 / 10f64.powi(in_decimals as i32)),
                 "amount_in_raw": amount_minimal.to_string(),
+                "expected_out": format!("{:.6}", amount_out as f64 / 10f64.powi(out_decimals as i32)),
                 "expected_out_raw": amount_out.to_string(),
+                "min_expected": format!("{:.6}", min_expected as f64 / 10f64.powi(out_decimals as i32)),
                 "min_expected_raw": min_expected.to_string(),
                 "slippage_pct": slippage * 100.0,
                 "calldata": calldata,
@@ -116,6 +123,19 @@ pub async fn run(
             })
         );
         return Ok(());
+    }
+
+    // Pre-flight balance check for ERC-20 input tokens
+    if !is_native {
+        let bal = rpc::balance_of(&token_in_addr, &wallet_addr, rpc_url).await.unwrap_or(0);
+        if bal < amount_minimal {
+            anyhow::bail!(
+                "Insufficient {} balance: need {:.6}, have {:.6}.",
+                in_symbol,
+                amount_minimal as f64 / 10f64.powi(in_decimals as i32),
+                bal as f64 / 10f64.powi(in_decimals as i32),
+            );
+        }
     }
 
     // ERC-20 approve if not native ETH
@@ -165,8 +185,11 @@ pub async fn run(
             "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
             "token_in": { "symbol": in_symbol, "address": token_in_addr },
             "token_out": { "symbol": out_symbol, "address": token_out_addr },
+            "amount_in": format!("{:.6}", amount_minimal as f64 / 10f64.powi(in_decimals as i32)),
             "amount_in_raw": amount_minimal.to_string(),
+            "expected_out": format!("{:.6}", amount_out as f64 / 10f64.powi(out_decimals as i32)),
             "expected_out_raw": amount_out.to_string(),
+            "min_expected": format!("{:.6}", min_expected as f64 / 10f64.powi(out_decimals as i32)),
             "min_expected_raw": min_expected.to_string(),
             "tx_hash": tx_hash,
             "explorer": explorer

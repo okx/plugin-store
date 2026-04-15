@@ -88,6 +88,11 @@ pub async fn run(
                 .await
                 .unwrap_or_default();
             let estimated = rpc::decode_uint128(&est_hex);
+            let coin_decimals: u8 = pool
+                .and_then(|p| p.coins.get(idx as usize))
+                .and_then(|c| c.decimals.as_deref())
+                .and_then(|d| d.parse().ok())
+                .unwrap_or(18);
             println!(
                 "{}",
                 serde_json::json!({
@@ -95,9 +100,12 @@ pub async fn run(
                     "dry_run": true,
                     "chain": chain_name,
                     "pool_address": pool_address,
+                    "lp_amount": format!("{:.6}", actual_lp_amount as f64 / 1e18),
                     "lp_amount_raw": actual_lp_amount.to_string(),
                     "coin_index": idx,
+                    "estimated_out": format!("{:.6}", estimated as f64 / 10f64.powi(coin_decimals as i32)),
                     "estimated_out_raw": estimated.to_string(),
+                    "min_amount": format!("{:.6}", min_out as f64 / 10f64.powi(coin_decimals as i32)),
                     "min_amount_raw": min_out.to_string()
                 })
             );
@@ -143,6 +151,7 @@ pub async fn run(
                 "dry_run": true,
                 "chain": chain_name,
                 "pool_address": pool_address,
+                "lp_amount": format!("{:.6}", actual_lp_amount as f64 / 1e18),
                 "lp_amount_raw": actual_lp_amount.to_string(),
                 "calldata": calldata
             })
@@ -173,6 +182,7 @@ pub async fn run(
             "chain": chain_name,
             "pool_address": pool_address,
             "pool_name": pool_name,
+            "lp_amount": format!("{:.6}", actual_lp_amount as f64 / 1e18),
             "lp_amount_raw": actual_lp_amount.to_string(),
             "tx_hash": tx_hash,
             "explorer": explorer

@@ -43,7 +43,7 @@ pub async fn run(
     }
 
     // Parse human-readable amounts using per-coin decimals
-    let amounts: Vec<u128> = if let Some(p) = pool {
+    let mut amounts: Vec<u128> = if let Some(p) = pool {
         let mut parsed = Vec::with_capacity(n_coins);
         for (i, s) in amount_strs.iter().enumerate() {
             let coin_decimals: u8 = p
@@ -66,7 +66,50 @@ pub async fn run(
     // Parse min_mint as LP tokens (always 18 decimals)
     let min_mint = rpc::parse_human_amount(&min_mint_str, 18)?;
 
-    // Build add_liquidity calldata based on coin count
+    // Pre-flight balance check — verify wallet holds enough of each token before approving.
+    // Slippage from a prior swap can leave a small shortfall (e.g. 1.499471 USDT when 1.5 was
+    // requested). Cap down if gap ≤ 1%; bail with a human-readable error if gap > 1%.
+    if !dry_run {
+        if let Some(p) = pool {
+            for (i, coin) in p.coins.iter().enumerate() {
+                if amounts[i] == 0 {
+                    continue;
+                }
+                let coin_decimals: u8 = coin
+                    .decimals
+                    .as_deref()
+                    .and_then(|d| d.parse().ok())
+                    .unwrap_or(18);
+                let bal = rpc::balance_of(&coin.address, &wallet_addr, rpc_url)
+                    .await
+                    .unwrap_or(0);
+                let desired = amounts[i];
+                if bal < desired {
+                    let shortfall_pct = (desired - bal) as f64 / desired as f64 * 100.0;
+                    if shortfall_pct > 1.0 {
+                        anyhow::bail!(
+                            "Insufficient {} balance: need {:.6}, have {:.6}. \
+                             Add funds or reduce --amounts before adding liquidity.",
+                            coin.symbol,
+                            desired as f64 / 10f64.powi(coin_decimals as i32),
+                            bal as f64 / 10f64.powi(coin_decimals as i32),
+                        );
+                    }
+                    eprintln!(
+                        "[curve] NOTE: Requested {:.6} {} but wallet holds {:.6}. \
+                         Adjusting down to available balance ({:.4}% gap).",
+                        desired as f64 / 10f64.powi(coin_decimals as i32),
+                        coin.symbol,
+                        bal as f64 / 10f64.powi(coin_decimals as i32),
+                        shortfall_pct,
+                    );
+                    amounts[i] = bal;
+                }
+            }
+        }
+    }
+
+    // Build add_liquidity calldata using (potentially capped) amounts
     let calldata = match n_coins {
         2 => curve_abi::encode_add_liquidity_2([amounts[0], amounts[1]], min_mint),
         3 => curve_abi::encode_add_liquidity_3([amounts[0], amounts[1], amounts[2]], min_mint),
@@ -79,6 +122,17 @@ pub async fn run(
 
     if dry_run {
         let pool_name = pool.map(|p| p.name.as_str()).unwrap_or("unknown");
+        let amounts_display: Vec<String> = if let Some(p) = pool {
+            amounts.iter().enumerate().map(|(i, &a)| {
+                let dec: u8 = p.coins.get(i)
+                    .and_then(|c| c.decimals.as_deref())
+                    .and_then(|d| d.parse().ok())
+                    .unwrap_or(18);
+                format!("{:.6}", a as f64 / 10f64.powi(dec as i32))
+            }).collect()
+        } else {
+            amounts.iter().map(|&a| format!("{:.6}", a as f64 / 1e18)).collect()
+        };
         println!(
             "{}",
             serde_json::json!({
@@ -87,6 +141,7 @@ pub async fn run(
                 "chain": chain_name,
                 "pool_address": pool_address,
                 "pool_name": pool_name,
+                "amounts": amounts_display,
                 "amounts_raw": amounts.iter().map(|a| a.to_string()).collect::<Vec<_>>(),
                 "min_mint_raw": min_mint.to_string(),
                 "calldata": calldata
@@ -142,6 +197,18 @@ pub async fn run(
     let explorer = config::explorer_url(chain_id, &tx_hash);
     let pool_name = pool.map(|p| p.name.as_str()).unwrap_or("unknown");
 
+    let amounts_display: Vec<String> = if let Some(p) = pool {
+        amounts.iter().enumerate().map(|(i, &a)| {
+            let dec: u8 = p.coins.get(i)
+                .and_then(|c| c.decimals.as_deref())
+                .and_then(|d| d.parse().ok())
+                .unwrap_or(18);
+            format!("{:.6}", a as f64 / 10f64.powi(dec as i32))
+        }).collect()
+    } else {
+        amounts.iter().map(|&a| format!("{:.6}", a as f64 / 1e18)).collect()
+    };
+
     println!(
         "{}",
         serde_json::json!({
@@ -149,6 +216,7 @@ pub async fn run(
             "chain": chain_name,
             "pool_address": pool_address,
             "pool_name": pool_name,
+            "amounts": amounts_display,
             "amounts_raw": amounts.iter().map(|a| a.to_string()).collect::<Vec<_>>(),
             "min_mint_raw": min_mint.to_string(),
             "tx_hash": tx_hash,

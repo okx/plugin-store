@@ -87,6 +87,10 @@ pub async fn run(
         ((in_f - out_f) / in_f * 100.0).max(0.0)
     };
 
+    let amount_in_display = format!("{:.6}", amount_minimal as f64 / 10f64.powi(in_decimals as i32));
+    let amount_out_display = format!("{:.6}", amount_out as f64 / 10f64.powi(out_decimals as i32));
+    let min_expected_display = format!("{:.6}", min_expected as f64 / 10f64.powi(out_decimals as i32));
+
     println!(
         "{}",
         serde_json::json!({
@@ -95,8 +99,11 @@ pub async fn run(
             "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
             "token_in": { "symbol": in_symbol, "address": token_in_addr, "index": in_idx },
             "token_out": { "symbol": out_symbol, "address": token_out_addr, "index": out_idx },
+            "amount_in": amount_in_display,
             "amount_in_raw": amount_minimal.to_string(),
+            "amount_out": amount_out_display,
             "amount_out_raw": amount_out.to_string(),
+            "min_expected": min_expected_display,
             "min_expected_raw": min_expected.to_string(),
             "slippage_pct": slippage * 100.0,
             "price_impact_pct": format!("{:.4}", price_impact_pct),
