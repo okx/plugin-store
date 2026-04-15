@@ -1,6 +1,6 @@
 ---
 name: kamino-lend-plugin
-version: "0.1.4"
+version: "0.1.2"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol
 author: GeoGu360
 ---
@@ -18,7 +18,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-lend-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.4"
+LOCAL_VER="0.1.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
