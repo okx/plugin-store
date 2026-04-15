@@ -1,0 +1,24 @@
+{
+  "name": "xlayer-execution-guard",
+  "description": "Complete pre-execution judgment + post-execution proof pipeline for autonomous AI agents with closed-loop validation",
+  "version": "1.0.0",
+  "author": {
+    "name": "Richard",
+    "email": "ritsuyan4763@gmail.com"
+  },
+  "homepage": "https://github.com/miraix-interface/xlayer-execution-guard",
+  "repository": "https://github.com/miraix-interface/xlayer-execution-guard",
+  "license": "MIT",
+  "keywords": [
+    "xlayer",
+    "onchainos",
+    "execution",
+    "trading",
+    "arbitrage",
+    "honeypot",
+    "route-referee",
+    "proof-kit",
+    "agent",
+    "defi"
+  ]
+}
