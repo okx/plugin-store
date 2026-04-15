@@ -31,7 +31,7 @@ pub struct RemoveLiquidityArgs {
     pub wallet: Option<String>,
 }
 
-pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Result<()> {
+pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool, confirm: bool) -> anyhow::Result<()> {
     let client = Client::new();
 
     // ── 1. Resolve wallet ────────────────────────────────────────────────────
@@ -113,6 +113,21 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
             println!("{}", serde_json::to_string_pretty(&output)?);
             return Ok(());
         }
+        // Confirm gate for empty-position close
+        if !confirm {
+            let preview = serde_json::json!({
+                "ok": true,
+                "preview": true,
+                "operation": "remove-liquidity",
+                "pool": args.pool,
+                "position": args.position,
+                "wallet": wallet_str,
+                "action": "close_empty_position",
+                "note": "Re-run with --confirm to execute on-chain."
+            });
+            println!("{}", serde_json::to_string_pretty(&preview)?);
+            return Ok(());
+        }
         let blockhash = solana_rpc::get_latest_blockhash(&client).await?;
         let mut instructions = Vec::new();
         if !ata_x_exists {
@@ -191,6 +206,25 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
             "bin_array_upper_pda": bin_array_upper.to_string(),
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
+        return Ok(());
+    }
+
+    // Confirm gate: show preview and exit unless --confirm passed
+    if !confirm {
+        let preview = json!({
+            "ok": true,
+            "preview": true,
+            "operation": "remove-liquidity",
+            "pool": args.pool,
+            "position": args.position,
+            "wallet": wallet_str,
+            "pct": args.pct,
+            "lower_bin_id": lower_bin_id,
+            "upper_bin_id": upper_bin_id,
+            "will_close_position": args.close && bps_to_remove == 10000,
+            "note": "Re-run with --confirm to execute on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
         return Ok(());
     }
 

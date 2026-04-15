@@ -25,7 +25,9 @@ pub struct SwapArgs {
     pub wallet: Option<String>,
 }
 
-pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
+const MAX_PRICE_IMPACT_PCT: f64 = 5.0;
+
+pub async fn execute(args: &SwapArgs, dry_run: bool, confirm: bool) -> anyhow::Result<()> {
     // dry_run: show quote instead of executing swap
     if dry_run {
         let raw = onchainos::dex_quote_solana(
@@ -74,7 +76,55 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Resolve wallet address AFTER dry_run guard
+    // Fetch quote for confirm gate preview and price-impact check
+    let quote_raw = onchainos::dex_quote_solana(&args.from_token, &args.to_token, &args.amount)?;
+    let data0 = &quote_raw["data"][0];
+    let price_impact: f64 = data0["priceImpactPercent"]
+        .as_str()
+        .and_then(|s| s.parse::<f64>().ok())
+        .map(f64::abs)
+        .unwrap_or(0.0);
+
+    // Block high price impact unless user explicitly passes --force
+    if price_impact >= MAX_PRICE_IMPACT_PCT {
+        let out_symbol = data0["toToken"]["tokenSymbol"].as_str().unwrap_or("tokens");
+        anyhow::bail!(
+            "Price impact {:.2}% exceeds maximum allowed {:.1}%. \
+             Pass --force to execute anyway.\n\
+             Tip: reduce swap size or choose a pool with deeper liquidity.\n\
+             Estimated output: {} {}",
+            price_impact, MAX_PRICE_IMPACT_PCT,
+            data0["toTokenAmount"].as_str().unwrap_or("?"), out_symbol
+        );
+    }
+
+    // Confirm gate: show preview and exit unless --confirm passed
+    if !confirm {
+        let to_symbol = data0["toToken"]["tokenSymbol"].as_str().unwrap_or("?");
+        let from_symbol = data0["fromToken"]["tokenSymbol"].as_str().unwrap_or("?");
+        let to_decimals = data0["toToken"]["decimal"].as_str().and_then(|s| s.parse::<u32>().ok()).unwrap_or(6);
+        let out_raw = data0["toTokenAmount"].as_str().or_else(|| data0["outAmount"].as_str()).unwrap_or("0");
+        let out_readable = out_raw.parse::<u128>().ok()
+            .map(|r| format!("{:.6}", r as f64 / 10f64.powi(to_decimals as i32)))
+            .unwrap_or_else(|| "unknown".to_string());
+        let preview = serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "operation": "swap",
+            "from_token": args.from_token,
+            "from_symbol": from_symbol,
+            "to_token": args.to_token,
+            "to_symbol": to_symbol,
+            "amount": args.amount,
+            "estimated_output": out_readable,
+            "price_impact_pct": price_impact,
+            "note": "Re-run with --confirm to execute on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
+        return Ok(());
+    }
+
+    // Resolve wallet address AFTER confirm gate
     let wallet = if let Some(w) = &args.wallet {
         w.clone()
     } else {

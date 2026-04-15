@@ -1,7 +1,7 @@
 ---
 name: meteora-plugin
 description: "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, add and remove liquidity, quickstart wallet check"
-version: "0.3.5"
+version: "0.3.6"
 tags:
   - solana
   - dex

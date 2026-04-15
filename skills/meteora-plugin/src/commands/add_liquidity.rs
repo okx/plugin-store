@@ -36,7 +36,7 @@ pub struct AddLiquidityArgs {
 /// reading the pool state and executing the transaction.
 const Y_ONLY_SLIPPAGE: i32 = 5;
 
-pub async fn execute(args: &AddLiquidityArgs, dry_run: bool) -> anyhow::Result<()> {
+pub async fn execute(args: &AddLiquidityArgs, dry_run: bool, confirm: bool) -> anyhow::Result<()> {
     let client = Client::new();
 
     // ── 1. Resolve wallet ────────────────────────────────────────────────────
@@ -357,6 +357,28 @@ pub async fn execute(args: &AddLiquidityArgs, dry_run: bool) -> anyhow::Result<(
             "user_token_y_exists": ata_y_exists,
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
+        return Ok(());
+    }
+
+    // Confirm gate: show preview and exit unless --confirm passed
+    if !confirm {
+        let preview = json!({
+            "ok": true,
+            "preview": true,
+            "operation": "add-liquidity",
+            "pool": args.pool,
+            "wallet": wallet_str,
+            "amount_x": args.amount_x,
+            "amount_y": args.amount_y,
+            "token_x_mint": token_x_mint.to_string(),
+            "token_y_mint": token_y_mint.to_string(),
+            "active_id": pool.active_id,
+            "position_lower_bin_id": pos_lower,
+            "position_upper_bin_id": pos_upper,
+            "will_initialize_position": !position_exists,
+            "note": "Re-run with --confirm to execute on-chain."
+        });
+        println!("{}", serde_json::to_string_pretty(&preview)?);
         return Ok(());
     }
 
