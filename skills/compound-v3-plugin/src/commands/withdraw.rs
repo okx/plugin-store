@@ -45,6 +45,13 @@ pub async fn run(
     };
     let balance_type = if is_base { "supply balance" } else { "collateral balance" };
     let asset_factor = 10f64.powi(asset_decimals as i32);
+    if on_chain_balance == 0 {
+        anyhow::bail!(
+            "No {} of asset {} in this market. Supply the asset first before attempting to withdraw.",
+            balance_type,
+            asset
+        );
+    }
     if amount > on_chain_balance {
         anyhow::bail!(
             "Withdrawal amount {:.decimals$} exceeds your current {}: {:.decimals$} (raw: {}). \
