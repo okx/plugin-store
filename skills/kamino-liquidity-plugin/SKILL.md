@@ -4,8 +4,8 @@ description: "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to e
 license: MIT
 metadata:
   author: GeoGu360
-  version: "0.1.3"
-version: "0.1.3"
+  version: "0.1.1"
+version: "0.1.1"
 author: GeoGu360
 ---
 
@@ -22,7 +22,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-liquidity-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then

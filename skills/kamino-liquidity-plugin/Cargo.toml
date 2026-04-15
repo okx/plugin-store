@@ -1,6 +1,6 @@
 [package]
 name = "kamino-liquidity-plugin"
-version = "0.1.3"
+version = "0.1.1"
 edition = "2021"
 
 [[bin]]
