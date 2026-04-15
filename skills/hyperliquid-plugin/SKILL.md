@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.3.5"
+version: "0.3.2"
 author: GeoGu360
 tags:
   - perps
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.3.5"
+LOCAL_VER="0.3.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
