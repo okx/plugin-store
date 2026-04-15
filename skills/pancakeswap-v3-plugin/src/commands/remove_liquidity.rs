@@ -71,6 +71,12 @@ pub async fn run(args: RemoveLiquidityArgs) -> Result<()> {
     println!("  Owed fees:    {} {} / {} {}", pos.tokens_owed0, sym0, pos.tokens_owed1, sym1);
     println!("  NPM:          {}", cfg.npm);
 
+    // Preview gate: if --confirm not passed and not dry-run, show details and exit without broadcasting
+    if !args.confirm && !args.dry_run {
+        println!("\nPreview only — no transactions submitted. Add --confirm to execute.");
+        return Ok(());
+    }
+
     // Deadline: 20 minutes from now
     let deadline = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
