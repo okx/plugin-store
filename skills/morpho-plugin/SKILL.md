@@ -1,7 +1,7 @@
 ---
 name: morpho-plugin
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.4"
+version: "0.2.2"
 author: "GeoGu360"
 tags:
   - lending
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/morpho-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.4"
+LOCAL_VER="0.2.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
