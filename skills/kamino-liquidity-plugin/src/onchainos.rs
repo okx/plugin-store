@@ -67,7 +67,8 @@ pub async fn wallet_contract_call_solana(
             "--to",
             to,
             "--unsigned-tx",
-            &tx_base58
+            &tx_base58,
+            "--force",
         ])
         .output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
