@@ -43,11 +43,7 @@ Publicly, it can credibly describe these capabilities:
 
 ## Why it fits Skill Arena
 
-- reusable agent workflow
-- technically legible and installable
-- strong natural-language surface for operators and AI agents
-- grounded in **OKX OnchainOS** as the main public intelligence layer
-- turns fragmented onchain and market data into structured decision support
+BPB Lite gives agents a reusable way to interpret Solana movement instead of just listing token facts. It is installable, technically legible, grounded in **OKX OnchainOS** as the main public intelligence layer, and turns fragmented onchain and market data into structured decision support.
 
 ## What makes it different
 
@@ -100,12 +96,6 @@ The five screenshots together tell a simple story:
 BPB Lite should be framed as OKX-powered signal intelligence, not just a generic scanner.
 
 OKX OnchainOS is the main public intelligence layer behind the workflow. It helps BPB interpret market structure, venue context, token state, and momentum conditions in a way that is useful for real operator decisions.
-
-## Socials and links
-
-- X: https://x.com/BasedPings
-- Telegram: https://t.me/BasedPingBot
-- OKX ref: https://web3.okx.com/join/BasedPings
 
 ## Suggested tags
 

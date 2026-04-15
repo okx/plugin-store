@@ -340,12 +340,6 @@ It combines movement, structure, attribution, wallet context, and lock context i
 
 The repo does not stop at theory. It shows the signal loop with real examples, readable outputs, and product surfaces that make sense to an operator immediately.
 
-## Socials
-
-- X: <https://x.com/BasedPings>
-- Telegram: <https://t.me/BasedPingBot>
-- OKX ref: <https://web3.okx.com/join/BasedPings>
-
 ## License
 
 MIT
