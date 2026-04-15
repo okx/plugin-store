@@ -45,6 +45,15 @@ pub async fn wallet_contract_call(
             "calldata": input_data
         }));
     }
+    if !force {
+        // Preview mode: --confirm not passed, do not broadcast
+        return Ok(serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --confirm to broadcast this transaction",
+            "calldata": input_data
+        }));
+    }
     let chain_str = chain_id.to_string();
     let mut args = vec![
         "wallet",
