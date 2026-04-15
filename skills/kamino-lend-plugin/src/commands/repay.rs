@@ -29,6 +29,14 @@ pub struct RepayArgs {
 }
 
 pub async fn run(args: RepayArgs) -> anyhow::Result<()> {
+    // Validate amount
+    let amount_f: f64 = args.amount.parse().map_err(|_| {
+        anyhow::anyhow!("Invalid amount '{}': must be a positive number", args.amount)
+    })?;
+    if amount_f <= 0.0 {
+        anyhow::bail!("Amount must be greater than 0, got '{}'", args.amount);
+    }
+
     if args.dry_run {
         println!(
             "{}",
