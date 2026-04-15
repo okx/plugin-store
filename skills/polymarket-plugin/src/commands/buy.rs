@@ -177,17 +177,30 @@ pub async fn run(
         fp
     };
 
-    // Build order amounts using GCD-based integer arithmetic.
+    // Build order amounts using integer arithmetic.
+    //
+    // Constraint: maker_amount_raw = price_ticks × taker_amount_raw / tick_scale
+    // must be a non-negative integer (USDC in millionths).
+    //
+    // The minimum taker_amount_raw (shares in millionths) that satisfies this is:
+    //   tick_scale / gcd(price_ticks, tick_scale)
+    //
+    // However, since Polymarket treats outcome token amounts as whole shares,
+    // we align to 1 share (1_000_000 raw) as the minimum step. We then find
+    // the smallest multiple of 1 share for which the USDC amount is also an integer.
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 { let t = b; b = a % b; a = t; }
         a
     }
     let tick_scale = (1.0 / tick_size).round() as u128;
     let price_ticks = (limit_price / tick_size).round() as u128;
-    let g = gcd(price_ticks, tick_scale * 10_000);
-    let step_raw = tick_scale * 10_000 / g;
-    let g2 = gcd(step_raw, 10_000);
-    let step = step_raw / g2 * 10_000;
+    const SHARE_RAW: u128 = 1_000_000; // 1 whole share in raw units (6 decimal places)
+    // Minimum k such that price_ticks × (k × SHARE_RAW) is divisible by tick_scale.
+    // = tick_scale / gcd(price_ticks × SHARE_RAW, tick_scale)
+    let g = gcd(price_ticks * SHARE_RAW % tick_scale.max(1), tick_scale.max(1));
+    let shares_per_step = tick_scale.max(1) / g.max(1);
+    // step is in share-raw units (millionths of shares)
+    let step = shares_per_step * SHARE_RAW;
 
     let max_taker_raw = (usdc_amount / limit_price * 1_000_000.0).floor() as u128;
     let mut taker_amount_raw = if round_up {

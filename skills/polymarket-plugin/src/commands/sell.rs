@@ -180,17 +180,22 @@ pub async fn run(
         }
     };
 
-    // Build order amounts (SELL) using GCD-based integer arithmetic.
+    // Build order amounts (SELL) using integer arithmetic.
+    //
+    // Constraint: taker_amount_raw = price_ticks × maker_amount_raw / tick_scale
+    // must be a non-negative integer (USDC in millionths).
+    //
+    // Align to whole shares (1_000_000 raw) as the minimum step — same logic as buy.
     fn gcd(mut a: u128, mut b: u128) -> u128 {
         while b != 0 { let t = b; b = a % b; a = t; }
         a
     }
     let tick_scale = (1.0 / tick_size).round() as u128;
     let price_ticks = (limit_price / tick_size).round() as u128;
-    let g = gcd(price_ticks, tick_scale * 10_000);
-    let step_raw = tick_scale * 10_000 / g;
-    let g2 = gcd(step_raw, 10_000);
-    let step = step_raw / g2 * 10_000;
+    const SHARE_RAW: u128 = 1_000_000;
+    let g = gcd((price_ticks * SHARE_RAW) % tick_scale.max(1), tick_scale.max(1));
+    let shares_per_step = tick_scale.max(1) / g.max(1);
+    let step = shares_per_step * SHARE_RAW;
 
     let max_maker_raw = (share_amount * 1_000_000.0).floor() as u128;
     let maker_amount_raw = (max_maker_raw / step) * step;
