@@ -34,27 +34,40 @@ pub async fn run(args: MarketsArgs) -> anyhow::Result<()> {
             }
         }
 
-        // For the main market, fetch APY data for key reserves
+        // Fetch APY data for key reserves of all known markets
         let mut reserves_info = Vec::new();
-        if is_primary || market_pubkey == config::MAIN_MARKET {
-            let known_reserves = [
+        let known_reserves: &[(&str, &str)] = match market_pubkey {
+            pk if pk == config::MAIN_MARKET => &[
                 ("USDC", "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59"),
-                ("SOL", "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"),
-            ];
-            for (symbol, reserve_addr) in &known_reserves {
-                if let Ok(metrics) = api::get_reserve_metrics(market_pubkey, reserve_addr).await {
-                    if let Some(latest) = get_latest_metrics(&metrics) {
-                        reserves_info.push(serde_json::json!({
-                            "symbol": symbol,
-                            "reserve": reserve_addr,
-                            "supply_apy": format_pct(latest["supplyInterestAPY"].as_f64()),
-                            "borrow_apy": format_pct(latest["borrowInterestAPY"].as_f64()),
-                            "deposit_tvl": format_usd(latest["depositTvl"].as_str()),
-                            "borrow_tvl": format_usd(latest["borrowTvl"].as_str()),
-                            "total_liquidity": latest["totalLiquidity"].as_str().unwrap_or("0"),
-                            "ltv": latest["loanToValue"].as_f64().unwrap_or(0.0),
-                        }));
-                    }
+                ("SOL",  "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"),
+            ],
+            pk if pk == config::JLP_MARKET => &[
+                ("USDC", "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59"),
+                ("SOL",  "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"),
+            ],
+            pk if pk == config::ALTCOIN_MARKET => &[
+                ("USDC", "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59"),
+                ("SOL",  "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"),
+            ],
+            _ if is_primary => &[
+                ("USDC", "D6q6wuQSrifJKZYpR1M8R4YawnLDtDsMmWM1NbBmgJ59"),
+                ("SOL",  "d4A2prbA2whesmvHaL88BH6Ewn5N4bTSU2Ze8P6Bc4Q"),
+            ],
+            _ => &[],
+        };
+        for (symbol, reserve_addr) in known_reserves {
+            if let Ok(metrics) = api::get_reserve_metrics(market_pubkey, reserve_addr).await {
+                if let Some(latest) = get_latest_metrics(&metrics) {
+                    reserves_info.push(serde_json::json!({
+                        "symbol": symbol,
+                        "reserve": reserve_addr,
+                        "supply_apy": format_pct(latest["supplyInterestAPY"].as_f64()),
+                        "borrow_apy": format_pct(latest["borrowInterestAPY"].as_f64()),
+                        "deposit_tvl": format_usd(latest["depositTvl"].as_str()),
+                        "borrow_tvl": format_usd(latest["borrowTvl"].as_str()),
+                        "total_liquidity": latest["totalLiquidity"].as_str().unwrap_or("0"),
+                        "ltv": latest["loanToValue"].as_f64().unwrap_or(0.0),
+                    }));
                 }
             }
         }

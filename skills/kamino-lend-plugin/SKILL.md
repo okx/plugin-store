@@ -1,6 +1,6 @@
 ---
 name: kamino-lend-plugin
-version: "0.1.3"
+version: "0.1.4"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol
 author: GeoGu360
 ---
@@ -18,7 +18,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-lend-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -91,7 +91,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.3/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.4/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-lend-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -99,7 +99,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/kamino-lend-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.3" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
+echo "0.1.4" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -119,7 +119,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"kamino-lend-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"kamino-lend-plugin","version":"0.1.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -168,9 +168,18 @@ Trigger phrases:
 ```bash
 kamino-lend markets
 kamino-lend markets --name "main"
+kamino-lend markets --name "jlp"
+kamino-lend markets --name "altcoin"
 ```
 
 Expected output: List of markets with supply APY, borrow APY, and TVL for each reserve.
+
+**Supported markets:**
+- **Main market** (`7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF`): USDC, SOL and other blue-chip assets
+- **JLP market** (`DxXdAyU3kCjnyggvHmY5nAwg5cRbbmdyX3npfDMjjMek`): Jupiter LP token as collateral
+- **Altcoin market** (`ByYiZxp8QrdN9qbdtaAiePN8AAr3qvTPppNJDpf5DVJ5`): SOL, mSOL, jitoSOL, and other liquid staking tokens
+
+All known markets are returned by default; use `--name` to filter by name substring.
 
 ---
 
@@ -219,7 +228,7 @@ kamino-lend supply --token USDC --amount 0.01 --dry-run
 
 Parameters:
 - `--token`: Token symbol (USDC, SOL) or reserve address
-- `--amount`: Amount in UI units (0.01 USDC = 0.01, NOT 10000)
+- `--amount`: Amount in UI units (0.01 USDC = 0.01, NOT 10000); must be greater than 0
 - `--dry-run`: Preview without submitting (optional)
 - `--wallet`: Override wallet address (optional)
 - `--market`: Override market address (optional)
@@ -264,6 +273,10 @@ kamino-lend borrow --token USDC --amount 0.01 --dry-run
 ```
 
 **Note:** Borrowing requires prior collateral supply. Use `--dry-run` to preview. To borrow for real, omit `--dry-run` and **confirm** the transaction.
+
+**Amount validation:** `--amount` must be a positive number greater than 0.
+
+**Response includes `health_factor`:** After a successful borrow, the response JSON includes `data.health_factor` — the updated ratio of `liquidationLtv / loanToValue` (values > 1.0 are safe; values approaching 1.0 risk liquidation). `null` if positions cannot be fetched post-borrow.
 
 Before executing a real borrow, **ask user to confirm** and warn about liquidation risk.
 
