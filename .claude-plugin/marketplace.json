@@ -151,6 +151,15 @@
       }
     },
     {
+      "name": "one-click-token-launch",
+      "description": "One-click multi-launchpad token creation with bundled buy, IPFS metadata, MEV protection across 6 launchpads on Solana and BSC",
+      "source": "./skills/one-click-token-launch",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
+    },
+    {
       "name": "orca-plugin",
       "description": "Concentrated liquidity AMM on Solana — swap tokens and query pools via the Whirlpools CLMM program",
       "source": "./skills/orca-plugin",
