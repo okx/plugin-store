@@ -81,18 +81,32 @@ pub async fn run(args: AddLiquidityArgs) -> anyhow::Result<()> {
         amount_b_desired_raw
     };
 
+    // Preview gate — emit structured preview and exit before any wallet/on-chain calls
+    if !args.confirm && !args.dry_run {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --confirm to broadcast",
+            "data": {
+                "action": "add-liquidity",
+                "token_a": token_a,
+                "token_b": token_b,
+                "stable": args.stable,
+                "amount_a_desired": amount_a_desired,
+                "amount_b_desired": amount_b_desired,
+                "amount_a_min": amount_a_min,
+                "amount_b_min": amount_b_min
+            }
+        }))?);
+        return Ok(());
+    }
+
     // --- 3. Resolve recipient ---
     let recipient = if args.dry_run {
         "0x0000000000000000000000000000000000000000".to_string()
     } else {
         resolve_wallet(CHAIN_ID)?
     };
-
-    println!(
-        "Adding liquidity: {}/{} stable={} amountA={} amountB={}",
-        token_a, token_b, args.stable, amount_a_desired, amount_b_desired
-    );
-    println!("Please confirm the add-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
 
     // --- 4. Approve token A if needed ---
     if !args.dry_run {
