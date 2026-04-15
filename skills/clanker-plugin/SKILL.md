@@ -345,12 +345,17 @@ clanker [--chain 8453] [--dry-run] deploy-token \
 
 **Example:**
 ```bash
-# Preview
+# Preview without wallet (uses zero address as placeholder)
 clanker --dry-run deploy-token --name "SkyDog" --symbol "SKYDOG"
+
+# Preview with your wallet (shows the deployer address in the preview output)
+clanker --dry-run deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 
 # Deploy (after user confirmation)
 clanker deploy-token --name "SkyDog" --symbol "SKYDOG" --from 0xYourWallet
 ```
+
+> **Note on `--from` in dry-run:** Passing `--from <wallet_address>` to `--dry-run` affects the preview output — the deployer address shown in the response will be your wallet address instead of a placeholder. This is useful to verify the token admin / fee recipient is set correctly before deploying.
 
 **Expected output:**
 <external-content>

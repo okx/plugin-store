@@ -1,13 +1,13 @@
-# clanker
-Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum with support for token launching, creator search, and LP fee rewards.
+# clanker-plugin
+Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards.
 
 ## Highlights
-- Deploy ERC-20 tokens on Base and Arbitrum via Clanker REST API
+- Deploy ERC-20 tokens directly on-chain via Clanker V4 factory (Base)
 - Search tokens by creator address or Farcaster username
 - List recently deployed tokens with pagination and filtering
-- Get real-time token metadata and price information
+- Get real-time token info including price data from oracles
 - Claim LP fee rewards for deployed tokens
 - Built-in security scanning for token safety verification
-- Support for token vaults with customizable lockup periods
-- Automatic gas estimation and transaction confirmation flows
+- MEV protection and automated liquidity positioning
+- Support for Base (8453) and Arbitrum One (42161) chains
 
