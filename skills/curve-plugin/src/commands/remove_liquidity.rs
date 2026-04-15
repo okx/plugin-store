@@ -10,6 +10,7 @@ pub async fn run(
     min_amount_strs: Vec<String>,  // human-readable min amounts per coin
     wallet: Option<String>,
     dry_run: bool,
+    confirm: bool,
 ) -> Result<()> {
     let chain_name = config::chain_name(chain_id);
     let rpc_url = config::rpc_url(chain_id);
@@ -134,6 +135,28 @@ pub async fn run(
             _ => anyhow::bail!("Unsupported pool coin count: {}", n_coins),
         }
     };
+
+    // Confirm gate: show preview and exit if --confirm not given (and not dry-run)
+    if !dry_run && !confirm {
+        let pool_name = pool.map(|p| p.name.as_str()).unwrap_or("unknown");
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "preview": true,
+                "operation": "remove-liquidity",
+                "chain": chain_name,
+                "pool_address": pool_address,
+                "pool_name": pool_name,
+                "lp_amount": lp_amount_str,
+                "lp_amount_raw": actual_lp_amount.to_string(),
+                "coin_index": coin_index,
+                "calldata": calldata,
+                "note": "Re-run with --confirm to execute on-chain."
+            })
+        );
+        return Ok(());
+    }
 
     if dry_run {
         println!(

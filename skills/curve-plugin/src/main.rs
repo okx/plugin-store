@@ -9,7 +9,7 @@ mod rpc;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "curve", about = "Curve DEX plugin — swap, add/remove liquidity, query pools")]
+#[command(name = "curve", version, about = "Curve DEX plugin — swap, add/remove liquidity, query pools")]
 struct Cli {
     /// Chain ID (1=Ethereum, 42161=Arbitrum, 8453=Base, 137=Polygon, 56=BSC)
     #[arg(long, default_value = "1")]
@@ -18,6 +18,10 @@ struct Cli {
     /// Simulate without broadcasting on-chain transactions
     #[arg(long)]
     dry_run: bool,
+
+    /// Execute the transaction on-chain. Without this flag write operations show a preview and exit.
+    #[arg(long, global = true)]
+    confirm: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -166,7 +170,7 @@ async fn main() {
             slippage,
             wallet,
         } => {
-            commands::swap::run(chain_id, token_in, token_out, amount, slippage, wallet, dry_run)
+            commands::swap::run(chain_id, token_in, token_out, amount, slippage, wallet, dry_run, cli.confirm)
                 .await
         }
         Commands::AddLiquidity {
@@ -179,7 +183,7 @@ async fn main() {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect();
-            commands::add_liquidity::run(chain_id, pool, amount_strs, min_mint, wallet, dry_run)
+            commands::add_liquidity::run(chain_id, pool, amount_strs, min_mint, wallet, dry_run, cli.confirm)
                 .await
         }
         Commands::RemoveLiquidity {
@@ -201,6 +205,7 @@ async fn main() {
                 min_amount_strs,
                 wallet,
                 dry_run,
+                cli.confirm,
             )
             .await
         }

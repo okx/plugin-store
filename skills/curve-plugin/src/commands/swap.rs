@@ -17,6 +17,7 @@ pub async fn run(
     slippage: f64,
     wallet: Option<String>,
     dry_run: bool,
+    confirm: bool,
 ) -> Result<()> {
     let chain_name = config::chain_name(chain_id);
     let rpc_url = config::rpc_url(chain_id);
@@ -96,6 +97,31 @@ pub async fn run(
     } else {
         curve_abi::encode_exchange(in_idx as i64, out_idx as i64, amount_minimal, min_expected)
     };
+
+    // Confirm gate: show preview and exit if --confirm not given (and not dry-run)
+    if !dry_run && !confirm {
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "preview": true,
+                "operation": "swap",
+                "chain": chain_name,
+                "pool": { "id": pool.id, "name": pool.name, "address": pool.address },
+                "token_in": { "symbol": in_symbol, "address": token_in_addr, "index": in_idx },
+                "token_out": { "symbol": out_symbol, "address": token_out_addr, "index": out_idx },
+                "amount_in": amount_in,
+                "amount_in_raw": amount_minimal.to_string(),
+                "expected_out_raw": amount_out.to_string(),
+                "min_expected_raw": min_expected.to_string(),
+                "slippage_pct": slippage * 100.0,
+                "calldata": calldata,
+                "target_contract": pool.address,
+                "note": "Re-run with --confirm to execute this swap on-chain."
+            })
+        );
+        return Ok(());
+    }
 
     if dry_run {
         println!(

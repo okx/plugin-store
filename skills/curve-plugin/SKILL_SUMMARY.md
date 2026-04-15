@@ -1,22 +1,22 @@
 
-# curve -- Skill Summary
+# curve-plugin -- Skill Summary
 
 ## Overview
-The Curve plugin enables interaction with Curve Finance, a decentralized exchange optimized for stablecoin trading with low slippage. It provides comprehensive functionality for swapping tokens, managing liquidity positions, and querying pool data across five major blockchain networks including Ethereum, Arbitrum, Base, Polygon, and BSC.
+The curve-plugin enables AI agents to interact with Curve Finance, a leading decentralized exchange specializing in stablecoin trading and liquidity provision. It provides comprehensive functionality for swapping tokens, managing liquidity positions, and querying pool data across Ethereum, Arbitrum, Base, Polygon, and BSC networks. The plugin emphasizes safety with confirmation gates for write operations and automatic handling of ERC-20 approvals.
 
 ## Usage
-Trigger the plugin with phrases like "swap on Curve", "Curve pool APY", "add liquidity Curve", or "Curve quote". All write operations use dry-run previews and require user confirmation before execution.
+Install the plugin and run commands prefixed with `curve --chain <chain_id>`. All write operations require the `--confirm` flag to execute on-chain, otherwise they return a preview JSON for user confirmation.
 
 ## Commands
-| Command | Purpose |
-|---------|---------|
-| `get-pools` | List available Curve pools with TVL and APY data |
-| `get-pool-info` | Get detailed information about a specific pool |
-| `get-balances` | Check LP token balances for a wallet |
-| `quote` | Get swap quotes between tokens |
-| `swap` | Execute token swaps on Curve |
-| `add-liquidity` | Add liquidity to Curve pools |
-| `remove-liquidity` | Remove liquidity from pools (proportional or single-coin) |
+| Command | Description |
+|---------|-------------|
+| `get-pools` | List Curve pools with TVL and APY data |
+| `get-pool-info --pool <address>` | Get detailed pool information including fees and virtual price |
+| `get-balances` | Show LP token balances across all Curve positions |
+| `quote --token-in <token> --token-out <token> --amount <amount>` | Get swap quote without execution |
+| `swap --token-in <token> --token-out <token> --amount <amount> [--confirm]` | Execute token swap (requires --confirm) |
+| `add-liquidity --pool <address> --amounts <amounts> [--confirm]` | Add liquidity to pool (requires --confirm) |
+| `remove-liquidity --pool <address> [--coin-index <i>] [--confirm]` | Remove liquidity from pool (requires --confirm) |
 
 ## Triggers
-Activate this skill when users want to perform stablecoin swaps, manage liquidity on Curve Finance, or query Curve pool information and APY rates. Use for phrases containing "Curve swap", "Curve liquidity", "Curve pool", or "Curve quote".
+Activate this skill when users mention Curve DEX operations like "swap on Curve", "Curve pool APY", "add liquidity to Curve", or "remove Curve LP tokens". Also trigger for stablecoin swaps where Curve offers better rates than other DEXs.

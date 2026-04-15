@@ -1,7 +1,7 @@
 ---
 name: curve-plugin
 description: "Curve DEX plugin for swapping stablecoins and managing liquidity on Curve Finance. Trigger phrases: swap on Curve, Curve swap, add liquidity Curve, remove liquidity Curve, Curve pool APY, Curve pools, get Curve quote."
-version: "0.2.6"
+version: "0.2.7"
 author: "GeoGu360"
 tags:
   - dex
@@ -24,7 +24,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/curve-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.6"
+LOCAL_VER="0.2.7"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -97,7 +97,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/curve-plugin@0.2.6/curve-plugin-${TARGET}${EXT}" -o ~/.local/bin/.curve-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/curve-plugin@0.2.7/curve-plugin-${TARGET}${EXT}" -o ~/.local/bin/.curve-plugin-core${EXT}
 chmod +x ~/.local/bin/.curve-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -105,7 +105,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/curve-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.6" > "$HOME/.plugin-store/managed/curve-plugin"
+echo "0.2.7" > "$HOME/.plugin-store/managed/curve-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -125,7 +125,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"curve-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
+    -d '{"name":"curve-plugin","version":"0.2.7"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -151,11 +151,23 @@ fi
 - Read ops (`get-pools`, `get-pool-info`, `get-balances`, `quote`) → direct `eth_call` via public RPC; no confirmation needed
 - Write ops (`swap`, `add-liquidity`, `remove-liquidity`) → after user confirmation, submits via `onchainos wallet contract-call`
 
-## Execution Flow for Write Operations
+## Confirm Gate for Write Operations
 
-1. Run with `--dry-run` first to preview calldata and expected output
+All write operations (`swap`, `add-liquidity`, `remove-liquidity`) require `--confirm` to execute on-chain. Without `--confirm`, the command prints a JSON preview of what would happen and exits. This is the default safe mode.
+
+```bash
+# Preview (default — no --confirm)
+curve --chain 1 swap --token-in USDC --token-out DAI --amount 1000.0
+# → prints preview JSON and exits
+
+# Execute on-chain
+curve --chain 1 --confirm swap --token-in USDC --token-out DAI --amount 1000.0
+```
+
+**Execution flow:**
+1. Run without `--confirm` to preview calldata and expected output
 2. **Ask user to confirm** before executing on-chain
-3. Execute only after explicit user approval
+3. Re-run with `--confirm` to execute
 4. Report transaction hash and block explorer link
 
 ## Supported Chains
@@ -320,7 +332,7 @@ curve --chain <chain_id> quote --token-in <symbol|address> --token-out <symbol|a
 
 **Usage:**
 ```
-curve --chain <chain_id> [--dry-run] swap --token-in <symbol|address> --token-out <symbol|address> --amount <human_amount> [--slippage 0.005] [--wallet <address>]
+curve --chain <chain_id> [--confirm] [--dry-run] swap --token-in <symbol|address> --token-out <symbol|address> --amount <human_amount> [--slippage 0.005] [--wallet <address>]
 ```
 
 **Parameters:**
@@ -329,18 +341,23 @@ curve --chain <chain_id> [--dry-run] swap --token-in <symbol|address> --token-ou
 - `--amount` — Input amount in human-readable units (e.g. `1.0` = 1 USDC); decimals resolved automatically from pool data
 - `--slippage` — Slippage tolerance (default: 0.005)
 - `--wallet` — Sender address (default: onchainos active wallet)
-- `--dry-run` — Preview without broadcasting
+- `--confirm` — Execute on-chain (without this flag, shows preview and exits)
+- `--dry-run` — Preview calldata without broadcasting
 
 **Execution flow:**
-1. Run `--dry-run` to preview expected output and calldata
+1. Run without `--confirm` to preview expected output and calldata
 2. **Ask user to confirm** the swap parameters and expected output
-3. Check ERC-20 allowance; if insufficient, approve and **wait for approval tx confirmation** via `onchainos wallet history`
-4. Execute swap via `onchainos wallet contract-call` with `--force`
-5. Report `txHash` and block explorer link
+3. Re-run with `--confirm` to execute on-chain
+4. Check ERC-20 allowance; if insufficient, approve and **wait for approval tx confirmation** via `onchainos wallet history`
+5. Execute swap via `onchainos wallet contract-call` with `--force`
+6. Report `txHash` and block explorer link
 
 **Example:**
-```
+```bash
+# Preview
 curve --chain 1 swap --token-in USDC --token-out DAI --amount 1000.0 --slippage 0.005
+# Execute
+curve --chain 1 --confirm swap --token-in USDC --token-out DAI --amount 1000.0 --slippage 0.005
 ```
 
 ---
@@ -351,7 +368,7 @@ curve --chain 1 swap --token-in USDC --token-out DAI --amount 1000.0 --slippage 
 
 **Usage:**
 ```
-curve --chain <chain_id> [--dry-run] add-liquidity --pool <pool_address> --amounts <a1,a2,...> [--min-mint 0] [--wallet <address>]
+curve --chain <chain_id> [--confirm] [--dry-run] add-liquidity --pool <pool_address> --amounts <a1,a2,...> [--min-mint 0] [--wallet <address>]
 ```
 
 **Parameters:**
@@ -359,17 +376,22 @@ curve --chain <chain_id> [--dry-run] add-liquidity --pool <pool_address> --amoun
 - `--amounts` — Comma-separated token amounts in human-readable units matching pool coin order (e.g. `"0,500.0,500.0"` for 3pool: DAI,USDC,USDT); decimals resolved automatically from pool data
 - `--min-mint` — Minimum LP tokens to accept in human-readable units (default: 0)
 - `--wallet` — Sender address
+- `--confirm` — Execute on-chain (without this flag, shows preview and exits)
 
 **Execution flow:**
-1. Run `--dry-run` to preview calldata
+1. Run without `--confirm` to preview calldata
 2. **Ask user to confirm** the amounts and pool address
-3. For each non-zero token: check allowance; if insufficient, approve and **wait for each approval tx confirmation** via `onchainos wallet history` before proceeding
-4. Execute `add_liquidity` via `onchainos wallet contract-call` with `--force`
-5. Report `txHash` and estimated LP tokens received
+3. Re-run with `--confirm` to execute on-chain
+4. For each non-zero token: check allowance; if insufficient, approve and **wait for each approval tx confirmation** via `onchainos wallet history` before proceeding
+5. Execute `add_liquidity` via `onchainos wallet contract-call` with `--force`
+6. Report `txHash` and estimated LP tokens received
 
 **Example — 3pool (DAI/USDC/USDT), supply 500 USDC + 500 USDT:**
-```
+```bash
+# Preview
 curve --chain 1 add-liquidity --pool 0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7 --amounts "0,500.0,500.0"
+# Execute
+curve --chain 1 --confirm add-liquidity --pool 0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7 --amounts "0,500.0,500.0"
 ```
 
 ---
@@ -380,7 +402,7 @@ curve --chain 1 add-liquidity --pool 0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7 
 
 **Usage:**
 ```
-curve --chain <chain_id> [--dry-run] remove-liquidity --pool <pool_address> [--lp-amount <raw>] [--coin-index <i>] [--min-amounts <a1,a2>] [--wallet <address>]
+curve --chain <chain_id> [--confirm] [--dry-run] remove-liquidity --pool <pool_address> [--lp-amount <raw>] [--coin-index <i>] [--min-amounts <a1,a2>] [--wallet <address>]
 ```
 
 **Parameters:**
@@ -389,23 +411,31 @@ curve --chain <chain_id> [--dry-run] remove-liquidity --pool <pool_address> [--l
 - `--coin-index` — Coin index for single-coin withdrawal (omit for proportional)
 - `--min-amounts` — Minimum amounts to receive in human-readable units (default: 0); pass as many values as pool coins (2, 3, or 4); decimals resolved automatically from pool data
 - `--wallet` — Sender address
+- `--confirm` — Execute on-chain (without this flag, shows preview and exits)
 
 **Execution flow:**
 1. Query LP token balance for the pool
 2. If `--coin-index` provided: estimate single-coin output via `calc_withdraw_one_coin`
-3. Run `--dry-run` to preview
+3. Run without `--confirm` to preview
 4. **Ask user to confirm** before proceeding
-5. Execute `remove_liquidity` or `remove_liquidity_one_coin` via `onchainos wallet contract-call` with `--force`
-6. Report `txHash` and explorer link
+5. Re-run with `--confirm` to execute on-chain
+6. Execute `remove_liquidity` or `remove_liquidity_one_coin` via `onchainos wallet contract-call` with `--force`
+7. Report `txHash` and explorer link
 
 **Example — remove all LP as USDC (coin index 1 in 3pool):**
-```
+```bash
+# Preview
 curve --chain 1 remove-liquidity --pool 0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7 --coin-index 1 --min-amounts 0
+# Execute
+curve --chain 1 --confirm remove-liquidity --pool 0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7 --coin-index 1 --min-amounts 0
 ```
 
 **Example — proportional withdrawal from 2-pool:**
-```
+```bash
+# Preview
 curve --chain 42161 remove-liquidity --pool <2pool_addr> --min-amounts "0,0"
+# Execute
+curve --chain 42161 --confirm remove-liquidity --pool <2pool_addr> --min-amounts "0,0"
 ```
 
 ---
@@ -433,6 +463,9 @@ curve --chain 42161 remove-liquidity --pool <2pool_addr> --min-amounts "0,0"
 | `token_in.symbol` shows raw address in output | Symbol not resolved when input was an address | Fixed in v0.2.2: symbol and decimals resolved from pool coin data |
 | `--amounts "0,500000000,500000000"` causes wrong add-liquidity amount or confusion | `add-liquidity --amounts` expected raw minimal units | Fixed in v0.2.3: `--amounts` now accepts human-readable values (e.g. `"0,500.0,500.0"`); decimals resolved per coin from pool data |
 | `--lp-amount 1000000000000000000` rejected with "invalid digit" or wrong amount | `--lp-amount` and `--min-amounts` for remove-liquidity expected raw u128 integers | Fixed in v0.2.3: both accept human-readable decimal strings (e.g. `--lp-amount 1.5`); LP tokens always 18 decimals |
+
+| `--version` flag not recognized | Old binary missing version support | Fixed in v0.2.7: `--version` now prints `curve X.Y.Z` |
+| `swap`/`add-liquidity`/`remove-liquidity` executed without confirmation | No confirm gate in prior versions | Fixed in v0.2.7: write commands require `--confirm` to execute; without it, a preview JSON is returned |
 
 ## Security Notes
 
