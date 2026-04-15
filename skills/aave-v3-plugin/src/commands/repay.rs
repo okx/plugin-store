@@ -58,24 +58,21 @@ pub async fn run(
         None
     };
 
-    // Compute repay amount in minimal units
-    // For --all: query the wallet's actual token balance and use that as the repay amount.
-    // Using uint256.max reverts when wallet balance < accrued dust interest.
+    // Compute repay amount in minimal units.
+    // For --all: use u128::MAX, which encode_repay maps to type(uint256).max.
+    // Aave interprets uint256.max as "repay full debt including all accrued interest",
+    // pulling the exact outstanding amount from the wallet — no dust risk.
     let (amount_minimal, amount_display) = if all {
-        let balance = rpc::get_erc20_balance(&token_addr, &from_addr, cfg.rpc_url)
-            .await
-            .context("Failed to fetch token balance for full repay")?;
-        if balance == 0 {
-            anyhow::bail!("No {} balance in wallet to repay with", asset);
-        }
-        (balance, format!("all ({})", balance))
+        (u128::MAX, "all".to_string())
     } else {
         let v = amount.unwrap();
         let minimal = (v * 10u128.pow(decimals as u32) as f64) as u128;
         (minimal, v.to_string())
     };
 
-    // Step 4: Check ERC-20 allowance for token → pool
+    // Step 4: Check ERC-20 allowance for token → pool.
+    // For --all (amount_minimal == u128::MAX), always approve with u128::MAX (unlimited)
+    // so Aave can pull the full debt amount including last-second interest.
     let needs_approval = if all {
         true
     } else {
@@ -87,7 +84,8 @@ pub async fn run(
 
     let mut approval_result: Option<Value> = None;
     if needs_approval {
-        let approve_calldata = calldata::encode_erc20_approve(&pool_addr, amount_minimal)
+        let approve_amount = if all { u128::MAX } else { amount_minimal };
+        let approve_calldata = calldata::encode_erc20_approve(&pool_addr, approve_amount)
             .context("Failed to encode approve calldata")?;
         let approve_res = onchainos::wallet_contract_call(
             chain_id,
@@ -131,11 +129,18 @@ pub async fn run(
         .or_else(|| result["hash"].as_str())
         .unwrap_or("pending");
 
+    let amount_display_fmt = if all {
+        "all".to_string()
+    } else {
+        format!("{:.2}", amount.unwrap_or(0.0))
+    };
+
     Ok(json!({
         "ok": true,
         "txHash": tx_hash,
         "asset": asset,
         "repayAmount": amount_display,
+        "repayAmountDisplay": amount_display_fmt,
         "poolAddress": pool_addr,
         "totalDebtBefore": format!("{:.2}", account_data.total_debt_usd()),
         "healthFactorBefore": format!("{:.4}", account_data.health_factor_f64()),

@@ -203,6 +203,48 @@ pub fn wallet_contract_call(
     run_cmd(cmd)
 }
 
+/// Same as wallet_contract_call but attaches a native ETH value (--amt).
+/// Used for WETH.deposit() and similar payable calls.
+pub fn wallet_contract_call_with_value(
+    chain_id: u64,
+    to: &str,
+    input_data: &str,
+    from: Option<&str>,
+    value_wei: u128,
+    dry_run: bool,
+) -> anyhow::Result<Value> {
+    let mut args: Vec<String> = vec![
+        "wallet".to_string(),
+        "contract-call".to_string(),
+        "--chain".to_string(),
+        chain_id.to_string(),
+        "--to".to_string(),
+        to.to_string(),
+        "--input-data".to_string(),
+        input_data.to_string(),
+        "--amt".to_string(),
+        value_wei.to_string(),
+    ];
+    if let Some(addr) = from {
+        args.push("--from".to_string());
+        args.push(addr.to_string());
+    }
+    if dry_run {
+        args.push("--dry-run".to_string());
+        let cmd_str = format!("onchainos {}", args.join(" "));
+        eprintln!("[dry-run] would execute: {}", cmd_str);
+        return Ok(serde_json::json!({
+            "ok": true,
+            "dryRun": true,
+            "simulatedCommand": cmd_str
+        }));
+    }
+    args.push("--force".to_string());
+    let mut cmd = base_cmd();
+    cmd.args(&args);
+    run_cmd(cmd)
+}
+
 /// Approve an ERC-20 token spend via wallet contract-call (approve(spender, uint256.max)).
 /// Uses unlimited approval (type(uint256).max) for simplicity.
 pub fn dex_approve(

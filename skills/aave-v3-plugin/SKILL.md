@@ -1,7 +1,7 @@
 ---
 name: aave-v3-plugin
 description: "Aave V3 lending and borrowing. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
-version: "0.2.4"
+version: "0.2.5"
 author: "skylavis-sky"
 tags:
   - lending
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/aave-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.4"
+LOCAL_VER="0.2.5"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -99,7 +99,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/aave-v3-plugin@0.2.4/aave-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.aave-v3-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/aave-v3-plugin@0.2.5/aave-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.aave-v3-plugin-core${EXT}
 chmod +x ~/.local/bin/.aave-v3-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -107,7 +107,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/aave-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.4" > "$HOME/.plugin-store/managed/aave-v3-plugin"
+echo "0.2.5" > "$HOME/.plugin-store/managed/aave-v3-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -127,7 +127,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"aave-v3-plugin","version":"0.2.4"}' >/dev/null 2>&1 || true
+    -d '{"name":"aave-v3-plugin","version":"0.2.5"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -249,21 +249,25 @@ aave-v3-plugin --chain 8453 --confirm supply --asset USDC --amount 1000
 **What it does:**
 1. Resolves token contract address via `onchainos token search` (or uses address directly if provided)
 2. Resolves Pool address at runtime via `PoolAddressesProvider.getPool()`
-3. **Ask user to confirm** the approval before broadcasting
-4. Approves token to Pool: `onchainos wallet contract-call` → ERC-20 `approve(pool, amount)`
-5. **Ask user to confirm** the deposit before broadcasting
-6. Deposits to Pool: `onchainos wallet contract-call` → `Pool.supply(asset, amount, onBehalfOf, 0)`
+3. **WETH pre-flight**: if supplying WETH, checks on-chain WETH balance. If insufficient but wallet has enough ETH, automatically calls `WETH.deposit()` to wrap the needed amount first
+4. **Non-WETH pre-flight**: checks ERC-20 balance; errors with a clear message if insufficient
+5. **Ask user to confirm** the approval before broadcasting
+6. Approves token to Pool: `onchainos wallet contract-call` → ERC-20 `approve(pool, amount)`
+7. **Ask user to confirm** the deposit before broadcasting
+8. Deposits to Pool: `onchainos wallet contract-call` → `Pool.supply(asset, amount, onBehalfOf, 0)`
 
 **Expected output:**
 <external-content>
 ```json
 {
   "ok": true,
+  "wrapTxHash": null,
   "approveTxHash": "0xabc...",
   "supplyTxHash": "0xdef...",
   "asset": "USDC",
   "tokenAddress": "0x833589...",
   "amount": 1000,
+  "amountDisplay": "1000.00",
   "poolAddress": "0xa238dd..."
 }
 ```
@@ -284,7 +288,11 @@ aave-v3-plugin --chain 8453 withdraw --asset USDC --all
 **Key parameters:**
 - `--asset` — token symbol or ERC-20 address
 - `--amount` — partial withdrawal amount
-- `--all` — withdraw the full balance
+- `--all` — withdraw the full balance (uses `type(uint256).max`, safe with outstanding debt)
+
+**Notes:**
+- If outstanding debt exists, a warning is printed when using `--amount`; consider `--all` or repay first
+- `--amount` automatically caps to actual aToken balance to prevent precision-mismatch revert (e.g. aToken balance 0.999998 when user requests 1.0)
 
 **Expected output:**
 <external-content>
@@ -293,7 +301,8 @@ aave-v3-plugin --chain 8453 withdraw --asset USDC --all
   "ok": true,
   "txHash": "0xabc...",
   "asset": "USDC",
-  "amount": "500"
+  "amount": "500.00",
+  "amountDisplay": "500.00"
 }
 ```
 </external-content>
@@ -362,7 +371,7 @@ aave-v3-plugin --chain 137 --confirm repay --asset 0x2791Bca1f2de4661ED88A30C99A
 
 **Notes:**
 - ERC-20 approval is checked automatically; if insufficient, an approve tx is submitted first
-- `--all` repay uses the wallet's actual token balance to avoid revert when accrued interest exceeds wallet balance
+- `--all` repay passes `type(uint256).max` to Aave, which pulls the exact full debt (including last-second accrued interest) from the wallet — no dust risk
 
 **Expected output:**
 <external-content>
@@ -371,7 +380,8 @@ aave-v3-plugin --chain 137 --confirm repay --asset 0x2791Bca1f2de4661ED88A30C99A
   "ok": true,
   "txHash": "0xabc...",
   "asset": "0x2791...",
-  "repayAmount": "all (1005230000)",
+  "repayAmount": "all",
+  "repayAmountDisplay": "all",
   "totalDebtBefore": "1005.23",
   "approvalExecuted": true
 }

@@ -1,6 +1,6 @@
 schema_version: 1
 name: aave-v3-plugin
-version: "0.2.4"
+version: "0.2.5"
 description: "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
 author:
   name: skylavis-sky

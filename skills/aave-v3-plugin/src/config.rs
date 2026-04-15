@@ -20,6 +20,8 @@ pub struct ChainConfig {
     pub pool_addresses_provider: &'static str,
     pub rpc_url: &'static str,
     pub name: &'static str,
+    /// WETH contract address on this chain (used for ETH→WETH auto-wrap in supply)
+    pub weth_address: &'static str,
 }
 
 pub static CHAINS: &[ChainConfig] = &[
@@ -28,24 +30,28 @@ pub static CHAINS: &[ChainConfig] = &[
         pool_addresses_provider: "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
         rpc_url: "https://ethereum.publicnode.com",
         name: "Ethereum Mainnet",
+        weth_address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     },
     ChainConfig {
         chain_id: 137,
         pool_addresses_provider: "0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb",
         rpc_url: "https://polygon-bor-rpc.publicnode.com",
         name: "Polygon",
+        weth_address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
     },
     ChainConfig {
         chain_id: 42161,
         pool_addresses_provider: "0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb",
         rpc_url: "https://arbitrum-one-rpc.publicnode.com",
         name: "Arbitrum One",
+        weth_address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
     },
     ChainConfig {
         chain_id: 8453,
         pool_addresses_provider: "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
         rpc_url: "https://base-rpc.publicnode.com",
         name: "Base",
+        weth_address: "0x4200000000000000000000000000000000000006",
     },
 ];
 

@@ -2,24 +2,24 @@
 # aave-v3-plugin -- Skill Summary
 
 ## Overview
-The aave-v3-plugin skill enables users to interact with Aave V3, the leading decentralized lending protocol, across multiple chains including Ethereum, Polygon, Arbitrum, and Base. It provides comprehensive functionality for supplying assets to earn yield, borrowing against collateral, managing health factors to avoid liquidation, and monitoring positions in real-time.
+This plugin enables interaction with Aave V3, the leading decentralized lending protocol, allowing users to supply assets to earn yield, borrow against collateral, and manage positions across multiple chains. It provides comprehensive functionality for DeFi lending operations including health factor monitoring, collateral management, and reward claiming, with built-in safety mechanisms and automatic token handling.
 
 ## Usage
-Install the plugin and connect your wallet with `onchainos wallet login`, then use natural language triggers like "supply to aave", "borrow from aave", or "check my aave health factor" to interact with the protocol. All write operations include dry-run simulation and require user confirmation before execution.
+Connect your wallet with `onchainos wallet login`, then use commands like `aave-v3-plugin supply --asset USDC --amount 1000` to interact with Aave markets. Always simulate operations first (default behavior) before adding `--confirm` to execute transactions.
 
 ## Commands
-| Command | Purpose |
-|---------|---------|
-| `aave-v3-plugin supply` | Deposit assets to earn interest |
-| `aave-v3-plugin withdraw` | Redeem supplied assets |
-| `aave-v3-plugin borrow` | Borrow against collateral |
-| `aave-v3-plugin repay` | Repay borrowed debt |
-| `aave-v3-plugin health-factor` | Check liquidation risk |
-| `aave-v3-plugin positions` | View current positions |
-| `aave-v3-plugin reserves` | List market rates and APYs |
-| `aave-v3-plugin set-collateral` | Enable/disable asset as collateral |
-| `aave-v3-plugin set-emode` | Set efficiency mode for correlated assets |
-| `aave-v3-plugin claim-rewards` | Claim accrued protocol rewards |
+| Command | Description |
+|---------|-------------|
+| `supply --asset <TOKEN> --amount <AMOUNT>` | Deposit assets to earn interest |
+| `withdraw --asset <TOKEN> --amount <AMOUNT>` | Redeem supplied assets |
+| `borrow --asset <ADDRESS> --amount <AMOUNT>` | Borrow against collateral |
+| `repay --asset <TOKEN> --amount <AMOUNT>` | Repay borrowed debt |
+| `health-factor` | Check liquidation risk status |
+| `positions` | View current lending positions |
+| `reserves` | List market rates and APYs |
+| `set-collateral --asset <ADDRESS> --enable` | Manage collateral settings |
+| `set-emode --category <ID>` | Enable efficiency mode |
+| `claim-rewards` | Claim Aave incentive rewards |
 
 ## Triggers
-Activate this skill when users want to lend, borrow, or manage positions on Aave V3, including phrases like "supply to aave", "borrow from aave", "aave health factor", "my aave positions", or when users need to check interest rates or manage collateral settings. Always prioritize safety by checking health factors before risky operations.
+Activate when users want to lend, borrow, or manage DeFi positions on Aave, especially with phrases like "supply to aave," "borrow from aave," "aave health factor," or "my aave positions." Always check health factor before borrowing operations to prevent liquidation risk.

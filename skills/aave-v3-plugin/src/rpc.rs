@@ -261,6 +261,55 @@ pub async fn get_erc20_symbol(token_addr: &str, rpc_url: &str) -> anyhow::Result
     Ok(String::from_utf8_lossy(&bytes).to_string())
 }
 
+/// Get native ETH balance via eth_getBalance.
+pub async fn get_eth_balance(account: &str, rpc_url: &str) -> anyhow::Result<u128> {
+    let client = reqwest::Client::new();
+    let req = json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [account, "latest"],
+        "id": 1
+    });
+    let resp: RpcResponse = client
+        .post(rpc_url)
+        .json(&req)
+        .send()
+        .await
+        .context("eth_getBalance HTTP request failed")?
+        .json()
+        .await
+        .context("eth_getBalance response parse failed")?;
+    if let Some(err) = resp.error {
+        anyhow::bail!("eth_getBalance RPC error: {}", err);
+    }
+    let hex_str = resp.result.ok_or_else(|| anyhow::anyhow!("eth_getBalance returned null"))?;
+    let raw = strip_0x(&hex_str);
+    u128::from_str_radix(raw, 16).context("eth_getBalance: hex parse error")
+}
+
+/// Get the aToken address for an asset via IPoolDataProvider.getReserveTokensAddresses(asset).
+/// Selector 0xd2493b6c — verified against Aave V3 PoolDataProvider.
+/// Returns the aTokenAddress (first of the three returned addresses).
+pub async fn get_atoken_address(
+    data_provider: &str,
+    asset: &str,
+    rpc_url: &str,
+) -> anyhow::Result<String> {
+    let asset_bytes = parse_address(asset)?;
+    let mut data = hex::decode("d2493b6c")?;
+    data.extend_from_slice(&[0u8; 12]);
+    data.extend_from_slice(&asset_bytes);
+    let data_hex = format!("0x{}", hex::encode(&data));
+    let hex_result = eth_call(rpc_url, data_provider, &data_hex).await?;
+    let raw = strip_0x(&hex_result);
+    // Returns 3 x address (each 32 bytes = 64 hex chars), total 192 hex chars minimum
+    if raw.len() < 192 {
+        anyhow::bail!("getReserveTokensAddresses: short response ({} hex chars)", raw.len());
+    }
+    // First slot (bytes 0..64) = aTokenAddress
+    decode_address_result(&format!("0x{}", &raw[0..64]))
+}
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 fn strip_0x(s: &str) -> &str {

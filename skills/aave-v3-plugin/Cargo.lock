@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "aave-v3-plugin"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
