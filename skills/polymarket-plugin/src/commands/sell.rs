@@ -271,11 +271,13 @@ pub async fn run(
     // Check CTF token balance (from maker's address).
     // EOA mode: use CLOB API (reliable for EOA wallets).
     // POLY_PROXY mode: CLOB API returns 0 for proxy wallets regardless of actual balance;
-    // skip the pre-flight check and let the CLOB server validate at order submission.
+    // skip the proxy pre-flight and let the CLOB server validate at order submission.
+    // However, as a heuristic we check if the EOA holds the tokens — if so, warn the
+    // user that they may have the wrong mode set (bought in EOA, now selling in proxy).
+    let shares_needed_raw = to_token_units(share_amount);
     if effective_mode == TradingMode::Eoa {
         let token_balance = get_balance_allowance(&client, &maker_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;
         let balance_raw = token_balance.balance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
-        let shares_needed_raw = to_token_units(share_amount);
 
         if balance_raw < shares_needed_raw {
             // Check if the proxy wallet might hold these tokens and hint mode switch.
@@ -295,6 +297,26 @@ pub async fn run(
                 share_amount,
                 proxy_hint
             );
+        }
+    } else {
+        // Proxy mode: CLOB API can't verify proxy token balance directly.
+        // Check EOA balance as a heuristic — if EOA holds enough tokens the user
+        // likely bought in EOA mode and is now selling in proxy mode (wrong mode).
+        if let Ok(eoa_bal) = get_balance_allowance(
+            &client, &signer_addr, &creds, "CONDITIONAL", Some(&token_id)
+        ).await {
+            let eoa_raw = eoa_bal.balance.as_deref()
+                .unwrap_or("0").parse::<u64>().unwrap_or(0);
+            if eoa_raw >= shares_needed_raw {
+                eprintln!(
+                    "[polymarket] Warning: found {:.6} {} tokens in EOA wallet ({}) — \
+                     your position may be in EOA, not proxy. \
+                     If sell fails, switch modes with: polymarket switch-mode --mode eoa",
+                    eoa_raw as f64 / 1_000_000.0,
+                    outcome,
+                    signer_addr
+                );
+            }
         }
     }
 

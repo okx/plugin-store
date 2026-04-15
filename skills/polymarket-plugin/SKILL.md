@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
-description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit."
-version: "0.4.3"
+description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit, BTC 5分钟, ETH 5分钟, 5分钟市场, 5min market, 五分钟市场, 短线市场, list 5-minute, BTC up or down, 找5分钟, 看5分钟, 5m updown, crypto 5m, 5分钟涨跌, 五分钟涨跌, updown market, BTC 5min, ETH 5min, SOL 5min, 5分钟预测."
+version: "0.4.4"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.3"
+LOCAL_VER="0.4.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.3/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.4/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.3" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.4" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.4.3`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.4.4`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -730,7 +730,7 @@ polymarket cancel --all
 
 ### `redeem` — Redeem Winning Outcome Tokens
 
-After a market resolves, the winning side's tokens can be redeemed for USDC.e at a 1:1 rate. This calls `redeemPositions` on the Gnosis CTF contract with `indexSets=[1, 2]` (covers both YES and NO outcomes; the CTF contract no-ops silently for non-winning tokens, so passing both is safe).
+After a market resolves, the winning side's tokens can be redeemed for USDC.e at a 1:1 rate. The binary automatically detects which wallet (EOA or proxy) holds the winning tokens by querying the Data API, then calls the correct redemption path for each wallet. No manual mode selection needed.
 
 ```
 polymarket redeem --market-id <condition_id_or_slug>
@@ -741,23 +741,31 @@ polymarket redeem --market-id <condition_id_or_slug> --dry-run
 | Flag | Description |
 |------|-------------|
 | `--market-id` | Market to redeem from: condition_id (0x-prefixed) or slug |
-| `--dry-run` | Preview the redemption (shows condition_id and call details) without submitting any transaction |
+| `--dry-run` | Preview the redemption (shows wallets and call details) without submitting any transaction |
 
 **Auth required:** onchainos wallet (for signing the on-chain tx). No CLOB credentials needed.
 
 **Not supported:** `neg_risk: true` (multi-outcome) markets — use the Polymarket web UI for those.
 
-**Output fields on success:** `condition_id`, `question`, `tx_hash`, `note`
+**Wallet routing (automatic):**
+- EOA has winning tokens → direct `redeemPositions` from EOA
+- Proxy has winning tokens → `PROXY_FACTORY.proxy([(CALL, CTF, 0, redeemPositions_calldata)])`
+- Both wallets have tokens → both txs submitted, one `eoa_tx` + one `proxy_tx`
+- Data API lag (nothing redeemable yet) → fallback EOA redeem with a warning
+
+**Output fields on success:** `condition_id`, `question`, `note`, and one or both of:
+- `eoa_tx` + `eoa_note` (if EOA held winning tokens)
+- `proxy_tx` + `proxy_note` (if proxy held winning tokens)
 
 **Agent flow:**
 1. Resolve `--market-id` to a condition_id and check `neg_risk` (auto from market lookup)
-2. Offer `--dry-run` first to show the user what will happen
-3. After user confirms, run without `--dry-run` to submit the tx
-4. Return the `tx_hash` — redemption settles once the tx confirms on Polygon (~seconds)
+2. Offer `--dry-run` first to show the user which wallets will be used
+3. After user confirms, run without `--dry-run` to submit the tx(s)
+4. Return the tx hash(es) — USDC.e lands in the respective wallet once tx confirms on Polygon (~seconds)
 
 **Example:**
 ```bash
-# Preview first
+# Preview first (shows eoa_wallet + proxy_wallet addresses)
 polymarket redeem --market-id will-trump-win-2024 --dry-run
 
 # After user confirms:
@@ -1071,4 +1079,4 @@ Fees are deducted by the exchange from the received amount. The `feeRateBps` fie
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.3** (2026-04-14).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.4.4** (2026-04-14).

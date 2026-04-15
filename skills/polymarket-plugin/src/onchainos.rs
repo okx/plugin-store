@@ -689,6 +689,73 @@ pub async fn ctf_redeem_positions(condition_id: &str) -> Result<String> {
     extract_tx_hash(&result)
 }
 
+/// ABI-encode and submit CTF redeemPositions via the PROXY_FACTORY.
+///
+/// Used when winning outcome tokens are held by the proxy wallet (POLY_PROXY mode).
+/// Routes: EOA → PROXY_FACTORY.proxy([(CALL, CTF, 0, redeemPositions_calldata)])
+/// The factory forwards the call from the proxy wallet's context, so CTF sees
+/// msg.sender = proxy wallet, which holds the winning tokens.
+pub async fn ctf_redeem_via_proxy(condition_id: &str) -> Result<String> {
+    use sha3::{Digest, Keccak256};
+    use crate::config::Contracts;
+
+    // Build inner redeemPositions calldata (identical to ctf_redeem_positions)
+    let inner_selector = Keccak256::digest(b"redeemPositions(address,bytes32,bytes32,uint256[])");
+    let inner_selector_hex = hex::encode(&inner_selector[..4]);
+    let collateral   = pad_address(Contracts::USDC_E);
+    let parent_id    = format!("{:064x}", 0u128);
+    let cond_id_hex  = condition_id.trim_start_matches("0x");
+    let cond_id_pad  = format!("{:0>64}", cond_id_hex);
+    let array_offset = pad_u256(4 * 32);
+    let array_len    = pad_u256(2);
+    let index_yes    = pad_u256(1);
+    let index_no     = pad_u256(2);
+
+    let inner_hex = format!(
+        "{}{}{}{}{}{}{}{}",
+        inner_selector_hex, collateral, parent_id, cond_id_pad,
+        array_offset, array_len, index_yes, index_no
+    );
+    // inner calldata = 4 + 7*32 = 228 bytes
+    let inner_bytes = hex::decode(&inner_hex).expect("inner redeem calldata");
+    let inner_len   = inner_bytes.len();
+    let pad_len     = (32 - inner_len % 32) % 32;
+    let inner_padded = format!("{}{}", inner_hex, "00".repeat(pad_len));
+
+    // Wrap in PROXY_FACTORY.proxy([(CALL, CTF, 0, inner_calldata)])
+    // Layout mirrors withdraw_usdc_from_proxy exactly, only `to` changes to CTF.
+    let outer_selector = Keccak256::digest(b"proxy((uint8,address,uint256,bytes)[])");
+    let outer_selector_hex = hex::encode(&outer_selector[..4]);
+    let ctf_padded     = pad_address(Contracts::CTF);
+    let data_len_padded = format!("{:064x}", inner_len);
+
+    let calldata = format!(
+        "0x{}\
+         {}\
+         {}\
+         {}\
+         {}\
+         {}\
+         {}\
+         {}\
+         {}\
+         {}",
+        outer_selector_hex,
+        "0000000000000000000000000000000000000000000000000000000000000020", // params array offset
+        "0000000000000000000000000000000000000000000000000000000000000001", // array length = 1
+        "0000000000000000000000000000000000000000000000000000000000000020", // tuple[0] offset
+        "0000000000000000000000000000000000000000000000000000000000000001", // op = 1 (CALL)
+        ctf_padded,                                                         // to = CTF
+        "0000000000000000000000000000000000000000000000000000000000000000", // value = 0
+        "0000000000000000000000000000000000000000000000000000000000000080", // data offset in tuple
+        data_len_padded,
+        inner_padded,
+    );
+
+    let result = wallet_contract_call(Contracts::PROXY_FACTORY, &calldata).await?;
+    extract_tx_hash(&result)
+}
+
 /// Get native POL balance for an address (eth_getBalance). Returns human-readable f64 (POL).
 pub async fn get_pol_balance(addr: &str) -> Result<f64> {
     use crate::config::Urls;
