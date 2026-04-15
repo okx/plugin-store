@@ -1,21 +1,21 @@
 
-# kamino-lend -- Skill Summary
+# kamino-lend-plugin -- Skill Summary
 
 ## Overview
-This skill provides complete access to Kamino Lend, Solana's leading lending protocol, enabling users to supply assets for yield, borrow against collateral, and manage lending positions. All operations include transaction previews and require explicit user confirmation before execution, with automatic integration to onchainos for seamless Solana blockchain interaction.
+This plugin enables comprehensive interaction with Kamino Lend, Solana's leading borrowing and lending protocol. Users can view market data, manage lending positions, supply assets to earn yield, borrow against collateral, and repay loans. All operations include safety features like dry-run previews, health factor monitoring, and explicit user confirmation requirements for write operations.
 
 ## Usage
-Run commands like `kamino-lend markets` to view rates, `kamino-lend positions` to check your obligations, or `kamino-lend supply --token USDC --amount 0.01` to earn yield. All write operations require `--confirm` flag after preview.
+Install the plugin and ensure you're logged into onchainos on Solana mainnet (chain 501). Run commands with `--dry-run` first to preview transactions, then add `--confirm` to execute actual operations.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
 | `kamino-lend markets` | View lending markets with APYs and TVL |
 | `kamino-lend positions` | Check your lending obligations and health factor |
-| `kamino-lend supply --token <TOKEN> --amount <AMOUNT>` | Supply assets to earn yield |
+| `kamino-lend supply --token <TOKEN> --amount <AMOUNT>` | Deposit assets to earn yield |
 | `kamino-lend withdraw --token <TOKEN> --amount <AMOUNT>` | Withdraw supplied assets |
-| `kamino-lend borrow --token <TOKEN> --amount <AMOUNT>` | Borrow assets (supports --dry-run) |
-| `kamino-lend repay --token <TOKEN> --amount <AMOUNT>` | Repay borrowed assets (supports --dry-run) |
+| `kamino-lend borrow --token <TOKEN> --amount <AMOUNT> --dry-run` | Borrow assets (preview) |
+| `kamino-lend repay --token <TOKEN> --amount <AMOUNT> --dry-run` | Repay borrowed assets (preview) |
 
 ## Triggers
-Activate when users want to interact with Kamino Lend for lending, borrowing, or yield farming on Solana, or when they ask about interest rates, lending positions, or DeFi yield opportunities on the Solana blockchain.
+Activate when users want to interact with Kamino Lend for lending operations like checking market rates, managing positions, supplying/withdrawing assets, or borrowing/repaying loans. Use for DeFi yield farming and leveraged positions on Solana.

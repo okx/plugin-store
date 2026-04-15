@@ -2,6 +2,10 @@
 
 pub const API_BASE: &str = "https://api.kamino.finance";
 pub const MAIN_MARKET: &str = "7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF";
+/// JLP market (Jupiter LP token as collateral)
+pub const JLP_MARKET: &str = "DxXdAyU3kCjnyggvHmY5nAwg5cRbbmdyX3npfDMjjMek";
+/// Altcoin market (SOL, mSOL, jitoSOL, etc.)
+pub const ALTCOIN_MARKET: &str = "ByYiZxp8QrdN9qbdtaAiePN8AAr3qvTPppNJDpf5DVJ5";
 pub const KLEND_PROGRAM_ID: &str = "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD";
 pub const SOLANA_CHAIN_ID: u64 = 501;
 

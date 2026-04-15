@@ -29,6 +29,14 @@ pub struct BorrowArgs {
 }
 
 pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
+    // Validate amount
+    let amount_f: f64 = args.amount.parse().map_err(|_| {
+        anyhow::anyhow!("Invalid amount '{}': must be a positive number", args.amount)
+    })?;
+    if amount_f <= 0.0 {
+        anyhow::bail!("Amount must be greater than 0, got '{}'", args.amount);
+    }
+
     // Borrow is dry-run only per GUARDRAILS (liquidation risk with limited funds)
     if args.dry_run {
         println!(
@@ -79,6 +87,9 @@ pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
 
     let tx_hash = onchainos::extract_tx_hash(&result)?;
 
+    // Fetch updated health factor (loan_to_value / liquidation_ltv) post-borrow
+    let health_factor = fetch_health_factor(&wallet, &market).await;
+
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
@@ -90,12 +101,30 @@ pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
                 "market": market,
                 "reserve": reserve,
                 "action": "borrow",
+                "health_factor": health_factor,
                 "explorer": format!("https://solscan.io/tx/{}", tx_hash)
             }
         }))?
     );
 
     Ok(())
+}
+
+/// Fetch the updated health factor (liquidationLtv / loanToValue) for the wallet post-borrow.
+/// Returns None if positions cannot be fetched or no borrow exists.
+async fn fetch_health_factor(wallet: &str, market: &str) -> Option<f64> {
+    let obligations = api::get_obligations(market, wallet).await.ok()?;
+    let arr = obligations.as_array()?;
+    // Find the first obligation with borrows
+    for obl in arr {
+        let stats = obl.get("refreshedStats")?;
+        let ltv = stats.get("loanToValue").and_then(|v| v.as_f64())?;
+        let liq_ltv = stats.get("liquidationLtv").and_then(|v| v.as_f64())?;
+        if ltv > 0.0 && liq_ltv > 0.0 {
+            return Some((liq_ltv / ltv * 100.0).round() / 100.0);
+        }
+    }
+    None
 }
 
 fn resolve_reserve(token_or_address: &str) -> anyhow::Result<String> {
