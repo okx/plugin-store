@@ -97,6 +97,9 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
 
     // dry_run guard - must come before resolve_wallet_solana()
     if dry_run {
+        let amount_display = args.amount.parse::<f64>()
+            .map(|v| format!("{:.2}", v))
+            .unwrap_or_else(|_| args.amount.clone());
         println!(
             "{}",
             serde_json::to_string_pretty(&serde_json::json!({
@@ -105,6 +108,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
                 "inputMint": args.input_mint,
                 "outputMint": args.output_mint,
                 "amount": args.amount,
+                "amountDisplay": amount_display,
                 "rawAmount": raw_amount,
                 "slippageBps": args.slippage_bps,
                 "note": "dry_run: tx not built or broadcast"
@@ -125,6 +129,34 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         }
         w
     };
+
+    // Pre-flight balance check
+    if args.input_mint == SOL_NATIVE_MINT {
+        let lamports = onchainos::get_sol_balance(&wallet, SOLANA_RPC_URL)
+            .await
+            .unwrap_or(0);
+        if lamports < raw_amount {
+            anyhow::bail!(
+                "Insufficient SOL balance: need {:.9} SOL, have {:.9} SOL. \
+                 Add funds to your wallet before swapping.",
+                raw_amount as f64 / 1e9,
+                lamports as f64 / 1e9,
+            );
+        }
+    } else {
+        let token_balance = onchainos::get_spl_token_balance(&wallet, &args.input_mint, SOLANA_RPC_URL)
+            .await
+            .unwrap_or(0);
+        if token_balance < raw_amount {
+            anyhow::bail!(
+                "Insufficient token balance: need {} units, have {} units for mint {}. \
+                 Add funds to your wallet before swapping.",
+                raw_amount,
+                token_balance,
+                args.input_mint,
+            );
+        }
+    }
 
     // Step 1: Get swap quote
     let quote_url = format!("{}/compute/swap-base-in", TX_API_BASE);
@@ -234,11 +266,15 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
         }));
     }
 
+    let amount_display = args.amount.parse::<f64>()
+        .map(|v| format!("{:.2}", v))
+        .unwrap_or_else(|_| args.amount.clone());
     let output = serde_json::json!({
         "ok": true,
         "inputMint": args.input_mint,
         "outputMint": args.output_mint,
         "amount": args.amount,
+        "amountDisplay": amount_display,
         "rawAmount": raw_amount,
         "outputAmount": quote_resp["data"]["outputAmount"],
         "priceImpactPct": price_impact,

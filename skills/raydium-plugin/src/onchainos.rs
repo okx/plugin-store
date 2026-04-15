@@ -62,6 +62,62 @@ pub async fn wallet_contract_call_solana(
 }
 
 
+/// Return native SOL balance in lamports for the given wallet.
+pub async fn get_sol_balance(wallet: &str, rpc_url: &str) -> anyhow::Result<u64> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getBalance",
+        "params": [wallet]
+    });
+    let resp: Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    resp["result"]["value"]
+        .as_u64()
+        .ok_or_else(|| anyhow::anyhow!("Failed to parse SOL balance: {}", resp))
+}
+
+/// Return SPL token balance in raw units (u64) for the given wallet and mint.
+/// Returns 0 if the wallet holds no token account for this mint.
+pub async fn get_spl_token_balance(owner: &str, mint: &str, rpc_url: &str) -> anyhow::Result<u64> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getTokenAccountsByOwner",
+        "params": [
+            owner,
+            { "mint": mint },
+            { "encoding": "jsonParsed" }
+        ]
+    });
+    let resp: Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    let accounts = resp["result"]["value"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("Unexpected RPC response: {}", resp))?;
+    if accounts.is_empty() {
+        return Ok(0);
+    }
+    let amount_str = accounts[0]["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"]
+        .as_str()
+        .unwrap_or("0");
+    amount_str
+        .parse::<u64>()
+        .map_err(|_| anyhow::anyhow!("Failed to parse token amount: {}", amount_str))
+}
+
 /// Resolve the user's Associated Token Account (ATA) for a given SPL mint via Solana RPC.
 /// Required by Raydium's /transaction/swap-base-in API as `inputAccount` when input is SPL.
 pub async fn get_token_account(owner: &str, mint: &str, rpc_url: &str) -> anyhow::Result<String> {
