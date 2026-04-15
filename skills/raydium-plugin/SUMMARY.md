@@ -1,13 +1,13 @@
-# raydium
-Raydium AMM plugin for token swaps, price queries, and pool information on Solana mainnet.
+# raydium-plugin
+A Solana DEX plugin for executing token swaps, getting price quotes, and querying pool information on the Raydium AMM.
 
 ## Highlights
-- Execute token swaps on Raydium DEX with automatic slippage protection
-- Get real-time swap quotes and price impact analysis before trading
-- Query USD prices for any SPL token using Raydium's price feeds
-- Access comprehensive pool information including liquidity and TVL data
-- Browse and search through all available Raydium liquidity pools
-- Built-in safety guards that warn or abort swaps with high price impact
-- Automatic token decimal handling for human-readable amount inputs
-- Integration with onchainos wallet for seamless Solana transaction execution
+- Execute token swaps on Raydium AMM with slippage protection
+- Get real-time swap quotes and price impact analysis
+- Query USD prices for any SPL token
+- Browse and filter Raydium liquidity pools
+- Built-in safety guards (price impact warnings, transaction previews)
+- Supports both wrapped and native SOL handling
+- Direct integration with Solana mainnet via onchainos
+- Automatic token decimal resolution for accurate amounts
 

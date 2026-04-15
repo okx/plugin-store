@@ -56,6 +56,10 @@ pub struct SwapArgs {
     /// Wallet public key (base58); if omitted, resolved from onchainos
     #[arg(long)]
     pub from: Option<String>,
+
+    /// Confirm execution — required to execute on-chain. Without this flag, shows a preview.
+    #[arg(long)]
+    pub confirm: bool,
 }
 
 /// Resolve token decimals for well-known mints; fall back to Raydium mint API for others.
@@ -92,22 +96,47 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
     let client = reqwest::Client::new();
 
     // Resolve input token decimals and parse human-readable amount to raw u64
+    // ── Resolve input token decimals and parse human-readable amount to raw u64 ──
     let input_decimals = resolve_decimals(&args.input_mint, &client).await?;
     let raw_amount = parse_human_amount(&args.amount, input_decimals)?;
 
-    // dry_run guard - must come before resolve_wallet_solana()
-    if dry_run {
+    // dry_run or confirm gate — fetch quote and show preview
+    if dry_run || !args.confirm {
+        let quote_url = format!("{}/compute/swap-base-in", TX_API_BASE);
+        let quote_resp: Value = client
+            .get(&quote_url)
+            .query(&[
+                ("inputMint", args.input_mint.as_str()),
+                ("outputMint", args.output_mint.as_str()),
+                ("amount", &raw_amount.to_string()),
+                ("slippageBps", &args.slippage_bps.to_string()),
+                ("txVersion", args.tx_version.as_str()),
+            ])
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let estimated_output = quote_resp["data"]["outputAmount"]
+            .as_str()
+            .or_else(|| quote_resp["data"]["outputAmount"].as_str())
+            .map(|s| s.to_string());
+        let price_impact_pct = quote_resp["data"]["priceImpactPct"].as_f64().unwrap_or(0.0);
+
         println!(
             "{}",
             serde_json::to_string_pretty(&serde_json::json!({
                 "ok": true,
-                "dry_run": true,
+                "dry_run": dry_run,
                 "inputMint": args.input_mint,
                 "outputMint": args.output_mint,
                 "amount": args.amount,
                 "rawAmount": raw_amount,
                 "slippageBps": args.slippage_bps,
-                "note": "dry_run: tx not built or broadcast"
+                "estimatedOutputAmount": estimated_output,
+                "priceImpactPct": price_impact_pct,
+                "quoteData": quote_resp["data"],
+                "note": "Re-run with --confirm to execute on-chain.",
             }))?
         );
         return Ok(());
