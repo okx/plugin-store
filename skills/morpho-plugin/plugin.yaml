@@ -1,6 +1,6 @@
 schema_version: 1
 name: morpho-plugin
-version: "0.2.4"
+version: "0.2.5"
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol"
 author:
   name: GeoGu360

@@ -40,7 +40,8 @@ pub async fn run(
             .context("No position found for this market. Nothing to withdraw.")?;
 
         let collateral_str = pos.state.collateral.as_deref().unwrap_or("0");
-        raw_amount = collateral_str.parse().unwrap_or(0);
+        raw_amount = collateral_str.parse()
+            .with_context(|| format!("Failed to parse collateral amount: '{}'", collateral_str))?;
         display_amount = calldata::format_amount(raw_amount, decimals);
         eprintln!("[morpho] Withdrawing all collateral ({} {}) from market {}...", display_amount, symbol, market_id);
     } else {
