@@ -1,7 +1,7 @@
 ---
 name: velodrome-v2-plugin
 description: Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism (chain 10). Supports swap, quote, pools, positions, add-liquidity, remove-liquidity, claim-rewards.
-version: "0.1.3"
+version: "0.1.4"
 author: GeoGu360
 tags:
   - dex
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/velodrome-v2-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -99,7 +99,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/velodrome-v2-plugin@0.1.3/velodrome-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.velodrome-v2-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/velodrome-v2-plugin@0.1.4/velodrome-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.velodrome-v2-plugin-core${EXT}
 chmod +x ~/.local/bin/.velodrome-v2-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -107,7 +107,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/velodrome-v2-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.3" > "$HOME/.plugin-store/managed/velodrome-v2-plugin"
+echo "0.1.4" > "$HOME/.plugin-store/managed/velodrome-v2-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -127,7 +127,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"velodrome-v2-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"velodrome-v2-plugin","version":"0.1.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -301,12 +301,19 @@ velodrome-v2 positions --token-a WETH --token-b USDC --stable false
 Adds liquidity to a classic AMM pool (ERC-20 LP tokens). **Ask user to confirm** before submitting.
 
 ```bash
+# Volatile pool (default — omit --stable)
 velodrome-v2 add-liquidity \
   --token-a WETH \
   --token-b USDC \
-  --stable false \
   --amount-a-desired 0.00005 \
   --amount-b-desired 0.118
+
+# Stable pool (add --stable flag)
+velodrome-v2 add-liquidity \
+  --token-a USDC \
+  --token-b DAI \
+  --stable \
+  --amount-a-desired 10
 ```
 
 **Auto-quote token B amount:**
@@ -315,9 +322,10 @@ velodrome-v2 add-liquidity \
 velodrome-v2 add-liquidity \
   --token-a WETH \
   --token-b USDC \
-  --stable false \
   --amount-a-desired 0.00005
 ```
+
+> **Note on `--stable`**: For `add-liquidity`, `remove-liquidity`, and `claim-rewards`, `--stable` is a presence flag — include it for stable pools, omit it for volatile pools (the default). `--stable true`/`--stable false` syntax is not supported for these commands; use `--stable` or omit it.
 
 **Output:**
 ```json
@@ -341,18 +349,22 @@ velodrome-v2 add-liquidity \
 Burns LP tokens to withdraw the underlying token pair. **Ask user to confirm** before submitting.
 
 ```bash
-# Remove all LP tokens for WETH/USDC volatile pool
+# Remove all LP tokens for WETH/USDC volatile pool (omit --stable for volatile)
 velodrome-v2 remove-liquidity \
   --token-a WETH \
-  --token-b USDC \
-  --stable false
+  --token-b USDC
 
 # Remove specific LP amount
 velodrome-v2 remove-liquidity \
   --token-a WETH \
   --token-b USDC \
-  --stable false \
   --liquidity 0.001
+
+# Stable pool: use --stable flag
+velodrome-v2 remove-liquidity \
+  --token-a USDC \
+  --token-b DAI \
+  --stable
 ```
 
 **Output:**
@@ -376,11 +388,16 @@ velodrome-v2 remove-liquidity \
 Claims accumulated VELO emissions from a pool gauge. **Ask user to confirm** before submitting.
 
 ```bash
-# Claim from WETH/USDC volatile pool gauge
+# Claim from WETH/USDC volatile pool gauge (omit --stable for volatile)
 velodrome-v2 claim-rewards \
   --token-a WETH \
-  --token-b USDC \
-  --stable false
+  --token-b USDC
+
+# Claim from stable pool gauge
+velodrome-v2 claim-rewards \
+  --token-a USDC \
+  --token-b DAI \
+  --stable
 
 # Claim from known gauge address
 velodrome-v2 claim-rewards --gauge 0xGaugeAddress

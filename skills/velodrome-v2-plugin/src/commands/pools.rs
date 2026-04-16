@@ -71,12 +71,16 @@ pub async fn run(args: PoolsArgs) -> anyhow::Result<()> {
             }));
         } else {
             println!("  stable={}: not deployed", stable);
-            pools.push(serde_json::json!({
-                "stable": stable,
-                "address": pool_addr,
-                "deployed": false,
-            }));
+            // Do not include non-deployed (zero-address) pools in the JSON output
+            // to avoid callers mistakenly using the zero address.
         }
+    }
+
+    if pools.is_empty() {
+        anyhow::bail!(
+            "No Velodrome V2 pools found for {}/{}. The pool may not have been deployed yet.",
+            token_a, token_b
+        );
     }
 
     println!(
