@@ -298,6 +298,148 @@ pub async fn pool_info(
     parse_pool_info(&result, pid)
 }
 
+/// Scan ERC-721 Transfer events to discover token IDs currently staked by `wallet` in `masterchef`.
+///
+/// Strategy:
+///   1. Query Transfer(wallet → masterchef) logs — all NFTs ever deposited for farming.
+///   2. Query Transfer(masterchef → wallet) logs — all NFTs ever withdrawn/unfarmed.
+///   3. Candidates = deposited_set − withdrawn_set (net staked by log history).
+///   4. For each candidate, call `userPositionInfos(tokenId)` and keep only those where
+///      `info.user == wallet` — this is the authoritative on-chain confirmation.
+///
+/// Returns `(token_ids, discovery_note)`.
+/// On RPC log query failure, returns `(vec![], warning_message)` so the caller can surface it.
+pub async fn scan_staked_token_ids(
+    nft_contract: &str,
+    masterchef: &str,
+    wallet: &str,
+    from_block: u64,
+    rpc_url: &str,
+) -> (Vec<u64>, String) {
+    // ERC-721 Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+    const TRANSFER_SIG: &str =
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+    let wallet_lower = wallet.trim_start_matches("0x").to_lowercase();
+    let masterchef_lower = masterchef.trim_start_matches("0x").to_lowercase();
+    let wallet_padded = format!("0x{:0>64}", wallet_lower);
+    let masterchef_padded = format!("0x{:0>64}", masterchef_lower);
+
+    let from_block_hex = format!("0x{:x}", from_block);
+
+    // Deposits: wallet → masterchef
+    let deposited = match get_transfer_logs(
+        nft_contract,
+        TRANSFER_SIG,
+        &wallet_padded,
+        &masterchef_padded,
+        &from_block_hex,
+        rpc_url,
+    )
+    .await
+    {
+        Ok(ids) => ids,
+        Err(e) => {
+            return (
+                vec![],
+                format!(
+                    "Staked position auto-discovery unavailable: eth_getLogs failed ({}). \
+                     Use --include-staked <token_ids> to view staked positions manually.",
+                    e
+                ),
+            );
+        }
+    };
+
+    if deposited.is_empty() {
+        return (vec![], "No historical stake deposits found for this wallet.".to_string());
+    }
+
+    // Withdrawals: masterchef → wallet
+    let withdrawn = match get_transfer_logs(
+        nft_contract,
+        TRANSFER_SIG,
+        &masterchef_padded,
+        &wallet_padded,
+        &from_block_hex,
+        rpc_url,
+    )
+    .await
+    {
+        Ok(ids) => ids,
+        Err(_) => vec![], // If we can't get withdrawals, conservatively keep all deposits as candidates
+    };
+
+    let withdrawn_set: std::collections::HashSet<u64> = withdrawn.into_iter().collect();
+    let candidates: Vec<u64> = {
+        let mut seen = std::collections::HashSet::new();
+        deposited
+            .into_iter()
+            .filter(|id| !withdrawn_set.contains(id) && seen.insert(*id))
+            .collect()
+    };
+
+    let note = format!(
+        "Auto-discovered {} candidate token ID(s) from Transfer logs; verifying on-chain.",
+        candidates.len()
+    );
+    (candidates, note)
+}
+
+async fn get_transfer_logs(
+    contract: &str,
+    event_sig: &str,
+    topic1: &str,
+    topic2: &str,
+    from_block: &str,
+    rpc_url: &str,
+) -> anyhow::Result<Vec<u64>> {
+    let client = reqwest::Client::new();
+    let body = json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getLogs",
+        "params": [{
+            "address": contract,
+            "topics": [event_sig, topic1, topic2, null],
+            "fromBlock": from_block,
+            "toBlock": "latest"
+        }],
+        "id": 1
+    });
+
+    let resp: serde_json::Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await
+        .context("eth_getLogs HTTP request failed")?
+        .json()
+        .await
+        .context("eth_getLogs JSON parse failed")?;
+
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("{}", err);
+    }
+
+    let logs = resp["result"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("eth_getLogs: missing result array"))?;
+
+    // topic[3] = indexed tokenId (all 3 Transfer params are indexed in ERC-721)
+    let token_ids = logs
+        .iter()
+        .filter_map(|log| {
+            log["topics"]
+                .as_array()?
+                .get(3)?
+                .as_str()
+                .map(decode_u64)
+        })
+        .collect();
+
+    Ok(token_ids)
+}
+
 fn parse_pool_info(hex: &str, pid: u64) -> anyhow::Result<PoolInfo> {
     let clean = hex.trim_start_matches("0x");
     // poolInfo returns:

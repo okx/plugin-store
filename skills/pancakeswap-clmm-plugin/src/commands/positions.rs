@@ -40,45 +40,76 @@ pub async fn run(
         }
     }
 
-    // Fetch staked positions (if token IDs provided via --include-staked)
+    // Determine candidate staked token IDs:
+    // - If --include-staked provided: use those IDs directly (explicit override)
+    // - Otherwise: auto-discover via ERC-721 Transfer log scan
+    let (staked_candidates, discovery_mode, discovery_note) = if let Some(ids_str) = token_ids_staked {
+        let ids: Vec<u64> = ids_str
+            .split(',')
+            .filter_map(|s| s.trim().parse::<u64>().ok())
+            .collect();
+        let note = format!("Using {} manually specified token ID(s).", ids.len());
+        (ids, "manual", note)
+    } else {
+        let (candidates, note) = rpc::scan_staked_token_ids(
+            cfg.nonfungible_position_manager,
+            cfg.masterchef_v3,
+            &wallet,
+            cfg.nft_deployment_block,
+            &rpc,
+        )
+        .await;
+        (candidates, "auto", note)
+    };
+
+    // For each candidate, verify it is currently staked for this wallet via userPositionInfos.
+    // This is the authoritative on-chain check and handles any log-scan edge cases.
     let mut staked = Vec::new();
-    if let Some(ids_str) = token_ids_staked {
-        for part in ids_str.split(',') {
-            let part = part.trim();
-            if part.is_empty() {
-                continue;
-            }
-            match part.parse::<u64>() {
-                Ok(token_id) => {
-                    match rpc::user_position_infos(cfg.masterchef_v3, token_id, &rpc).await {
-                        Ok(info) => {
-                            // Also fetch position details from NonfungiblePositionManager
-                            let pos =
-                                rpc::get_position(cfg.nonfungible_position_manager, token_id, &rpc)
-                                    .await
-                                    .ok();
-                            let pending =
-                                rpc::pending_cake(cfg.masterchef_v3, token_id, &rpc).await.unwrap_or(0);
-                            staked.push(serde_json::json!({
-                                "token_id": token_id,
-                                "staked": true,
-                                "user": info.user,
-                                "pid": info.pid,
-                                "liquidity": info.liquidity.to_string(),
-                                "tick_lower": info.tick_lower,
-                                "tick_upper": info.tick_upper,
-                                "pending_cake_wei": pending.to_string(),
-                                "pending_cake": format!("{:.6}", pending as f64 / 1e18),
-                                "position": pos
-                            }));
-                        }
-                        Err(e) => eprintln!("Warning: userPositionInfos({}) failed: {}", token_id, e),
-                    }
+    let mut verified_count = 0usize;
+    for token_id in &staked_candidates {
+        match rpc::user_position_infos(cfg.masterchef_v3, *token_id, &rpc).await {
+            Ok(info) => {
+                // Confirm this position is staked for our wallet (not someone else's)
+                if info.user.to_lowercase() != wallet.to_lowercase() {
+                    continue;
                 }
-                Err(_) => eprintln!("Warning: invalid token_id '{}'", part),
+                verified_count += 1;
+                let pending =
+                    rpc::pending_cake(cfg.masterchef_v3, *token_id, &rpc).await.unwrap_or(0);
+                let pos = rpc::get_position(cfg.nonfungible_position_manager, *token_id, &rpc)
+                    .await
+                    .ok();
+                staked.push(serde_json::json!({
+                    "token_id": token_id,
+                    "staked": true,
+                    "user": info.user,
+                    "pid": info.pid,
+                    "liquidity": info.liquidity.to_string(),
+                    "boost_liquidity": info.boost_liquidity.to_string(),
+                    "tick_lower": info.tick_lower,
+                    "tick_upper": info.tick_upper,
+                    "pending_cake_wei": pending.to_string(),
+                    "pending_cake": rpc::format_cake_wei(pending),
+                    "position": pos
+                }));
+            }
+            Err(e) => {
+                eprintln!(
+                    "Warning: userPositionInfos({}) failed (may not be staked): {}",
+                    token_id, e
+                );
             }
         }
     }
+
+    let final_note = if discovery_mode == "auto" && !staked_candidates.is_empty() {
+        format!(
+            "{} Confirmed {} staked position(s) on-chain.",
+            discovery_note, verified_count
+        )
+    } else {
+        discovery_note
+    };
 
     println!(
         "{}",
@@ -91,7 +122,9 @@ pub async fn run(
             "unstaked_count": unstaked.len(),
             "unstaked_positions": unstaked,
             "staked_count": staked.len(),
-            "staked_positions": staked
+            "staked_positions": staked,
+            "staked_discovery": discovery_mode,
+            "staked_discovery_note": final_note
         }))?
     );
     Ok(())

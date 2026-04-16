@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-clmm-plugin
 description: "PancakeSwap V3 CLMM farming plugin. Stake V3 LP NFTs into MasterChefV3 to earn CAKE rewards, harvest CAKE, collect swap fees, and view positions across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions."
-version: "0.1.2"
+version: "0.1.3"
 author: "skylavis-sky"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-clmm-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.2"
+LOCAL_VER="0.1.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.2/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.3/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-clmm-plugin","version":"0.1.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-clmm-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -174,8 +174,15 @@ This plugin focuses on **MasterChefV3 farming** and is complementary to the `pan
 
 ## Note on Staked NFT Discovery
 
-NFTs staked in MasterChefV3 leave your wallet. The `positions` command shows unstaked positions by default.
-To also view staked positions, use `--include-staked <tokenId1,tokenId2>` to query specific token IDs.
+When a V3 LP NFT is staked (farmed), it is transferred to the MasterChefV3 contract. The NFT leaves the user's wallet, so a plain `balanceOf` scan would miss it.
+
+The `positions` command automatically discovers staked positions by scanning ERC-721 `Transfer` events on the NonfungiblePositionManager (wallet → MasterChefV3) and verifying each candidate on-chain via `userPositionInfos(tokenId)`. This finds all currently staked positions without requiring the user to know their token IDs in advance.
+
+The output includes a `staked_discovery` field:
+- `"auto"` — staked positions were discovered via Transfer log scan
+- `"manual"` — user supplied `--include-staked <tokenId1,tokenId2>` explicitly
+
+If the RPC node does not support `eth_getLogs` with a large block range, auto-discovery falls back gracefully and reports a `staked_discovery_note` explaining the limitation. In that case, use `--include-staked` to specify token IDs manually.
 
 ## Commands
 
@@ -198,7 +205,7 @@ pancakeswap-clmm --chain 56 --confirm farm --token-id 12345
 1. Run without flags to preview the action (verifies ownership, shows contract details, exits)
 2. Verify the target pool has active CAKE incentives via `farm-pools`
 3. Run with `--confirm` to execute — NFT is transferred to MasterChefV3
-4. Verify staking via `positions --include-staked <tokenId>`
+4. Verify staking via `positions` (auto-discovers staked positions)
 
 **Parameters:**
 - `--token-id` — LP NFT token ID (required)
@@ -305,13 +312,22 @@ pancakeswap-clmm --chain 8453 farm-pools
 
 ### positions — View All LP Positions
 
-View unstaked V3 LP positions in your wallet. Optionally include staked positions by specifying their token IDs.
+View all V3 LP positions — both unstaked (in wallet) and staked (in MasterChefV3). Staked positions are auto-discovered via Transfer log scan; no token IDs needed.
 
 ```
+# Auto-discovers both unstaked and staked positions
 pancakeswap-clmm --chain 56 positions
 pancakeswap-clmm --chain 56 positions --owner 0xYourWallet
+
+# Manual override: specify staked token IDs directly (use if auto-discovery fails)
 pancakeswap-clmm --chain 56 positions --include-staked 12345,67890
 ```
+
+**Output fields:**
+- `unstaked_positions` — NFTs currently in the wallet
+- `staked_positions` — NFTs staked in MasterChefV3 (includes `pending_cake`, `pid`, `liquidity`)
+- `staked_discovery` — `"auto"` or `"manual"`
+- `staked_discovery_note` — explains how many candidates were found and verified
 
 ---
 

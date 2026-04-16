@@ -9,6 +9,9 @@ pub struct ChainConfig {
     pub nonfungible_position_manager: &'static str,
     pub masterchef_v3: &'static str,
     pub factory: &'static str,
+    /// Earliest block to scan for Transfer events (NFT contract deployment block).
+    /// Used by staked-position auto-discovery to bound eth_getLogs queries.
+    pub nft_deployment_block: u64,
 }
 
 pub const CHAINS: &[ChainConfig] = &[
@@ -18,6 +21,7 @@ pub const CHAINS: &[ChainConfig] = &[
         nonfungible_position_manager: "0x46A15B0b27311cedF172AB29E4f4766fbE7F4364",
         masterchef_v3: "0x556B9306565093C855AEA9AE92A594704c2Cd59e",
         factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+        nft_deployment_block: 26_956_207, // BSC: PancakeSwap V3 launch Jan 2023
     },
     ChainConfig {
         chain_id: 1,
@@ -25,6 +29,7 @@ pub const CHAINS: &[ChainConfig] = &[
         nonfungible_position_manager: "0x46A15B0b27311cedF172AB29E4f4766fbE7F4364",
         masterchef_v3: "0x556B9306565093C855AEA9AE92A594704c2Cd59e",
         factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+        nft_deployment_block: 17_413_000, // ETH: PancakeSwap V3 launch Jun 2023
     },
     ChainConfig {
         chain_id: 8453,
@@ -32,6 +37,7 @@ pub const CHAINS: &[ChainConfig] = &[
         nonfungible_position_manager: "0x46A15B0b27311cedF172AB29E4f4766fbE7F4364",
         masterchef_v3: "0xC6A2Db661D5a5690172d8eB0a7DEA2d3008665A3",
         factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+        nft_deployment_block: 2_000_000, // Base: approximate V3 deployment
     },
     ChainConfig {
         chain_id: 42161,
@@ -39,6 +45,7 @@ pub const CHAINS: &[ChainConfig] = &[
         nonfungible_position_manager: "0x46A15B0b27311cedF172AB29E4f4766fbE7F4364",
         masterchef_v3: "0x5e09ACf80C0296740eC5d6F643005a4ef8DaA694",
         factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+        nft_deployment_block: 99_000_000, // Arbitrum: approximate V3 deployment
     },
 ];
 

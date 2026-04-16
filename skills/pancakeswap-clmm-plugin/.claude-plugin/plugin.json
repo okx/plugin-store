@@ -1,5 +1,5 @@
 {
   "name": "pancakeswap-clmm",
   "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions.",
-  "version": "0.1.0"
+  "version": "0.1.3"
 }
