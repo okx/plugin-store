@@ -61,26 +61,48 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     // Build calldata: submit(address _referral)
     let calldata = format!("0x{}{}", config::SEL_SUBMIT, referral_padded);
 
-    println!("=== Lido Stake ===");
-    println!("From:        {}", wallet);
-    println!("Amount:      {} ETH ({} wei)", args.amount_eth, amount_wei);
-    println!("Referral:    {}", referral);
-    println!("Contract:    {}", config::STETH_ADDRESS);
-    println!("Calldata:    {}", calldata);
-    println!();
-
     if args.dry_run {
-        println!("[dry-run] Transaction NOT submitted.");
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "action": "stake",
+            "from": wallet,
+            "amountEth": format!("{:.6}", args.amount_eth),
+            "amountWei": amount_wei.to_string(),
+            "referral": referral,
+            "contract": config::STETH_ADDRESS,
+            "calldata": calldata,
+            "note": "Add --confirm to broadcast"
+        }));
         return Ok(());
     }
 
-    println!("Submitting stake transaction...");
-    // ── Preview mode: show TX details without broadcasting ──────────────────
-    if !args.confirm && !args.dry_run {
-        println!("=== Transaction Preview (NOT broadcast) ===");
-        println!("Add --confirm to execute this transaction.");
+    // Pre-flight: ETH balance check (EVM-001)
+    let eth_balance = onchainos::eth_get_balance(&wallet, chain_id).await
+        .map_err(|e| anyhow::anyhow!("Failed to check ETH balance: {}", e))?;
+    if eth_balance < amount_wei {
+        anyhow::bail!(
+            "Insufficient ETH balance: need {:.6} ETH, have {:.6} ETH.",
+            amount_wei as f64 / 1e18,
+            eth_balance as f64 / 1e18
+        );
+    }
+
+    if !args.confirm {
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "action": "stake",
+            "from": wallet,
+            "amountEth": format!("{:.6}", args.amount_eth),
+            "amountWei": amount_wei.to_string(),
+            "referral": referral,
+            "stEthExpected": format!("~{:.6}", args.amount_eth),
+            "note": "Add --confirm to execute"
+        }));
         return Ok(());
     }
+
     let result = onchainos::wallet_contract_call(
         chain_id,
         config::STETH_ADDRESS,
@@ -93,11 +115,16 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     .await?;
 
     let tx_hash = onchainos::extract_tx_hash(&result);
-    println!("Transaction submitted: {}", tx_hash);
-    println!(
-        "You will receive approximately {} stETH. Balance grows daily via rebase.",
-        args.amount_eth
-    );
+    println!("{}", serde_json::json!({
+        "ok": true,
+        "action": "stake",
+        "from": wallet,
+        "amountEth": format!("{:.6}", args.amount_eth),
+        "amountWei": amount_wei.to_string(),
+        "txHash": tx_hash,
+        "stEthExpected": format!("~{:.6}", args.amount_eth),
+        "note": "stETH balance grows daily via rebase"
+    }));
 
     Ok(())
 }

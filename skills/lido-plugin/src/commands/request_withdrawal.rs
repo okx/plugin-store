@@ -54,33 +54,57 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
     // Build requestWithdrawals calldata
     let request_calldata = rpc::calldata_request_withdrawals(&[amount_wei], &wallet);
 
-    println!("=== Lido Request Withdrawal ===");
-    println!("From:        {}", wallet);
-    println!("Amount:      {} stETH ({} wei)", args.amount_eth, amount_wei);
-    println!("Step 1:      Approve stETH to WithdrawalQueueERC721");
-    println!("  Contract:  {}", config::STETH_ADDRESS);
-    println!("  Calldata:  {}", approve_calldata);
-    println!("Step 2:      Submit requestWithdrawals");
-    println!("  Contract:  {}", config::WITHDRAWAL_QUEUE_ADDRESS);
-    println!("  Calldata:  {}", request_calldata);
-    println!();
-    println!(
-        "Warning: Withdrawal finalization typically takes 1-5 days (longer during Bunker mode)."
-    );
-
     if args.dry_run {
-        println!("[dry-run] Transactions NOT submitted.");
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "action": "requestWithdrawal",
+            "from": wallet,
+            "amountStEth": format!("{:.6}", args.amount_eth),
+            "amountWei": amount_wei.to_string(),
+            "step1_approve": {
+                "contract": config::STETH_ADDRESS,
+                "calldata": approve_calldata
+            },
+            "step2_request": {
+                "contract": config::WITHDRAWAL_QUEUE_ADDRESS,
+                "calldata": request_calldata
+            },
+            "note": "Add --confirm to broadcast. Withdrawal finalization typically takes 1–5 days."
+        }));
         return Ok(());
     }
 
+    // Pre-flight: stETH balance check (EVM-001)
+    let balance_calldata = rpc::calldata_single_address(config::SEL_BALANCE_OF, &wallet);
+    let balance_result = onchainos::eth_call(chain_id, config::STETH_ADDRESS, &balance_calldata).await
+        .map_err(|e| anyhow::anyhow!("Failed to check stETH balance: {}", e))?;
+    let steth_balance = rpc::extract_return_data(&balance_result)
+        .and_then(|h| rpc::decode_uint256(&h))
+        .map_err(|e| anyhow::anyhow!("Failed to decode stETH balance: {}", e))?;
+    if steth_balance < amount_wei {
+        anyhow::bail!(
+            "Insufficient stETH balance: need {:.6} stETH, have {:.6} stETH.",
+            amount_wei as f64 / 1e18,
+            steth_balance as f64 / 1e18
+        );
+    }
+
     if !args.confirm {
-        println!("=== Transaction Preview (NOT broadcast) ===");
-        println!("Add --confirm to execute this transaction.");
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "action": "requestWithdrawal",
+            "from": wallet,
+            "amountStEth": format!("{:.6}", args.amount_eth),
+            "amountWei": amount_wei.to_string(),
+            "note": "Add --confirm to execute. Withdrawal finalization typically takes 1–5 days."
+        }));
         return Ok(());
     }
 
     // Step 1: Approve stETH spend — must be mined before step 2 can succeed
-    println!("Step 1/2: Approving stETH spend...");
+    eprintln!("Step 1/2: Approving stETH spend...");
     let approve_result = onchainos::wallet_contract_call(
         chain_id,
         config::STETH_ADDRESS,
@@ -92,17 +116,11 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
     )
     .await?;
     let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result, "Approve")?;
-    println!("Approve tx: {}", approve_tx);
-
-    // Wait for approve to be mined before submitting requestWithdrawals.
-    // The contract checks allowance at execution time, so the approve must
-    // land on-chain first.
-    if args.confirm {
-        onchainos::wait_for_receipt(chain_id, &approve_tx, 120).await?;
-    }
+    eprintln!("Approve tx: {} — waiting for confirmation...", approve_tx);
+    onchainos::wait_for_receipt(chain_id, &approve_tx, 120).await?;
 
     // Step 2: Request withdrawal
-    println!("Step 2/2: Submitting withdrawal request...");
+    eprintln!("Step 2/2: Submitting withdrawal request...");
     let request_result = onchainos::wallet_contract_call(
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
@@ -114,15 +132,19 @@ pub async fn run(args: RequestWithdrawalArgs) -> anyhow::Result<()> {
     )
     .await?;
     let request_tx = onchainos::extract_tx_hash_or_err(&request_result, "requestWithdrawals")?;
-    println!("Request tx: {}", request_tx);
+    eprintln!("Request tx: {} — waiting for confirmation...", request_tx);
+    onchainos::wait_for_receipt(chain_id, &request_tx, 120).await?;
 
-    // Verify requestWithdrawals landed on-chain
-    if args.confirm {
-        onchainos::wait_for_receipt(chain_id, &request_tx, 120).await?;
-    }
-    println!();
-    println!("Withdrawal request submitted. You will receive an unstETH NFT (ERC-721).");
-    println!("Use `lido get-withdrawals` to check status.");
+    println!("{}", serde_json::json!({
+        "ok": true,
+        "action": "requestWithdrawal",
+        "from": wallet,
+        "amountStEth": format!("{:.6}", args.amount_eth),
+        "amountWei": amount_wei.to_string(),
+        "approveTxHash": approve_tx,
+        "requestTxHash": request_tx,
+        "note": "Withdrawal request submitted. Use `lido get-withdrawals` to check status. Finalization typically takes 1–5 days."
+    }));
 
     Ok(())
 }

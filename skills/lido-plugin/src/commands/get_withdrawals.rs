@@ -35,14 +35,14 @@ pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
     };
 
     if ids.is_empty() {
-        println!("No withdrawal requests found for {}", address);
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "address": address,
+            "count": 0,
+            "requests": []
+        }));
         return Ok(());
     }
-
-    println!("=== Lido Withdrawal Requests ===");
-    println!("Address: {}", address);
-    println!("Found {} request(s): {:?}", ids.len(), ids);
-    println!();
 
     // Step 2: getWithdrawalStatus(uint256[]) -> WithdrawalRequestStatus[]
     let status_calldata = rpc::calldata_get_withdrawal_status(&ids);
@@ -55,11 +55,10 @@ pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
     // Try to fetch estimated wait times from wq-api
     let wait_times = fetch_wait_times(&ids).await;
 
-    // Print raw status data
+    let mut requests: Vec<serde_json::Value> = Vec::new();
+
     match rpc::extract_return_data(&status_result) {
         Ok(hex) => {
-            println!("Status data (hex): {}", &hex[..hex.len().min(128)], );
-            // Parse each status entry (each is 6 * 32 bytes = 192 bytes = 384 hex chars)
             let hex = hex.trim_start_matches("0x");
             // Skip ABI array header (offset + length = 128 hex chars)
             let data = if hex.len() > 128 { &hex[128..] } else { hex };
@@ -70,41 +69,59 @@ pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
                     break;
                 }
                 let entry = &data[start..start + entry_size];
-                let amount_steth_wei =
-                    u128::from_str_radix(&entry[0..64], 16).unwrap_or(0);
+
+                // EVM-012 fix: propagate parse error instead of silently returning 0
+                let amount_steth_wei = match u128::from_str_radix(&entry[0..64], 16) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("[lido] Warning: failed to decode amountOfStETH for request #{}: {}", id, e);
+                        continue;
+                    }
+                };
                 let amount_steth = amount_steth_wei as f64 / 1e18;
                 let is_finalized = u128::from_str_radix(&entry[4 * 64..5 * 64], 16)
-                    .unwrap_or(0)
-                    != 0;
+                    .unwrap_or(0) != 0;
                 let is_claimed = u128::from_str_radix(&entry[5 * 64..6 * 64], 16)
-                    .unwrap_or(0)
-                    != 0;
+                    .unwrap_or(0) != 0;
 
                 let status = if is_claimed {
                     "CLAIMED"
                 } else if is_finalized {
-                    "READY TO CLAIM"
+                    "READY_TO_CLAIM"
                 } else {
                     "PENDING"
                 };
 
-                print!(
-                    "  Request #{}: {:.6} stETH — {}",
-                    id, amount_steth, status
-                );
-                if let Some(Some(wait)) = wait_times.as_ref().and_then(|w| w.get(i)) {
-                    print!(" (est. wait: {})", wait);
+                let estimated_wait = wait_times
+                    .as_ref()
+                    .and_then(|w| w.get(i))
+                    .and_then(|v| v.as_deref())
+                    .unwrap_or("");
+
+                let mut entry_json = serde_json::json!({
+                    "id": id.to_string(),
+                    "amountStEth": format!("{:.6}", amount_steth),
+                    "amountStEthWei": amount_steth_wei.to_string(),
+                    "status": status
+                });
+                if !estimated_wait.is_empty() {
+                    entry_json["estimatedWait"] = serde_json::Value::String(estimated_wait.to_string());
                 }
-                println!();
+                requests.push(entry_json);
             }
         }
-        Err(_) => {
-            println!("Status: {}", status_result);
+        Err(e) => {
+            anyhow::bail!("Failed to decode withdrawal status: {}", e);
         }
     }
 
-    println!();
-    println!("Use `lido claim-withdrawal --ids <ID1,ID2,...>` to claim finalized requests.");
+    println!("{}", serde_json::json!({
+        "ok": true,
+        "address": address,
+        "count": requests.len(),
+        "requests": requests,
+        "hint": "Use `lido claim-withdrawal --ids <ID1,ID2,...>` to claim finalized requests."
+    }));
 
     Ok(())
 }

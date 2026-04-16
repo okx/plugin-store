@@ -142,6 +142,34 @@ pub async fn wait_for_receipt(chain_id: u64, tx_hash: &str, timeout_secs: u64) -
     )
 }
 
+/// Query native ETH balance via eth_getBalance JSON-RPC.
+pub async fn eth_get_balance(address: &str, chain_id: u64) -> anyhow::Result<u128> {
+    let rpc_url = match chain_id {
+        1 => "https://ethereum.publicnode.com",
+        _ => anyhow::bail!("Unsupported chain_id for eth_getBalance: {}", chain_id),
+    };
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [address, "latest"],
+        "id": 1
+    });
+    let client = reqwest::Client::new();
+    let resp: Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await?
+        .json()
+        .await?;
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("eth_getBalance RPC error: {}", err);
+    }
+    let hex = resp["result"].as_str().unwrap_or("0x0");
+    let hex = hex.trim_start_matches("0x");
+    Ok(u128::from_str_radix(hex, 16).unwrap_or(0))
+}
+
 pub fn extract_tx_hash(result: &Value) -> &str {
     result["data"]["txHash"]
         .as_str()

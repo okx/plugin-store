@@ -35,12 +35,8 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
         anyhow::bail!("Cannot get wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    println!("=== Lido Claim Withdrawal ===");
-    println!("From:        {}", wallet);
-    println!("Request IDs: {:?}", args.ids);
-
     // Step 1: getLastCheckpointIndex() -> uint256
-    println!("\nStep 1/3: Getting last checkpoint index...");
+    eprintln!("Step 1/3: Getting last checkpoint index...");
     let checkpoint_calldata = format!("0x{}", config::SEL_GET_LAST_CHECKPOINT_INDEX);
     let checkpoint_result = onchainos::eth_call(
         chain_id,
@@ -54,11 +50,10 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
             anyhow::bail!("Failed to get last checkpoint index: {}", e);
         }
     };
-    println!("Last checkpoint index: {}", last_checkpoint);
+    eprintln!("Last checkpoint index: {}", last_checkpoint);
 
     // Step 2a: getWithdrawalStatus — filter out PENDING / CLAIMED before calling findCheckpointHints.
-    // findCheckpointHints reverts with an opaque error on any non-finalized request ID.
-    println!("Step 2/3: Checking request status...");
+    eprintln!("Step 2/3: Checking request status...");
     let status_calldata = rpc::calldata_get_withdrawal_status(&args.ids);
     let status_result = onchainos::eth_call(
         chain_id,
@@ -98,8 +93,8 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
         }
     }
 
-    // Step 2b: findCheckpointHints(uint256[] requestIds, uint256 firstIndex, uint256 lastIndex)
-    println!("  Finding checkpoint hints...");
+    // Step 2b: findCheckpointHints
+    eprintln!("  Finding checkpoint hints...");
     let hints_calldata =
         rpc::calldata_find_checkpoint_hints(&args.ids, 1, last_checkpoint);
     let hints_result = onchainos::eth_call(
@@ -122,26 +117,37 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
             args.ids.len()
         );
     }
-    println!("Hints: {:?}", hints);
 
     // Step 3: claimWithdrawals(uint256[] requestIds, uint256[] hints)
     let claim_calldata = rpc::calldata_claim_withdrawals(&args.ids, &hints);
 
-    println!("\nStep 3/3: Claiming withdrawals");
-    println!("  Contract:  {}", config::WITHDRAWAL_QUEUE_ADDRESS);
-    println!("  Calldata:  {}", claim_calldata);
-
     if args.dry_run {
-        println!("\n[dry-run] Transaction NOT submitted.");
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "action": "claimWithdrawal",
+            "from": wallet,
+            "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+            "contract": config::WITHDRAWAL_QUEUE_ADDRESS,
+            "calldata": claim_calldata,
+            "note": "Add --confirm to broadcast"
+        }));
         return Ok(());
     }
 
-    // ── Preview mode: show TX details without broadcasting ──────────────────
-    if !args.confirm && !args.dry_run {
-        println!("=== Transaction Preview (NOT broadcast) ===");
-        println!("Add --confirm to execute this transaction.");
+    if !args.confirm {
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "action": "claimWithdrawal",
+            "from": wallet,
+            "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+            "note": "Add --confirm to execute"
+        }));
         return Ok(());
     }
+
+    eprintln!("Step 3/3: Claiming withdrawals...");
     let claim_result = onchainos::wallet_contract_call(
         chain_id,
         config::WITHDRAWAL_QUEUE_ADDRESS,
@@ -154,8 +160,14 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
     .await?;
 
     let tx_hash = onchainos::extract_tx_hash(&claim_result);
-    println!("\nClaim transaction submitted: {}", tx_hash);
-    println!("ETH will be sent to your wallet. The unstETH NFT(s) are burned.");
+    println!("{}", serde_json::json!({
+        "ok": true,
+        "action": "claimWithdrawal",
+        "from": wallet,
+        "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+        "txHash": tx_hash,
+        "note": "ETH sent to wallet, unstETH NFT(s) burned"
+    }));
 
     Ok(())
 }
