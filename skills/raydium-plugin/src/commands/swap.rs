@@ -134,7 +134,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
     if args.input_mint == SOL_NATIVE_MINT {
         let lamports = onchainos::get_sol_balance(&wallet, SOLANA_RPC_URL)
             .await
-            .unwrap_or(0);
+            .map_err(|e| anyhow::anyhow!("Failed to fetch SOL balance: {}", e))?;
         if lamports < raw_amount {
             anyhow::bail!(
                 "Insufficient SOL balance: need {:.9} SOL, have {:.9} SOL. \
@@ -146,7 +146,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> Result<()> {
     } else {
         let token_balance = onchainos::get_spl_token_balance(&wallet, &args.input_mint, SOLANA_RPC_URL)
             .await
-            .unwrap_or(0);
+            .map_err(|e| anyhow::anyhow!("Failed to fetch token balance for mint {}: {}", args.input_mint, e))?;
         if token_balance < raw_amount {
             anyhow::bail!(
                 "Insufficient token balance: need {} units, have {} units for mint {}. \

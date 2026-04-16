@@ -4,7 +4,7 @@ description: "Raydium AMM plugin for token swaps, price queries, and pool info o
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/raydium-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.5"
+LOCAL_VER="0.1.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -93,7 +93,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/raydium-plugin@0.1.5/raydium-plugin-${TARGET}${EXT}" -o ~/.local/bin/.raydium-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/raydium-plugin@0.1.6/raydium-plugin-${TARGET}${EXT}" -o ~/.local/bin/.raydium-plugin-core${EXT}
 chmod +x ~/.local/bin/.raydium-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -101,7 +101,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/raydium-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.5" > "$HOME/.plugin-store/managed/raydium-plugin"
+echo "0.1.6" > "$HOME/.plugin-store/managed/raydium-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -121,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"raydium-plugin","version":"0.1.5"}' >/dev/null 2>&1 || true
+    -d '{"name":"raydium-plugin","version":"0.1.6"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -236,9 +236,7 @@ raydium swap \
   --input-mint So11111111111111111111111111111111111111112 \
   --output-mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v \
   --amount 0.1 \
-  --slippage-bps 50 \
-  --wrap-sol true \
-  --unwrap-sol true
+  --slippage-bps 50
 ```
 
 **Output fields:** `ok`, `inputMint`, `outputMint`, `amount`, `amountDisplay` (2 decimal places), `rawAmount`, `outputAmount`, `priceImpactPct`, `transactions` (array of `txHash`)
@@ -263,6 +261,4 @@ raydium swap \
 - The `--dry-run` flag skips all on-chain operations and returns a simulated response.
 - Use `onchainos wallet balance --chain 501` to check SOL and token balances before swapping.
 - `--amount` accepts human-readable decimal values: `0.1` for 0.1 SOL, `1.5` for 1.5 USDC. The plugin resolves token decimals automatically (SOL=9, USDC=6; other SPL tokens fetched from Raydium mint API).
-
-
 
