@@ -1,5 +1,5 @@
 {
   "name": "raydium",
   "description": "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet. Trigger phrases: swap on raydium, raydium swap, raydium price, raydium pool, get swap quote raydium, raydium dex, swap solana raydium.",
-  "version": "0.1.3"
+  "version": "0.1.6"
 }

@@ -1,6 +1,6 @@
 schema_version: 1
 name: raydium-plugin
-version: "0.1.5"
+version: "0.1.6"
 description: "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet. Trigger phrases: swap on raydium, raydium swap, raydium price, raydium pool, get swap quote raydium, raydium dex, swap solana raydium."
 author:
   name: skylavis-sky

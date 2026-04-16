@@ -4,7 +4,7 @@ description: "Raydium AMM plugin for token swaps, price queries, and pool info o
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 
@@ -236,9 +236,7 @@ raydium swap \
   --input-mint So11111111111111111111111111111111111111112 \
   --output-mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v \
   --amount 0.1 \
-  --slippage-bps 50 \
-  --wrap-sol true \
-  --unwrap-sol true
+  --slippage-bps 50
 ```
 
 **Output fields:** `ok`, `inputMint`, `outputMint`, `amount`, `amountDisplay` (2 decimal places), `rawAmount`, `outputAmount`, `priceImpactPct`, `transactions` (array of `txHash`)
