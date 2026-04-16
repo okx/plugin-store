@@ -242,9 +242,13 @@ enum Commands {
 
     /// Redeem winning outcome tokens after a market resolves (signs via onchainos wallet)
     Redeem {
-        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        /// Market identifier: condition_id (0x-prefixed hex) or slug. Omit when using --all.
         #[arg(long)]
-        market_id: String,
+        market_id: Option<String>,
+
+        /// Redeem all redeemable positions across EOA and proxy wallets in one pass
+        #[arg(long)]
+        all: bool,
 
         /// Preview the redemption call without submitting the transaction
         #[arg(long)]
@@ -348,8 +352,15 @@ async fn main() {
         Commands::SwitchMode { mode } => {
             commands::switch_mode::run(&mode).await
         }
-        Commands::Redeem { market_id, dry_run } => {
-            commands::redeem::run(&market_id, dry_run).await
+        Commands::Redeem { market_id, all, dry_run } => {
+            if all {
+                commands::redeem::run_all(dry_run).await
+            } else if let Some(mid) = market_id {
+                commands::redeem::run(&mid, dry_run).await
+            } else {
+                eprintln!("Error: provide --market-id <ID> or --all");
+                std::process::exit(1);
+            }
         }
         Commands::Cancel { order_id, market, all } => {
             if all {

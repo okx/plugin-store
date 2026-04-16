@@ -2,20 +2,27 @@
 # polymarket-plugin -- Skill Summary
 
 ## Overview
-This skill enables trading on Polymarket prediction markets through Polygon. Users can browse markets, buy/sell YES/NO and categorical outcome tokens, manage positions, and cancel orders. The plugin uses the onchainos wallet for EIP-712 order signing and automatically handles USDC.e approvals for trades. All market data comes from Polymarket's CLOB, Gamma, and Data APIs.
+This skill enables AI agents to interact with Polymarket, a prediction market platform on Polygon, allowing users to trade outcome tokens on real-world events. It supports both direct wallet trading (EOA mode) and gasless proxy wallet trading (POLY_PROXY mode), with automated credential management and EIP-712 signing through the onchainos wallet system.
 
 ## Usage
-Install the plugin and connect your onchainos wallet to Polygon (chain 137). API credentials are auto-derived from the wallet on first use. Browse markets with `list-markets`, place orders with `buy`/`sell`, and monitor positions with `get-positions`.
+Connect your onchainos wallet, verify regional access with `polymarket-plugin check-access`, then fund your wallet with USDC.e on Polygon. Browse markets with `list-markets` and trade with `buy` or `sell` commands.
 
 ## Commands
 | Command | Description |
 |---------|-------------|
-| `list-markets` | Browse active prediction markets with optional filtering |
-| `get-market` | Get detailed market info and order book by ID or slug |
-| `get-positions` | View open positions and P&L for wallet address |
-| `buy` | Purchase YES/NO shares with USDC.e |
-| `sell` | Sell existing YES/NO shares |
-| `cancel` | Cancel open orders by ID, market, or all orders |
+| `check-access` | Verify region is not restricted |
+| `list-markets` | Browse active prediction markets with filtering options |
+| `list-5m` | List 5-minute crypto up/down markets |
+| `get-market` | Get detailed market information and order book |
+| `get-positions` | View current positions and P&L |
+| `balance` | Show POL and USDC.e balances for EOA and proxy wallets |
+| `buy` | Purchase YES/NO outcome shares |
+| `sell` | Sell existing outcome shares |
+| `cancel` | Cancel open orders |
+| `redeem` | Redeem winning tokens after market resolution |
+| `setup-proxy` | Deploy proxy wallet for gasless trading |
+| `deposit` | Transfer USDC.e from EOA to proxy wallet |
+| `switch-mode` | Switch between EOA and proxy trading modes |
 
 ## Triggers
-Activate when users want to trade prediction markets, check Polymarket positions, browse prediction markets, or manage Polymarket orders. Also triggered by phrases like "polymarket-plugin shares," "prediction market trade," or "buy yes token."
+Activate when users want to trade prediction markets, check Polymarket positions, browse markets by topic (sports, elections, crypto), or search for specific events. Also triggers on setup phrases like "new to polymarket" or "just installed polymarket" for guided onboarding.
