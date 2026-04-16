@@ -138,6 +138,118 @@ fi
 
 ---
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed velodrome", "how do I swap on Velodrome", "what can I do with this", "help me provide liquidity on Velodrome" — **do not wait for them to ask specific questions.** Proactively walk them through the Quickstart in order, one step at a time, waiting for confirmation before proceeding to the next:
+
+1. **Check wallet** — run `onchainos wallet addresses --chain 10`. If no address, direct them to connect via `onchainos wallet login`. Do not proceed to write operations until a wallet is confirmed.
+2. **Check balance** — run `onchainos wallet balance --chain 10`. Look for ETH (for gas) and the tokens they want to swap or provide as liquidity.
+3. **Get a quote first** — run `velodrome-v2 quote --token-in <A> --token-out <B> --amount-in <X>` to show the expected rate before committing. This auto-checks both volatile and stable pools and picks the best.
+4. **Preview the swap** — run `velodrome-v2 swap --token-in <A> --token-out <B> --amount-in <X> --slippage 0.5` without `--confirm` to show the preview. Confirm the amounts and minimum output look correct.
+5. **Execute** — once they confirm, re-run with `--confirm`.
+6. **If providing liquidity** — guide them to `pools` to verify the pool exists, then `add-liquidity` preview, then confirm. Remind them they can claim VELO rewards any time with `claim-rewards`.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+---
+
+## Quickstart
+
+New to Velodrome V2? Follow these steps to go from zero to your first swap or LP position on Optimism.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet login your@email.com
+onchainos wallet addresses --chain 10
+```
+
+Confirm an Optimism (chain 10) address is active before proceeding.
+
+### Step 2 — Check your balance
+
+```bash
+onchainos wallet balance --chain 10
+```
+
+You need ETH on Optimism for gas (very cheap, typically < $0.01 per tx) plus the tokens you want to swap or provide as liquidity.
+
+### Step 3 — Get a quote (no gas)
+
+```bash
+velodrome-v2 quote --token-in WETH --token-out USDC --amount-in 0.001
+```
+
+Auto-checks both volatile and stable pools and returns the best rate. No wallet or gas required.
+
+### Step 4 — Preview before executing
+
+All write commands show a safe preview by default — no on-chain action until you add `--confirm`:
+
+```bash
+# Preview (safe — no tx sent):
+velodrome-v2 swap --token-in WETH --token-out USDC --amount-in 0.001 --slippage 0.5
+
+# Execute (add --confirm):
+velodrome-v2 swap --token-in WETH --token-out USDC --amount-in 0.001 --slippage 0.5 --confirm
+```
+
+### Step 5 — Swap tokens
+
+```bash
+velodrome-v2 swap --token-in USDC --token-out WETH --amount-in 1.0 --slippage 0.5 --confirm
+```
+
+Preview shows `estimated_amount_out` and `amount_out_min` (slippage-adjusted floor). An ERC-20 approve tx fires automatically if needed before the swap.
+
+### Step 6 — (Optional) Provide liquidity
+
+**Check the pool exists first:**
+```bash
+velodrome-v2 pools --token-a WETH --token-b USDC
+```
+
+**Add liquidity** (specify one side; the other is auto-quoted):
+```bash
+# Preview:
+velodrome-v2 add-liquidity --token-a WETH --token-b USDC --amount-a-desired 0.001
+
+# Execute:
+velodrome-v2 add-liquidity --token-a WETH --token-b USDC --amount-a-desired 0.001 --confirm
+```
+
+For stable pools (e.g. USDC/DAI), add the `--stable` flag (presence only — no value needed).
+
+**View your LP position:**
+```bash
+velodrome-v2 positions --token-a WETH --token-b USDC
+```
+
+### Step 7 — (Optional) Claim VELO rewards
+
+LP positions in gauged pools earn VELO token emissions. Claim any time:
+
+```bash
+# Preview (shows earned VELO):
+velodrome-v2 claim-rewards --token-a WETH --token-b USDC
+
+# Execute:
+velodrome-v2 claim-rewards --token-a WETH --token-b USDC --confirm
+```
+
+### Step 8 — (Optional) Remove liquidity
+
+```bash
+# Preview:
+velodrome-v2 remove-liquidity --token-a WETH --token-b USDC
+
+# Execute (removes full LP balance by default):
+velodrome-v2 remove-liquidity --token-a WETH --token-b USDC --confirm
+```
+
+Use `--liquidity <amount>` for partial removal.
+
+---
 
 ## Pool Types
 
