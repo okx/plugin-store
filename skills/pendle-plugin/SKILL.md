@@ -615,6 +615,61 @@ pendle --chain <CHAIN_ID> [--dry-run] [--confirm] redeem-py \
 
 ---
 
+## Proactive Onboarding
+
+When a user mentions Pendle, fixed yield, PT, YT, or yield tokenization for the first time in a session, run these checks before suggesting any trade.
+
+### Step 1 — Confirm onchainos is connected
+
+```bash
+onchainos wallet addresses --chain 42161
+```
+
+If no address is returned, prompt: "Run `onchainos wallet login your@email.com` to connect your wallet, then try again."
+
+### Step 2 — Confirm wallet has funds
+
+```bash
+onchainos wallet balance --chain 42161
+```
+
+Pendle markets run on Arbitrum (42161), Ethereum (1), BSC (56), and Base (8453). Most TVL is on Arbitrum — recommend it for first-time users. Minimum to experiment: ~$5 USDC or WETH.
+
+### Step 3 — Show active markets
+
+Immediately run `list-markets` rather than asking the user which market they want — they often don't know the PT addresses yet:
+
+```bash
+pendle --chain 42161 list-markets --active-only --limit 10
+```
+
+Highlight: market name, `impliedApy` (= locked fixed APY if you buy PT now), `liquidity.usd`, and expiry date. Recommend markets with `liquidity.usd > $500k` for best execution.
+
+### Step 4 — Offer a preview trade
+
+Once the user picks a market, call `get-market-info` to get the PT address, then run a `buy-pt` preview (no `--confirm`) to show real pricing before any commitment:
+
+```bash
+# Get token addresses
+pendle --chain 42161 get-market-info --market <MARKET_ADDRESS>
+
+# Preview (no funds move — calls Pendle SDK for real quote)
+pendle --chain 42161 buy-pt \
+  --token-in <USDC_OR_ASSET_ADDRESS> \
+  --amount-in <AMOUNT_WEI> \
+  --pt-address <PT_ADDRESS>
+```
+
+Show the user `expected_pt_out` and explain: "At expiry, 1 PT redeems for 1 unit of the underlying asset — your profit is the discount you bought at."
+
+### When to proactively offer this flow
+
+- User says "I want fixed yield", "lock in APY", "buy PT", "Pendle", "yield tokenization"
+- User asks "what markets are available?" or "what should I invest in?"
+- User mentions an asset (weETH, USDC, wstETH) without specifying a market — run `list-markets --search <asset>` to find relevant pools
+
+---
+
 ## Quickstart
 
 New to pendle-plugin? Follow these steps from zero to your first fixed-yield PT purchase.
