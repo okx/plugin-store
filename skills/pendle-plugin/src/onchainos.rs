@@ -1,40 +1,5 @@
 use serde_json::Value;
 
-/// Public RPC endpoints for supported chains — used by wait_for_tx.
-pub fn default_rpc_url(chain_id: u64) -> &'static str {
-    match chain_id {
-        1     => "https://ethereum.publicnode.com",
-        42161 => "https://arbitrum-one-rpc.publicnode.com",
-        56    => "https://bsc.publicnode.com",
-        8453  => "https://base-rpc.publicnode.com",
-        _     => "https://ethereum.publicnode.com",
-    }
-}
-
-/// Poll eth_getTransactionReceipt until the tx confirms or timeout (20 × 2s = 40s).
-/// Called after every ERC-20 approve so the on-chain allowance is visible before
-/// the main Pendle router tx fires.  Silently returns on timeout — the router tx
-/// will either succeed (allowance landed) or fail with a clear on-chain revert.
-pub async fn wait_for_tx(tx_hash: &str, rpc_url: &str) {
-    let client = reqwest::Client::new();
-    for _ in 0..20u32 {
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let body = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "eth_getTransactionReceipt",
-            "params": [tx_hash],
-            "id": 1
-        });
-        if let Ok(resp) = client.post(rpc_url).json(&body).send().await {
-            if let Ok(json) = resp.json::<Value>().await {
-                if json.get("result").map(|r| !r.is_null()).unwrap_or(false) {
-                    return;
-                }
-            }
-        }
-    }
-}
-
 /// Validate that an address looks like a well-formed EVM address (0x + 40 hex chars).
 pub fn validate_evm_address(addr: &str) -> anyhow::Result<()> {
     if !addr.starts_with("0x") || addr.len() != 42 {
@@ -104,10 +69,6 @@ pub async fn wallet_contract_call(
         to.to_string(),
         "--input-data".to_string(),
         input_data.to_string(),
-        // --force bypasses onchainos's interactive confirmation prompt.
-        // This is intentional: the plugin implements its own preview/confirm gate.
-        // dry_run=true returns early above, so --force is only present on the live
-        // execution path (confirm=true), never on preview or dry-run paths.
         "--force".to_string(),
     ];
 
@@ -170,41 +131,6 @@ pub fn extract_tx_hash(result: &Value) -> anyhow::Result<String> {
             "Transaction was not broadcast — no txHash in onchainos response: {}",
             result
         ))
-}
-
-/// Query ERC-20 balanceOf(wallet) for a given token via a direct JSON-RPC eth_call.
-/// Used as a pre-flight balance check before calling the Pendle SDK — surfaces
-/// insufficient-balance errors locally rather than spending a round-trip to the SDK.
-/// Returns 0 on any RPC error (non-fatal: on-chain will revert if truly underfunded).
-pub async fn erc20_balance_of(chain_id: u64, token_addr: &str, wallet: &str) -> anyhow::Result<u128> {
-    let rpc_url = default_rpc_url(chain_id);
-    let wallet_clean = wallet.strip_prefix("0x").unwrap_or(wallet);
-    // balanceOf(address) selector = 0x70a08231; wallet padded to 32 bytes
-    let data = format!("0x70a08231{:0>64}", wallet_clean);
-    let client = reqwest::Client::new();
-    let body = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "eth_call",
-        "params": [{"to": token_addr, "data": data}, "latest"],
-        "id": 1
-    });
-    let resp: Value = client
-        .post(rpc_url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| anyhow::anyhow!("eth_call for balanceOf failed: {}", e))?
-        .json()
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to parse balanceOf response: {}", e))?;
-    let hex = resp["result"].as_str().unwrap_or("0x0");
-    let clean = hex.trim_start_matches("0x");
-    if clean.is_empty() {
-        return Ok(0);
-    }
-    // ABI result is a 32-byte (64 hex char) padded uint256; u128 fits in the last 32 hex chars
-    let truncated = if clean.len() > 32 { &clean[clean.len() - 32..] } else { clean };
-    Ok(u128::from_str_radix(truncated, 16).unwrap_or(0))
 }
 
 /// Build ERC-20 approve calldata and submit via wallet contract-call.

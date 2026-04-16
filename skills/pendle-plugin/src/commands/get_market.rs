@@ -9,6 +9,13 @@ pub async fn run(
     time_frame: Option<&str>,
     api_key: Option<&str>,
 ) -> Result<Value> {
-    let data = api::get_market(chain_id, market_address, time_frame, api_key).await?;
+    // Map user-facing time frame labels to API-accepted values
+    let mapped = time_frame.map(|tf| match tf {
+        "1D" => "hour",
+        "1W" => "day",
+        "1M" => "week",
+        other => other,
+    });
+    let data = api::get_market(chain_id, market_address, mapped, api_key).await?;
     Ok(data)
 }

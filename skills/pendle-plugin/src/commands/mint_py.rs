@@ -1,8 +1,12 @@
 use anyhow::Result;
 use serde_json::Value;
 
-use crate::api;
+use crate::api::{self, SdkTokenAmount};
 use crate::onchainos;
+
+/// Native ETH sentinel address used by Pendle (and most DEX aggregators).
+/// When token_in is this address, no ERC-20 approval is needed.
+const NATIVE_ETH: &str = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 pub async fn run(
     chain_id: u64,
@@ -12,8 +16,8 @@ pub async fn run(
     yt_address: &str,
     from: Option<&str>,
     slippage: f64,
-    dry_run: bool,
     confirm: bool,
+    dry_run: bool,
     api_key: Option<&str>,
 ) -> Result<Value> {
     // Validate inputs
@@ -29,54 +33,58 @@ pub async fn run(
         anyhow::bail!("Cannot resolve wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    // Pre-flight balance check: verify wallet holds enough token_in before calling the SDK
-    if !dry_run {
-        let balance = onchainos::erc20_balance_of(chain_id, token_in, &wallet).await.unwrap_or(0);
-        let required: u128 = amount_in.parse().unwrap_or(0);
-        if balance < required {
-            anyhow::bail!(
-                "Insufficient balance: wallet {} holds {} wei of token {} but {} wei is required. \
-                 Acquire more before retrying.",
-                wallet, balance, token_in, required
-            );
-        }
-    }
-
-    // Use the v2 GET endpoint with comma-separated tokensOut — the v3 POST endpoint cannot
-    // classify mintPyFromToken when outputs contains both PT and YT addresses.
-    // Ref: pendle-finance/pendle-examples-public hosted-sdk-demo/src/mint-py.ts
-    let sdk_resp = api::sdk_convert_v2_get(
+    // Both PT and YT as outputs; Hosted SDK routes to mintPyFromToken
+    let sdk_resp = api::sdk_convert(
         chain_id,
         &wallet,
-        token_in,
-        amount_in,
-        &format!("{},{}", pt_address, yt_address),
+        vec![SdkTokenAmount {
+            token: token_in.to_string(),
+            amount: amount_in.to_string(),
+        }],
+        vec![
+            SdkTokenAmount {
+                token: pt_address.to_string(),
+                amount: "0".to_string(),
+            },
+            SdkTokenAmount {
+                token: yt_address.to_string(),
+                amount: "0".to_string(),
+            },
+        ],
         slippage,
+        true, // enableAggregator: true — allows non-native tokenIn (e.g. USDC) via DEX routing
         api_key,
     )
     .await?;
 
     let (calldata, router_to) = api::extract_sdk_calldata(&sdk_resp)?;
-    let approvals = api::extract_required_approvals(&sdk_resp);
-    let expected_py_out = api::extract_amount_out(&sdk_resp);
+    let mut approvals = api::extract_required_approvals(&sdk_resp);
 
-    // Preview gate: show SDK quote without executing
-    if !confirm && !dry_run {
+    // M3 fallback: Pendle SDK sometimes returns empty requiredApprovals for non-native ERC-20
+    // inputs (e.g. weETH, USDC). Without an explicit approval the router call fails with
+    // "insufficient allowance". Hardcode approval for token_in → router when SDK omits it.
+    let is_native = token_in.to_lowercase() == NATIVE_ETH;
+    if approvals.is_empty() && !is_native {
+        approvals.push((token_in.to_string(), router_to.clone()));
+    }
+
+    // Preview gate: show what would be executed without --confirm
+    if !confirm {
         return Ok(serde_json::json!({
             "ok": true,
             "preview": true,
-            "note": "Preview — add --confirm to execute on-chain.",
             "operation": "mint-py",
             "chain_id": chain_id,
             "token_in": token_in,
             "amount_in": amount_in,
             "pt_address": pt_address,
             "yt_address": yt_address,
-            "expected_py_out": expected_py_out,
             "router": router_to,
             "calldata": calldata,
             "wallet": wallet,
-            "required_approvals": approvals.len(),
+            "required_approvals": approvals.iter().map(|(t, s)| serde_json::json!({"token": t, "spender": s})).collect::<Vec<_>>(),
+            "dry_run": dry_run,
+            "note": "Re-run with --confirm to execute"
         }));
     }
 
@@ -93,9 +101,7 @@ pub async fn run(
             dry_run,
         )
         .await?;
-        let approve_hash = onchainos::extract_tx_hash(&approve_result)?;
-        if !dry_run { onchainos::wait_for_tx(&approve_hash, onchainos::default_rpc_url(chain_id)).await; }
-        approve_hashes.push(approve_hash);
+        approve_hashes.push(onchainos::extract_tx_hash(&approve_result)?);
     }
 
     let result = onchainos::wallet_contract_call(
@@ -118,7 +124,6 @@ pub async fn run(
         "amount_in": amount_in,
         "pt_address": pt_address,
         "yt_address": yt_address,
-        "expected_py_out": expected_py_out,
         "router": router_to,
         "calldata": calldata,
         "wallet": wallet,

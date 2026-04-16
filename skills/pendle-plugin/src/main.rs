@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(
-    name = "pendle",
+    name = "pendle-plugin",
     about = "Pendle Finance plugin — yield tokenization: buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT",
     version
 )]
@@ -19,10 +19,6 @@ struct Cli {
     /// Simulate without broadcasting any transaction
     #[arg(long, global = true)]
     dry_run: bool,
-
-    /// Confirm and broadcast the transaction (required for live execution)
-    #[arg(long, global = true)]
-    confirm: bool,
 
     /// Optional Pendle API Bearer token (increases rate limit)
     #[arg(long, global = true)]
@@ -51,29 +47,17 @@ enum Commands {
         /// Max results to return (max 100)
         #[arg(long, default_value = "20")]
         limit: u64,
-
-        /// Filter markets by name or token symbol (e.g. weETH, USDC, wstETH).
-        /// Note: ETH pools use liquid staking derivatives — try weETH, wstETH, rETH instead of ETH/WETH.
-        #[arg(long)]
-        search: Option<String>,
     },
 
     /// Get detailed market data for a specific Pendle market
     GetMarket {
-        /// Market contract address (also accepted as --market-id)
-        #[arg(long, alias = "market-id")]
+        /// Market contract address
+        #[arg(long)]
         market: String,
 
         /// Time frame for historical data: 1D (1 day), 1W (1 week), 1M (1 month)
         #[arg(long)]
         time_frame: Option<String>,
-    },
-
-    /// Get a clean summary of token addresses for a specific Pendle market (PT, YT, SY, LP, underlying)
-    GetMarketInfo {
-        /// Market contract address (also accepted as --market-id)
-        #[arg(long, alias = "market-id")]
-        market: String,
     },
 
     /// Get user positions (PT, YT, LP holdings) across all chains
@@ -127,6 +111,10 @@ enum Commands {
         /// Slippage tolerance (0.01 = 1%)
         #[arg(long, default_value = "0.01")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Sell PT (Principal Token) back to underlying token
@@ -154,6 +142,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.01")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Buy YT (Yield Token) — long floating yield position
@@ -181,6 +173,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.01")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Sell YT (Yield Token) back to underlying token
@@ -208,6 +204,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.01")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Add single-token liquidity to a Pendle AMM pool
@@ -235,6 +235,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.005")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Remove single-token liquidity from a Pendle AMM pool
@@ -262,6 +266,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.005")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Mint PT + YT pair from underlying token
@@ -289,6 +297,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.005")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 
     /// Redeem equal amounts of PT + YT back to underlying token
@@ -320,6 +332,10 @@ enum Commands {
         /// Slippage tolerance
         #[arg(long, default_value = "0.005")]
         slippage: f64,
+
+        /// Confirm and execute (omit to preview only)
+        #[arg(long)]
+        confirm: bool,
     },
 }
 
@@ -330,25 +346,18 @@ async fn main() {
     let dry_run = cli.dry_run;
     let api_key = cli.api_key.as_deref();
 
-    let confirm = cli.confirm;
-
     let result = match cli.command {
         Commands::ListMarkets {
             chain_id,
             active_only,
             skip,
             limit,
-            search,
         } => {
-            // If --chain-id not explicitly passed, default to the global --chain value
-            // so `pendle --chain 42161 list-markets` correctly filters by Arbitrum.
-            let effective_chain_id = Some(chain_id.unwrap_or(chain));
             commands::list_markets::run(
-                effective_chain_id,
+                chain_id,
                 if active_only { Some(true) } else { None },
                 skip,
                 limit,
-                search.as_deref(),
                 api_key,
             )
             .await
@@ -356,10 +365,6 @@ async fn main() {
 
         Commands::GetMarket { market, time_frame } => {
             commands::get_market::run(chain, &market, time_frame.as_deref(), api_key).await
-        }
-
-        Commands::GetMarketInfo { market } => {
-            commands::get_market_info::run(chain, &market, api_key).await
         }
 
         Commands::GetPositions { user, filter_usd } => {
@@ -382,6 +387,7 @@ async fn main() {
             min_pt_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::buy_pt::run(
                 chain,
@@ -391,8 +397,8 @@ async fn main() {
                 &min_pt_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -405,6 +411,7 @@ async fn main() {
             min_token_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::sell_pt::run(
                 chain,
@@ -414,8 +421,8 @@ async fn main() {
                 &min_token_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -428,6 +435,7 @@ async fn main() {
             min_yt_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::buy_yt::run(
                 chain,
@@ -437,8 +445,8 @@ async fn main() {
                 &min_yt_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -451,6 +459,7 @@ async fn main() {
             min_token_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::sell_yt::run(
                 chain,
@@ -460,8 +469,8 @@ async fn main() {
                 &min_token_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -474,6 +483,7 @@ async fn main() {
             min_lp_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::add_liquidity::run(
                 chain,
@@ -483,8 +493,8 @@ async fn main() {
                 &min_lp_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -497,6 +507,7 @@ async fn main() {
             min_token_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::remove_liquidity::run(
                 chain,
@@ -506,8 +517,8 @@ async fn main() {
                 &min_token_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -520,6 +531,7 @@ async fn main() {
             yt_address,
             from,
             slippage,
+            confirm,
         } => {
             commands::mint_py::run(
                 chain,
@@ -529,8 +541,8 @@ async fn main() {
                 &yt_address,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await
@@ -544,6 +556,7 @@ async fn main() {
             token_out,
             from,
             slippage,
+            confirm,
         } => {
             commands::redeem_py::run(
                 chain,
@@ -554,8 +567,8 @@ async fn main() {
                 &token_out,
                 from.as_deref(),
                 slippage,
-                dry_run,
                 confirm,
+                dry_run,
                 api_key,
             )
             .await

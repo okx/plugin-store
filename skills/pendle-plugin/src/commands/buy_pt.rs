@@ -12,8 +12,8 @@ pub async fn run(
     min_pt_out: &str,
     from: Option<&str>,
     slippage: f64,
-    dry_run: bool,
     confirm: bool,
+    dry_run: bool,
     api_key: Option<&str>,
 ) -> Result<Value> {
     // Validate inputs
@@ -29,19 +29,6 @@ pub async fn run(
         anyhow::bail!("Cannot resolve wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    // Pre-flight balance check: verify wallet holds enough token_in before calling the SDK
-    if !dry_run {
-        let balance = onchainos::erc20_balance_of(chain_id, token_in, &wallet).await.unwrap_or(0);
-        let required: u128 = amount_in.parse().unwrap_or(0);
-        if balance < required {
-            anyhow::bail!(
-                "Insufficient balance: wallet {} holds {} wei of token {} but {} wei is required. \
-                 Acquire more before retrying.",
-                wallet, balance, token_in, required
-            );
-        }
-    }
-
     // Call Pendle Hosted SDK to generate calldata
     let sdk_resp = api::sdk_convert(
         chain_id,
@@ -55,31 +42,31 @@ pub async fn run(
             amount: min_pt_out.to_string(),
         }],
         slippage,
+        true, // enableAggregator: true — buy/sell/liquidity operations may need DEX routing
         api_key,
     )
     .await?;
 
     let (calldata, router_to) = api::extract_sdk_calldata(&sdk_resp)?;
     let approvals = api::extract_required_approvals(&sdk_resp);
-    let expected_pt_out = api::extract_amount_out(&sdk_resp);
-    api::check_min_out(&expected_pt_out, min_pt_out, "pt")?;
 
-    // Preview gate: show SDK quote without executing
-    if !confirm && !dry_run {
+    // Preview gate: show what would be executed without --confirm
+    if !confirm {
         return Ok(serde_json::json!({
             "ok": true,
             "preview": true,
-            "note": "Preview — add --confirm to execute on-chain.",
             "operation": "buy-pt",
             "chain_id": chain_id,
             "token_in": token_in,
             "amount_in": amount_in,
             "pt_address": pt_address,
-            "expected_pt_out": expected_pt_out,
+            "min_pt_out": min_pt_out,
             "router": router_to,
             "calldata": calldata,
             "wallet": wallet,
-            "required_approvals": approvals.len(),
+            "required_approvals": approvals.iter().map(|(t, s)| serde_json::json!({"token": t, "spender": s})).collect::<Vec<_>>(),
+            "dry_run": dry_run,
+            "note": "Re-run with --confirm to execute"
         }));
     }
 
@@ -98,9 +85,7 @@ pub async fn run(
             dry_run,
         )
         .await?;
-        let approve_hash = onchainos::extract_tx_hash(&approve_result)?;
-        if !dry_run { onchainos::wait_for_tx(&approve_hash, onchainos::default_rpc_url(chain_id)).await; }
-        approve_hashes.push(approve_hash);
+        approve_hashes.push(onchainos::extract_tx_hash(&approve_result)?);
     }
 
     // Submit main buy-PT transaction
@@ -124,7 +109,6 @@ pub async fn run(
         "amount_in": amount_in,
         "pt_address": pt_address,
         "min_pt_out": min_pt_out,
-        "expected_pt_out": expected_pt_out,
         "router": router_to,
         "calldata": calldata,
         "wallet": wallet,

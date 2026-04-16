@@ -12,8 +12,8 @@ pub async fn run(
     min_token_out: &str,
     from: Option<&str>,
     slippage: f64,
-    dry_run: bool,
     confirm: bool,
+    dry_run: bool,
     api_key: Option<&str>,
 ) -> Result<Value> {
     // Validate inputs
@@ -28,20 +28,6 @@ pub async fn run(
         anyhow::bail!("Cannot resolve wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    // Pre-flight balance check: verify wallet holds enough YT before calling the SDK
-    if !dry_run {
-        let balance = onchainos::erc20_balance_of(chain_id, yt_address, &wallet).await.unwrap_or(0);
-        let required: u128 = amount_in.parse().unwrap_or(0);
-        if balance < required {
-            anyhow::bail!(
-                "Insufficient YT balance: wallet {} holds {} wei of YT {} but {} wei is required. \
-                 Acquire more before retrying. \
-                 To preview pricing without holding YT, use --dry-run (skips balance check).",
-                wallet, balance, yt_address, required
-            );
-        }
-    }
-
     let sdk_resp = api::sdk_convert(
         chain_id,
         &wallet,
@@ -54,44 +40,32 @@ pub async fn run(
             amount: min_token_out.to_string(),
         }],
         slippage,
+        true, // enableAggregator: true — buy/sell/liquidity operations may need DEX routing
         api_key,
     )
     .await?;
 
     let (calldata, router_to) = api::extract_sdk_calldata(&sdk_resp)?;
     let approvals = api::extract_required_approvals(&sdk_resp);
-    let expected_token_out = api::extract_amount_out(&sdk_resp);
-    api::check_min_out(&expected_token_out, min_token_out, "token")?;
-    let price_impact_pct = api::extract_price_impact(&sdk_resp);
-    let high_impact = price_impact_pct.map_or(false, |p| p > 5.0);
 
-    // Preview gate: show SDK quote without executing
-    if !confirm && !dry_run {
-        let mut preview = serde_json::json!({
+    // Preview gate: show what would be executed without --confirm
+    if !confirm {
+        return Ok(serde_json::json!({
             "ok": true,
             "preview": true,
-            "note": "Preview — add --confirm to execute on-chain.",
             "operation": "sell-yt",
             "chain_id": chain_id,
             "yt_address": yt_address,
             "amount_in": amount_in,
             "token_out": token_out,
-            "expected_token_out": expected_token_out,
+            "min_token_out": min_token_out,
             "router": router_to,
             "calldata": calldata,
             "wallet": wallet,
-            "required_approvals": approvals.len(),
-            "price_impact_pct": price_impact_pct.map(|p| format!("{:.2}", p)),
-        });
-        if high_impact {
-            preview["warning"] = serde_json::json!(format!(
-                "High price impact: {:.2}% — this is a relative deviation vs the pool's theoretical rate. \
-                 For cross-asset routes it may appear elevated on small amounts. \
-                 Verify expected_token_out before confirming, or choose a more liquid pool.",
-                price_impact_pct.unwrap_or(0.0)
-            ));
-        }
-        return Ok(preview);
+            "required_approvals": approvals.iter().map(|(t, s)| serde_json::json!({"token": t, "spender": s})).collect::<Vec<_>>(),
+            "dry_run": dry_run,
+            "note": "Re-run with --confirm to execute"
+        }));
     }
 
     let amount_in_wei: u128 = amount_in.parse().map_err(|_| anyhow::anyhow!("Failed to parse amount-in: '{}'", amount_in))?;
@@ -107,9 +81,7 @@ pub async fn run(
             dry_run,
         )
         .await?;
-        let approve_hash = onchainos::extract_tx_hash(&approve_result)?;
-        if !dry_run { onchainos::wait_for_tx(&approve_hash, onchainos::default_rpc_url(chain_id)).await; }
-        approve_hashes.push(approve_hash);
+        approve_hashes.push(onchainos::extract_tx_hash(&approve_result)?);
     }
 
     let result = onchainos::wallet_contract_call(
@@ -124,7 +96,7 @@ pub async fn run(
 
     let tx_hash = onchainos::extract_tx_hash(&result)?;
 
-    let mut result = serde_json::json!({
+    Ok(serde_json::json!({
         "ok": true,
         "operation": "sell-yt",
         "chain_id": chain_id,
@@ -132,20 +104,11 @@ pub async fn run(
         "amount_in": amount_in,
         "token_out": token_out,
         "min_token_out": min_token_out,
-        "expected_token_out": expected_token_out,
         "router": router_to,
         "calldata": calldata,
         "wallet": wallet,
         "approve_txs": approve_hashes,
         "tx_hash": tx_hash,
-        "dry_run": dry_run,
-        "price_impact_pct": price_impact_pct.map(|p| format!("{:.2}", p)),
-    });
-    if high_impact {
-        result["warning"] = serde_json::json!(format!(
-            "High price impact: {:.2}% — consider reducing position size or choosing a more liquid pool.",
-            price_impact_pct.unwrap_or(0.0)
-        ));
-    }
-    Ok(result)
+        "dry_run": dry_run
+    }))
 }
