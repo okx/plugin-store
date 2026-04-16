@@ -33,7 +33,8 @@ struct SellOutput {
     slippage_bps: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     wallet: Option<String>,
-    tx_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tx_hash: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     explorer_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,7 +79,7 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
                 token_amount: amount,
                 slippage_bps: args.slippage_bps,
                 wallet,
-                tx_hash: String::new(),
+                tx_hash: None,
                 explorer_url: None,
                 dry_run: is_dry_run,
                 preview: is_preview,
@@ -103,7 +104,7 @@ pub async fn execute(args: &SellArgs, dry_run: bool) -> Result<()> {
             token_amount: amount,
             slippage_bps: args.slippage_bps,
             wallet,
-            tx_hash,
+            tx_hash: Some(tx_hash),
             explorer_url,
             dry_run: None,
             preview: None,

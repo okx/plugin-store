@@ -98,7 +98,11 @@ pub async fn execute(args: &GetPriceArgs) -> Result<()> {
         0.0
     };
 
-    let (amount_out, amount_out_ui) = if direction == "buy" {
+    let (amount_out, amount_out_ui) = if direction == "buy" && curve.complete {
+        // Graduated token — bonding curve is closed, get_buy_price would error.
+        // Return ok:true with amount_out=0 and a graduated_warning instead.
+        (0u64, 0.0f64)
+    } else if direction == "buy" {
         let tokens = curve
             .get_buy_price(args.amount)
             .map_err(|e| anyhow::anyhow!("get_buy_price failed: {e}"))?;
