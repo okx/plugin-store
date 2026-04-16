@@ -9,197 +9,353 @@
     {
       "name": "aave-v3-plugin",
       "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
-      "source": "./skills/aave-v3-plugin"
+      "source": "./skills/aave-v3-plugin",
+      "category": "defi-protocol",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
-      "name": "clanker-plugin",
+      "name": "clanker",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
-      "source": "./skills/clanker-plugin"
+      "source": "./skills/clanker-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "compound-v3-plugin",
+      "name": "compound-v3",
       "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards",
-      "source": "./skills/compound-v3-plugin"
+      "source": "./skills/compound-v3-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "skylavis-sky"
+      }
     },
     {
-      "name": "curve-plugin",
+      "name": "curve",
       "description": "Curve DEX plugin — swap stablecoins, add/remove liquidity, query pools and APY across Ethereum, Arbitrum, Base, Polygon, and BSC.",
-      "source": "./skills/curve-plugin"
+      "source": "./skills/curve-plugin",
+      "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "etherfi-plugin",
-      "description": "Plugin: etherfi-plugin",
-      "source": "./skills/etherfi-plugin"
+      "name": "etherfi",
+      "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY",
+      "source": "./skills/etherfi-plugin",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "gmx-v2-plugin",
-      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche",
-      "source": "./skills/gmx-v2-plugin"
+      "name": "gmx-v2",
+      "description": "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions",
+      "source": "./skills/gmx-v2-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "hyperliquid-plugin",
-      "description": "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC",
-      "source": "./skills/hyperliquid-plugin"
+      "name": "hyperliquid",
+      "description": "Hyperliquid on-chain perpetuals DEX — check positions, get market prices, place and cancel perpetual orders on Hyperliquid L1 (chain_id 999).",
+      "source": "./skills/hyperliquid-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "kamino-lend-plugin",
-      "description": "Plugin: kamino-lend-plugin",
-      "source": "./skills/kamino-lend-plugin"
+      "name": "kamino-lend",
+      "description": "Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol",
+      "source": "./skills/kamino-lend-plugin",
+      "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "kamino-liquidity-plugin",
-      "description": "Plugin: kamino-liquidity-plugin",
-      "source": "./skills/kamino-liquidity-plugin"
+      "name": "kamino-liquidity",
+      "description": "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to earn yield, withdraw shares, and track positions.",
+      "source": "./skills/kamino-liquidity-plugin",
+      "category": "utility",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "lido-plugin",
-      "description": "Stake ETH with Lido liquid staking protocol — stake, manage withdrawals, and track staking rewards on Ethereum mainnet",
-      "source": "./skills/lido-plugin"
+      "name": "lido",
+      "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
+      "source": "./skills/lido-plugin",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
       "name": "macro-intelligence",
       "description": "Unified macro intelligence feed — reads 7 sources, classifies events, scores sentiment, generates AI insights, exposes signals via HTTP API",
-      "source": "./skills/macro-intelligence"
+      "source": "./skills/macro-intelligence",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
     },
     {
       "name": "mainstream-spot-order",
       "description": "Multi-chain DEX spot trading system with 6-signal ensemble, auto-research strategy optimization, and per-pair backtesting across SOL, ETH, BTC, BNB, AVAX, DOGE",
-      "source": "./skills/mainstream-spot-order"
+      "source": "./skills/mainstream-spot-order",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
     },
     {
       "name": "meme-trench-scanner",
       "description": "Meme Trench Scanner v1.0 — Solana Meme automated trading bot with 11 Launchpad coverage, 7-layer exit system, TraderSoul AI observation",
-      "source": "./skills/meme-trench-scanner"
+      "source": "./skills/meme-trench-scanner",
+      "category": "trading-strategy",
+      "author": {
+        "name": "yz06276"
+      }
     },
     {
-      "name": "meteora-plugin",
-      "description": "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana",
-      "source": "./skills/meteora-plugin"
+      "name": "meteora",
+      "description": "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, add and remove liquidity",
+      "source": "./skills/meteora-plugin",
+      "category": "utility",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
-      "name": "morpho-plugin",
-      "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol",
-      "source": "./skills/morpho-plugin"
+      "name": "morpho",
+      "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults.",
+      "source": "./skills/morpho-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
       "name": "okx-buildx-hackathon-agent-track",
       "description": "AI Hackathon participation guide — registration, wallet setup, project building, submission to Moltbook, voting, and scoring. Apr 1-15, 2026. $14,000 USDT in prizes.",
-      "source": "./skills/okx-buildx-hackathon-agent-track"
+      "source": "./skills/okx-buildx-hackathon-agent-track",
+      "category": "trading-strategy",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
       "name": "one-click-token-launch",
       "description": "One-click multi-launchpad token creation with bundled buy, IPFS metadata, MEV protection across 6 launchpads on Solana and BSC",
-      "source": "./skills/one-click-token-launch"
+      "source": "./skills/one-click-token-launch",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
     },
     {
       "name": "orca-plugin",
       "description": "Concentrated liquidity AMM on Solana — swap tokens and query pools via the Whirlpools CLMM program",
-      "source": "./skills/orca-plugin"
+      "source": "./skills/orca-plugin",
+      "category": "utility",
+      "author": {
+        "name": "skylavis-sky"
+      }
     },
     {
-      "name": "pancakeswap-clmm-plugin",
-      "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees. Trigger phrases: stake LP NFT, farm CAKE, collect fees, unfarm, PancakeSwap farming.",
-      "source": "./skills/pancakeswap-clmm-plugin"
+      "name": "pancakeswap-clmm",
+      "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions.",
+      "source": "./skills/pancakeswap-clmm-plugin",
+      "category": "utility",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
-      "name": "pancakeswap-v2-plugin",
+      "name": "pancakeswap-v2",
       "description": "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair.",
-      "source": "./skills/pancakeswap-v2-plugin"
+      "source": "./skills/pancakeswap-v2-plugin",
+      "category": "utility",
+      "author": {
+        "name": "skylavis-sky"
+      }
     },
     {
-      "name": "pancakeswap-v3-plugin",
-      "description": "Swap tokens and manage concentrated liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
-      "source": "./skills/pancakeswap-v3-plugin"
+      "name": "pancakeswap-v3",
+      "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
+      "source": "./skills/pancakeswap-v3-plugin",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
-      "name": "pendle-plugin",
+      "name": "pendle",
       "description": "Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
-      "source": "./skills/pendle-plugin"
+      "source": "./skills/pendle-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
       "name": "plugin-store",
-      "description": "Plugin: plugin-store",
-      "source": "./skills/plugin-store"
+      "description": "The main on-chain DeFi skill. Discover, install, update, and manage plugins — including trading strategies, DeFi integrations, and developer tools — across Claude Code, Cursor, and OpenClaw.",
+      "source": "./skills/plugin-store",
+      "category": "trading-strategy",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
       "name": "polymarket-plugin",
       "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
-      "source": "./skills/polymarket-plugin"
+      "source": "./skills/polymarket-plugin",
+      "category": "trading-strategy",
+      "author": {
+        "name": "skylavis-sky"
+      }
     },
     {
-      "name": "pump-fun-plugin",
+      "name": "pump-fun",
       "description": "Buy and sell tokens on pump.fun bonding curves on Solana mainnet",
-      "source": "./skills/pump-fun-plugin"
+      "source": "./skills/pump-fun-plugin",
+      "category": "utility",
+      "author": {
+        "name": "skylavis-sky"
+      }
     },
     {
-      "name": "raydium-plugin",
+      "name": "raydium",
       "description": "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet. Trigger phrases: swap on raydium, raydium swap, raydium price, raydium pool, get swap quote raydium, raydium dex, swap solana raydium.",
-      "source": "./skills/raydium-plugin"
+      "source": "./skills/raydium-plugin",
+      "category": "utility",
+      "author": {
+        "name": "OKX"
+      }
     },
     {
       "name": "smart-money-signal-copy-trade",
       "description": "Smart Money Signal Copy Trade v1.0 — Smart money signal tracker with cost-aware TP, 15-check safety, 7-layer exit system",
-      "source": "./skills/smart-money-signal-copy-trade"
+      "source": "./skills/smart-money-signal-copy-trade",
+      "category": "trading-strategy",
+      "author": {
+        "name": "yz06276"
+      }
     },
     {
       "name": "top-rank-tokens-sniper",
       "description": "Top Rank Tokens Sniper v1.0 — OKX ranking leaderboard sniper with momentum scoring, 3-level safety, 6-layer exit system",
-      "source": "./skills/top-rank-tokens-sniper"
+      "source": "./skills/top-rank-tokens-sniper",
+      "category": "trading-strategy",
+      "author": {
+        "name": "yz06276"
+      }
     },
     {
       "name": "uniswap-ai",
       "description": "AI-powered Uniswap developer tools: trading, hooks, drivers, and on-chain analysis across V2/V3/V4",
-      "source": "./skills/uniswap-ai"
+      "source": "./skills/uniswap-ai",
+      "category": "trading-strategy",
+      "author": {
+        "name": "Uniswap"
+      }
     },
     {
       "name": "uniswap-cca-configurator",
       "description": "Configure Continuous Clearing Auction (CCA) smart contract parameters for fair and transparent token distribution",
-      "source": "./skills/uniswap-cca-configurator"
+      "source": "./skills/uniswap-cca-configurator",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-cca-deployer",
       "description": "Deploy Continuous Clearing Auction (CCA) smart contracts using the Factory pattern with CREATE2 for consistent addresses",
-      "source": "./skills/uniswap-cca-deployer"
+      "source": "./skills/uniswap-cca-deployer",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-liquidity-planner",
       "description": "Plan and generate deep links for creating liquidity positions on Uniswap v2, v3, and v4",
-      "source": "./skills/uniswap-liquidity-planner"
+      "source": "./skills/uniswap-liquidity-planner",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-pay-with-any-token",
       "description": "Pay HTTP 402 payment challenges using any token via Tempo CLI and Uniswap Trading API, supporting MPP and x402 protocols",
-      "source": "./skills/uniswap-pay-with-any-token"
+      "source": "./skills/uniswap-pay-with-any-token",
+      "category": "trading-strategy",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-swap-integration",
       "description": "Integrate Uniswap swaps into frontends, backends, and smart contracts via Trading API, Universal Router SDK, or direct contract calls",
-      "source": "./skills/uniswap-swap-integration"
+      "source": "./skills/uniswap-swap-integration",
+      "category": "trading-strategy",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-swap-planner",
       "description": "Plan token swaps and generate Uniswap deep links across all supported chains, with token discovery and research workflows",
-      "source": "./skills/uniswap-swap-planner"
+      "source": "./skills/uniswap-swap-planner",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-v4-security-foundations",
       "description": "Security-first guide for building Uniswap v4 hooks covering vulnerabilities, audit requirements, and best practices",
-      "source": "./skills/uniswap-v4-security-foundations"
+      "source": "./skills/uniswap-v4-security-foundations",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
       "name": "uniswap-viem-integration",
       "description": "Integrate EVM blockchains using viem and wagmi for TypeScript and JavaScript applications",
-      "source": "./skills/uniswap-viem-integration"
+      "source": "./skills/uniswap-viem-integration",
+      "category": "defi-protocol",
+      "author": {
+        "name": "Uniswap Labs"
+      }
     },
     {
-      "name": "velodrome-v2-plugin",
-      "description": "Plugin: velodrome-v2-plugin",
-      "source": "./skills/velodrome-v2-plugin"
+      "name": "velodrome-v2",
+      "description": "Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism",
+      "source": "./skills/velodrome-v2-plugin",
+      "category": "defi-protocol",
+      "author": {
+        "name": "GeoGu360"
+      }
     },
     {
       "name": "wallet-tracker-mcap",
       "description": "Wallet copy-trade bot -- monitors target Solana wallets and auto-mirrors meme token buys/sells with MC target gating, tiered TP, trailing stop, and 4-tier risk grading",
-      "source": "./skills/wallet-tracker-mcap"
+      "source": "./skills/wallet-tracker-mcap",
+      "category": "trading-strategy",
+      "author": {
+        "name": "victorlee"
+      }
     }
   ]
 }
