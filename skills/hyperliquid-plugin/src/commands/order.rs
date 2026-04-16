@@ -334,14 +334,14 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     );
 
     if args.dry_run {
-        println!("\n[DRY RUN] Order not signed or submitted.");
+        eprintln!("\n[DRY RUN] Order not signed or submitted.");
         return Ok(());
     }
 
     if !args.confirm {
-        println!("\n[PREVIEW] Add --confirm to sign and submit this order.");
-        println!("WARNING: This will place a real perpetual order on Hyperliquid.");
-        println!("         Perpetuals trading involves significant risk including total loss.");
+        eprintln!("\n[PREVIEW] Add --confirm to sign and submit this order.");
+        eprintln!("WARNING: This will place a real perpetual order on Hyperliquid.");
+        eprintln!("         Perpetuals trading involves significant risk including total loss.");
         return Ok(());
     }
 
@@ -363,7 +363,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 lev_result["response"].as_str().unwrap_or("unknown error")
             );
         }
-        println!(
+        eprintln!(
             "Leverage set to {}x ({}) for {}",
             lev, if is_cross { "cross" } else { "isolated" }, coin
         );

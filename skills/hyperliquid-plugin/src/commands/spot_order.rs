@@ -139,13 +139,13 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
     );
 
     if args.dry_run {
-        println!("\n[DRY RUN] Not signed or submitted.");
+        eprintln!("\n[DRY RUN] Not signed or submitted.");
         return Ok(());
     }
 
     if !args.confirm {
-        println!("\n[PREVIEW] Add --confirm to sign and submit this spot order.");
-        println!("WARNING: This will place a real spot order on Hyperliquid.");
+        eprintln!("\n[PREVIEW] Add --confirm to sign and submit this spot order.");
+        eprintln!("WARNING: This will place a real spot order on Hyperliquid.");
         return Ok(());
     }
 

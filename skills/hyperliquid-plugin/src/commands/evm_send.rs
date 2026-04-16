@@ -1,8 +1,9 @@
 use clap::Args;
 use sha3::{Digest, Keccak256};
-use crate::config::{CHAIN_ID, info_url};
+use crate::config::{CHAIN_ID, HYPER_EVM_RPC, info_url};
 use crate::onchainos::{resolve_wallet, wallet_contract_call};
 use crate::api::get_clearinghouse_state;
+use crate::rpc::wait_tx_mined;
 
 /// CoreWriter precompile on HyperEVM — executes HyperCore actions via msg.sender
 const CORE_WRITER: &str = "0x3333333333333333333333333333333333333333";
@@ -170,18 +171,22 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
     // ── Execute ───────────────────────────────────────────────────────────
 
     // Step 1: Move perp → spot
-    println!("Step 1/2  Transferring {} USDC from perp → spot via CoreWriter...", args.amount);
-    wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_perp_to_spot, None, false)?;
+    eprintln!("Step 1/2  Transferring {} USDC from perp → spot via CoreWriter...", args.amount);
+    let result1 = wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_perp_to_spot, None, false)?;
 
-    // Give HyperCore time to settle the transfer (~2 HyperEVM blocks)
-    println!("  Waiting for HyperCore to process...");
-    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    // Wait for step 1 to be mined before submitting step 2 (HyperCore needs the tx on-chain)
+    eprintln!("  Waiting for HyperCore to process...");
+    let tx1_hash = result1["data"]["txHash"].as_str().unwrap_or("");
+    if !tx1_hash.is_empty() {
+        let confirmed = wait_tx_mined(tx1_hash, HYPER_EVM_RPC).await;
+        if !confirmed {
+            eprintln!("  Warning: step 1 tx confirmation timed out. Proceeding with step 2.");
+        }
+    }
 
     // Step 2: Spot → HyperEVM address
-    println!("Step 2/2  Sending {} USDC from spot → HyperEVM {}...", args.amount, &destination[..10]);
+    eprintln!("Step 2/2  Sending {} USDC from spot → HyperEVM {}...", args.amount, &destination[..10]);
     wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_spot_to_evm, None, false)?;
-
-    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     println!("{}", serde_json::json!({
         "ok": true,

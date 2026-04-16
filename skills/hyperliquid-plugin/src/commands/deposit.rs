@@ -173,7 +173,7 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
     });
 
     // Step 2: Sign the permit via onchainos
-    println!("Signing USDC permit for {} USDC...", args.amount);
+    eprintln!("Signing USDC permit for {} USDC...", args.amount);
     let sig_hex = onchainos_sign_eip712(&permit_typed_data, &wallet)?;
 
     // Parse r, s, v from the 65-byte hex signature
@@ -189,7 +189,7 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
     let calldata = build_batched_deposit_calldata(&wallet, usdc_units, deadline, r, s, v);
 
     // Step 4: Submit the transaction
-    println!("Depositing {:.6} USDC to Hyperliquid via Arbitrum bridge...", args.amount);
+    eprintln!("Depositing {:.6} USDC to Hyperliquid via Arbitrum bridge...", args.amount);
     let deposit_result = wallet_contract_call(
         ARBITRUM_CHAIN_ID,
         HL_BRIDGE_ARBITRUM,

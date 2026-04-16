@@ -63,11 +63,11 @@ pub async fn run(args: CancelArgs) -> anyhow::Result<()> {
         );
 
         if args.dry_run {
-            println!("\n[DRY RUN] Cancel not signed or submitted.");
+            eprintln!("\n[DRY RUN] Cancel not signed or submitted.");
             return Ok(());
         }
         if !args.confirm {
-            println!("\n[PREVIEW] Add --confirm to sign and submit this cancellation.");
+            eprintln!("\n[PREVIEW] Add --confirm to sign and submit this cancellation.");
             return Ok(());
         }
 
@@ -187,11 +187,11 @@ pub async fn run(args: CancelArgs) -> anyhow::Result<()> {
     );
 
     if args.dry_run {
-        println!("\n[DRY RUN] Cancel not signed or submitted.");
+        eprintln!("\n[DRY RUN] Cancel not signed or submitted.");
         return Ok(());
     }
     if !args.confirm {
-        println!("\n[PREVIEW] Add --confirm to sign and submit this batch cancellation.");
+        eprintln!("\n[PREVIEW] Add --confirm to sign and submit this batch cancellation.");
         return Ok(());
     }
 

@@ -193,13 +193,13 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
     );
 
     if args.dry_run {
-        println!("\n[DRY RUN] Not signed or submitted.");
+        eprintln!("\n[DRY RUN] Not signed or submitted.");
         return Ok(());
     }
 
     if !args.confirm {
-        println!("\n[PREVIEW] Add --confirm to place these TP/SL orders.");
-        println!("NOTE: Both orders are sent independently (grouping: na). \
+        eprintln!("\n[PREVIEW] Add --confirm to place these TP/SL orders.");
+        eprintln!("NOTE: Both orders are sent independently (grouping: na). \
                   The first one to trigger closes your position; cancel the \
                   other manually afterward.");
         return Ok(());
