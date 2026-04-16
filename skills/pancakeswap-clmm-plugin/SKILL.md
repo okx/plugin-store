@@ -184,10 +184,9 @@ The output includes a `staked_discovery` field:
 
 If the RPC node does not support `eth_getLogs` with a large block range, the plugin falls back to a chunked scan of the most recent available blocks (newest-first, stopping at pruned history). It reports the block coverage in `staked_discovery_note`.
 
-**For full historical discovery** (positions staked weeks or months ago), use an archive-capable RPC:
+**For full historical discovery** (positions staked weeks or months ago), pass an archive-capable RPC via `--rpc-url` (e.g. Ankr, QuickNode, or Alchemy BSC endpoints):
 ```bash
-pancakeswap-clmm --chain 56 --rpc-url https://rpc.ankr.com/bsc positions
-pancakeswap-clmm --chain 56 --rpc-url https://<your-quicknode-or-alchemy-endpoint> positions
+pancakeswap-clmm --chain 56 --rpc-url <your-archive-rpc-url> positions
 ```
 Or specify token IDs directly if you know them:
 ```bash
