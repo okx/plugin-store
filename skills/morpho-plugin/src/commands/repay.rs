@@ -50,11 +50,13 @@ pub async fn run(
             .context("No position found for this market. Nothing to repay.")?;
 
         let borrow_shares_str = pos.state.borrow_shares.as_deref().unwrap_or("0");
-        repay_shares = borrow_shares_str.parse().unwrap_or(0);
+        repay_shares = borrow_shares_str.parse()
+            .with_context(|| format!("Failed to parse borrow shares: '{}'", borrow_shares_str))?;
         repay_assets = 0; // Use shares mode for full repay
 
         let borrow_assets_str = pos.state.borrow_assets.as_deref().unwrap_or("0");
-        borrow_assets = borrow_assets_str.parse().unwrap_or(0);
+        borrow_assets = borrow_assets_str.parse()
+            .with_context(|| format!("Failed to parse borrow assets: '{}'", borrow_assets_str))?;
         display_amount = calldata::format_amount(borrow_assets, decimals);
 
         eprintln!("[morpho] Repaying all debt ({} {}) using {} shares...", display_amount, symbol, repay_shares);

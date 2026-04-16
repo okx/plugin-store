@@ -102,6 +102,40 @@ pub async fn erc20_symbol(token: &str, rpc_url: &str) -> anyhow::Result<String> 
     Ok(String::from_utf8_lossy(&bytes).to_string())
 }
 
+/// Read native ETH balance of `owner`.
+pub async fn eth_balance(owner: &str, rpc_url: &str) -> anyhow::Result<u128> {
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [owner, "latest"],
+        "id": 1
+    });
+    let resp: serde_json::Value = client
+        .post(rpc_url)
+        .json(&body)
+        .send()
+        .await
+        .context("RPC request failed")?
+        .json()
+        .await
+        .context("RPC response parse failed")?;
+
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("eth_getBalance error: {}", err);
+    }
+    let hex = resp["result"]
+        .as_str()
+        .context("Missing result field in eth_getBalance response")?;
+    let hex_clean = hex.trim_start_matches("0x");
+    if hex_clean.is_empty() {
+        return Ok(0);
+    }
+    let padded = format!("{:0>32}", hex_clean);
+    let val = u128::from_str_radix(&padded[padded.len().saturating_sub(32)..], 16).unwrap_or(0);
+    Ok(val)
+}
+
 /// Read vault share balance (ERC-20 balanceOf, same encoding).
 pub async fn vault_share_balance(
     vault: &str,
