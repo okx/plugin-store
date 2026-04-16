@@ -118,13 +118,13 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     );
 
     if args.dry_run {
-        println!("\n[DRY RUN] Not signed or submitted.");
+        eprintln!("\n[DRY RUN] Not signed or submitted.");
         return Ok(());
     }
 
     if !args.confirm {
-        println!("\n[PREVIEW] Add --confirm to sign and market-close this position.");
-        println!("WARNING: Market orders execute immediately at prevailing price.");
+        eprintln!("\n[PREVIEW] Add --confirm to sign and market-close this position.");
+        eprintln!("WARNING: Market orders execute immediately at prevailing price.");
         return Ok(());
     }
 

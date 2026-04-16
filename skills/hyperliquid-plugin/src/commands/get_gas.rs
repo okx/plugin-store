@@ -155,7 +155,7 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
             .unwrap_or(0);
 
         if existing < usdc_units as u128 {
-            println!("Approving USDC to relay solver...");
+            eprintln!("Approving USDC to relay solver...");
             let approve_value_opt = if approve_value > 0 { Some(approve_value) } else { None };
             let result = wallet_contract_call(
                 ARBITRUM_CHAIN_ID, approve_to, approve_calldata, approve_value_opt, false
@@ -164,12 +164,12 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
             // Wait for the approve tx to be mined so deposit simulation succeeds
             let tx_hash = result["data"]["txHash"].as_str().unwrap_or("");
             if !tx_hash.is_empty() {
-                print!("  Waiting for approve tx {} to confirm...", tx_hash);
+                eprint!("  Waiting for approve tx {} to confirm...", tx_hash);
                 let confirmed = wait_tx_mined(tx_hash, ARBITRUM_RPC).await;
-                println!(" {}", if confirmed { "confirmed" } else { "timed out (proceeding anyway)" });
+                eprintln!(" {}", if confirmed { "confirmed" } else { "timed out (proceeding anyway)" });
             }
         } else {
-            println!("USDC allowance already sufficient, skipping approve.");
+            eprintln!("USDC allowance already sufficient, skipping approve.");
         }
     }
 
@@ -192,12 +192,12 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         .as_str()
         .unwrap_or(request_id);
 
-    println!("Depositing {} USDC to relay solver...", args.amount);
+    eprintln!("Depositing {} USDC to relay solver...", args.amount);
     let deposit_value_opt = if deposit_value > 0 { Some(deposit_value) } else { None };
     wallet_contract_call(ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, false)?;
 
     // Poll relay.link status until HYPE arrives (max ~40s)
-    println!("Waiting for HYPE to arrive on HyperEVM (~{} seconds)...", time_est);
+    eprintln!("Waiting for HYPE to arrive on HyperEVM (~{} seconds)...", time_est);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()?;
