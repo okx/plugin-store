@@ -25,9 +25,9 @@ pub struct SwapArgs {
     pub wallet: Option<String>,
 }
 
-pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
-    // dry_run: show quote instead of executing swap
-    if dry_run {
+pub async fn execute(args: &SwapArgs, confirm: bool) -> anyhow::Result<()> {
+    // confirm gate: without --confirm, show quote instead of executing swap
+    if !confirm {
         let raw = onchainos::dex_quote_solana(
             &args.from_token,
             &args.to_token,
@@ -59,8 +59,8 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
 
         let output = serde_json::json!({
             "ok": true,
-            "dry_run": true,
-            "message": "Dry run: showing quote only. No transaction submitted.",
+            "preview": true,
+            "message": "Preview only — add --confirm to execute the swap",
             "from_token": args.from_token,
             "from_symbol": from_symbol,
             "to_token": args.to_token,

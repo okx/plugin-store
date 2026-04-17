@@ -1,6 +1,6 @@
 schema_version: 1
 name: meteora-plugin
-version: "0.3.7"
+version: "0.3.8"
 description: "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana"
 author:
   name: "skylavis-sky"
@@ -24,6 +24,6 @@ build:
 
 api_calls:
   - "https://dlmm.datapi.meteora.ag"
-  - "api.mainnet-beta.solana.com"
-  - "rpc.ankr.com"
+  - "https://api.mainnet-beta.solana.com"
+  - "https://rpc.ankr.com"
 

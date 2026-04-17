@@ -36,7 +36,7 @@ pub struct AddLiquidityArgs {
 /// reading the pool state and executing the transaction.
 const Y_ONLY_SLIPPAGE: i32 = 5;
 
-pub async fn execute(args: &AddLiquidityArgs, dry_run: bool) -> anyhow::Result<()> {
+pub async fn execute(args: &AddLiquidityArgs, confirm: bool) -> anyhow::Result<()> {
     let client = Client::new();
 
     // ── 1. Resolve wallet ────────────────────────────────────────────────────
@@ -307,12 +307,12 @@ pub async fn execute(args: &AddLiquidityArgs, dry_run: bool) -> anyhow::Result<(
     let user_token_x: Pubkey = token_x_acct.parse()?;
     let user_token_y: Pubkey = token_y_acct.parse()?;
 
-    // ── 8. Dry-run output ────────────────────────────────────────────────────
-    if dry_run {
+    // ── 8. Preview gate — no --confirm, return preview only ──────────────────
+    if !confirm {
         let output = json!({
             "ok": true,
-            "dry_run": true,
-            "message": "Dry run: preview only, no transaction submitted.",
+            "preview": true,
+            "message": "Preview only — add --confirm to add liquidity",
             "pool": args.pool,
             "wallet": wallet_str,
             "token_x_mint": token_x_mint.to_string(),

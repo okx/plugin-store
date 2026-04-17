@@ -14,9 +14,9 @@ use clap::{Parser, Subcommand};
     version = env!("CARGO_PKG_VERSION")
 )]
 struct Cli {
-    /// Simulate without broadcasting (dry run)
+    /// Execute the transaction on-chain (without this flag, the command previews only)
     #[arg(long, global = true)]
-    dry_run: bool,
+    confirm: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -58,9 +58,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::GetPoolDetail(args) => commands::get_pool_detail::execute(args).await?,
         Commands::GetSwapQuote(args) => commands::get_swap_quote::execute(args).await?,
         Commands::GetUserPositions(args) => commands::get_user_positions::execute(args).await?,
-        Commands::Swap(args) => commands::swap::execute(args, cli.dry_run).await?,
-        Commands::AddLiquidity(args) => commands::add_liquidity::execute(args, cli.dry_run).await?,
-        Commands::RemoveLiquidity(args) => commands::remove_liquidity::execute(args, cli.dry_run).await?,
+        Commands::Swap(args) => commands::swap::execute(args, cli.confirm).await?,
+        Commands::AddLiquidity(args) => commands::add_liquidity::execute(args, cli.confirm).await?,
+        Commands::RemoveLiquidity(args) => commands::remove_liquidity::execute(args, cli.confirm).await?,
         Commands::Quickstart(args) => commands::quickstart::execute(args).await?,
     }
 

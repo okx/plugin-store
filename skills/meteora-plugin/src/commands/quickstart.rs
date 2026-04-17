@@ -1,110 +1,144 @@
 use clap::Args;
-use reqwest::Client;
 use serde_json::json;
 
 use crate::onchainos;
-use crate::solana_rpc;
+
+const ABOUT: &str = "Meteora DLMM is a concentrated liquidity DEX on Solana — add liquidity to \
+    dynamic bins, earn swap fees, and execute token swaps with tight spreads across \
+    hundreds of pools including SOL/USDC, memecoins, and LST pairs.";
 
 const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const USDT_MINT: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
+
+// Minimum SOL needed for fees + a minimum deposit
+const MIN_SOL_GAS: f64 = 0.01;
+// Minimum quote-side balance for a meaningful deposit or swap
+const MIN_USDC: f64 = 1.0;
 
 #[derive(Args, Debug)]
 pub struct QuickstartArgs {
-    /// Meteora DLMM pool address to inspect
-    #[arg(long)]
-    pub pool: String,
-
-    /// Wallet address. If omitted, uses the currently logged-in onchainos wallet.
+    /// Wallet address (Solana pubkey). If omitted, uses the currently logged-in wallet.
     #[arg(long)]
     pub wallet: Option<String>,
 }
 
 pub async fn execute(args: &QuickstartArgs) -> anyhow::Result<()> {
-    let client = Client::new();
-
-    // ── 1. Resolve wallet ────────────────────────────────────────────────────
-    let wallet_str = if let Some(w) = &args.wallet {
+    // Resolve wallet
+    let wallet = if let Some(w) = &args.wallet {
         w.clone()
     } else {
         onchainos::resolve_wallet_solana().map_err(|e| {
-            anyhow::anyhow!("Cannot resolve wallet. Pass --wallet or log in via onchainos.\nError: {e}")
+            anyhow::anyhow!(
+                "Cannot resolve wallet. Pass --wallet or log in via onchainos.\nError: {e}"
+            )
         })?
     };
 
-    // ── 2. Fetch pool data ───────────────────────────────────────────────────
-    let pool_data = solana_rpc::get_account_data(&client, &args.pool)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to fetch pool {}: {e}", args.pool))?;
-    let pool = solana_rpc::parse_lb_pair(&pool_data)
-        .map_err(|e| anyhow::anyhow!("Failed to parse LbPair: {e}"))?;
+    eprintln!("Checking assets for {}... on Solana...", &wallet[..8.min(wallet.len())]);
 
-    let active_id = pool.active_id;
-    let bin_step = pool.bin_step;
-
-    // Approximate price: each bin covers bin_step / 100 % price change
-    // price ~ (1 + bin_step/10000)^active_id relative to some base
-    // For SOL/USDC with bin_step=4 bps, we estimate from active_id
-    // Price = 1.0004^active_id (base = 1 USDC per SOL unit at id=0)
-    // This is a rough approximation useful for orientation only.
-    let price_approx = (1.0_f64 + bin_step as f64 / 10000.0).powi(active_id);
-
-    // ── 3. Fetch balances ────────────────────────────────────────────────────
-    let sol_balance = onchainos::get_sol_balance(&wallet_str);
+    // Fetch balances (sync onchainos CLI calls)
+    let sol_balance  = onchainos::get_sol_balance(&wallet);
     let usdc_balance = onchainos::get_spl_token_balance(USDC_MINT);
+    let usdt_balance = onchainos::get_spl_token_balance(USDT_MINT);
 
-    // ── 4. Build suggestion ──────────────────────────────────────────────────
-    let has_sol = sol_balance >= 0.01;   // enough for gas (0.01) + min deposit (0.001)
-    let has_usdc = usdc_balance >= 1.0;  // enough for Y-only deposit
+    let has_gas   = sol_balance  >= MIN_SOL_GAS;
+    let has_quote = usdc_balance >= MIN_USDC || usdt_balance >= MIN_USDC;
+    let has_sol_liquidity = sol_balance >= MIN_SOL_GAS + 0.001; // gas + a tiny deposit
 
-    let (mode, reason, command) = match (has_sol, has_usdc) {
-        (true, true) => (
-            "two_sided",
-            "You have both SOL and USDC — deposit both for maximum fee earning range",
-            format!(
-                "meteora-plugin add-liquidity --pool {} --amount-x 0.001 --amount-y 0.5",
-                args.pool
-            ),
-        ),
-        (true, false) => (
-            "x_only",
-            "You have SOL but little USDC — do an X-only SOL deposit above the active bin",
-            format!(
-                "meteora-plugin add-liquidity --pool {} --amount-x 0.001",
-                args.pool
-            ),
-        ),
-        (false, true) => (
-            "y_only",
-            "You have USDC but little SOL — do a Y-only USDC deposit below the active bin",
-            format!(
-                "meteora-plugin add-liquidity --pool {} --amount-y 0.5",
-                args.pool
-            ),
-        ),
-        (false, false) => (
-            "insufficient_funds",
-            "Insufficient balance. You need at least 0.01 SOL (for gas + deposit) or 1.0 USDC to deposit",
-            format!(
-                "# Fund your wallet first, then run:\nmeteora-plugin add-liquidity --pool {}",
-                args.pool
-            ),
-        ),
-    };
+    let quote_balance = if usdc_balance >= usdt_balance { usdc_balance } else { usdt_balance };
+    let quote_example = format!("{:.2}", (quote_balance * 0.9).max(MIN_USDC).min(quote_balance));
+    let sol_example = format!("{:.4}", (sol_balance - MIN_SOL_GAS).max(0.001).min(sol_balance - MIN_SOL_GAS));
 
-    let output = json!({
+    let (status, suggestion, onboarding_steps, next_command): (&str, &str, Vec<String>, String) =
+        if has_gas && has_sol_liquidity && has_quote {
+            (
+                "ready",
+                "You have both SOL and stablecoins — add two-sided liquidity or swap.",
+                vec![
+                    "1. Find a high-volume SOL/USDC pool:".to_string(),
+                    "   meteora-plugin get-pools --search-term SOL-USDC".to_string(),
+                    "2. Add two-sided liquidity (SpotBalanced):".to_string(),
+                    format!(
+                        "   meteora-plugin --confirm add-liquidity --pool <POOL_ADDRESS> --amount-x {} --amount-y {}",
+                        sol_example, quote_example
+                    ),
+                    "3. Or swap stablecoins for SOL:".to_string(),
+                    format!(
+                        "   meteora-plugin --confirm swap --from-token {} --to-token So11111111111111111111111111111111111111112 --amount {}",
+                        USDC_MINT, quote_example
+                    ),
+                ],
+                "meteora-plugin get-pools --search-term SOL-USDC".to_string(),
+            )
+        } else if has_gas && !has_quote {
+            (
+                "ready_sol_only",
+                "You have SOL but no stablecoins — add SOL-only liquidity above the active bin, or swap some SOL for USDC first.",
+                vec![
+                    "Option A — SOL-only liquidity deposit above the active bin:".to_string(),
+                    format!(
+                        "   meteora-plugin --confirm add-liquidity --pool <POOL_ADDRESS> --amount-x {}",
+                        sol_example
+                    ),
+                    "Option B — swap SOL for USDC first:".to_string(),
+                    format!(
+                        "   meteora-plugin --confirm swap --from-token So11111111111111111111111111111111111111112 --to-token {} --amount {}",
+                        USDC_MINT, sol_example
+                    ),
+                    "1. Find pools:".to_string(),
+                    "   meteora-plugin get-pools --search-term SOL-USDC".to_string(),
+                ],
+                "meteora-plugin get-pools --search-term SOL-USDC".to_string(),
+            )
+        } else if !has_gas && has_quote {
+            (
+                "needs_gas",
+                "You have stablecoins but need SOL for transaction fees. Send at least 0.01 SOL to your wallet.",
+                vec![
+                    format!("1. Send at least {} SOL (gas) to:", MIN_SOL_GAS),
+                    format!("   {}", wallet),
+                    "2. Run quickstart again:".to_string(),
+                    "   meteora-plugin quickstart".to_string(),
+                ],
+                "meteora-plugin quickstart".to_string(),
+            )
+        } else {
+            (
+                "no_funds",
+                "No SOL or stablecoins found. Send SOL (for gas + deposits) to get started.",
+                vec![
+                    format!("1. Send at least {} SOL (gas + deposit) to your wallet:", MIN_SOL_GAS + 0.001),
+                    format!("   {}", wallet),
+                    "2. Optionally also send USDC for two-sided liquidity:".to_string(),
+                    format!("   USDC mint: {}", USDC_MINT),
+                    "3. Run quickstart again:".to_string(),
+                    "   meteora-plugin quickstart".to_string(),
+                    "4. Browse pools:".to_string(),
+                    "   meteora-plugin get-pools --search-term SOL-USDC".to_string(),
+                ],
+                "meteora-plugin quickstart".to_string(),
+            )
+        };
+
+    let mut out = json!({
         "ok": true,
-        "wallet": wallet_str,
-        "sol_balance": sol_balance,
-        "usdc_balance": usdc_balance,
-        "pool": args.pool,
-        "active_id": active_id,
-        "bin_step": bin_step,
-        "price_approx": price_approx,
-        "suggestion": {
-            "mode": mode,
-            "reason": reason,
-            "command": command
-        }
+        "about": ABOUT,
+        "wallet": wallet,
+        "chain": "solana",
+        "assets": {
+            "sol_balance": sol_balance,
+            "usdc_balance": usdc_balance,
+            "usdt_balance": usdt_balance,
+        },
+        "status": status,
+        "suggestion": suggestion,
+        "next_command": next_command,
     });
-    println!("{}", serde_json::to_string_pretty(&output)?);
+
+    if !onboarding_steps.is_empty() {
+        out["onboarding_steps"] = json!(onboarding_steps);
+    }
+
+    println!("{}", serde_json::to_string_pretty(&out)?);
     Ok(())
 }

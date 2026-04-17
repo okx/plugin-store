@@ -31,7 +31,7 @@ pub struct RemoveLiquidityArgs {
     pub wallet: Option<String>,
 }
 
-pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Result<()> {
+pub async fn execute(args: &RemoveLiquidityArgs, confirm: bool) -> anyhow::Result<()> {
     let client = Client::new();
 
     // ── 1. Resolve wallet ────────────────────────────────────────────────────
@@ -100,11 +100,11 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
         let user_token_x_pk: Pubkey = if ata_x_exists { user_token_x.parse()? } else { ata_x };
         let user_token_y_pk: Pubkey = if ata_y_exists { user_token_y.parse()? } else { ata_y };
 
-        if dry_run {
+        if !confirm {
             let output = serde_json::json!({
                 "ok": true,
-                "dry_run": true,
-                "message": "Dry run: position is empty, will claim pending fees then close account.",
+                "preview": true,
+                "message": "Preview only — add --confirm to claim fees and close the empty position.",
                 "position": args.position,
                 "lower_bin_id": lower_bin_id,
                 "upper_bin_id": upper_bin_id,
@@ -175,12 +175,12 @@ pub async fn execute(args: &RemoveLiquidityArgs, dry_run: bool) -> anyhow::Resul
     let bin_array_lower = meteora_ix::bin_array_pda(&lb_pair, lower_idx);
     let bin_array_upper = meteora_ix::bin_array_pda(&lb_pair, upper_idx);
 
-    // ── 6. Dry-run output ────────────────────────────────────────────────────
-    if dry_run {
+    // ── 6. Preview gate — no --confirm, return preview only ──────────────────
+    if !confirm {
         let output = json!({
             "ok": true,
-            "dry_run": true,
-            "message": "Dry run: preview only, no transaction submitted.",
+            "preview": true,
+            "message": "Preview only — add --confirm to remove liquidity",
             "pool": args.pool,
             "position": args.position,
             "wallet": wallet_str,
