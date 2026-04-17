@@ -1,7 +1,7 @@
 {
   "name": "lido",
   "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "author": {
     "name": "GeoGu360",
     "github": "GeoGu360"

@@ -6,7 +6,7 @@ mod rpc;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "lido", about = "Lido liquid staking plugin for onchainos")]
+#[command(name = "lido", version, about = "Lido liquid staking plugin for onchainos")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -30,6 +30,8 @@ enum Commands {
     Wrap(commands::wrap::WrapArgs),
     /// Unwrap wstETH back to stETH
     Unwrap(commands::unwrap::UnwrapArgs),
+    /// Check wallet state and get guided next steps
+    Quickstart,
 }
 
 #[tokio::main]
@@ -44,5 +46,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::ClaimWithdrawal(args) => commands::claim_withdrawal::run(args).await,
         Commands::Wrap(args) => commands::wrap::run(args).await,
         Commands::Unwrap(args) => commands::unwrap::run(args).await,
+        Commands::Quickstart => commands::quickstart::run().await,
     }
 }

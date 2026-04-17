@@ -27,10 +27,10 @@ pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
     }
 
     // Resolve wallet address — must not be zero
-    let wallet = args
-        .from
-        .clone()
-        .unwrap_or_else(|| onchainos::resolve_wallet(chain_id).unwrap_or_default());
+    let wallet = match args.from.clone() {
+        Some(f) => f,
+        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
+    };
     if wallet.is_empty() {
         anyhow::bail!("Cannot get wallet address. Pass --from or ensure onchainos is logged in.");
     }

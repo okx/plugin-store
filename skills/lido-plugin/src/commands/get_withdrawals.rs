@@ -11,10 +11,10 @@ pub struct GetWithdrawalsArgs {
 pub async fn run(args: GetWithdrawalsArgs) -> anyhow::Result<()> {
     let chain_id = config::CHAIN_ID;
 
-    let address = args
-        .address
-        .clone()
-        .unwrap_or_else(|| onchainos::resolve_wallet(chain_id).unwrap_or_default());
+    let address = match args.address.clone() {
+        Some(a) => a,
+        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
+    };
     if address.is_empty() {
         anyhow::bail!("Cannot get wallet address. Pass --address or ensure onchainos is logged in.");
     }
@@ -140,7 +140,7 @@ async fn fetch_wait_times(ids: &[u128]) -> Option<Vec<Option<String>>> {
     let client = reqwest::Client::new();
     let resp = client
         .get(&url)
-        .header("User-Agent", "lido-plugin/0.1.0")
+        .header("User-Agent", "lido-plugin/0.2.8")
         .send()
         .await
         .ok()?;
@@ -159,14 +159,23 @@ async fn fetch_wait_times(ids: &[u128]) -> Option<Vec<Option<String>>> {
                 if entry["status"].as_str() == Some("finalized") {
                     return None;
                 }
-                entry["requestInfo"]["finalizationIn"]
-                    .as_str()
-                    .map(|s| Some(s.to_string()))
-                    .unwrap_or_else(|| {
-                        entry["expectedWaitTimeSeconds"]
-                            .as_u64()
-                            .map(|s| format!("{}s", s))
+                // finalizationIn is a millisecond integer, not a string
+                if let Some(ms) = entry["requestInfo"]["finalizationIn"].as_u64() {
+                    let hours = ms / 3_600_000;
+                    let days = hours / 24;
+                    Some(if days > 0 {
+                        format!("~{} day{}", days, if days == 1 { "" } else { "s" })
+                    } else if hours > 0 {
+                        format!("~{} hour{}", hours, if hours == 1 { "" } else { "s" })
+                    } else {
+                        format!("~{} min", ms / 60_000)
                     })
+                } else {
+                    // Fallback: older API shape uses expectedWaitTimeSeconds
+                    entry["expectedWaitTimeSeconds"]
+                        .as_u64()
+                        .map(|s| format!("~{}s", s))
+                }
             })
             .collect(),
     )

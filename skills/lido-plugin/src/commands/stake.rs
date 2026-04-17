@@ -27,16 +27,16 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     let chain_id = config::CHAIN_ID;
 
     // Resolve wallet address
-    let wallet = args
-        .from
-        .clone()
-        .unwrap_or_else(|| onchainos::resolve_wallet(chain_id).unwrap_or_default());
+    let wallet = match args.from.clone() {
+        Some(f) => f,
+        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
+    };
     if wallet.is_empty() {
         anyhow::bail!("Cannot get wallet address. Pass --from or ensure onchainos is logged in.");
     }
 
-    // Convert ETH to wei
-    let amount_wei = (args.amount_eth * 1e18) as u128;
+    // Convert ETH to wei — round() avoids f64 truncation on values like 0.1 ETH
+    let amount_wei = (args.amount_eth * 1e18_f64).round() as u128;
     if amount_wei == 0 {
         anyhow::bail!("Stake amount must be greater than 0");
     }

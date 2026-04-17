@@ -11,10 +11,10 @@ pub struct BalanceArgs {
 pub async fn run(args: BalanceArgs) -> anyhow::Result<()> {
     let chain_id = config::CHAIN_ID;
 
-    let address = args
-        .address
-        .clone()
-        .unwrap_or_else(|| onchainos::resolve_wallet(chain_id).unwrap_or_default());
+    let address = match args.address.clone() {
+        Some(a) => a,
+        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
+    };
     if address.is_empty() {
         anyhow::bail!("Cannot get wallet address. Pass --address or ensure onchainos is logged in.");
     }

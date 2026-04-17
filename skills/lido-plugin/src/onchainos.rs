@@ -1,11 +1,11 @@
-use std::process::Command;
+use tokio::process::Command;
 use serde_json::Value;
 
-pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
+pub async fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
     let chain_str = chain_id.to_string();
     let output = Command::new("onchainos")
         .args(["wallet", "balance", "--chain", &chain_str])
-        .output()?;
+        .output().await?;
     let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
     // Try data.address first (legacy), then data.details[0].tokenAssets[0].address
     if let Some(addr) = json["data"]["address"].as_str() {
@@ -61,7 +61,7 @@ pub async fn wallet_contract_call(
         if force {
         args.push("--force");
     }
-    let output = Command::new("onchainos").args(&args).output()?;
+    let output = Command::new("onchainos").args(&args).output().await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(serde_json::from_str(&stdout)?)
 }
