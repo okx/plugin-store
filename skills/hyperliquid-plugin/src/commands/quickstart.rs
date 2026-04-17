@@ -4,6 +4,8 @@ use crate::config::{info_url, ARBITRUM_CHAIN_ID, USDC_ARBITRUM};
 use crate::onchainos::resolve_wallet;
 use crate::rpc::{ARBITRUM_RPC, erc20_balance};
 
+const ABOUT: &str = "Hyperliquid is a high-performance on-chain perpetuals DEX — trade BTC, ETH and 100+ assets with up to 50x leverage at CEX speed, with full on-chain transparency and no KYC.";
+
 #[derive(Args)]
 pub struct QuickstartArgs {
     /// Wallet address to query. Defaults to the connected onchainos wallet.
@@ -68,41 +70,47 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
     };
 
     // 3. Build guidance based on account state
-    let (status, suggestion, next_command) =
-        build_suggestion(arb_usdc, hl_account_value, &open_positions);
+    let (status, suggestion, onboarding_steps, next_command) =
+        build_suggestion(&wallet, arb_usdc, hl_account_value, &open_positions);
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&serde_json::json!({
-            "ok": true,
-            "wallet": wallet,
-            "assets": {
-                "arb_usdc_balance":     arb_usdc,
-                "hl_account_value_usd": hl_account_value,
-                "hl_withdrawable_usd":  hl_withdrawable,
-                "hl_open_positions":    open_positions.len(),
-            },
-            "positions": positions_detail,
-            "status":       status,
-            "suggestion":   suggestion,
-            "next_command": next_command,
-        }))?
-    );
+    let mut out = serde_json::json!({
+        "ok": true,
+        "about": ABOUT,
+        "wallet": wallet,
+        "assets": {
+            "arb_usdc_balance":     arb_usdc,
+            "hl_account_value_usd": hl_account_value,
+            "hl_withdrawable_usd":  hl_withdrawable,
+            "hl_open_positions":    open_positions.len(),
+        },
+        "positions": positions_detail,
+        "status":       status,
+        "suggestion":   suggestion,
+        "next_command": next_command,
+    });
+
+    if !onboarding_steps.is_empty() {
+        out["onboarding_steps"] = serde_json::json!(onboarding_steps);
+    }
+
+    println!("{}", serde_json::to_string_pretty(&out)?);
 
     Ok(())
 }
 
-/// Returns (status, human-readable suggestion, ready-to-run command).
+/// Returns (status, human-readable suggestion, onboarding_steps, ready-to-run command).
 fn build_suggestion(
+    wallet: &str,
     arb_usdc: f64,
     hl_account_value: f64,
     open_positions: &[String],
-) -> (&'static str, &'static str, String) {
+) -> (&'static str, &'static str, Vec<String>, String) {
     // Case 1: active trader — has open positions
     if !open_positions.is_empty() {
         return (
             "active",
             "You have open positions on Hyperliquid. Review them below.",
+            vec![],
             "hyperliquid positions".to_string(),
         );
     }
@@ -112,18 +120,33 @@ fn build_suggestion(
         return (
             "ready",
             "Your Hyperliquid perp account is funded. Place your first trade.",
+            vec![
+                "1. Check available markets:  hyperliquid prices".to_string(),
+                "2. Preview a trade (no --confirm = preview only):".to_string(),
+                "   hyperliquid order --coin BTC --side long --size 10 --leverage 5".to_string(),
+                "3. When ready, add --confirm to execute on-chain:".to_string(),
+                "   hyperliquid order --coin BTC --side long --size 10 --leverage 5 --confirm".to_string(),
+            ],
             "hyperliquid order --coin BTC --side long --size 10 --leverage 5".to_string(),
         );
     }
 
     // Case 3: has enough Arbitrum USDC to deposit (minimum $5)
     if arb_usdc >= 5.0 {
-        // Suggest depositing 90% and keeping a small buffer for gas, minimum $5
         let suggest = ((arb_usdc * 0.9 * 100.0).floor() / 100.0).max(5.0);
         let suggest = suggest.min(arb_usdc);
         return (
             "needs_deposit",
             "You have USDC on Arbitrum. Deposit to Hyperliquid to start trading perps (minimum $5).",
+            vec![
+                format!("1. Deposit USDC from Arbitrum to Hyperliquid (minimum $5):"),
+                format!("   hyperliquid deposit --amount {:.2} --confirm", suggest),
+                "2. Run quickstart again to confirm your HL account is funded:".to_string(),
+                "   hyperliquid quickstart".to_string(),
+                "3. Check available markets:  hyperliquid prices".to_string(),
+                "4. Place your first trade:".to_string(),
+                "   hyperliquid order --coin BTC --side long --size 10 --leverage 5 --confirm".to_string(),
+            ],
             format!("hyperliquid deposit --amount {:.2} --confirm", suggest),
         );
     }
@@ -133,6 +156,14 @@ fn build_suggestion(
         return (
             "low_balance",
             "You have some USDC on Arbitrum but below the $5 deposit minimum. Add more USDC to your Arbitrum wallet.",
+            vec![
+                format!("1. Send at least $5 USDC to your Arbitrum wallet:"),
+                format!("   {}", wallet),
+                "2. Run quickstart again to check your balance:".to_string(),
+                "   hyperliquid quickstart".to_string(),
+                "3. Then deposit to Hyperliquid:".to_string(),
+                "   hyperliquid deposit --amount 5 --confirm".to_string(),
+            ],
             "hyperliquid address".to_string(),
         );
     }
@@ -141,6 +172,16 @@ fn build_suggestion(
     (
         "no_funds",
         "No USDC found on Arbitrum or Hyperliquid. Transfer USDC to your Arbitrum wallet, then deposit (minimum $5).",
+        vec![
+            "1. Send USDC to your Arbitrum wallet (minimum $5):".to_string(),
+            format!("   {}", wallet),
+            "2. Run quickstart again to confirm your balance:".to_string(),
+            "   hyperliquid quickstart".to_string(),
+            "3. Deposit USDC to Hyperliquid:".to_string(),
+            "   hyperliquid deposit --amount <amount> --confirm".to_string(),
+            "4. Place your first trade:".to_string(),
+            "   hyperliquid order --coin BTC --side long --size 10 --leverage 5 --confirm".to_string(),
+        ],
         "hyperliquid address".to_string(),
     )
 }
