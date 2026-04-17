@@ -26,5 +26,5 @@ build:
 api_calls:
   - "https://api.orca.so/v1/whirlpool/list"
   - "https://api.orca.so/v1"
-  - "api.mainnet-beta.solana.com"
+  - "https://api.mainnet-beta.solana.com"
 
