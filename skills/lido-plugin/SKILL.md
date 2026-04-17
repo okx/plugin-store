@@ -156,6 +156,49 @@ Before running any command:
 2. For write operations, verify wallet is logged in: `onchainos wallet balance --chain 1 --output json`
 3. If wallet check fails, prompt: "Please log in with `onchainos wallet login` first."
 
+## Quickstart
+
+**New to Lido?** Run these steps in order:
+
+1. **Check current staking APR**
+   ```bash
+   lido-plugin get-apy
+   ```
+   Returns the current stETH APR (typically 3–5%).
+
+2. **Check your stETH balance**
+   ```bash
+   lido-plugin balance
+   ```
+
+3. **Preview a stake** (no transaction sent)
+   ```bash
+   lido-plugin stake --amount-eth 0.1
+   ```
+   Shows the APR and expected stETH received. No funds move until you add `--confirm`.
+
+4. **Stake ETH → receive stETH** (after reviewing the preview)
+   ```bash
+   lido-plugin stake --amount-eth 0.1 --confirm
+   ```
+
+**Withdrawal flow** (when you want ETH back — takes 1–5 days to finalize):
+
+```bash
+# Step 1: Request withdrawal
+lido-plugin request-withdrawal --amount-steth 0.1 --confirm
+
+# Step 2: Monitor status
+lido-plugin get-withdrawals
+
+# Step 3: Claim once finalized (use request ID from get-withdrawals output)
+lido-plugin claim-withdrawal --ids <REQUEST_ID> --confirm
+```
+
+> `wrap` / `unwrap` convert between stETH and wstETH (non-rebasing form used by DeFi protocols such as Aave and Compound).
+
+---
+
 ## Contract Addresses (Ethereum Mainnet)
 
 | Contract | Address |
