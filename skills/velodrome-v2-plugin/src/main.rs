@@ -37,6 +37,8 @@ enum Commands {
     RemoveLiquidity(RemoveLiquidityArgs),
     /// Claim VELO gauge rewards from a pool gauge
     ClaimRewards(ClaimRewardsArgs),
+    /// Check wallet state and get personalised onboarding steps
+    Quickstart,
 }
 
 #[tokio::main]
@@ -50,5 +52,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::AddLiquidity(args) => commands::add_liquidity::run(args).await,
         Commands::RemoveLiquidity(args) => commands::remove_liquidity::run(args).await,
         Commands::ClaimRewards(args) => commands::claim_rewards::run(args).await,
+        Commands::Quickstart => commands::quickstart::run().await,
     }
 }
