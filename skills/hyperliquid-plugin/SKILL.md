@@ -872,6 +872,194 @@ Use `hyperliquid prices` to get a full list of available markets.
 
 ---
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed hyperliquid",
+"how do I get started with Hyperliquid", "what can I do with Hyperliquid" — **do not wait for them to ask
+specific questions.** Proactively walk them through the Quickstart in order, one step at a time,
+waiting for confirmation before proceeding to the next:
+
+1. **Connect wallet** — run `onchainos wallet addresses`. If no address, direct them to
+   `onchainos wallet login`. Do not proceed to write operations until a wallet is confirmed.
+2. **Run register** — run `hyperliquid register` to detect the onchainos signing address.
+   If `"status": "setup_required"`, walk them through Option 1 (deposit USDC directly to the signing
+   address from Arbitrum) or Option 2 (add it as an API wallet via the Hyperliquid web UI).
+   This step is **required** before any order can be placed.
+3. **Fund the account** — run `hyperliquid address` to check Arbitrum USDC balance. If balance is low,
+   use `hyperliquid deposit --amount <N>` (preview first, then `--confirm`). Minimum: ~$10 USDC to
+   meet the exchange's minimum notional per trade.
+4. **Check prices** — run `hyperliquid prices --coin BTC` (or the coin they want) to see the current
+   market price before sizing a trade.
+5. **Preview the order** — run the `order` command **without `--confirm`** to show the preview JSON
+   including `fund_landscape` (margin check). Confirm `"preview": true` is present.
+6. **Execute** — once the user confirms, re-run the same command **with `--confirm`** to sign and
+   broadcast. Orders are settled on Hyperliquid L1 — no EVM gas required.
+7. **Monitor position** — run `hyperliquid positions` to confirm the position opened and check
+   `liquidationPrice`. Set a stop-loss with `hyperliquid tpsl --coin <COIN> --sl-px <PRICE> --confirm`.
+
+**Important caveats discovered during live testing:**
+- The `register` step is mandatory. Skipping it causes `sign-message failed` errors on all write ops.
+- Hyperliquid L1 is **not EVM**. Do not pass `--chain` flags — the plugin targets HL L1 directly.
+- All write commands (`order`, `close`, `tpsl`, `cancel`, `withdraw`, `transfer`) require `--confirm`.
+  Without it they show a safe preview with no on-chain action.
+- Deposit flows from Arbitrum (chain 42161): ensure ETH on Arbitrum for gas (~$0.01) before depositing.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+---
+
+## Quickstart
+
+New to hyperliquid-plugin? Follow these steps to go from zero to your first perpetual trade.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet addresses
+```
+
+If no address is shown, log in first:
+
+```bash
+onchainos wallet login your@email.com
+```
+
+Confirm you see your wallet address before continuing.
+
+### Step 2 — Register your signing address (required once)
+
+```bash
+hyperliquid register
+```
+
+This detects the EOA signing key onchainos will use for Hyperliquid L1 actions. Two possible outcomes:
+
+- `"status": "ready"` — no extra setup needed; proceed to Step 3.
+- `"status": "setup_required"` — your onchainos signing address differs from your wallet address.
+  Follow Option 1: deposit USDC directly to the signing address shown, or Option 2: add it as an
+  API wallet at https://app.hyperliquid.xyz/settings/api-wallets.
+
+### Step 3 — Fund your Hyperliquid account
+
+Check your Arbitrum USDC balance (source of deposits):
+
+```bash
+hyperliquid address
+```
+
+If you have USDC on Arbitrum, deposit to Hyperliquid (preview first):
+
+```bash
+# Preview (no broadcast):
+hyperliquid deposit --amount 100
+
+# Execute:
+hyperliquid deposit --amount 100 --confirm
+```
+
+Funds arrive in 2–5 minutes. Minimum recommended: $20–$50 USDC (you need ≥ $10 notional per trade).
+
+### Step 4 — Check prices
+
+```bash
+# Single coin price
+hyperliquid prices --coin BTC
+
+# All perp market prices
+hyperliquid prices
+```
+
+Use this to calibrate your order size and price before placing.
+
+### Step 5 — Preview before placing an order
+
+All write commands show a safe preview by default — no on-chain action until you add `--confirm`:
+
+```bash
+# Preview: market long 0.001 BTC (no confirm = no trade)
+hyperliquid order --coin BTC --side buy --size 0.001
+
+# Execute: market long 0.001 BTC
+hyperliquid order --coin BTC --side buy --size 0.001 --confirm
+```
+
+Check the preview for `"fund_landscape"` — it shows your perp balance vs. required margin. If margin
+is insufficient, the command exits with a tip to `transfer` or `deposit` first.
+
+### Step 6 — Place your first order
+
+```bash
+# Market long 0.001 BTC at 10x cross leverage
+hyperliquid order \
+  --coin BTC \
+  --side buy \
+  --size 0.001 \
+  --leverage 10 \
+  --confirm
+```
+
+Expected output: `"ok": true`, `"coin": "BTC"`, `"side": "buy"`, and a `result` with fill details.
+
+For a limit order with a stop-loss bracket:
+
+```bash
+hyperliquid order \
+  --coin BTC \
+  --side buy \
+  --size 0.001 \
+  --type limit \
+  --price 95000 \
+  --sl-px 90000 \
+  --tp-px 105000 \
+  --confirm
+```
+
+### Step 7 — Monitor your position
+
+```bash
+hyperliquid positions
+```
+
+Check `liquidationPrice` — if the market moves against you, you may be liquidated at that price.
+
+To add or update a stop-loss on an open position:
+
+```bash
+# Preview:
+hyperliquid tpsl --coin BTC --sl-px 90000
+
+# Execute:
+hyperliquid tpsl --coin BTC --sl-px 90000 --confirm
+```
+
+### Step 8 — Close your position
+
+```bash
+# Preview close:
+hyperliquid close --coin BTC
+
+# Execute full close:
+hyperliquid close --coin BTC --confirm
+
+# Close half the position:
+hyperliquid close --coin BTC --size 0.0005 --confirm
+```
+
+### Step 9 — (Optional) Withdraw USDC back to Arbitrum
+
+```bash
+# Preview (shows $1 fee breakdown):
+hyperliquid withdraw --amount 50
+
+# Execute:
+hyperliquid withdraw --amount 50 --confirm
+```
+
+Note: a $1 USDC fixed fee is deducted from your Hyperliquid balance on every withdrawal. Funds arrive
+on Arbitrum in ~2–5 minutes.
+
+---
+
 ## M07 — Security Notice (Perpetuals / High Risk)
 
 > **WARNING: Perpetual futures are high-risk derivative instruments.**
