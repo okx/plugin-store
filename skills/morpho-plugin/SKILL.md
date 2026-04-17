@@ -177,6 +177,32 @@ Morpho is a permissionless lending protocol with over $5B TVL operating on two l
 
 ---
 
+## Quickstart
+
+Run the built-in onboarding command to check your wallet state and receive step-by-step guidance:
+
+```bash
+morpho-plugin quickstart
+```
+
+This checks your ETH, USDC, and WETH balances plus any open Blue and vault positions in parallel,
+then returns a `status` and a suggested `next_command` tailored to your situation:
+
+| Status | Meaning | Suggested next step |
+|--------|---------|-------------------|
+| `active` | Open positions exist — review them | `morpho-plugin positions` |
+| `ready` | Funded, no positions yet | `morpho-plugin supply --asset USDC --amount 100` |
+| `needs_gas` | Has tokens but no ETH for gas | Top up ETH on Ethereum mainnet |
+| `needs_funds` | Has gas but no USDC/WETH to supply | Bridge or buy USDC/WETH |
+| `no_funds` | Nothing found — new wallet | Fund the wallet address shown in output |
+
+**Base chain:**
+```bash
+morpho-plugin --chain 8453 quickstart
+```
+
+---
+
 ## Pre-flight Checks
 
 Before executing any command, verify:
