@@ -1,6 +1,6 @@
 ---
 name: kamino-lend-plugin
-version: "0.1.3"
+version: "0.1.4"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol
 author: GeoGu360
 ---
@@ -18,7 +18,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-lend-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -91,7 +91,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.3/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.4/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-lend-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -99,7 +99,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/kamino-lend-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.3" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
+echo "0.1.4" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -119,7 +119,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"kamino-lend-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"kamino-lend-plugin","version":"0.1.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -156,6 +156,40 @@ Before executing any command:
 
 > **Write operations require `--confirm`**: Run the command first without `--confirm` to preview
 > the transaction details. Add `--confirm` to broadcast.
+
+### quickstart — Wallet Status and Onboarding
+
+Trigger phrases:
+- "Get started with Kamino"
+- "Kamino quickstart"
+- "What can I do on Kamino?"
+- "Check my Kamino wallet"
+- "Am I ready to use Kamino Lend?"
+
+```bash
+kamino-lend quickstart
+kamino-lend quickstart --wallet <WALLET_ADDRESS>
+```
+
+**Output fields:**
+- `about`: one-line description of Kamino Lend
+- `wallet`: resolved Solana wallet address
+- `assets.sol_balance`: SOL balance (UI units)
+- `assets.usdc_balance`: USDC balance (UI units)
+- `status`: one of `active`, `ready`, `needs_gas`, `needs_funds`, `no_funds`
+- `suggestion`: human-readable status message
+- `next_command`: the single most useful next command to run
+- `onboarding_steps` (only when status ≠ `active`): step-by-step guide to get started
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Has active lending positions — suggest checking them |
+| `ready` | Has SOL + USDC — ready to supply |
+| `needs_gas` | Has USDC but needs SOL for transaction fees |
+| `needs_funds` | Has SOL but needs USDC or other tokens to supply |
+| `no_funds` | No SOL or USDC — needs to fund wallet first |
+
+---
 
 ### markets — View Lending Markets
 

@@ -1,7 +1,7 @@
 {
   "name": "kamino-lend",
   "description": "Supply, borrow, and manage positions on Kamino Lend \u2014 the leading Solana lending protocol",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "author": {
     "name": "GeoGu360",
     "github": "GeoGu360"

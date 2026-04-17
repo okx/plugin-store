@@ -1,6 +1,59 @@
 use std::process::Command;
 use serde_json::Value;
 
+/// Native SOL mint sentinel (System Program address used by onchainos for native SOL).
+const NATIVE_SOL_MINT: &str = "11111111111111111111111111111111";
+
+/// Return native SOL balance in UI units (e.g. 1.5 = 1.5 SOL).
+/// Returns 0.0 on any failure — used for quickstart balance checks only.
+pub fn get_sol_balance() -> f64 {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501"])
+        .output()
+        .ok();
+    let stdout = output
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(Value::Null);
+    if let Some(assets) = json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+    {
+        for asset in assets {
+            let addr = asset["tokenAddress"].as_str().unwrap_or("");
+            if addr.is_empty() || addr == NATIVE_SOL_MINT {
+                return asset["balance"]
+                    .as_str()
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .unwrap_or(0.0);
+            }
+        }
+    }
+    0.0
+}
+
+/// Return SPL token balance in UI units for a given mint address.
+/// Returns 0.0 on any failure — used for quickstart balance checks only.
+pub fn get_spl_token_balance(token_mint: &str) -> f64 {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501", "--token-address", token_mint])
+        .output()
+        .ok();
+    let stdout = output
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(Value::Null);
+    json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+        .and_then(|a| a.first())
+        .and_then(|t| t["balance"].as_str())
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0)
+}
+
 /// Resolve the current Solana wallet address from onchainos.
 /// NOTE: Solana does NOT support --output json; wallet balance returns JSON directly.
 /// Address path: data.details[0].tokenAssets[0].address

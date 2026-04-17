@@ -3,6 +3,25 @@ use serde_json::Value;
 
 use crate::config::API_BASE;
 
+/// Fetch symbol and decimals for a reserve via the metrics/history endpoint.
+/// Returns None if the reserve is not found or the API call fails.
+pub async fn get_reserve_info(market: &str, reserve: &str) -> Option<(String, u32)> {
+    let end = chrono_approx_now();
+    let start = chrono_approx_yesterday();
+    let url = format!(
+        "{}/kamino-market/{}/reserves/{}/metrics/history?env=mainnet-beta&start={}&end={}&frequency=day",
+        API_BASE, market, reserve, start, end
+    );
+    let resp = reqwest::Client::new().get(&url).send().await.ok()?;
+    let data: Value = resp.json().await.ok()?;
+    let history = data["history"].as_array()?;
+    let latest = history.last()?;
+    let metrics = &latest["metrics"];
+    let symbol = metrics["symbol"].as_str()?.to_string();
+    let decimals = metrics["decimals"].as_u64()? as u32;
+    Some((symbol, decimals))
+}
+
 /// Fetch all Kamino lending markets.
 /// GET /v2/kamino-market
 pub async fn get_markets() -> Result<Value> {
