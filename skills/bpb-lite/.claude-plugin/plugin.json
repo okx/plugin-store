@@ -1,0 +1,12 @@
+{
+  "name": "bpb-lite",
+  "description": "Public AI-agent workflow for Based Pings Bot, focused on Solana automated signals, volume insights, launchpad context, and compact research output",
+  "version": "0.1.0",
+  "author": {
+    "name": "solgoodman",
+    "url": "https://github.com/solgoodmanx"
+  },
+  "homepage": "https://web3.okx.com/join/BasedPings",
+  "license": "MIT",
+  "keywords": ["solana", "memecoin", "signals", "analytics", "trading"]
+}

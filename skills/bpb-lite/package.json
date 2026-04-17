@@ -1,0 +1,14 @@
+{
+  "name": "bpb-lite",
+  "version": "0.1.0",
+  "description": "AI-agent skill for Solana memecoin triage with confidence tiers and platform attribution hints",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "scan": "node scripts/scan-token.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

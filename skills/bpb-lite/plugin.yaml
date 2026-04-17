@@ -1,0 +1,27 @@
+schema_version: 1
+name: bpb-lite
+version: "0.1.0"
+description: "Public AI-agent workflow for Based Pings Bot, focused on Solana automated signals, volume insights, launchpad context, and compact research output"
+author:
+  name: "solgoodman"
+  github: "solgoodmanx"
+  url: "https://github.com/solgoodmanx"
+license: MIT
+category: analytics
+tags:
+  - solana
+  - memecoin
+  - trading
+  - signals
+  - analytics
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "web3.okx.com"
+  - "api.dexscreener.com"
+  - "public-api.birdeye.so"
+  - "api-preview.printr.money"
+  - "api.helius.xyz"
