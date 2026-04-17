@@ -137,6 +137,55 @@ fi
 
 ---
 
+## Quickstart
+
+This plugin manages **CAKE farming** for PancakeSwap V3 LP positions. You need a V3 LP token ID from the `pancakeswap-v3` plugin before you can farm.
+
+**New to CLMM farming? Run these steps:**
+
+1. **See active farming pools and their APRs**
+   ```bash
+   pancakeswap-clmm farm-pools
+   ```
+
+2. **Create a V3 LP position** (requires the `pancakeswap-v3` plugin — note the token ID from the output)
+   ```bash
+   pancakeswap-v3 add-liquidity --token-a CAKE --token-b WBNB --amount-a 10 --confirm
+   ```
+
+3. **Check your current positions** (discovers staked and unstaked NFTs automatically)
+   ```bash
+   pancakeswap-clmm positions
+   ```
+
+4. **Preview staking** (no transaction sent)
+   ```bash
+   pancakeswap-clmm farm --token-id <TOKEN_ID>
+   ```
+
+5. **Stake the NFT to start earning CAKE**
+   ```bash
+   pancakeswap-clmm farm --token-id <TOKEN_ID> --confirm
+   ```
+
+**Day-to-day farming:**
+```bash
+# Check pending CAKE rewards
+pancakeswap-clmm pending-rewards --token-id <TOKEN_ID>
+
+# Claim rewards (position stays staked)
+pancakeswap-clmm harvest --token-id <TOKEN_ID> --confirm
+
+# Collect accumulated swap fees
+pancakeswap-clmm collect-fees --token-id <TOKEN_ID> --confirm
+
+# Stop farming (withdraw NFT from MasterChefV3)
+pancakeswap-clmm unfarm --token-id <TOKEN_ID> --confirm
+```
+
+> Default chain is BSC (`--chain 56`). Also supported: Ethereum (`--chain 1`), Base (`--chain 8453`), Arbitrum (`--chain 42161`).
+
+---
 
 ## Do NOT use for
 
