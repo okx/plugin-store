@@ -138,6 +138,179 @@ fi
 ---
 
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed gmx-v2",
+"how do I get started with GMX", "what can I do with GMX V2" — **do not wait for them to ask
+specific questions.** Proactively walk them through the Quickstart in order, one step at a time,
+waiting for confirmation before proceeding to the next:
+
+1. **Choose chain** — ask the user which chain they want to use. Supported: Arbitrum (42161),
+   Avalanche (43114). Use their answer for `<CHAIN>` in all subsequent steps.
+   If unsure, suggest Arbitrum — it has deeper liquidity, more markets, and lower execution fees
+   (0.001 ETH vs 0.012 AVAX on Avalanche).
+2. **Check wallet** — run `onchainos wallet addresses --chain <CHAIN>`. If no address, direct them
+   to connect via `onchainos wallet login`. Do not proceed to write operations until a wallet is
+   confirmed.
+3. **Check balance** — run `onchainos wallet balance --chain <CHAIN>`. You need:
+   - ETH (Arbitrum) or AVAX (Avalanche) for the execution fee (≥ 0.002 ETH / 0.015 AVAX recommended)
+   - Collateral token (e.g. USDC) for the position
+   If balances are insufficient, explain what's needed and how to fund (bridge or CEX withdrawal).
+4. **Explore markets** — run `gmx-v2 --chain <CHAIN> list-markets` to show available perpetual markets.
+   Ask what asset they want to trade and whether they want long or short. Use `get-prices` to check
+   current oracle prices for the asset.
+5. **Preview first write** — run `open-position` **without `--confirm`** so the user sees the
+   preview JSON (including calldata, estimated leverage, and execution fee) before any on-chain action.
+   Confirm the `"status":"preview"` field is present and explain what it means.
+6. **Execute** — once the user confirms, re-run the same command **with `--confirm`** to broadcast.
+   Note: if ERC-20 collateral allowance is insufficient, the plugin prints a NOTE and re-running
+   with `--confirm` handles the approval and position open in one step.
+7. **Monitor** — after broadcast, remind the user that keeper execution follows within 1–30 seconds.
+   Run `get-positions` after ~30 seconds to confirm the position is live.
+
+**Important caveats:**
+- Write commands need the `--confirm` **global flag** (placed before the subcommand) to broadcast.
+  Without it, the binary returns a safe preview JSON only — no on-chain action occurs.
+- `cancel-order` also uses `--confirm` as a global flag: `gmx-v2 --chain arbitrum --confirm cancel-order --key 0x...`
+- The `txHash` from write commands is the *order creation* tx, not the execution tx — the keeper
+  executes the order separately within 1–30 seconds.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+---
+
+## Quickstart
+
+New to gmx-v2-plugin? Follow these steps to go from zero to your first leveraged position on
+Arbitrum.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet login your@email.com
+onchainos wallet addresses --chain 42161
+```
+
+Confirm you see your Arbitrum address before continuing.
+
+### Step 2 — Check your balance
+
+```bash
+onchainos wallet balance --chain 42161
+```
+
+You need two things:
+- **Execution fee**: at least 0.002 ETH on Arbitrum (0.001 ETH fee + 0.001 ETH gas buffer)
+- **Collateral**: USDC or another supported ERC-20 token for the position
+
+If balances are zero, bridge ETH and USDC to Arbitrum first (e.g. via the OKX bridge or a CEX
+withdrawal to Arbitrum).
+
+### Step 3 — Browse available markets and prices
+
+```bash
+# List all active perpetual markets
+gmx-v2 --chain arbitrum list-markets
+
+# Check current oracle price for ETH
+gmx-v2 --chain arbitrum get-prices --symbol ETH
+```
+
+Note the market name (e.g. `"ETH/USD"`) from `list-markets` — you'll pass it as `--market` when
+opening a position.
+
+### Step 4 — Preview a position before executing
+
+All write commands show a safe preview by default — no on-chain action until you add `--confirm`:
+
+```bash
+# Preview a $5,000 ETH long with 1,000 USDC collateral (no tx sent):
+gmx-v2 --chain arbitrum open-position \
+  --market "ETH/USD" \
+  --collateral-token 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 \
+  --collateral-amount 1000000000 \
+  --size-usd 5000.0 \
+  --long \
+  --slippage-bps 100
+```
+
+Check for `"status":"preview"` in the output. The preview shows estimated leverage, execution fee,
+and pre-flight checks (balance, collateral minimum, ETH for gas). Fix any pre-flight errors before
+proceeding.
+
+### Step 5 — Open the position
+
+Once you've reviewed the preview and confirmed with the user, re-run with `--confirm`:
+
+```bash
+# Execute (broadcasts to chain):
+gmx-v2 --chain arbitrum --confirm open-position \
+  --market "ETH/USD" \
+  --collateral-token 0xaf88d065e77c8cC2239327C5EDb3A432268e5831 \
+  --collateral-amount 1000000000 \
+  --size-usd 5000.0 \
+  --long \
+  --slippage-bps 100
+```
+
+Expected output: `"ok": true`, `"txHash": "0x..."`. The position will appear on-chain within
+1–30 seconds once a keeper executes the creation order.
+
+**Note:** If the binary prints `NOTE: collateral token allowance insufficient` in the preview, this
+is expected — re-running with `--confirm` will submit the approval and open-position in one step.
+
+### Step 6 — Monitor your position
+
+```bash
+# Wait ~30s for keeper execution, then check:
+gmx-v2 --chain arbitrum get-positions
+```
+
+Output includes `sizeUsd`, `collateralUsd`, `leverage`, `entryPrice_usd`, `unrealizedPnl_usd`, and
+the `market` and `collateralToken` addresses you'll need for closing.
+
+### Step 7 — Close the position
+
+Use the `market` and `collateralToken` addresses from `get-positions` output:
+
+```bash
+# Preview close (no tx sent):
+gmx-v2 --chain arbitrum close-position \
+  --market-token 0xMarketTokenAddress \
+  --collateral-token 0xCollateralTokenAddress \
+  --size-usd 5000.0 \
+  --collateral-amount 1000000000 \
+  --long
+
+# Execute close:
+gmx-v2 --chain arbitrum --confirm close-position \
+  --market-token 0xMarketTokenAddress \
+  --collateral-token 0xCollateralTokenAddress \
+  --size-usd 5000.0 \
+  --collateral-amount 1000000000 \
+  --long
+```
+
+### Step 8 — (Optional) Claim accrued funding fees
+
+If you've held a position for a while, you may have accumulated funding fee income:
+
+```bash
+# Preview claim:
+gmx-v2 --chain arbitrum claim-funding-fees \
+  --markets 0xMarket1,0xMarket2 \
+  --tokens 0xToken1,0xToken2 \
+  --receiver 0xYourWallet
+
+# Execute claim:
+gmx-v2 --chain arbitrum --confirm claim-funding-fees \
+  --markets 0xMarket1,0xMarket2 \
+  --tokens 0xToken1,0xToken2 \
+  --receiver 0xYourWallet
+```
+
+---
+
 ## Do NOT use for...
 
 - Spot swaps or DEX trades without leverage — use a swap/DEX plugin instead
