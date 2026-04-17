@@ -33,7 +33,7 @@
     },
     {
       "name": "clanker",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
       "author": {
         "name": "GeoGu360"
