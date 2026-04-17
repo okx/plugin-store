@@ -1,6 +1,91 @@
 use std::process::Command;
 use serde_json::Value;
 
+/// Native SOL mint sentinel (System Program address used by onchainos for native SOL).
+const NATIVE_SOL_MINT: &str = "11111111111111111111111111111111";
+
+/// Return native SOL balance in UI units (e.g. 1.5 = 1.5 SOL).
+/// Returns 0.0 on any failure — used for quickstart balance checks only.
+pub fn get_sol_balance() -> f64 {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501"])
+        .output()
+        .ok();
+    let stdout = output
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(Value::Null);
+    if let Some(assets) = json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+    {
+        for asset in assets {
+            let addr = asset["tokenAddress"].as_str().unwrap_or("");
+            if addr.is_empty() || addr == NATIVE_SOL_MINT {
+                return asset["balance"]
+                    .as_str()
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .unwrap_or(0.0);
+            }
+        }
+    }
+    0.0
+}
+
+/// Return all token balances (SOL + SPL) from a single onchainos call.
+/// Returns a vec of (symbol, balance_ui, mint_address).
+pub fn get_all_token_balances() -> Vec<(String, f64, String)> {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501"])
+        .output()
+        .ok();
+    let stdout = output
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(Value::Null);
+    let mut result = Vec::new();
+    if let Some(assets) = json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+    {
+        for asset in assets {
+            let symbol = asset["symbol"].as_str().unwrap_or("UNKNOWN").to_string();
+            let balance = asset["balance"]
+                .as_str()
+                .and_then(|s| s.parse::<f64>().ok())
+                .unwrap_or(0.0);
+            let mint = asset["tokenAddress"].as_str().unwrap_or("").to_string();
+            if balance > 0.0 {
+                result.push((symbol, balance, mint));
+            }
+        }
+    }
+    result
+}
+
+/// Return SPL token balance in UI units for a given mint address.
+/// Returns 0.0 on any failure — used for quickstart balance checks only.
+pub fn get_spl_token_balance(token_mint: &str) -> f64 {
+    let output = Command::new("onchainos")
+        .args(["wallet", "balance", "--chain", "501", "--token-address", token_mint])
+        .output()
+        .ok();
+    let stdout = output
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+    let json: Value = serde_json::from_str(&stdout).unwrap_or(Value::Null);
+    json["data"]["details"]
+        .as_array()
+        .and_then(|a| a.first())
+        .and_then(|d| d["tokenAssets"].as_array())
+        .and_then(|a| a.first())
+        .and_then(|t| t["balance"].as_str())
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0)
+}
+
 /// Resolve the current Solana wallet address from onchainos.
 /// NOTE: Solana does NOT support --output json; wallet balance returns JSON directly.
 /// Address path: data.details[0].tokenAssets[0].address
@@ -99,6 +184,53 @@ pub async fn wallet_contract_call_solana(
     }
 
     Ok(result)
+}
+
+/// Poll onchainos wallet history until the tx reaches SUCCESS or FAILED, or 60s timeout.
+/// Returns Ok(()) on SUCCESS, Err on FAILED or timeout.
+pub async fn wait_for_tx_solana(tx_hash: &str, wallet: &str) -> anyhow::Result<()> {
+    let tx = tx_hash.to_string();
+    let wlt = wallet.to_string();
+    tokio::task::spawn_blocking(move || wait_for_tx_solana_sync(&tx, &wlt))
+        .await
+        .map_err(|e| anyhow::anyhow!("spawn_blocking error: {}", e))?
+}
+
+fn wait_for_tx_solana_sync(tx_hash: &str, wallet: &str) -> anyhow::Result<()> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        if std::time::Instant::now() > deadline {
+            anyhow::bail!("Timeout (60s) waiting for tx {} to confirm on-chain", tx_hash);
+        }
+        let output = Command::new("onchainos")
+            .args([
+                "wallet", "history",
+                "--tx-hash", tx_hash,
+                "--address", wallet,
+                "--chain", "501",
+            ])
+            .output();
+        if let Ok(out) = output {
+            let text = String::from_utf8_lossy(&out.stdout);
+            if let Ok(v) = serde_json::from_str::<Value>(&text) {
+                // onchainos returns data as array or single object
+                let entry = v["data"]
+                    .as_array()
+                    .and_then(|a| a.first())
+                    .cloned()
+                    .unwrap_or_else(|| v["data"].clone());
+                match entry["txStatus"].as_str() {
+                    Some("SUCCESS") => return Ok(()),
+                    Some("FAILED") => {
+                        let reason = entry["failReason"].as_str().unwrap_or("unknown");
+                        anyhow::bail!("tx {} failed on-chain: {}", tx_hash, reason);
+                    }
+                    _ => {} // PENDING or not yet indexed — keep polling
+                }
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    }
 }
 
 /// Extract txHash from onchainos response.

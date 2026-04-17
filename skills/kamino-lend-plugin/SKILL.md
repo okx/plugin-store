@@ -1,6 +1,6 @@
 ---
 name: kamino-lend-plugin
-version: "0.1.3"
+version: "0.1.4"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol
 author: GeoGu360
 ---
@@ -18,7 +18,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-lend-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.3"
+LOCAL_VER="0.1.4"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -91,7 +91,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.3/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.4/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-lend-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -99,7 +99,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/kamino-lend-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.3" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
+echo "0.1.4" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -119,7 +119,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"kamino-lend-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
+    -d '{"name":"kamino-lend-plugin","version":"0.1.4"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -156,6 +156,70 @@ Before executing any command:
 
 > **Write operations require `--confirm`**: Run the command first without `--confirm` to preview
 > the transaction details. Add `--confirm` to broadcast.
+
+### quickstart — Wallet Status and Onboarding
+
+Trigger phrases:
+- "Get started with Kamino"
+- "Kamino quickstart"
+- "What can I do on Kamino?"
+- "Check my Kamino wallet"
+- "Am I ready to use Kamino Lend?"
+
+```bash
+kamino-lend quickstart
+kamino-lend quickstart --wallet <WALLET_ADDRESS>
+```
+
+**Output fields:**
+- `about`: one-line description of Kamino Lend
+- `wallet`: resolved Solana wallet address
+- `assets.sol_balance`: SOL balance (UI units)
+- `assets.usdc_balance`: USDC balance (UI units)
+- `status`: one of `active`, `ready`, `needs_gas`, `needs_funds`, `no_funds`
+- `suggestion`: human-readable status message
+- `next_command`: the single most useful next command to run
+- `onboarding_steps` (only when status ≠ `active`): step-by-step guide to get started
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Has active lending positions — suggest checking them |
+| `ready` | Has SOL + USDC — ready to supply |
+| `needs_gas` | Has USDC but needs SOL for transaction fees |
+| `needs_funds` | Has SOL but needs USDC or other tokens to supply |
+| `no_funds` | No SOL or USDC — needs to fund wallet first |
+
+---
+
+### reserves — List All Available Lending Assets
+
+Trigger phrases:
+- "What can I supply on Kamino?"
+- "What tokens does Kamino Lend support?"
+- "Show Kamino lending rates"
+- "Kamino available assets"
+- "What's the APY for [token] on Kamino?"
+
+```bash
+kamino-lend reserves
+kamino-lend reserves --min-apy 2
+```
+
+**Parameters:**
+- `--min-apy`: Only show reserves with supply APY ≥ this value (optional, e.g. `2` = 2%)
+
+**Output fields per reserve:**
+- `symbol`: token symbol (e.g., USDC, SOL, JitoSOL, WBTC)
+- `supply_apy_pct`: current supply (lending) APY as percentage
+- `borrow_apy_pct`: current borrow APY as percentage
+- `tvl_usd`: total value locked in USD
+- `supply_example`: ready-to-run supply command
+
+> **Fastest query path**: Single call to `https://yields.llama.fi/pools` (DeFiLlama),
+> filtered to `project=kamino-lend, chain=Solana`. Returns all reserves in ~1s.
+> No per-reserve iteration needed.
+
+---
 
 ### markets — View Lending Markets
 
@@ -224,7 +288,7 @@ Parameters:
 - `--wallet`: Override wallet address (optional)
 - `--market`: Override market address (optional)
 
-**Important:** After user confirmation, executes via `onchainos wallet contract-call --chain 501 --unsigned-tx <base58_tx> --force`. The transaction is fetched from Kamino API and immediately submitted (Solana blockhash expires in ~60 seconds).
+**Important:** After user confirmation, executes via `onchainos wallet contract-call --chain 501 --unsigned-tx <base58_tx> --force`. The transaction is fetched from Kamino API and immediately submitted (Solana blockhash expires in ~60 seconds). The command waits for on-chain confirmation (polls `onchainos wallet history` until `txStatus: SUCCESS`) before returning `ok: true`.
 
 ---
 
@@ -247,7 +311,7 @@ Parameters: Same as `supply`.
 
 **Note:** Withdrawing when you have outstanding borrows may fail if it would bring health factor below 1.0. Check positions first.
 
-After user confirmation, submits transaction via `onchainos wallet contract-call`.
+After user confirmation, submits transaction via `onchainos wallet contract-call` and waits for on-chain confirmation before returning success.
 
 ---
 
@@ -269,17 +333,38 @@ Before executing a real borrow, **ask user to confirm** and warn about liquidati
 
 ---
 
-### repay — Repay Borrowed Assets (Dry-run)
+### repay — Repay Borrowed Assets
 
 Trigger phrases:
 - "Repay [amount] [token] on Kamino"
 - "Pay back my [token] loan on Kamino"
 - "Reduce my Kamino debt"
+- "Repay all my Kamino debt"
 
 ```bash
 kamino-lend repay --token SOL --amount 0.001 --dry-run
 kamino-lend repay --token USDC --amount 0.01 --dry-run
+kamino-lend repay --token PYUSD --amount all --confirm
 ```
+
+**Parameters:**
+- `--token`: Token symbol or reserve address
+- `--amount`: Amount in UI units, or `all`/`max` to repay the full outstanding balance (recommended — avoids interest-accrual shortfall errors)
+- `--dry-run`: Preview without submitting
+- `--confirm`: Execute and broadcast
+
+**Output fields (on success):**
+- `txHash`: confirmed transaction hash
+- `token`: token symbol
+- `amount`: amount passed by user
+- `action`: `"repay"`
+- `note`: human-readable note (e.g. if full debt was repaid or auto-swap was triggered)
+- `auto_swap`: `true` if a Jupiter swap was automatically triggered to cover an interest shortfall
+- `explorer`: Solscan link
+
+> **Tip:** Always prefer `--amount all` when closing a debt entirely. Passing an exact amount often fails because interest accrues between transaction build and execution, leaving sub-minimum dust that Kamino rejects.
+
+> **Interest shortfall auto-recovery:** When `--amount all` is used and the wallet is short by a few atoms due to accrued interest, the skill automatically swaps 0.001 SOL → the required token via Jupiter before repaying. The output includes `"auto_swap": true` so external agents know this side-effect occurred.
 
 Before executing a real repay, **ask user to confirm** the repayment details.
 
@@ -293,6 +378,9 @@ Before executing a real repay, **ask user to confirm** the repayment details.
 | `base64→base58 conversion failed` | API returned invalid tx | Retry; the API transaction may have expired |
 | `Cannot resolve wallet address` | Not logged in to onchainos | Run `onchainos wallet balance --chain 501` to verify login |
 | `Unknown token 'X'` | Unsupported token symbol | Use USDC or SOL, or pass reserve address directly |
+| `Net value remaining too small` | Partial repay leaves sub-minimum dust (interest accrued) | Use `--amount all` to repay full debt; or swap more tokens in first |
+| `transaction simulation failed: InstructionError Custom:1` | SPL token transfer failed — wallet has less than current debt (1 atom short due to accrued interest) | Use `--amount all` — the skill auto-swaps 0.001 SOL via Jupiter to cover the shortfall |
+| `INTEREST_SHORTFALL` (error_code) | Wallet is short a few atoms due to interest, and Jupiter auto-swap also failed | Manually swap a small amount of SOL → the token (e.g. 0.001 SOL), then retry |
 
 ## Routing Rules
 

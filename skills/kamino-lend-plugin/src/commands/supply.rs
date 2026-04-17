@@ -29,6 +29,9 @@ pub struct SupplyArgs {
 }
 
 pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
+    // Resolve reserve early — validates token even in dry-run
+    let reserve = resolve_reserve(&args.token)?;
+
     if args.dry_run {
         println!(
             "{}",
@@ -39,6 +42,7 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
                     "txHash": "",
                     "token": args.token,
                     "amount": args.amount,
+                    "reserve": reserve,
                     "action": "supply"
                 }
             }))?
@@ -49,19 +53,56 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
     // Resolve wallet (must be done AFTER dry-run guard)
     let wallet = match args.wallet {
         Some(w) => w,
-        None => onchainos::resolve_wallet_solana()?,
+        None => match onchainos::resolve_wallet_solana() {
+            Ok(w) => w,
+            Err(e) => {
+                println!("{}", super::error_response(&e, Some(&args.token)));
+                return Ok(());
+            }
+        },
     };
     if wallet.is_empty() {
-        anyhow::bail!("Cannot resolve wallet address. Pass --wallet or ensure onchainos is logged in.");
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "error": "Cannot resolve wallet address.",
+                "error_code": "WALLET_NOT_FOUND",
+                "suggestion": "Pass --wallet <address> or run `onchainos wallet balance --chain 501` to verify login."
+            }))?
+        );
+        return Ok(());
     }
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
 
-    // Resolve reserve address
-    let reserve = resolve_reserve(&args.token)?;
+    // SOL/wSOL deposit requires an existing obligation account.
+    // The Kamino API cannot create the obligation and wrap SOL in the same transaction.
+    // Check upfront and give a clear error rather than a cryptic on-chain simulation failure.
+    if is_sol_token(&args.token) {
+        let obligations = api::get_obligations(&market, &wallet).await.unwrap_or_default();
+        if obligations.as_array().map(|a| a.is_empty()).unwrap_or(true) {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "ok": false,
+                    "error": "SOL deposit requires an existing Kamino obligation account.",
+                    "error_code": "NO_OBLIGATION",
+                    "suggestion": "Supply USDC first to initialize your account, then SOL deposits will work: kamino-lend supply --token USDC --amount <amount> --confirm"
+                }))?
+            );
+            return Ok(());
+        }
+    }
 
     // Build transaction via Kamino API — returns base64 serialized tx
-    let tx_b64 = api::build_deposit_tx(&wallet, &market, &reserve, &args.amount).await?;
+    let tx_b64 = match api::build_deposit_tx(&wallet, &market, &reserve, &args.amount).await {
+        Ok(tx) => tx,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
 
     // Submit via onchainos (converts base64 → base58 internally)
     // ── Preview mode: show TX details without broadcasting ──────────────────
@@ -70,14 +111,32 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
         println!("Add --confirm to execute this transaction.");
         return Ok(());
     }
-    let result = onchainos::wallet_contract_call_solana(
+    let result = match onchainos::wallet_contract_call_solana(
         config::KLEND_PROGRAM_ID,
         &tx_b64,
         false,
     )
-    .await?;
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
 
-    let tx_hash = onchainos::extract_tx_hash(&result)?;
+    let tx_hash = match onchainos::extract_tx_hash(&result) {
+        Ok(h) => h,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
+
+    if let Err(e) = onchainos::wait_for_tx_solana(&tx_hash, &wallet).await {
+        println!("{}", super::error_response(&e, Some(&args.token)));
+        return Ok(());
+    }
 
     println!(
         "{}",
@@ -96,6 +155,12 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+/// Returns true for SOL and wSOL (both map to the SOL reserve, both require
+/// an existing obligation account before the Kamino API can build the deposit tx).
+fn is_sol_token(token: &str) -> bool {
+    matches!(token.to_uppercase().as_str(), "SOL" | "WSOL")
 }
 
 fn resolve_reserve(token_or_address: &str) -> anyhow::Result<String> {
