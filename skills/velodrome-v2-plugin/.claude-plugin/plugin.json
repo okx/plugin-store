@@ -1,7 +1,7 @@
 {
   "name": "velodrome-v2",
   "description": "Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism",
-  "version": "0.1.5",
+  "version": "0.1.4",
   "author": {
     "name": "GeoGu360",
     "github": "GeoGu360"
