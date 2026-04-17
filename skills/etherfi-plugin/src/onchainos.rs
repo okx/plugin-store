@@ -113,19 +113,28 @@ pub async fn wallet_contract_call(
 
     let chain_str = chain_id.to_string();
     let value_str = value_wei.to_string();
+    let mut args = vec![
+        "wallet",
+        "contract-call",
+        "--chain",
+        &chain_str,
+        "--to",
+        to,
+        "--input-data",
+        input_data,
+    ];
+    // Only pass --amt when sending native ETH value (non-zero).
+    // Passing --amt 0 on a pure ERC-20 call can cause onchainos to reject the tx.
+    if value_wei > 0 {
+        args.push("--amt");
+        args.push(&value_str);
+    }
+    // --force bypasses onchainos's interactive confirmation prompt.
+    // The plugin implements its own preview/confirm gate above (if !confirm { return preview }).
+    // By the time we reach this point, confirm=true is guaranteed, so --force is always correct here.
+    args.push("--force");
     let output = Command::new("onchainos")
-        .args([
-            "wallet",
-            "contract-call",
-            "--chain",
-            &chain_str,
-            "--to",
-            to,
-            "--input-data",
-            input_data,
-            "--amt",
-            &value_str,
-        ])
+        .args(&args)
         .output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);

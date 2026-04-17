@@ -1,6 +1,6 @@
 schema_version: 1
 name: etherfi-plugin
-version: "0.2.9"
+version: "0.2.10"
 description: Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap/unwrap eETH/weETH (ERC-4626), unstake eETH back to ETH, and check positions with APY
 author:
   name: GeoGu360

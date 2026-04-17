@@ -51,7 +51,7 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     eprintln!("  Expected weETH to receive: {}", weeth_expected_str);
     eprintln!("  Run with --confirm to broadcast.");
 
-    // Step 1: Check eETH balance
+    // Step 1: Check eETH balance (only on confirm path — preview returned early above)
     if !args.dry_run {
         let eeth_balance = get_balance(eeth, &wallet, rpc).await?;
         if eeth_balance < eeth_wei {
@@ -69,7 +69,11 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
     if !args.dry_run {
         let allowance = get_allowance(eeth, &wallet, weeth, rpc).await?;
         if allowance < eeth_wei {
-            let approve_data = build_approve_calldata(weeth, u128::MAX);
+            eprintln!(
+                "Approving weETH contract to spend exactly {} wei of eETH.",
+                eeth_wei
+            );
+            let approve_data = build_approve_calldata(weeth, eeth_wei);
             let approve_result = wallet_contract_call(
                 CHAIN_ID,
                 eeth,
@@ -88,7 +92,6 @@ pub async fn run(args: WrapArgs) -> anyhow::Result<()> {
 
             // Only reached when --confirm is passed and tx is actually broadcast
             let approve_tx = extract_tx_hash(&approve_result).to_string();
-            eprintln!("WARNING: Granting weETH contract unlimited (u128::MAX) eETH allowance. To revoke later: approve(weETH, 0).");
             eprintln!("Approve tx: {} — waiting for confirmation...", approve_tx);
             wait_for_tx(approve_tx, wallet.clone()).await
                 .map_err(|e| anyhow::anyhow!("Approve tx did not confirm: {}", e))?;

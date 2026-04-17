@@ -86,7 +86,11 @@ async fn run_request(args: UnstakeArgs) -> anyhow::Result<()> {
     if !args.dry_run {
         let allowance = get_allowance(eeth, &wallet, pool, rpc).await?;
         if allowance < eeth_wei {
-            let approve_data = build_approve_calldata(pool, u128::MAX);
+            eprintln!(
+                "Approving LiquidityPool to spend exactly {} wei of eETH.",
+                eeth_wei
+            );
+            let approve_data = build_approve_calldata(pool, eeth_wei);
             let approve_result = wallet_contract_call(
                 CHAIN_ID,
                 eeth,
@@ -105,7 +109,6 @@ async fn run_request(args: UnstakeArgs) -> anyhow::Result<()> {
 
             // Only reached when --confirm is passed and tx is actually broadcast
             let approve_tx = extract_tx_hash(&approve_result).to_string();
-            eprintln!("WARNING: Granting LiquidityPool unlimited (u128::MAX) eETH allowance. To revoke later: approve(LiquidityPool, 0).");
             eprintln!("Approve tx: {} — waiting for confirmation...", approve_tx);
             wait_for_tx(approve_tx, wallet.clone()).await
                 .map_err(|e| anyhow::anyhow!("Approve tx did not confirm: {}", e))?;

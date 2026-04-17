@@ -13,6 +13,7 @@ use commands::{
     unwrap::UnwrapArgs,
     wrap::WrapArgs,
 };
+use clap::Args;
 
 #[derive(Parser)]
 #[command(
@@ -23,6 +24,13 @@ use commands::{
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+}
+
+#[derive(Args)]
+struct QuickstartArgs {
+    /// Wallet address to query. Defaults to the connected onchainos wallet.
+    #[arg(long)]
+    from: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -37,6 +45,8 @@ enum Commands {
     Wrap(WrapArgs),
     /// Unwrap weETH → eETH (ERC-4626 redeem)
     Unwrap(UnwrapArgs),
+    /// Check wallet state and get personalised onboarding steps
+    Quickstart(QuickstartArgs),
 }
 
 #[tokio::main]
@@ -48,5 +58,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::Unstake(args) => commands::unstake::run(args).await,
         Commands::Wrap(args) => commands::wrap::run(args).await,
         Commands::Unwrap(args) => commands::unwrap::run(args).await,
+        Commands::Quickstart(args) => commands::quickstart::run(args.from.as_deref()).await,
     }
 }
