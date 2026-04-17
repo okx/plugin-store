@@ -140,6 +140,103 @@ fi
 
 > ⚠️ **--force note**: The `swap` command uses `onchainos wallet contract-call --force` for Solana `--unsigned-tx` submissions. This is required because Solana blockhashes expire in ~60 seconds — a two-step confirm/retry flow would risk expiry between steps. The agent MUST always confirm with the user before calling `swap` (not after). Do not call `swap` without explicit user confirmation.
 
+---
+
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed raydium", "how do I get started with raydium", "what can I do with this", "help me swap on Solana", "I'm new to raydium" — **do not wait for them to ask specific questions.** Proactively run the quickstart check and walk them through setup in order, one step at a time, waiting for confirmation before proceeding to the next:
+
+1. **Check wallet** — run `raydium-plugin quickstart`. This resolves your Solana wallet, checks SOL and USDC balances, and returns a `status` field indicating your readiness:
+   - `no_funds` → guide user to fund wallet with SOL (minimum ~0.01 SOL for gas)
+   - `needs_gas` → guide user to top up SOL; they have USDC but need SOL for gas
+   - `ready_sol_only` → wallet has SOL; suggest swapping SOL → USDC or another token
+   - `ready` → wallet is funded; proceed to swap
+2. **Find a token to swap** — ask what tokens the user wants to trade. Help them find mint addresses using `raydium-plugin get-token-price --symbol <TOKEN>` or `raydium-plugin get-price --input-mint <MINT> --output-mint <MINT>`.
+3. **Get a quote first** — always run `raydium-plugin get-swap-quote` (or `swap` without `--confirm`) before executing. Show the user the `outputAmount`, `priceImpactPct`, and fees. Ask for explicit confirmation before proceeding.
+4. **Execute the swap** — only after the user confirms the quote details, re-run the `swap` command with `--confirm`.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on. Never call `swap --confirm` without the user explicitly approving the quoted output amount and price impact.
+
+---
+
+## Quickstart
+
+New to Raydium on Solana? Follow these steps to go from zero to placing your first swap.
+
+### Step 1 — Connect your Solana wallet
+
+Raydium swaps are signed by an onchainos agentic wallet on Solana (chain 501). Log in with your email (OTP) or API key:
+
+```bash
+# Email-based login (sends OTP to your inbox)
+onchainos wallet login your@email.com
+```
+
+Once connected, verify a Solana address is active:
+
+```bash
+onchainos wallet addresses --chain 501
+```
+
+Your wallet address is your Raydium identity — all swaps are built and signed from it.
+
+### Step 2 — Check your readiness
+
+Run the built-in quickstart check to see your wallet status and get guided next steps:
+
+```bash
+raydium-plugin quickstart
+```
+
+This returns your SOL and USDC balances plus a `status` field:
+- `ready` — you have both SOL gas and USDC; you can swap immediately
+- `ready_sol_only` — you have SOL but no USDC; swap SOL → USDC first
+- `needs_gas` — you have USDC but need SOL for gas; top up ~0.01 SOL
+- `no_funds` — wallet is empty; fund it via OKX Web3 or a CEX withdrawal to Solana
+
+**Minimum required**: ~0.01 SOL for gas fees per swap transaction.
+
+### Step 3 — Get a swap quote
+
+Before executing any swap, preview the quote:
+
+```bash
+# Quote: swap 0.1 SOL → USDC (no --confirm = preview only, no on-chain action)
+raydium-plugin swap \
+  --input-mint So11111111111111111111111111111111111111112 \
+  --output-mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v \
+  --amount 0.1 \
+  --slippage-bps 50
+```
+
+Review the output:
+- `outputAmount` — how many tokens you'll receive
+- `priceImpactPct` — market impact (warn at ≥ 5%, abort at ≥ 20%)
+- No on-chain transaction is submitted without `--confirm`
+
+### Step 4 — Execute the swap
+
+After reviewing the quote and confirming with the user, add `--confirm` to execute:
+
+```bash
+raydium-plugin swap \
+  --input-mint So11111111111111111111111111111111111111112 \
+  --output-mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v \
+  --amount 0.1 \
+  --slippage-bps 50 \
+  --confirm
+```
+
+The command will check your balance, build the transaction, and broadcast it. You'll receive `transactions[].txHash` on success.
+
+**Common mint addresses for Solana mainnet:**
+- SOL (native/wrapped): `So11111111111111111111111111111111111111112`
+- USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+- USDT: `Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB`
+- RAY: `4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R`
+
+---
+
 ## Architecture
 
 - Read ops (`get-swap-quote`, `get-price`, `get-token-price`, `get-pools`, `get-pool-list`) → direct REST API calls to Raydium endpoints; no wallet or confirmation needed
