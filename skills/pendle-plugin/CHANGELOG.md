@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.2.6 — 2026-04-17
+
+### Fixed
+
+- **Install script asset naming**: SKILL.md install script downloaded `pendle-plugin-${TARGET}`
+  but CI release assets are named `pendle-${TARGET}` (matching the binary name since v0.2.4).
+  Fresh installs from the install script produced 404 errors. Fixed download URL and symlink
+  name (`pendle-plugin` → `pendle`). Also cleans up both old and new names for idempotency.
+
+### Documented
+
+- **mint-py: native ETH not supported**: The Pendle SDK returns "Token not found" when
+  `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` is used as `--token-in` for mint-py.
+  SKILL.md now documents this with the correct WETH addresses for Arbitrum and Base.
+
+- **Flag ordering requirement**: Global flags (`--chain`, `--dry-run`, `--confirm`) must
+  precede the subcommand. SKILL.md previously (incorrectly) documented that flags work
+  after the subcommand. Corrected to show the required ordering.
+
 ## v0.2.5 — 2026-04-16
 
 ### Fixed

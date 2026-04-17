@@ -4,7 +4,7 @@ description: "Pendle Finance yield tokenization plugin. Buy or sell fixed-yield 
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.2.5"
+  version: "0.2.6"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pendle-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.5"
+LOCAL_VER="0.2.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -59,7 +59,7 @@ npx skills add okx/onchainos-skills --yes --global
 npx skills add okx/plugin-store --skill plugin-store --yes --global
 ```
 
-### Install pendle-plugin binary + launcher (auto-injected)
+### Install pendle binary + launcher (auto-injected)
 
 ```bash
 # Install shared infrastructure (launcher + update checker, only once)
@@ -75,7 +75,7 @@ if [ ! -f "$CHECKER" ]; then
 fi
 
 # Clean up old installation
-rm -f "$HOME/.local/bin/pendle-plugin" "$HOME/.local/bin/.pendle-plugin-core" 2>/dev/null
+rm -f "$HOME/.local/bin/pendle" "$HOME/.local/bin/.pendle-core" 2>/dev/null
 
 # Download binary
 OS=$(uname -s | tr A-Z a-z)
@@ -93,15 +93,15 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pendle-plugin@0.2.5/pendle-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pendle-plugin-core${EXT}
-chmod +x ~/.local/bin/.pendle-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pendle-plugin@0.2.6/pendle-${TARGET}${EXT}" -o ~/.local/bin/.pendle-core${EXT}
+chmod +x ~/.local/bin/.pendle-core${EXT}
 
 # Symlink CLI name to universal launcher
-ln -sf "$LAUNCHER" ~/.local/bin/pendle-plugin
+ln -sf "$LAUNCHER" ~/.local/bin/pendle
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.5" > "$HOME/.plugin-store/managed/pendle-plugin"
+echo "0.2.6" > "$HOME/.plugin-store/managed/pendle"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -121,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pendle-plugin","version":"0.2.5"}' >/dev/null 2>&1 || true
+    -d '{"name":"pendle-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -156,10 +156,10 @@ fi
 | Dry-run | `--dry-run` (global flag) | Same as preview but returns stub zero-hash placeholders in `approve_txs` and `tx_hash` instead of real calldata. Fastest; use when you only need to inspect the route. |
 | Live execution | `--confirm` (global flag) | Submits ERC-20 approvals and the Pendle router tx on-chain. |
 
-**Global flags** (`--chain`, `--dry-run`, `--confirm`) can appear **before or after** the subcommand — both are valid:
+**Global flags** (`--chain`, `--dry-run`, `--confirm`) **must come before the subcommand**:
 ```bash
-pendle --chain 42161 --dry-run buy-pt ...   # ✅ flags before subcommand
-pendle buy-pt --chain 42161 --dry-run ...   # ✅ flags after subcommand (v0.2.4+)
+pendle --chain 42161 --dry-run buy-pt ...   # ✅ correct — global flags before subcommand
+pendle buy-pt --chain 42161 --dry-run ...   # ❌ will fail — clap requires global flags first
 ```
 
 **Live execution internals**: All `onchainos wallet contract-call` invocations include `--force`. This is required to broadcast transactions; it is not user-facing.
@@ -560,7 +560,9 @@ pendle --chain <CHAIN_ID> [--dry-run] [--confirm] remove-liquidity \
 
 **Trigger phrases:** "mint PT and YT", "tokenize yield Pendle", "split yield Pendle", "create PT YT"
 
-> ⚠️ **Known limitation:** Some markets return HTTP 403 from the Pendle SDK for multi-output minting. Try Arbitrum (chainId 42161) which has the highest coverage. If 403 persists, the market does not support SDK minting.
+> ⚠️ **Known limitations:**
+> - **Native ETH is not supported** as `--token-in`. Use WETH (`0x82aF49447D8a07e3bd95BD0d56f35241523fBab1` on Arbitrum, `0x4200000000000000000000000000000000000006` on Base) instead.
+> - Some markets return HTTP 403 from the Pendle SDK for multi-output minting. Try Arbitrum (chainId 42161) which has the highest coverage. If 403 persists, the market does not support SDK minting.
 
 ```bash
 pendle --chain <CHAIN_ID> [--dry-run] [--confirm] mint-py \
@@ -787,6 +789,4 @@ pendle --chain 42161 --confirm sell-pt \
 | "Pendle SDK convert returned HTTP 403" | API rate limit, geographic restriction, or unsupported market | Wait and retry; verify market addresses are correct for the target chain |
 | `get-asset-price` returns empty priceMap | IDs not chain-prefixed | Use format `42161-0x...` not bare `0x...` |
 | Approval or main tx times out after ~40 seconds | Network congestion; the binary polls for confirmation every 2s for up to 20 retries (40s hard limit) | The tx may still confirm on-chain. Check the returned `tx_hash` on a block explorer; if confirmed, safe to proceed. If still pending, wait for the next block and retry the command (the approval is idempotent). |
-
-
 
