@@ -75,7 +75,20 @@ pub async fn run(args: ClaimRewardsArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!("Please confirm claiming {} VELO from gauge {}. (Proceeding automatically in non-interactive mode)", earned, gauge_addr);
+    // Preview gate — emit structured preview and exit before getReward call
+    if !args.confirm && !args.dry_run {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --confirm to broadcast",
+            "data": {
+                "action": "claim-rewards",
+                "gauge": gauge_addr,
+                "velo_earned": earned
+            }
+        }))?);
+        return Ok(());
+    }
 
     // --- 4. Build getReward(address account) calldata ---
     // Selector: 0xc00007b0

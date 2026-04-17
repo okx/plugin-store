@@ -89,11 +89,24 @@ pub async fn run(args: RemoveLiquidityArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    println!(
-        "Removing liquidity={} from pool {} ({}/{} stable={})",
-        liquidity_to_remove, pool_addr, token_a, token_b, args.stable
-    );
-    println!("Please confirm the remove-liquidity parameters above before proceeding. (Proceeding automatically in non-interactive mode)");
+    // Preview gate — emit structured preview and exit before any on-chain writes
+    if !args.confirm && !args.dry_run {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --confirm to broadcast",
+            "data": {
+                "action": "remove-liquidity",
+                "pool": pool_addr,
+                "token_a": token_a,
+                "token_b": token_b,
+                "stable": args.stable,
+                "lp_balance": lp_balance,
+                "liquidity_to_remove": liquidity_to_remove
+            }
+        }))?);
+        return Ok(());
+    }
 
     // --- 4. Approve LP token -> Router ---
     if !args.dry_run {

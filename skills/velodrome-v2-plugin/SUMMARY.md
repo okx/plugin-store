@@ -1,13 +1,13 @@
-# velodrome-v2
-A DeFi plugin for swapping tokens and managing classic AMM (volatile/stable) LP positions on Velodrome V2, the largest DEX on Optimism.
+# velodrome-v2-plugin
+Swap tokens and manage classic AMM (volatile/stable) LP positions on Velodrome V2 on Optimism.
 
 ## Highlights
-- Swap tokens with automatic volatile/stable pool routing
-- Quote swaps without executing transactions
-- Add and remove liquidity for volatile and stable pools
-- View LP token balances and positions
-- Claim VELO gauge emission rewards
-- Query pool information and reserves
-- Support for all major Optimism tokens (WETH, USDC, VELO, etc.)
-- Integrated with onchainos for secure transaction signing
+- Token swapping via Velodrome V2 Router on Optimism
+- Support for both volatile and stable AMM pools
+- Add and remove liquidity to earn trading fees
+- Claim VELO gauge rewards and emissions
+- Real-time swap quotes without transactions
+- Query pool reserves and LP positions
+- Auto-approval handling for ERC-20 tokens
+- Comprehensive pool type detection (volatile/stable)
 

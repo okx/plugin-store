@@ -78,11 +78,24 @@ pub async fn run(args: SwapArgs) -> anyhow::Result<()> {
     let slippage_factor = 1.0 - (args.slippage / 100.0);
     let amount_out_min = (best_amount_out as f64 * slippage_factor) as u128;
 
-    println!(
-        "Quote: tokenIn={} tokenOut={} amountIn={} stable={} amountOut={} amountOutMin={}",
-        token_in, token_out, amount_in, best_stable, best_amount_out, amount_out_min
-    );
-    println!("Please confirm the swap above before proceeding. (Proceeding automatically in non-interactive mode)");
+    // Preview gate — emit structured preview and exit before any wallet/on-chain calls
+    if !args.confirm && !args.dry_run {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "message": "Add --confirm to broadcast",
+            "data": {
+                "action": "swap",
+                "token_in": token_in,
+                "token_out": token_out,
+                "amount_in": amount_in,
+                "stable": best_stable,
+                "estimated_amount_out": best_amount_out,
+                "amount_out_min": amount_out_min
+            }
+        }))?);
+        return Ok(());
+    }
 
     // --- 2. Resolve recipient ---
     let recipient = if args.dry_run {
