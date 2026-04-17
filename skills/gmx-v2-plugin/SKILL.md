@@ -1,7 +1,7 @@
 ---
 name: gmx-v2-plugin
 description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions. Trigger phrases: open position GMX, close position GMX, GMX trade, GMX leverage, GMX liquidity, deposit GM pool, withdraw GM pool, GMX stop loss, GMX take profit, cancel order GMX, claim funding fees GMX."
-version: "0.2.5"
+version: "0.2.6"
 author: "GeoGu360"
 tags:
   - perpetuals
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/gmx-v2-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.5"
+LOCAL_VER="0.2.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2-plugin@0.2.5/gmx-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.gmx-v2-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2-plugin@0.2.6/gmx-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.gmx-v2-plugin-core${EXT}
 chmod +x ~/.local/bin/.gmx-v2-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/gmx-v2-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.5" > "$HOME/.plugin-store/managed/gmx-v2-plugin"
+echo "0.2.6" > "$HOME/.plugin-store/managed/gmx-v2-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"gmx-v2-plugin","version":"0.2.5"}' >/dev/null 2>&1 || true
+    -d '{"name":"gmx-v2-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -200,6 +200,58 @@ Please connect your wallet first: run `onchainos wallet login`
 ```
 
 ## Commands
+
+### quickstart — Check Assets & Get Guided Next Step
+
+Detects wallet state on the target chain in one call, then recommends the right action. Use this when a user says "I want to trade on GMX" or "how do I get started" without knowing their current status.
+
+**Trigger phrases:**
+- "帮我看下 GMX 状态" / "我要开始用 GMX"
+- "GMX 怎么用" / "I want to trade on GMX V2"
+- "check my GMX balance" / "what should I do on GMX"
+
+**Parameters:**
+
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--chain` | No | `arbitrum` | Chain to check (`arbitrum` or `avalanche`) |
+| `--address` | No | onchainos wallet | EVM wallet address |
+
+**Output fields:** `wallet`, `chain`, `assets.eth_balance` (or `avax_balance`), `assets.usdc_balance`, `assets.open_positions`, `status`, `suggestion`, `next_command`
+
+**Status values:**
+
+| `status` | Condition | `next_command` |
+|----------|-----------|----------------|
+| `active` | Has open GMX positions | `gmx-v2 --chain X get-positions` |
+| `ready` | Has ETH + USDC ≥ $10, no positions | `gmx-v2 --chain X list-markets` |
+| `needs_fee` | Has USDC but lacks ETH for fees | `gmx-v2 --chain X get-prices --token ETH` |
+| `needs_collateral` | Has ETH but lacks USDC | `gmx-v2 --chain X get-prices` |
+| `no_funds` | Nothing on chain | `gmx-v2 --chain X get-prices` |
+
+**Example:**
+```
+gmx-v2 quickstart
+gmx-v2 --chain avalanche quickstart
+```
+
+```json
+{
+  "ok": true,
+  "wallet": "0x87fb0647...",
+  "chain": "arbitrum",
+  "assets": {
+    "eth_balance": 0.0009,
+    "usdc_balance": 1.63,
+    "open_positions": 2
+  },
+  "status": "active",
+  "suggestion": "You have 2 open position(s) on GMX V2 (arbitrum). Review them below.",
+  "next_command": "gmx-v2 --chain arbitrum get-positions"
+}
+```
+
+---
 
 ### list-markets — View active markets
 
@@ -545,3 +597,9 @@ gmx-v2 --chain arbitrum open-position \
 gmx-v2 --chain arbitrum get-positions
 ```
 
+
+## Changelog
+
+### v0.2.6 (2026-04-17)
+
+- **feat**: `quickstart` — new command; checks native token balance (ETH/AVAX for fees), USDC balance, and open positions in parallel on the target chain, returns structured JSON with `status` and `next_command` to guide first-time users from zero to first trade
