@@ -25,6 +25,7 @@ use commands::{
     tpsl::TpslArgs,
     transfer::TransferArgs,
     withdraw::WithdrawArgs,
+    quickstart::QuickstartArgs,
 };
 
 #[derive(Parser)]
@@ -76,6 +77,8 @@ enum Commands {
     SpotOrder(SpotOrderArgs),
     /// Cancel an open spot order by order ID or cancel all for a token (requires --confirm)
     SpotCancel(SpotCancelArgs),
+    /// Check wallet assets and get a recommended next step for Hyperliquid
+    Quickstart(QuickstartArgs),
 }
 
 #[tokio::main]
@@ -100,5 +103,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::SpotPrices(args) => commands::spot_prices::run(args).await,
         Commands::SpotOrder(args) => commands::spot_order::run(args).await,
         Commands::SpotCancel(args) => commands::spot_cancel::run(args).await,
+        Commands::Quickstart(args) => commands::quickstart::run(args).await,
     }
 }

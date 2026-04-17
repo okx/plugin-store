@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.3.5"
+version: "0.3.6"
 author: GeoGu360
 tags:
   - perps
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.3.5"
+LOCAL_VER="0.3.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -99,7 +99,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.5/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.6/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
 chmod +x ~/.local/bin/.hyperliquid-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -107,7 +107,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/hyperliquid-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.3.5" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
+echo "0.3.6" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -127,7 +127,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid-plugin","version":"0.3.5"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid-plugin","version":"0.3.6"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -227,6 +227,60 @@ The binary `hyperliquid` must be in your PATH.
 ## Commands
 
 > **Write operations require `--confirm`**: Run the command without `--confirm` first to preview the action. Add `--confirm` to sign and broadcast.
+
+---
+
+### 0. `quickstart` — Check Assets & Get Guided Next Step
+
+Detects wallet state across Arbitrum and Hyperliquid in one call, then recommends the right next action. Use this when a user says "I want to start trading on Hyperliquid" or "what should I do first" without knowing their current status.
+
+**Trigger phrases:**
+- "帮我看下 Hyperliquid 状态" / "我要开始用 Hyperliquid"
+- "我有多少资产在 HL" / "quickstart hyperliquid"
+- "Hyperliquid 怎么用" / "I want to trade on Hyperliquid"
+- "check my hyperliquid balance" / "what should I do on HL"
+
+**Parameters:**
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--address` | No | EVM wallet address (defaults to onchainos wallet) |
+
+**Output fields:** `wallet`, `assets.arb_usdc_balance`, `assets.hl_account_value_usd`, `assets.hl_withdrawable_usd`, `assets.hl_open_positions`, `positions[]`, `status`, `suggestion`, `next_command`
+
+**Status values and flow:**
+
+| `status` | Condition | `next_command` |
+|----------|-----------|----------------|
+| `active` | Has open HL positions | `hyperliquid positions` |
+| `ready` | HL account ≥ $1, no positions | `hyperliquid order ...` |
+| `needs_deposit` | Arbitrum USDC ≥ $5, HL empty | `hyperliquid deposit --amount X --confirm` |
+| `low_balance` | Arbitrum USDC < $5 | `hyperliquid address` |
+| `no_funds` | No USDC anywhere | `hyperliquid address` |
+
+**Example:**
+```
+hyperliquid quickstart
+```
+
+```json
+{
+  "ok": true,
+  "wallet": "0x87fb0647...",
+  "assets": {
+    "arb_usdc_balance": 1.63,
+    "hl_account_value_usd": 9.89,
+    "hl_withdrawable_usd": 8.77,
+    "hl_open_positions": 1
+  },
+  "positions": [
+    { "coin": "BTC", "side": "long", "size": "0.00015", "entryPrice": "74633.0", "unrealizedPnl": "0.0015" }
+  ],
+  "status": "active",
+  "suggestion": "You have open positions on Hyperliquid. Review them below.",
+  "next_command": "hyperliquid positions"
+}
+```
 
 ---
 
@@ -903,6 +957,10 @@ All data returned by `hyperliquid positions`, `hyperliquid prices`, and exchange
 ---
 
 ## Changelog
+
+### v0.3.6 (2026-04-17)
+
+- **feat**: `quickstart` — new command; checks Arbitrum USDC balance + Hyperliquid account value + open positions in parallel via onchainos, returns structured JSON with `status` and `next_command` to guide first-time users from zero to first trade
 
 ### v0.3.2 (2026-04-13)
 

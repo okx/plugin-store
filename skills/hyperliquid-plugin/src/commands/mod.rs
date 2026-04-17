@@ -16,3 +16,4 @@ pub mod spot_prices;
 pub mod tpsl;
 pub mod transfer;
 pub mod withdraw;
+pub mod quickstart;
