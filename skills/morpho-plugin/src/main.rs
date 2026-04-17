@@ -221,6 +221,9 @@ enum Commands {
         #[arg(long)]
         asset: Option<String>,
     },
+
+    /// Check wallet assets and get a recommended next step for Morpho
+    Quickstart,
 }
 
 #[tokio::main]
@@ -282,6 +285,9 @@ async fn main() {
         }
         Commands::Vaults { asset } => {
             commands::vaults::run(global_chain, asset.as_deref()).await
+        }
+        Commands::Quickstart => {
+            commands::quickstart::run(global_chain, from).await
         }
     };
 

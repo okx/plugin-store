@@ -8,3 +8,4 @@ pub mod supply_collateral;
 pub mod withdraw_collateral;
 pub mod claim_rewards;
 pub mod vaults;
+pub mod quickstart;

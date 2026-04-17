@@ -1,7 +1,7 @@
 ---
 name: morpho-plugin
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.5"
+version: "0.2.6"
 author: "GeoGu360"
 tags:
   - lending
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/morpho-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.5"
+LOCAL_VER="0.2.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.5/morpho-plugin-${TARGET}${EXT}" -o ~/.local/bin/.morpho-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.6/morpho-plugin-${TARGET}${EXT}" -o ~/.local/bin/.morpho-plugin-core${EXT}
 chmod +x ~/.local/bin/.morpho-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/morpho-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.5" > "$HOME/.plugin-store/managed/morpho-plugin"
+echo "0.2.6" > "$HOME/.plugin-store/managed/morpho-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"morpho-plugin","version":"0.2.5"}' >/dev/null 2>&1 || true
+    -d '{"name":"morpho-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -672,6 +672,40 @@ morpho --chain 8453 vaults --asset WETH
 
 ---
 
+### quickstart — Check assets and get onboarding guidance
+
+**Trigger phrases:** "morpho quickstart", "get started with morpho", "what should I do on morpho", "morpho onboarding"
+
+**Purpose:** Checks wallet ETH, USDC, and WETH balances plus open positions in parallel, then returns a status and step-by-step guidance. Ideal as the first command for a new user.
+
+**Parameters:** none (uses global `--chain` and `--from`)
+
+**Output fields:** `about`, `wallet`, `chain`, `chainId`, `assets` (eth_balance, usdc_balance, weth_balance, blue_positions, vault_positions), `status`, `suggestion`, `next_command`, `onboarding_steps` (omitted when status is `active`)
+
+**Status values:**
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Has open Blue/vault positions — review them |
+| `ready` | Has gas + tokens, no positions — ready to supply or borrow |
+| `needs_gas` | Has tokens but no ETH for gas |
+| `needs_funds` | Has ETH gas but no USDC/WETH to supply |
+| `no_funds` | Nothing found — new user, start here |
+
+**Example (new user, no funds):**
+```bash
+morpho-plugin quickstart
+# Returns: about, wallet address, status: no_funds,
+# onboarding_steps with wallet address to fund
+```
+
+**Example (Base chain):**
+```bash
+morpho-plugin --chain 8453 quickstart
+```
+
+---
+
 ## Well-Known Vault Addresses
 
 ### Ethereum Mainnet (chain 1)
@@ -746,6 +780,9 @@ morpho --chain 8453 vaults --asset WETH
 ---
 
 ## Changelog
+
+### v0.2.6
+- **New: `quickstart` command** — Checks ETH, USDC, and WETH balances plus open positions in parallel. Detects 5 states (active/ready/needs_gas/needs_funds/no_funds) and returns `about`, `onboarding_steps` with wallet address, and `next_command` for guided onboarding.
 
 ### v0.2.5
 - **Fix: resolved wallet address now always forwarded as `--from`** — All 7 write commands (`supply`, `withdraw`, `borrow`, `repay`, `supply-collateral`, `withdraw-collateral`, `claim-rewards`) now pass the resolved wallet address explicitly to onchainos. Previously, when `--from` was omitted, `resolve_wallet()` determined the address but the original `None` was forwarded, causing broadcast failures on Base (chain 8453) where onchainos cannot infer the signer without an explicit address.
