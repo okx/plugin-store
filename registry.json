@@ -4,7 +4,7 @@
   "plugins": [
     {
       "name": "aave-v3-plugin",
-      "version": "0.2.6",
+      "version": "0.2.7",
       "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
       "author": {
         "name": "OKX"
@@ -724,14 +724,15 @@
     },
     {
       "name": "raydium",
-      "version": "0.1.6",
+      "version": "0.2.1",
       "description": "Raydium AMM plugin for token swaps, price queries, and pool info on Solana mainnet. Trigger phrases: swap on raydium, raydium swap, raydium price, raydium pool, get swap quote raydium, raydium dex, swap solana raydium.",
       "author": {
         "name": "OKX"
       },
       "category": "utility",
       "tags": [
-        "solana"
+        "solana",
+        "signal"
       ],
       "type": "official",
       "components": {
@@ -747,7 +748,7 @@
           "base"
         ],
         "protocols": [],
-        "risk_level": "medium"
+        "risk_level": "high"
       }
     },
     {
