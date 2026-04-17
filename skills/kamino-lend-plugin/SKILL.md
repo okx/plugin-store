@@ -307,6 +307,161 @@ Before executing a real repay, **ask user to confirm** the repayment details.
 | `Cannot resolve wallet address` | Not logged in to onchainos | Run `onchainos wallet balance --chain 501` to verify login |
 | `Unknown token 'X'` | Unsupported token symbol | Use USDC or SOL, or pass reserve address directly |
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed
+kamino-lend", "how do I get started with Kamino", "what can I do with Kamino Lend" — **do not
+wait for them to ask specific questions.** Proactively walk them through the Quickstart in order,
+one step at a time, waiting for confirmation before proceeding to the next:
+
+1. **Connect wallet** — run `onchainos wallet balance --chain 501`. If the command fails or returns
+   no balance, direct the user to `onchainos wallet login` first. Do not proceed to write operations
+   until a wallet on Solana (chain 501) is confirmed.
+2. **Browse markets** — run `kamino-lend markets` to show all lending markets with current supply
+   APY, borrow APY, and TVL. Ask which token the user is interested in (USDC, SOL, etc.) and which
+   market (main / jlp / altcoin). Use `--name` to filter if needed.
+3. **Check existing positions** — run `kamino-lend positions` to see if the user already has any
+   deposits or borrows on Kamino. Highlight health factor and LTV if borrows exist.
+4. **Preview supply** — run `kamino-lend supply --token <TOKEN> --amount <AMOUNT>` **without
+   `--confirm`** so the user sees the unsigned transaction preview before any on-chain action.
+   Confirm the output looks correct (token, amount, market address).
+5. **Execute supply** — once the user confirms, re-run the same command **with `--confirm`** to
+   broadcast. Remind the user that Solana blockhash expires in ~60 seconds, so confirm promptly.
+6. **Borrow (optional)** — if the user wants to borrow against their collateral, first run
+   `kamino-lend borrow --token <TOKEN> --amount <AMOUNT> --dry-run` to preview. Warn about
+   liquidation risk and show the expected health factor from the response. Require explicit
+   confirmation before re-running with `--confirm`.
+7. **Monitor health** — after any borrow, run `kamino-lend positions` again and highlight
+   `stats.loan_to_value` vs `stats.liquidation_ltv`. Alert if health factor is below 1.5.
+
+**Important caveats:**
+- All write operations (`supply`, `withdraw`, `borrow`, `repay`) require `--confirm` to broadcast.
+  Without it, the command shows a safe preview with the unsigned transaction — no on-chain action.
+- Amounts are always in UI units: `1 USDC = 1.0`, not `1000000`. Never pass raw token units.
+- Solana blockhash expires in ~60 seconds — once the user confirms, submit promptly.
+- Borrowing requires prior collateral supply. The first `borrow` or `repay` on an empty wallet
+  returns `Kamino API deposit error: Vanilla type Kamino Lend obligation does not exist`.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+---
+
+## Quickstart
+
+New to kamino-lend-plugin? Follow these steps to go from zero to your first supply on Kamino Lend.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet balance --chain 501
+```
+
+If this returns an error, log in first:
+
+```bash
+onchainos wallet login your@email.com
+```
+
+Confirm you see your Solana address and SOL balance before continuing. You need a small amount of
+SOL for transaction fees (~0.000005 SOL per tx).
+
+### Step 2 — Browse lending markets
+
+```bash
+kamino-lend markets
+```
+
+Returns all available markets with supply APY, borrow APY, and TVL per reserve. To filter:
+
+```bash
+kamino-lend markets --name "main"
+kamino-lend markets --name "jlp"
+kamino-lend markets --name "altcoin"
+```
+
+Pick the token you want to supply (e.g. USDC in the main market) and note the current supply APY.
+
+### Step 3 — Check your existing positions
+
+```bash
+kamino-lend positions
+```
+
+Shows all your active deposits and borrows. Key fields: `stats.loan_to_value`,
+`stats.liquidation_ltv`, and `stats.net_value_usd`. If you have no positions yet, this returns an
+empty list — that's expected.
+
+### Step 4 — Preview before executing
+
+All write commands show a safe preview by default — no on-chain action until you add `--confirm`:
+
+```bash
+# Preview (safe — no tx sent):
+kamino-lend supply --token USDC --amount 0.01
+
+# Execute (add --confirm):
+kamino-lend supply --token USDC --amount 0.01 --confirm
+```
+
+Review the unsigned transaction details in the preview output before confirming.
+
+### Step 5 — Supply assets to earn yield
+
+```bash
+kamino-lend supply --token USDC --amount 0.01 --confirm
+```
+
+Expected output: transaction signature and confirmation from `onchainos wallet contract-call`.
+After supplying, re-run `kamino-lend positions` to confirm your deposit appears.
+
+```bash
+kamino-lend positions
+```
+
+### Step 6 — (Optional) Borrow against your collateral
+
+Once you have supplied collateral, you can borrow other assets. Always preview first:
+
+```bash
+# Preview borrow (safe — no tx sent):
+kamino-lend borrow --token SOL --amount 0.001 --dry-run
+```
+
+Check `data.health_factor` in the response. Values above 1.5 are comfortable; values approaching
+1.0 risk liquidation. If the health factor looks safe:
+
+```bash
+# Execute borrow:
+kamino-lend borrow --token SOL --amount 0.001 --confirm
+```
+
+### Step 7 — (Optional) Repay borrowed assets
+
+To reduce your debt and improve your health factor:
+
+```bash
+# Preview repay:
+kamino-lend repay --token SOL --amount 0.001 --dry-run
+
+# Execute repay:
+kamino-lend repay --token SOL --amount 0.001 --confirm
+```
+
+### Step 8 — (Optional) Withdraw supplied assets
+
+To retrieve your deposited tokens (only possible if health factor remains above 1.0 after
+withdrawal):
+
+```bash
+# Preview withdraw:
+kamino-lend withdraw --token USDC --amount 0.01
+
+# Execute withdraw:
+kamino-lend withdraw --token USDC --amount 0.01 --confirm
+```
+
+---
+
 ## Routing Rules
 
 - Use this skill for Kamino **lending** (supply/borrow/repay/withdraw)
