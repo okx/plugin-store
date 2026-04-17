@@ -9,3 +9,4 @@ pub mod cancel_order;
 pub mod deposit_liquidity;
 pub mod withdraw_liquidity;
 pub mod claim_funding_fees;
+pub mod quickstart;

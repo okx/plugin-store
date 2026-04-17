@@ -1,6 +1,6 @@
 schema_version: 1
 name: gmx-v2-plugin
-version: "0.2.5"
+version: "0.2.6"
 description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche"
 author:
   name: GeoGu360

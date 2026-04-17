@@ -1,13 +1,13 @@
-# gmx-v2
-Trade perpetuals and spot on GMX V2 with leverage, limit orders, and liquidity provision on Arbitrum and Avalanche.
+# gmx-v2-plugin
+Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche.
 
 ## Highlights
-- Open/close leveraged positions (long/short) on GMX V2 perpetuals
-- Place conditional orders (limit, stop-loss, take-profit)
-- Add/remove liquidity to GM pools and earn fees
-- Query real-time market data, positions, and pending orders
-- Support for Arbitrum and Avalanche chains
-- Keeper-based execution model with 1-30 second settlement
-- Built-in slippage protection and risk management
-- Claim funding fees from active positions
+- Trade leveraged perpetuals with long/short positions on GMX V2
+- Place conditional orders (limit, stop-loss, take-profit) with keeper execution
+- Add/remove liquidity to GM pools and earn yield on trading fees
+- Support for Arbitrum and Avalanche networks
+- Real-time market data, prices, and position tracking
+- Integrated wallet checks and guided onboarding with quickstart command
+- Dry-run preview for all operations before execution
+- Built-in safety checks for collateral, balances, and execution fees
 

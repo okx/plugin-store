@@ -60,6 +60,9 @@ enum Commands {
 
     /// Claim accrued funding fees from GMX V2 positions
     ClaimFundingFees(commands::claim_funding_fees::ClaimFundingFeesArgs),
+
+    /// Check wallet assets and get a recommended next step for GMX V2
+    Quickstart(commands::quickstart::QuickstartArgs),
 }
 
 #[tokio::main]
@@ -106,6 +109,9 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Commands::ClaimFundingFees(args) => {
             commands::claim_funding_fees::run(&cli.chain, cli.dry_run, cli.confirm, args).await
+        }
+        Commands::Quickstart(args) => {
+            commands::quickstart::run(&cli.chain, args).await
         }
     }
 }
