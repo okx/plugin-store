@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-clmm-plugin
 description: "PancakeSwap V3 CLMM farming plugin. Stake V3 LP NFTs into MasterChefV3 to earn CAKE rewards, harvest CAKE, collect swap fees, and view positions across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions."
-version: "0.1.6"
+version: "0.1.7"
 author: "skylavis-sky"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-clmm-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.6"
+LOCAL_VER="0.1.7"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.6/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.7/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-clmm-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.6" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
+echo "0.1.7" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-clmm-plugin","version":"0.1.6"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-clmm-plugin","version":"0.1.7"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \

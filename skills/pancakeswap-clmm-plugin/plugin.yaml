@@ -1,6 +1,6 @@
 schema_version: 1
 name: pancakeswap-clmm-plugin
-version: "0.1.6"
+version: "0.1.7"
 description: "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees. Trigger phrases: stake LP NFT, farm CAKE, collect fees, unfarm, PancakeSwap farming."
 author:
   name: skylavis-sky

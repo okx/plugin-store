@@ -48,17 +48,23 @@ pub async fn run(
         None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
     };
     if recipient.is_empty() {
-        anyhow::bail!("Cannot resolve wallet address. Pass --to or ensure onchainos is logged in.");
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "error": "Cannot resolve wallet address. Ensure onchainos is logged in.",
+            "action_required": "onchainos wallet login"
+        }))?);
+        return Ok(());
     }
 
     // Pre-check: verify token is staked in MasterChefV3
-    let info = rpc::user_position_infos(cfg.masterchef_v3, token_id, &rpc).await?;
-    if info.user == "0x0000000000000000000000000000000000000000" {
-        anyhow::bail!(
-            "Token ID {} is not staked in MasterChefV3. Use 'farm --token-id {}' to stake it first.",
-            token_id,
-            token_id
-        );
+    let owner = rpc::owner_of(cfg.nonfungible_position_manager, token_id, &rpc).await?;
+    if owner.to_lowercase() != cfg.masterchef_v3.to_lowercase() {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "error": format!("Token ID {} is not staked in MasterChefV3. Run 'farm --token-id {}' to stake it first.", token_id, token_id),
+            "action_required": format!("pancakeswap-clmm-plugin farm --token-id {}", token_id)
+        }))?);
+        return Ok(());
     }
 
     // Show pending CAKE before unfarm
