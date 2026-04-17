@@ -61,6 +61,21 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
 
+    // SOL/wSOL deposit requires an existing obligation account.
+    // The Kamino API cannot create the obligation and wrap SOL in the same transaction.
+    // Check upfront and give a clear error rather than a cryptic on-chain simulation failure.
+    if is_sol_token(&args.token) {
+        let obligations = api::get_obligations(&market, &wallet).await.unwrap_or_default();
+        if obligations.as_array().map(|a| a.is_empty()).unwrap_or(true) {
+            anyhow::bail!(
+                "SOL deposit requires an existing Kamino obligation account.\n\
+                 Your wallet has no active positions yet. Supply USDC first to initialize \
+                 your account, then SOL deposits will work:\n\
+                 \n  kamino-lend supply --token USDC --amount <amount> --confirm"
+            );
+        }
+    }
+
     // Build transaction via Kamino API — returns base64 serialized tx
     let tx_b64 = api::build_deposit_tx(&wallet, &market, &reserve, &args.amount).await?;
 
@@ -97,6 +112,12 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+/// Returns true for SOL and wSOL (both map to the SOL reserve, both require
+/// an existing obligation account before the Kamino API can build the deposit tx).
+fn is_sol_token(token: &str) -> bool {
+    matches!(token.to_uppercase().as_str(), "SOL" | "WSOL")
 }
 
 fn resolve_reserve(token_or_address: &str) -> anyhow::Result<String> {
