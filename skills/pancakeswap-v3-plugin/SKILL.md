@@ -146,6 +146,166 @@ Swap tokens and manage concentrated liquidity on PancakeSwap V3 — the leading 
 
 ---
 
+## Proactive Onboarding
+
+When a user signals they are **new or just installed** this plugin — e.g. "I just installed pancakeswap-v3",
+"how do I get started with PancakeSwap V3", "what can I do with PancakeSwap V3" — **do not wait for them to ask
+specific questions.** Proactively walk them through the Quickstart in order, one step at a time,
+waiting for confirmation before proceeding to the next:
+
+1. **Choose chain** — ask the user which chain they want to use. Supported: BNB Chain (56), Base (8453),
+   Arbitrum (42161), Ethereum (1), Linea (59144). Use their answer for `<CHAIN>` in all subsequent steps.
+   If unsure, suggest BNB Chain (56) for the deepest PancakeSwap liquidity and lowest gas fees, or
+   Base (8453) for a low-cost EVM experience.
+2. **Check wallet** — run `onchainos wallet addresses --chain <CHAIN>`. If no address, direct them to
+   connect via `onchainos wallet login`. Do not proceed to write operations until a wallet is confirmed.
+3. **Check balance** — run `onchainos wallet balance --chain <CHAIN>`. You need at least a small amount
+   of the token you want to swap (e.g. 0.01 BNB, 1 USDT). If insufficient, explain what's needed and
+   how to fund (bridge, CEX withdrawal, or swap on another chain first).
+4. **Explore pools** — run `pancakeswap-v3 pools --token0 WBNB --token1 USDT --chain <CHAIN>` (or
+   the relevant pair) to show available fee tiers and liquidity. Use `quote` to preview expected
+   output before committing.
+5. **Preview first write** — run the write command (e.g. `swap`) **without `--confirm`** so the user
+   sees the preview (including expected output, min output, fee tier, and SmartRouter address) before
+   any on-chain action. Confirm no transaction was sent.
+6. **Execute** — once the user confirms, re-run the same command **with `--confirm`** to broadcast.
+   Note: ERC-20 tokens (USDT, USDC, CAKE, etc.) require an approval tx that fires first; the plugin
+   waits for approval to confirm on-chain before submitting the swap.
+
+**Important caveats:**
+- Write commands (`swap`, `add-liquidity`, `remove-liquidity`) require `--confirm` to broadcast.
+  Without `--confirm` the binary prints a preview and exits — no transaction is sent.
+- All five supported chains use the same PancakeV3Factory, NPM, and QuoterV2 addresses.
+- Unsupported chains return a clear error and exit 1.
+
+Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
+
+---
+
+## Quickstart
+
+New to pancakeswap-v3-plugin? Follow these steps to go from zero to your first PancakeSwap V3 swap on BNB Chain.
+
+### Step 1 — Connect your wallet
+
+```bash
+onchainos wallet login your@email.com
+onchainos wallet addresses --chain 56
+```
+
+Confirm you see your BNB Chain address before continuing.
+
+### Step 2 — Check your balance
+
+```bash
+onchainos wallet balance --chain 56
+```
+
+Minimum recommended: at least 0.005 BNB for gas, plus the token you want to swap (e.g. 1 USDT or
+0.01 WBNB). If your balance is zero, transfer BNB to your BNB Chain address first (via CEX
+withdrawal or bridge).
+
+### Step 3 — Explore available pools
+
+```bash
+# List all fee-tier pools for a token pair
+pancakeswap-v3 pools --token0 WBNB --token1 USDT --chain 56
+```
+
+Returns pool addresses, current price, liquidity, and current tick for each fee tier (0.01%, 0.05%,
+0.25%, 1%). Note the fee tier with the highest liquidity — that's typically the best pool to use.
+
+To get a swap quote before committing:
+
+```bash
+# Quote 0.1 WBNB → USDT on BSC (best fee tier auto-selected)
+pancakeswap-v3 quote --from WBNB --to USDT --amount 0.1 --chain 56
+```
+
+### Step 4 — Preview before executing
+
+All write commands show a safe preview by default — no on-chain action until you add `--confirm`:
+
+```bash
+# Preview swap (safe — no tx sent):
+pancakeswap-v3 swap --from WBNB --to USDT --amount 0.1 --chain 56
+
+# Execute swap (add --confirm):
+pancakeswap-v3 swap --from WBNB --to USDT --amount 0.1 --chain 56 --confirm
+```
+
+Check that the preview shows expected output and minimum output (after slippage) before confirming.
+
+### Step 5 — Swap tokens
+
+```bash
+pancakeswap-v3 swap \
+  --from WBNB \
+  --to USDT \
+  --amount 0.1 \
+  --slippage 0.5 \
+  --chain 56 \
+  --confirm
+```
+
+Expected output: approval tx hash (if WBNB is ERC-20), then swap tx hash with explorer link.
+
+**Note:** ERC-20 swaps (USDT, USDC, CAKE, etc.) fire an approve tx first. You will see
+`Approving <token> for SmartRouter...` followed by the approve tx hash before the swap broadcasts.
+This is expected and safe — the plugin waits for approval to confirm before sending the swap.
+
+### Step 6 — (Optional) View your LP positions
+
+If you already have V3 LP positions on this chain, check them with:
+
+```bash
+pancakeswap-v3 positions --owner 0xYOUR_WALLET --chain 56
+```
+
+### Step 7 — (Optional) Add concentrated liquidity
+
+```bash
+# Preview — shows token pair, amounts, fee tier, tick range, estimated deposit (no tx)
+pancakeswap-v3 add-liquidity \
+  --token-a WBNB \
+  --token-b USDT \
+  --fee 500 \
+  --amount-a 0.1 \
+  --amount-b 30 \
+  --chain 56
+
+# Execute — broadcasts approve0, approve1, and mint transactions
+pancakeswap-v3 add-liquidity \
+  --token-a WBNB \
+  --token-b USDT \
+  --fee 500 \
+  --amount-a 0.1 \
+  --amount-b 30 \
+  --chain 56 \
+  --confirm
+```
+
+Omit `--tick-lower` / `--tick-upper` to let the plugin auto-select a ±10% price range. After
+minting, run `positions` to confirm your new tokenId.
+
+### Step 8 — (Optional) Remove liquidity
+
+```bash
+# Preview — shows expected out, min amounts (no tx)
+pancakeswap-v3 remove-liquidity --token-id 1234 --chain 56
+
+# Execute — broadcasts decreaseLiquidity then collect
+pancakeswap-v3 remove-liquidity --token-id 1234 --chain 56 --confirm
+```
+
+To remove only part of the position:
+
+```bash
+pancakeswap-v3 remove-liquidity --token-id 1234 --liquidity-pct 50 --slippage 1.0 --chain 56 --confirm
+```
+
+---
+
 ## Do NOT use for
 
 Do NOT use for: PancakeSwap V2 AMM swaps (use pancakeswap-v2 skill), concentrated liquidity farming (use pancakeswap-clmm skill), non-PancakeSwap DEXes
