@@ -55,9 +55,9 @@ struct SwapOutput {
     pool_address: Option<String>,
 }
 
-pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
-    // ─── dry_run guard — wallet resolution must come AFTER this block ───
-    if dry_run {
+pub async fn execute(args: &SwapArgs, confirm: bool) -> anyhow::Result<()> {
+    // ─── confirm gate — wallet resolution must come AFTER this block ───
+    if !confirm {
         let output = SwapOutput {
             ok: true,
             dry_run: Some(true),
@@ -69,7 +69,7 @@ pub async fn execute(args: &SwapArgs, dry_run: bool) -> anyhow::Result<()> {
             amount_display: format!("{:.2}", args.amount),
             slippage_bps: args.slippage_bps,
             estimated_price_impact_pct: None,
-            warning: Some("dry_run=true — transaction not submitted".to_string()),
+            warning: Some("Preview only — add --confirm to execute the swap".to_string()),
             error: None,
             pool_address: None,
         };

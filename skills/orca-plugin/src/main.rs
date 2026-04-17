@@ -4,17 +4,18 @@ mod config;
 mod onchainos;
 
 use clap::{Parser, Subcommand};
-use commands::{get_pools, get_quote, swap};
+use commands::{get_pools, get_quote, quickstart, swap};
 
 #[derive(Parser)]
 #[command(
-    name = "orca",
+    name = "orca-plugin",
+    version,
     about = "Orca Whirlpools DEX plugin — swap tokens and query liquidity pools on Solana"
 )]
 struct Cli {
-    /// Simulate without broadcasting on-chain (dry run mode)
+    /// Execute the transaction on-chain (without this flag, the command previews only)
     #[arg(long, global = true)]
-    dry_run: bool,
+    confirm: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -30,6 +31,9 @@ enum Commands {
 
     /// Execute a token swap on Orca via onchainos
     Swap(swap::SwapArgs),
+
+    /// Check wallet assets and get a recommended next step for Orca
+    Quickstart,
 }
 
 #[tokio::main]
@@ -39,7 +43,8 @@ async fn main() -> anyhow::Result<()> {
     match &cli.command {
         Commands::GetPools(args) => get_pools::execute(args).await?,
         Commands::GetQuote(args) => get_quote::execute(args).await?,
-        Commands::Swap(args) => swap::execute(args, cli.dry_run).await?,
+        Commands::Swap(args) => swap::execute(args, cli.confirm).await?,
+        Commands::Quickstart => quickstart::run(cli.confirm).await?,
     }
 
     Ok(())
