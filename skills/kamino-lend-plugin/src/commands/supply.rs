@@ -29,6 +29,9 @@ pub struct SupplyArgs {
 }
 
 pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
+    // Resolve reserve early — validates token even in dry-run
+    let reserve = resolve_reserve(&args.token)?;
+
     if args.dry_run {
         println!(
             "{}",
@@ -39,6 +42,7 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
                     "txHash": "",
                     "token": args.token,
                     "amount": args.amount,
+                    "reserve": reserve,
                     "action": "supply"
                 }
             }))?
@@ -56,9 +60,6 @@ pub async fn run(args: SupplyArgs) -> anyhow::Result<()> {
     }
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
-
-    // Resolve reserve address
-    let reserve = resolve_reserve(&args.token)?;
 
     // Build transaction via Kamino API — returns base64 serialized tx
     let tx_b64 = api::build_deposit_tx(&wallet, &market, &reserve, &args.amount).await?;

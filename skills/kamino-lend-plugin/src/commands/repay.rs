@@ -29,6 +29,8 @@ pub struct RepayArgs {
 }
 
 pub async fn run(args: RepayArgs) -> anyhow::Result<()> {
+    let reserve = resolve_reserve(&args.token)?;
+
     if args.dry_run {
         println!(
             "{}",
@@ -39,6 +41,7 @@ pub async fn run(args: RepayArgs) -> anyhow::Result<()> {
                     "txHash": "",
                     "token": args.token,
                     "amount": args.amount,
+                    "reserve": reserve,
                     "action": "repay"
                 }
             }))?
@@ -56,7 +59,6 @@ pub async fn run(args: RepayArgs) -> anyhow::Result<()> {
     }
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
-    let reserve = resolve_reserve(&args.token)?;
 
     // Build transaction via Kamino API
     let tx_b64 = api::build_repay_tx(&wallet, &market, &reserve, &args.amount).await?;

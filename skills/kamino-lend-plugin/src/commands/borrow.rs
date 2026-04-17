@@ -29,6 +29,8 @@ pub struct BorrowArgs {
 }
 
 pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
+    let reserve = resolve_reserve(&args.token)?;
+
     // Borrow is dry-run only per GUARDRAILS (liquidation risk with limited funds)
     if args.dry_run {
         println!(
@@ -40,6 +42,7 @@ pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
                     "txHash": "",
                     "token": args.token,
                     "amount": args.amount,
+                    "reserve": reserve,
                     "action": "borrow"
                 },
                 "note": "Borrow requires prior supply as collateral. Use --dry-run to preview."
@@ -58,7 +61,6 @@ pub async fn run(args: BorrowArgs) -> anyhow::Result<()> {
     }
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
-    let reserve = resolve_reserve(&args.token)?;
 
     // Build transaction via Kamino API
     let tx_b64 = api::build_borrow_tx(&wallet, &market, &reserve, &args.amount).await?;
