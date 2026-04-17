@@ -36,6 +36,9 @@ enum Commands {
 
     /// Sell tokens back to a pump.fun bonding curve via onchainos swap
     Sell(SellArgs),
+
+    /// Check wallet state and get guided next steps
+    Quickstart,
 }
 
 #[tokio::main]
@@ -47,6 +50,7 @@ async fn main() {
         Commands::GetPrice(args) => commands::get_price::execute(args).await,
         Commands::Buy(args) => commands::buy::execute(args, cli.dry_run).await,
         Commands::Sell(args) => commands::sell::execute(args, cli.dry_run).await,
+        Commands::Quickstart => commands::quickstart::run().await,
     };
 
     if let Err(e) = result {
