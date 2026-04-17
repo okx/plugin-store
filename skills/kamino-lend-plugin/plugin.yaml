@@ -1,6 +1,6 @@
 schema_version: 1
 name: kamino-lend-plugin
-version: "0.1.3"
+version: "0.1.4"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana
   lending protocol
 author:
@@ -22,3 +22,5 @@ build:
   binary_name: kamino-lend-plugin
 api_calls:
 - api.kamino.finance
+- yields.llama.fi
+- api.jup.ag

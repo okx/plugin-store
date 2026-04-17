@@ -11,12 +11,27 @@ pub struct MarketsArgs {
 }
 
 pub async fn run(args: MarketsArgs) -> anyhow::Result<()> {
-    let markets_raw = api::get_markets().await?;
+    let markets_raw = match api::get_markets().await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", super::error_response(&e, None));
+            return Ok(());
+        }
+    };
 
     let markets = match markets_raw.as_array() {
         Some(arr) => arr.clone(),
         None => {
-            anyhow::bail!("Unexpected markets response format: {}", markets_raw);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "ok": false,
+                    "error": format!("Unexpected markets response format: {}", markets_raw),
+                    "error_code": "API_PARSE_ERROR",
+                    "suggestion": "Kamino API may be temporarily unavailable. Retry in a few seconds."
+                }))?
+            );
+            return Ok(());
         }
     };
 

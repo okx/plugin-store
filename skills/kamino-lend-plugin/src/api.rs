@@ -3,6 +3,113 @@ use serde_json::Value;
 
 use crate::config::API_BASE;
 
+const JUPITER_API: &str = "https://api.jup.ag/swap/v1";
+const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
+pub const JUPITER_PROGRAM_ID: &str = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+
+/// Swap SOL → output_mint via Jupiter Aggregator.
+/// sol_lamports: amount of native SOL to swap (in lamports; 1_000_000 = 0.001 SOL).
+/// Returns base64-encoded serialized transaction ready for onchainos.
+pub async fn jupiter_swap_sol_to_token(
+    wallet: &str,
+    output_mint: &str,
+    sol_lamports: u64,
+) -> Result<String> {
+    let client = reqwest::Client::new();
+
+    // Step 1: get quote
+    let quote_url = format!(
+        "{}/quote?inputMint={}&outputMint={}&amount={}&slippageBps=300",
+        JUPITER_API, SOL_MINT, output_mint, sol_lamports
+    );
+    let quote: Value = client.get(&quote_url).send().await?.json().await?;
+    if let Some(err) = quote.get("error").and_then(|e| e.as_str()) {
+        anyhow::bail!("Jupiter quote error: {}", err);
+    }
+
+    // Step 2: build swap transaction
+    let swap_body = serde_json::json!({
+        "quoteResponse": quote,
+        "userPublicKey": wallet,
+        "wrapAndUnwrapSol": true,
+        "dynamicComputeUnitLimit": true,
+        "prioritizationFeeLamports": "auto"
+    });
+    let swap_resp: Value = client
+        .post(format!("{}/swap", JUPITER_API))
+        .json(&swap_body)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    swap_resp["swapTransaction"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("Jupiter swap error: {}", swap_resp))
+}
+
+/// Fetch all Kamino Lend reserves from DeFiLlama in a single fast call.
+/// Filters to project=kamino-lend, chain=Solana.
+/// Returns raw DeFiLlama pool objects (fields: symbol, apy, apyBorrow, tvlUsd, …).
+pub async fn fetch_kamino_reserves_defillama() -> anyhow::Result<Vec<serde_json::Value>> {
+    let url = "https://yields.llama.fi/pools";
+    let resp = reqwest::Client::new().get(url).send().await?;
+    let data: serde_json::Value = resp.json().await?;
+    let all = data["data"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("DeFiLlama returned no data array"))?;
+
+    let kamino: Vec<serde_json::Value> = all
+        .iter()
+        .filter(|p| {
+            let proj = p["project"].as_str().unwrap_or("");
+            let chain = p["chain"].as_str().unwrap_or("");
+            proj == "kamino-lend" && chain.eq_ignore_ascii_case("solana")
+        })
+        .cloned()
+        .collect();
+    Ok(kamino)
+}
+
+/// Fetch symbol and decimals for a reserve via the metrics/history endpoint.
+/// Returns None if the reserve is not found or the API call fails.
+pub async fn get_reserve_info(market: &str, reserve: &str) -> Option<(String, u32)> {
+    let end = chrono_approx_now();
+    let start = chrono_approx_yesterday();
+    let url = format!(
+        "{}/kamino-market/{}/reserves/{}/metrics/history?env=mainnet-beta&start={}&end={}&frequency=day",
+        API_BASE, market, reserve, start, end
+    );
+    let resp = reqwest::Client::new().get(&url).send().await.ok()?;
+    let data: Value = resp.json().await.ok()?;
+    let history = data["history"].as_array()?;
+    let latest = history.last()?;
+    let metrics = &latest["metrics"];
+    let symbol = metrics["symbol"].as_str()?.to_string();
+    let decimals = metrics["decimals"].as_u64()? as u32;
+    Some((symbol, decimals))
+}
+
+/// Fetch the current USD price for a reserve (assetPriceUSD field from metrics).
+/// Returns None on any error.
+pub async fn get_reserve_price_usd(market: &str, reserve: &str) -> Option<f64> {
+    let end = chrono_approx_now();
+    let start = chrono_approx_yesterday();
+    let url = format!(
+        "{}/kamino-market/{}/reserves/{}/metrics/history?env=mainnet-beta&start={}&end={}&frequency=day",
+        API_BASE, market, reserve, start, end
+    );
+    let resp = reqwest::Client::new().get(&url).send().await.ok()?;
+    let data: Value = resp.json().await.ok()?;
+    let latest = data["history"].as_array()?.last()?;
+    let price_val = &latest["metrics"]["assetPriceUSD"];
+    // assetPriceUSD can be a JSON string or number depending on API version
+    price_val
+        .as_f64()
+        .or_else(|| price_val.as_str().and_then(|s| s.parse::<f64>().ok()))
+}
+
 /// Fetch all Kamino lending markets.
 /// GET /v2/kamino-market
 pub async fn get_markets() -> Result<Value> {

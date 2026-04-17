@@ -26,6 +26,14 @@ enum Commands {
     Borrow(commands::borrow::BorrowArgs),
     /// Repay borrowed assets on Kamino (dry-run supported)
     Repay(commands::repay::RepayArgs),
+    /// List all available lending reserves with supply/borrow APY (via DeFiLlama)
+    Reserves(commands::reserves::ReservesArgs),
+    /// Show wallet status, balances, and suggested first command
+    Quickstart {
+        /// Wallet address (optional; defaults to current onchainos Solana wallet)
+        #[arg(long)]
+        wallet: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -34,9 +42,13 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Markets(args) => commands::markets::run(args).await,
         Commands::Positions(args) => commands::positions::run(args).await,
+        Commands::Reserves(args) => commands::reserves::run(args).await,
         Commands::Supply(args) => commands::supply::run(args).await,
         Commands::Withdraw(args) => commands::withdraw::run(args).await,
         Commands::Borrow(args) => commands::borrow::run(args).await,
         Commands::Repay(args) => commands::repay::run(args).await,
+        Commands::Quickstart { wallet } => {
+            commands::quickstart::run(wallet.as_deref()).await
+        }
     }
 }

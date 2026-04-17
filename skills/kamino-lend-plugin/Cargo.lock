@@ -510,8 +510,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "kamino-lend"
-version = "0.1.1"
+name = "kamino-lend-plugin"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "base64",

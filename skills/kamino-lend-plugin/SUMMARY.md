@@ -1,13 +1,13 @@
-# kamino-lend
+# kamino-lend-plugin
 Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol.
 
 ## Highlights
-- View all Kamino lending markets with current supply/borrow APYs and TVL
-- Check your current lending positions and health factor
-- Supply assets to earn yield on Solana's leading lending protocol
-- Withdraw supplied assets with real-time availability checks
-- Preview borrowing operations with dry-run functionality
-- Repay outstanding loans with transaction preview
-- Automatic transaction handling via onchainos integration
-- Support for major Solana tokens (USDC, SOL) with UI-friendly amounts
+- View all lending markets with real-time supply/borrow APYs and TVL data
+- Check your lending positions, health factor, and liquidation risk
+- Supply assets to earn yield on deposits
+- Withdraw supplied assets when needed
+- Preview and execute borrow transactions against collateral
+- Repay outstanding loans with automatic interest shortfall handling
+- Dry-run support for safe transaction previewing
+- Built-in wallet status checking and onboarding guidance
 

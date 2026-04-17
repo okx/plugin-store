@@ -29,6 +29,8 @@ pub struct WithdrawArgs {
 }
 
 pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
+    let reserve = resolve_reserve(&args.token)?;
+
     if args.dry_run {
         println!(
             "{}",
@@ -39,6 +41,7 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
                     "txHash": "",
                     "token": args.token,
                     "amount": args.amount,
+                    "reserve": reserve,
                     "action": "withdraw"
                 }
             }))?
@@ -49,18 +52,37 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
     // Resolve wallet (after dry-run guard)
     let wallet = match args.wallet {
         Some(w) => w,
-        None => onchainos::resolve_wallet_solana()?,
+        None => match onchainos::resolve_wallet_solana() {
+            Ok(w) => w,
+            Err(e) => {
+                println!("{}", super::error_response(&e, Some(&args.token)));
+                return Ok(());
+            }
+        },
     };
     if wallet.is_empty() {
-        anyhow::bail!("Cannot resolve wallet address. Pass --wallet or ensure onchainos is logged in.");
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "error": "Cannot resolve wallet address.",
+                "error_code": "WALLET_NOT_FOUND",
+                "suggestion": "Pass --wallet <address> or run `onchainos wallet balance --chain 501` to verify login."
+            }))?
+        );
+        return Ok(());
     }
 
     let market = args.market.as_deref().unwrap_or(config::MAIN_MARKET).to_string();
 
-    let reserve = resolve_reserve(&args.token)?;
-
     // Build transaction via Kamino API
-    let tx_b64 = api::build_withdraw_tx(&wallet, &market, &reserve, &args.amount).await?;
+    let tx_b64 = match api::build_withdraw_tx(&wallet, &market, &reserve, &args.amount).await {
+        Ok(tx) => tx,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
 
     // Submit via onchainos
     // ── Preview mode: show TX details without broadcasting ──────────────────
@@ -69,14 +91,32 @@ pub async fn run(args: WithdrawArgs) -> anyhow::Result<()> {
         println!("Add --confirm to execute this transaction.");
         return Ok(());
     }
-    let result = onchainos::wallet_contract_call_solana(
+    let result = match onchainos::wallet_contract_call_solana(
         config::KLEND_PROGRAM_ID,
         &tx_b64,
         false,
     )
-    .await?;
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
 
-    let tx_hash = onchainos::extract_tx_hash(&result)?;
+    let tx_hash = match onchainos::extract_tx_hash(&result) {
+        Ok(h) => h,
+        Err(e) => {
+            println!("{}", super::error_response(&e, Some(&args.token)));
+            return Ok(());
+        }
+    };
+
+    if let Err(e) = onchainos::wait_for_tx_solana(&tx_hash, &wallet).await {
+        println!("{}", super::error_response(&e, Some(&args.token)));
+        return Ok(());
+    }
 
     println!(
         "{}",
