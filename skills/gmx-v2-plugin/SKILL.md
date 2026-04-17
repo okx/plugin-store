@@ -597,7 +597,6 @@ gmx-v2 --chain arbitrum open-position \
 gmx-v2 --chain arbitrum get-positions
 ```
 
-
 ## Changelog
 
 ### v0.2.6 (2026-04-17)
