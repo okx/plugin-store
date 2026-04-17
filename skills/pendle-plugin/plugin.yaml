@@ -1,6 +1,6 @@
 schema_version: 1
 name: pendle-plugin
-version: "0.2.5"
+version: "0.2.6"
 description: "Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base"
 author:
   name: skylavis-sky
