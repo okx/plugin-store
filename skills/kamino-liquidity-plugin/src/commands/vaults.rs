@@ -20,13 +20,48 @@ pub struct VaultsArgs {
 
 pub async fn run(args: VaultsArgs) -> anyhow::Result<()> {
     if args.chain != 501 {
-        anyhow::bail!("kamino-liquidity only supports Solana (chain 501)");
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "error": "kamino-liquidity only supports Solana (chain 501)",
+                "error_code": "UNSUPPORTED_CHAIN",
+                "suggestion": "Use --chain 501 or omit --chain (defaults to 501)."
+            }))?
+        );
+        return Ok(());
     }
 
-    let raw = api::get_vaults().await?;
+    let raw = match api::get_vaults().await {
+        Ok(r) => r,
+        Err(e) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "ok": false,
+                    "error": format!("{:#}", e),
+                    "error_code": "KAMINO_API_ERROR",
+                    "suggestion": "Kamino API request failed. Check your connection and retry."
+                }))?
+            );
+            return Ok(());
+        }
+    };
+
     let vaults = match raw.as_array() {
         Some(v) => v,
-        None => anyhow::bail!("Unexpected response from Kamino API: {}", raw),
+        None => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "ok": false,
+                    "error": format!("Unexpected response from Kamino API: {}", raw),
+                    "error_code": "KAMINO_API_ERROR",
+                    "suggestion": "Kamino API returned an unexpected format. Retry or check api.kamino.finance status."
+                }))?
+            );
+            return Ok(());
+        }
     };
 
     let mut results: Vec<serde_json::Map<String, Value>> = Vec::new();

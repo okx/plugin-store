@@ -4,8 +4,8 @@ description: "Kamino Liquidity KVault earn vaults on Solana. Deposit tokens to e
 license: MIT
 metadata:
   author: GeoGu360
-  version: "0.1.2"
-version: "0.1.2"
+  version: "0.1.3"
+version: "0.1.3"
 author: GeoGu360
 ---
 
@@ -22,7 +22,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-liquidity-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.2"
+LOCAL_VER="0.1.3"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -95,7 +95,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-liquidity-plugin@0.1.2/kamino-liquidity-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-liquidity-plugin@0.1.3/kamino-liquidity-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-liquidity-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -103,7 +103,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/kamino-liquidity-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.2" > "$HOME/.plugin-store/managed/kamino-liquidity-plugin"
+echo "0.1.3" > "$HOME/.plugin-store/managed/kamino-liquidity-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -123,7 +123,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"kamino-liquidity-plugin","version":"0.1.2"}' >/dev/null 2>&1 || true
+    -d '{"name":"kamino-liquidity-plugin","version":"0.1.3"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -166,6 +166,53 @@ Before running any command:
 
 > **Write operations require `--confirm`**: Run the command first without `--confirm` to preview
 > the transaction details. Add `--confirm` to broadcast.
+
+### quickstart — Wallet status and first command suggestion
+
+Shows wallet balances, active KVault positions, and suggests the best next action.
+
+**Usage:**
+```
+kamino-liquidity quickstart [--wallet <address>]
+```
+
+**Arguments:**
+- `--wallet` — Solana wallet address (optional; resolved from onchainos if omitted)
+
+**Trigger phrases:**
+- "Get started with Kamino"
+- "What should I do first on Kamino?"
+- "Check my Kamino status"
+- "Kamino quickstart"
+
+**Output fields:** `ok`, `about`, `wallet`, `assets` (sol_balance, usdc_balance, all_tokens), `kvault_positions`, `status` (active/ready/needs_gas/needs_funds/no_funds), `suggestion`, `next_command`, `onboarding_steps` (array of 5 steps, only when status != active)
+
+**Example output:**
+```json
+{
+  "ok": true,
+  "about": "Kamino KVaults are automated yield-optimization vaults on Solana...",
+  "wallet": "DTEqFXyFM9aMSGu9sw3PpRsZce6xqqmaUbGkFjmeieGE",
+  "assets": {
+    "sol_balance": "1.234567",
+    "usdc_balance": "50.000000",
+    "all_tokens": [{"symbol": "SOL", "balance": "1.234567"}, {"symbol": "USDC", "balance": "50.000000"}]
+  },
+  "kvault_positions": 0,
+  "status": "ready",
+  "suggestion": "Wallet is funded. You can deposit USDC into a KVault to start earning yield.",
+  "next_command": "kamino-liquidity vaults --token USDC",
+  "onboarding_steps": [
+    {"step": 1, "title": "Check available vaults", "command": "kamino-liquidity vaults --token USDC"},
+    {"step": 2, "title": "Preview a deposit", "command": "kamino-liquidity deposit --vault <VAULT_ADDRESS> --amount <AMOUNT> --dry-run"},
+    {"step": 3, "title": "Execute deposit", "command": "kamino-liquidity deposit --vault <VAULT_ADDRESS> --amount <AMOUNT> --confirm"},
+    {"step": 4, "title": "Check positions", "command": "kamino-liquidity positions"},
+    {"step": 5, "title": "Withdraw when ready", "command": "kamino-liquidity withdraw --vault <VAULT_ADDRESS> --amount <SHARES> --confirm"}
+  ]
+}
+```
+
+---
 
 ### vaults — List KVaults
 
@@ -264,6 +311,7 @@ kamino-liquidity deposit --vault <address> --amount <amount> [--chain 501] [--wa
 - `--chain` — Chain ID (must be 501, default: 501)
 - `--wallet` — Solana wallet address (optional; resolved from onchainos if omitted)
 - `--dry-run` — Preview transaction without broadcasting
+- `--confirm` — Broadcast the transaction (required for on-chain execution)
 
 **Trigger phrases:**
 - "Deposit 0.001 SOL into Kamino vault GEodMs..."
@@ -306,6 +354,7 @@ kamino-liquidity withdraw --vault <address> --amount <shares> [--chain 501] [--w
 - `--chain` — Chain ID (must be 501, default: 501)
 - `--wallet` — Solana wallet address (optional; resolved from onchainos if omitted)
 - `--dry-run` — Preview transaction without broadcasting
+- `--confirm` — Broadcast the transaction (required for on-chain execution)
 
 **Trigger phrases:**
 - "Withdraw from Kamino vault GEodMs..."

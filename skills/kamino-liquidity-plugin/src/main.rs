@@ -18,6 +18,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Show wallet status, balances, and suggested first command
+    Quickstart(commands::quickstart::QuickstartArgs),
     /// List all Kamino KVault earn vaults
     Vaults(commands::vaults::VaultsArgs),
     /// Query your Kamino KVault positions (share balances)
@@ -32,6 +34,7 @@ enum Commands {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Commands::Quickstart(args) => commands::quickstart::run(args).await,
         Commands::Vaults(args) => commands::vaults::run(args).await,
         Commands::Positions(args) => commands::positions::run(args).await,
         Commands::Deposit(args) => commands::deposit::run(args).await,
