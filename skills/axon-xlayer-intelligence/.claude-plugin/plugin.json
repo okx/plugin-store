@@ -1,0 +1,25 @@
+{
+  "name": "axon-xlayer-intelligence",
+  "description": "X Layer DeFi intelligence skill — query gas, blocks, Uniswap V3 pools, wallet portfolios, swap quotes, yield opportunities, and arbitrage signals on X Layer (Chain ID 196) via 17 MCP tools",
+  "version": "1.0.0",
+  "author": {
+    "name": "MUTHUKUMARAN K",
+    "email": ""
+  },
+  "homepage": "https://axon-six-amber.vercel.app",
+  "repository": "https://github.com/MUTHUKUMARAN-K-1/axon",
+  "license": "MIT",
+  "keywords": [
+    "xlayer",
+    "okb",
+    "uniswap",
+    "defi",
+    "onchainos",
+    "mcp",
+    "yield",
+    "portfolio",
+    "x402",
+    "gas",
+    "onchain"
+  ]
+}

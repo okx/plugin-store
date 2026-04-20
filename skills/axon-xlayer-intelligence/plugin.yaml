@@ -1,0 +1,62 @@
+schema_version: 1
+name: axon-xlayer-intelligence
+version: "2.0.0"
+description: "AXON — X Layer neural intelligence layer. 43 MCP tools covering portfolio analysis, 6-source token security scanning, OKLink explorer, NFT holdings, yield products, Uniswap V3 analytics, cross-chain bridge, address/URL security, swap routing, and x402 premium gates on X Layer (Chain ID 196)"
+author:
+  name: "MUTHUKUMARAN K"
+  github: "MUTHUKUMARAN-K-1"
+license: MIT
+category: analytics
+tags:
+  - xlayer
+  - okb
+  - uniswap
+  - defi
+  - onchainos
+  - mcp
+  - yield
+  - portfolio
+  - x402
+  - security
+  - nft
+  - explorer
+  - oklink
+  - bridge
+  - intelligence
+
+install:
+  one_liner: "claude mcp add axon-xlayer --transport http https://axon-onld.onrender.com"
+  npm: "npx skills add okx/plugin-store --skill axon-xlayer-intelligence"
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "axon-onld.onrender.com"
+  - "rpc.xlayer.tech"
+  - "www.oklink.com"
+  - "www.okx.com"
+  - "api.thegraph.com"
+  - "api.dexscreener.com"
+  - "yields.llama.fi"
+
+link: "https://axon-six-amber.vercel.app"
+dashboard: "https://axon-six-amber.vercel.app"
+api_docs: "https://axon-onld.onrender.com/docs"
+mcp_tools: "https://axon-onld.onrender.com/mcp/tools"
+
+extra:
+  chains:
+    - "xlayer"
+  chain_id: 196
+  native_token: "OKB"
+  protocols:
+    - "uniswap-v3"
+    - "okx-onchain-os"
+    - "oklink"
+    - "okx-dex-aggregator"
+  tool_count: 43
+  onchain_os_modules: 15
+  risk_level: "low"
+  mainnet_tx: "0x14a9bd9d2cbbb80be3373dd8b414104d107466247c48a2bd3c8ceb8eee58360b"
