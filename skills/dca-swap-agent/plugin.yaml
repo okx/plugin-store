@@ -1,0 +1,22 @@
+schema_version: 1
+name: dca-swap-agent
+version: "1.0.0"
+description: "Autonomous DCA agent that periodically swaps tokens on X Layer via OnchainOS"
+author:
+  name: "giwaov"
+  github: "giwaov"
+license: MIT
+category: trading-strategy
+tags:
+  - dca
+  - xlayer
+  - onchainos
+  - trading-bot
+
+components:
+  skill:
+    repo: "giwaov/dca-swap-agent"
+    commit: "7733cc2a5081692de51d40d4eabaec3fc98638c8"
+
+api_calls: []
+type: community-developer
