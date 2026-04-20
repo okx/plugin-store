@@ -1,4 +1,4 @@
-# kamino-liquidity
+# kamino-liquiditys
 
 Kamino Liquidity KVault earn vaults on Solana.
 
