@@ -3,7 +3,7 @@
 Swap tokens on Orca Whirlpools — Solana's leading concentrated liquidity DEX — with auto-routing to the best pool for your token pair.
 
 **Prerequisites**
-- onchainos agentic wallet connected with a Solana wallet (chain 501)
+- onchainos agentic wallet connected
 - Some SOL for transaction fees
 
 **How it Works**
