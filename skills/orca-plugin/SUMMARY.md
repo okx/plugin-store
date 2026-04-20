@@ -1,6 +1,6 @@
 **Overview**
 
-Swap tokens on Orca Whirlpools — Solana's leading concentrated liquidity DEX with $1B+ TVL — with auto-routing to the best pool for your token pair.
+Swap tokens on Orca Whirlpools — Solana's leading concentrated liquidity DEX — with auto-routing to the best pool for your token pair.
 
 **Prerequisites**
 - onchainos agentic wallet connected with a Solana wallet (chain 501)
