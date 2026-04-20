@@ -6,7 +6,7 @@ Stake PancakeSwap V3 LP NFTs into MasterChefV3 to earn CAKE rewards on top of sw
 **Prerequisites**
 - onchainos CLI installed and logged in with a BSC wallet (chain 56, default)
 - A PancakeSwap V3 LP NFT (create one with `pancakeswap-v3` plugin)
-- At least 0.005 BNB in your wallet for gas per transaction
+- Some BNB in your wallet for gas
 
 **How it Works**
 1. Check your existing V3 LP positions: `pancakeswap-clmm-plugin positions` — auto-discovers staked and unstaked NFTs
