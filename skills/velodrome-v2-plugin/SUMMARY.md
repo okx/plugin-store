@@ -5,8 +5,6 @@ Swap tokens and provide liquidity on Velodrome V2's AMM on Optimism — supporti
 **Prerequisites**
 - onchainos agentic wallet connected
 - Some tokens on Optimism to swap or provide as liquidity
-- For `add-liquidity`: both tokens of the pair in your wallet
-- For `claim-rewards`: an LP position in a pool that has a gauge
 
 **How it Works**
 1. **Swap tokens**:
@@ -14,7 +12,7 @@ Swap tokens and provide liquidity on Velodrome V2's AMM on Optimism — supporti
    - 1.2 **Execute the swap**: Send tokens and receive output in one transaction. `velodrome-v2-plugin swap --token-in WETH --token-out USDC --amount-in 0.1 --slippage 0.5 --confirm`
 2. **Provide liquidity**:
    - 2.1 **Check the pool**: Verify the pair exists and see pool type (volatile or stable). `velodrome-v2-plugin pools --token-a WETH --token-b USDC`
-   - 2.2 **Add liquidity**: Deposit both tokens to receive LP tokens — use `--stable` flag for stable pools (USDC/DAI). `velodrome-v2-plugin add-liquidity --token-a WETH --token-b USDC --amount-a-desired 0.001 --confirm`
+   - 2.2 **Add liquidity**: Deposit both tokens of the pair to receive LP tokens — use `--stable` flag for stable pools (USDC/DAI). `velodrome-v2-plugin add-liquidity --token-a WETH --token-b USDC --amount-a-desired 0.001 --confirm`
    - 2.3 **View LP balance**: Check your current LP position in the pool. `velodrome-v2-plugin positions --token-a WETH --token-b USDC`
    - 2.4 **Remove liquidity**: Withdraw your LP tokens and receive both underlying tokens back. `velodrome-v2-plugin remove-liquidity --token-a WETH --token-b USDC --confirm`
-   - 2.5 **Claim VELO rewards**: Collect VELO emissions from pool gauges — requires an LP position in an incentivized pool. `velodrome-v2-plugin claim-rewards --token-a WETH --token-b USDC --confirm`
+   - 2.5 **Claim VELO rewards**: Collect VELO emissions — requires an existing LP position in an incentivized pool. `velodrome-v2-plugin claim-rewards --token-a WETH --token-b USDC --confirm`
