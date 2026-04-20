@@ -3,7 +3,7 @@
 Add concentrated liquidity to Meteora DLMM pools on Solana — earning fees only on actively-traded price bins — with support for SOL-only, token-only, or two-sided deposits.
 
 **Prerequisites**
-- onchainos agentic wallet connected with a Solana wallet (chain 501)
+- onchainos agentic wallet connected
 - Some SOL for transaction fees
 
 **How it Works**
