@@ -212,14 +212,26 @@ pub async fn ensure_credentials(client: &Client, wallet_addr: &str) -> Result<Cr
     let env_pass = std::env::var("POLYMARKET_PASSPHRASE").unwrap_or_default();
 
     if !env_key.is_empty() && !env_secret.is_empty() && !env_pass.is_empty() {
+        // Even when credentials come from env vars, look up the proxy wallet so that
+        // `redeem` can reach tokens held in the proxy. /profile is unauthenticated —
+        // it only needs the wallet address, not the API key.
+        let proxy_wallet = crate::api::get_proxy_wallet(client, wallet_addr)
+            .await
+            .ok()
+            .flatten();
+        let mode = if proxy_wallet.is_some() {
+            TradingMode::PolyProxy
+        } else {
+            TradingMode::Eoa
+        };
         return Ok(Credentials {
             api_key: env_key,
             secret: env_secret,
             passphrase: env_pass,
             nonce: 0,
             signing_address: wallet_addr.to_string(),
-            proxy_wallet: None,
-            mode: TradingMode::Eoa,
+            proxy_wallet,
+            mode,
         });
     }
 
