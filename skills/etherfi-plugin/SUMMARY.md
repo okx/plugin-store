@@ -1,13 +1,16 @@
-# etherfi
-Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY.
+**Overview**
 
-## Highlights
-- Deposit ETH into ether.fi LiquidityPool to receive liquid staking token (eETH)
-- Wrap eETH into weETH (ERC-4626 yield-bearing token) for auto-compounding rewards
-- Earn combined Ethereum staking + EigenLayer restaking rewards
-- Check balances and current protocol APY with read-only position queries
-- Two-step confirmation gate for all write operations (preview then broadcast)
-- Direct integration with onchainos wallet for secure transaction signing
-- Support for stake, wrap, unwrap, and position monitoring workflows
-- Built-in allowance management and balance validation
+Liquid restake ETH on Ethereum to receive eETH — earning staking rewards and EigenLayer restaking points simultaneously — with an optional wrap to auto-compounding weETH and an exit via withdrawal queue.
 
+**Prerequisites**
+- onchainos agentic wallet connected
+- Ethereum mainnet wallet (chain 1) with at least 0.001 ETH
+
+**How it Works**
+1. **Check your positions and APY**: See current eETH/weETH balances and the live staking rate before committing. `etherfi-plugin positions`
+2. **Stake ETH**: Deposit ETH into ether.fi and receive eETH — approval fires automatically; minimum 0.001 ETH enforced by the protocol. `etherfi-plugin stake --amount 0.1 --confirm`
+3. **Choose how to hold your stake**:
+   - 3.1 **Hold as eETH** (simple): Your eETH balance grows daily via rebase — no further action needed.
+   - 3.2 **Wrap to weETH** (auto-compounding): Convert eETH to weETH, whose exchange rate appreciates over time rather than rebasing. `etherfi-plugin wrap --amount 0.1 --confirm`
+4. **Exit**: Queue a withdrawal to start the exit process — burns eETH (unwrap weETH first if needed) and mints a WithdrawRequestNFT. Expect 1–7 days. `etherfi-plugin unstake --amount 0.1 --confirm`
+5. **Claim ETH**: Once finalized, redeem your WithdrawRequestNFT for ETH back to your wallet. `etherfi-plugin unstake --claim --token-id <ID> --confirm`
