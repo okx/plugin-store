@@ -658,33 +658,40 @@ pub async fn approve_ctf(neg_risk: bool) -> Result<String> {
 /// YES (bit 0) and NO (bit 1) outcomes — the CTF contract only pays out for winning tokens
 /// and silently no-ops for losing ones, so passing both is safe.
 /// For neg_risk (multi-outcome) markets use the NEG_RISK_ADAPTER path (not implemented here).
-pub async fn ctf_redeem_positions(condition_id: &str) -> Result<String> {
+fn build_redeem_positions_calldata(condition_id: &str) -> String {
     use sha3::{Digest, Keccak256};
     use crate::config::Contracts;
 
-    // Compute the 4-byte function selector: keccak256("redeemPositions(address,bytes32,bytes32,uint256[])")
     let selector = Keccak256::digest(b"redeemPositions(address,bytes32,bytes32,uint256[])");
     let selector_hex = hex::encode(&selector[..4]);
 
-    // ABI-encode the four parameters.
-    // Slots 0-2 are static (address and bytes32); slot 3 is the offset to the dynamic uint256[] array.
-    let collateral  = pad_address(Contracts::USDC_E);         // address padded to 32 bytes
-    let parent_id   = format!("{:064x}", 0u128);               // bytes32(0) — null parent collection
+    let collateral  = pad_address(Contracts::USDC_E);
+    let parent_id   = format!("{:064x}", 0u128);
     let cond_id_hex = condition_id.trim_start_matches("0x");
-    let cond_id_pad = format!("{:0>64}", cond_id_hex);         // conditionId as bytes32
-    let array_offset = pad_u256(4 * 32);                       // 4 static slots → offset = 128
-
-    // Dynamic array: length=2, [1, 2] (YES indexSet=1, NO indexSet=2)
+    let cond_id_pad = format!("{:0>64}", cond_id_hex);
+    let array_offset = pad_u256(4 * 32);
     let array_len  = pad_u256(2);
-    let index_yes  = pad_u256(1);  // outcome 0, indexSet bit 0
-    let index_no   = pad_u256(2);  // outcome 1, indexSet bit 1
+    let index_yes  = pad_u256(1);
+    let index_no   = pad_u256(2);
 
-    let calldata = format!(
+    format!(
         "0x{}{}{}{}{}{}{}{}",
         selector_hex, collateral, parent_id, cond_id_pad,
         array_offset, array_len, index_yes, index_no
-    );
+    )
+}
 
+/// Simulate + broadcast `CTF.redeemPositions(...)` directly from the EOA.
+///
+/// Pre-flights via `eth_call` so reverts (e.g. EOA does not hold the outcome
+/// tokens) are surfaced before `wallet_contract_call --force` masks them by
+/// returning a tx hash that was signed but never broadcast.
+pub async fn ctf_redeem_positions(condition_id: &str, from: &str) -> Result<String> {
+    use crate::config::Contracts;
+    let calldata = build_redeem_positions_calldata(condition_id);
+    eth_call_simulate(from, Contracts::CTF, &calldata)
+        .await
+        .context("EOA redeemPositions would revert on-chain")?;
     let result = wallet_contract_call(Contracts::CTF, &calldata).await?;
     extract_tx_hash(&result)
 }
@@ -695,11 +702,10 @@ pub async fn ctf_redeem_positions(condition_id: &str) -> Result<String> {
 /// Routes: EOA → PROXY_FACTORY.proxy([(CALL, CTF, 0, redeemPositions_calldata)])
 /// The factory forwards the call from the proxy wallet's context, so CTF sees
 /// msg.sender = proxy wallet, which holds the winning tokens.
-pub async fn ctf_redeem_via_proxy(condition_id: &str) -> Result<String> {
+fn build_redeem_via_proxy_calldata(condition_id: &str) -> String {
     use sha3::{Digest, Keccak256};
     use crate::config::Contracts;
 
-    // Build inner redeemPositions calldata (identical to ctf_redeem_positions)
     let inner_selector = Keccak256::digest(b"redeemPositions(address,bytes32,bytes32,uint256[])");
     let inner_selector_hex = hex::encode(&inner_selector[..4]);
     let collateral   = pad_address(Contracts::USDC_E);
@@ -716,20 +722,17 @@ pub async fn ctf_redeem_via_proxy(condition_id: &str) -> Result<String> {
         inner_selector_hex, collateral, parent_id, cond_id_pad,
         array_offset, array_len, index_yes, index_no
     );
-    // inner calldata = 4 + 7*32 = 228 bytes
     let inner_bytes = hex::decode(&inner_hex).expect("inner redeem calldata");
     let inner_len   = inner_bytes.len();
     let pad_len     = (32 - inner_len % 32) % 32;
     let inner_padded = format!("{}{}", inner_hex, "00".repeat(pad_len));
 
-    // Wrap in PROXY_FACTORY.proxy([(CALL, CTF, 0, inner_calldata)])
-    // Layout mirrors withdraw_usdc_from_proxy exactly, only `to` changes to CTF.
     let outer_selector = Keccak256::digest(b"proxy((uint8,address,uint256,bytes)[])");
     let outer_selector_hex = hex::encode(&outer_selector[..4]);
     let ctf_padded     = pad_address(Contracts::CTF);
     let data_len_padded = format!("{:064x}", inner_len);
 
-    let calldata = format!(
+    format!(
         "0x{}\
          {}\
          {}\
@@ -741,17 +744,28 @@ pub async fn ctf_redeem_via_proxy(condition_id: &str) -> Result<String> {
          {}\
          {}",
         outer_selector_hex,
-        "0000000000000000000000000000000000000000000000000000000000000020", // params array offset
-        "0000000000000000000000000000000000000000000000000000000000000001", // array length = 1
-        "0000000000000000000000000000000000000000000000000000000000000020", // tuple[0] offset
-        "0000000000000000000000000000000000000000000000000000000000000001", // op = 1 (CALL)
-        ctf_padded,                                                         // to = CTF
-        "0000000000000000000000000000000000000000000000000000000000000000", // value = 0
-        "0000000000000000000000000000000000000000000000000000000000000080", // data offset in tuple
+        "0000000000000000000000000000000000000000000000000000000000000020",
+        "0000000000000000000000000000000000000000000000000000000000000001",
+        "0000000000000000000000000000000000000000000000000000000000000020",
+        "0000000000000000000000000000000000000000000000000000000000000001",
+        ctf_padded,
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "0000000000000000000000000000000000000000000000000000000000000080",
         data_len_padded,
         inner_padded,
-    );
+    )
+}
 
+/// Simulate + broadcast `CTF.redeemPositions(...)` routed through the proxy wallet.
+///
+/// Pre-flights via `eth_call` so reverts are surfaced before onchainos's `--force`
+/// flag masks them.
+pub async fn ctf_redeem_via_proxy(condition_id: &str, from: &str) -> Result<String> {
+    use crate::config::Contracts;
+    let calldata = build_redeem_via_proxy_calldata(condition_id);
+    eth_call_simulate(from, Contracts::PROXY_FACTORY, &calldata)
+        .await
+        .context("Proxy redeemPositions would revert on-chain")?;
     let result = wallet_contract_call(Contracts::PROXY_FACTORY, &calldata).await?;
     extract_tx_hash(&result)
 }
@@ -810,11 +824,56 @@ pub async fn get_usdc_balance(addr: &str) -> Result<f64> {
     Ok(raw as f64 / 1_000_000.0) // USDC.e has 6 decimals
 }
 
+/// Simulate a contract call via eth_call on Polygon. Returns Ok(()) if no revert.
+///
+/// Use this as a pre-flight before `wallet_contract_call` to catch reverts that
+/// onchainos's `--force` flag would otherwise mask (returning a txHash that was
+/// signed but never broadcast).
+pub async fn eth_call_simulate(from: &str, to: &str, input_data: &str) -> Result<()> {
+    use crate::config::Urls;
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_call",
+        "params": [{
+            "from": from,
+            "to": to,
+            "data": input_data,
+        }, "latest"],
+        "id": 1
+    });
+    let v: serde_json::Value = reqwest::Client::new()
+        .post(Urls::POLYGON_RPC)
+        .json(&body)
+        .send()
+        .await
+        .context("Polygon RPC eth_call failed")?
+        .json()
+        .await
+        .context("parsing eth_call response")?;
+    if let Some(err) = v.get("error") {
+        let msg = err
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("unknown");
+        anyhow::bail!("eth_call simulation reverted: {}", msg);
+    }
+    Ok(())
+}
+
 /// Poll eth_getTransactionReceipt until the tx is mined (or timeout).
 ///
 /// Polygon block time is ~2 seconds. We poll every 2 seconds for up to max_wait_secs.
-/// Call this after submitting an approval tx before posting any order.
 pub async fn wait_for_tx_receipt(tx_hash: &str, max_wait_secs: u64) -> Result<()> {
+    wait_for_tx_receipt_labeled(tx_hash, max_wait_secs, "Transaction").await
+}
+
+/// Same as `wait_for_tx_receipt` but with a caller-supplied label used in error
+/// messages (e.g. "Approve", "Redeem") so the bail text is accurate.
+pub async fn wait_for_tx_receipt_labeled(
+    tx_hash: &str,
+    max_wait_secs: u64,
+    label: &str,
+) -> Result<()> {
     use crate::config::Urls;
     use std::time::{Duration, Instant};
     use tokio::time::sleep;
@@ -834,14 +893,13 @@ pub async fn wait_for_tx_receipt(tx_hash: &str, max_wait_secs: u64) -> Result<()
             .await;
         if let Ok(r) = resp {
             if let Ok(v) = r.json::<serde_json::Value>().await {
-                // receipt is an object (not null) once the tx is mined
                 if v["result"].is_object() {
-                    // status "0x1" = success, "0x0" = reverted
                     let status = v["result"]["status"].as_str().unwrap_or("0x1");
                     if status == "0x0" {
                         anyhow::bail!(
-                            "Transaction {} was mined but reverted (status 0x0). \
+                            "{} tx {} was mined but reverted (status 0x0). \
                              Check Polygonscan for details.",
+                            label,
                             tx_hash
                         );
                     }
@@ -851,9 +909,13 @@ pub async fn wait_for_tx_receipt(tx_hash: &str, max_wait_secs: u64) -> Result<()
         }
         if Instant::now() >= deadline {
             anyhow::bail!(
-                "Approval tx {} not confirmed within {}s. \
-                 Check Polygonscan and retry.",
-                tx_hash, max_wait_secs
+                "{} tx {} not observed on-chain within {}s. \
+                 If the hash does not appear on Polygonscan, onchainos signed the tx \
+                 but never broadcast it — usually because it would revert. \
+                 Check your trading mode / outcome token ownership and retry.",
+                label,
+                tx_hash,
+                max_wait_secs
             );
         }
         sleep(Duration::from_millis(2000)).await;

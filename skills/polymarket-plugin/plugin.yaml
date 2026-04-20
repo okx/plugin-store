@@ -1,6 +1,6 @@
 schema_version: 1
 name: polymarket-plugin
-version: "0.4.7"
+version: "0.4.8"
 description: "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon"
 author:
   name: skylavis-sky
