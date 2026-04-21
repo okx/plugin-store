@@ -1,7 +1,7 @@
 ---
 name: morpho-plugin
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.6"
+version: "0.2.7"
 author: "GeoGu360"
 tags:
   - lending
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/morpho-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.6"
+LOCAL_VER="0.2.7"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.6/morpho-plugin-${TARGET}${EXT}" -o ~/.local/bin/.morpho-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.7/morpho-plugin-${TARGET}${EXT}" -o ~/.local/bin/.morpho-plugin-core${EXT}
 chmod +x ~/.local/bin/.morpho-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/morpho-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.6" > "$HOME/.plugin-store/managed/morpho-plugin"
+echo "0.2.7" > "$HOME/.plugin-store/managed/morpho-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"morpho-plugin","version":"0.2.6"}' >/dev/null 2>&1 || true
+    -d '{"name":"morpho-plugin","version":"0.2.7"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
