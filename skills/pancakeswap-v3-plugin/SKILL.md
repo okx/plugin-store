@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v3-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on Ethereum, BNB Chain, Base, Arbitrum, and Linea"
-version: "1.0.4"
+version: "1.0.5"
 author: "GeoGu360"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="1.0.4"
+LOCAL_VER="1.0.5"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.4/pancakeswap-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.5/pancakeswap-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "1.0.4" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
+echo "1.0.5" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pancakeswap-v3-plugin","version":"1.0.4"}' >/dev/null 2>&1 || true
+    -d '{"name":"pancakeswap-v3-plugin","version":"1.0.5"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -474,6 +474,9 @@ This command is read-only — no transactions, no gas. Default chain is BNB Chai
 
 ## Changelog
 
+### v1.0.5
+- **fix**: `eth_call` / `eth_call_with_gas` now return an explicit error when the RPC response is missing the `result` field. Previously, malformed responses were silently coerced to `"0x"` and decoded as zero, which produced misleading zero balances / zero ticks when an RPC node misbehaved (EVM-012).
+
 ### v1.0.4
 - **feat**: Add `quickstart` command — checks BNB/USDT/USDC balances and LP positions on BNB Chain, returns `about` + `onboarding_steps` + `next_command` for 5 user states (active/ready/needs_gas/needs_funds/no_funds).
 - **fix**: Add `ethereum-rpc.publicnode.com` and `linea-rpc.publicnode.com` to `plugin.yaml` `api_calls` — both chains were supported since v1.0.0 but their RPC domains were missing from the CI security whitelist.
@@ -500,6 +503,4 @@ This command is read-only — no transactions, no gas. Default chain is BNB Chai
 ### v0.2.1 (2026-04-11)
 
 - **fix**: Surface RPC errors in `pools` command instead of silently showing `tick: 0` when a node rate-limits the request.
-
-
 

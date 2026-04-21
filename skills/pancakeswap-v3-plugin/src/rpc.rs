@@ -39,7 +39,10 @@ pub async fn eth_call(to: &str, data: &str, rpc_url: &str) -> Result<String> {
         anyhow::bail!("eth_call error: {}", decode_rpc_error(err));
     }
 
-    Ok(resp["result"].as_str().unwrap_or("0x").to_string())
+    let result = resp["result"].as_str().ok_or_else(|| {
+        anyhow::anyhow!("eth_call: malformed RPC response (missing 'result' field): {}", resp)
+    })?;
+    Ok(result.to_string())
 }
 
 /// Execute an eth_call with an explicit gas limit (needed for QuoterV2 simulation).
@@ -62,7 +65,10 @@ pub async fn eth_call_with_gas(to: &str, data: &str, rpc_url: &str, gas: &str) -
         anyhow::bail!("eth_call error: {}", decode_rpc_error(err));
     }
 
-    Ok(resp["result"].as_str().unwrap_or("0x").to_string())
+    let result = resp["result"].as_str().ok_or_else(|| {
+        anyhow::anyhow!("eth_call_with_gas: malformed RPC response (missing 'result' field): {}", resp)
+    })?;
+    Ok(result.to_string())
 }
 
 // ── Hex decode helpers ────────────────────────────────────────────────────────
