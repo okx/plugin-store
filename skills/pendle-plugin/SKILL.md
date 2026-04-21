@@ -4,7 +4,7 @@ description: "Pendle Finance yield tokenization plugin. Buy or sell fixed-yield 
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.2.7"
+  version: "0.2.8"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pendle-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.7"
+LOCAL_VER="0.2.8"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -74,8 +74,7 @@ if [ ! -f "$CHECKER" ]; then
   curl -fsSL "https://raw.githubusercontent.com/okx/plugin-store/main/scripts/update-checker.py" -o "$CHECKER" 2>/dev/null || true
 fi
 
-# Clean up old installation (legacy pendle binary from v0.2.4–v0.2.5, and any stale pendle-plugin)
-rm -f "$HOME/.local/bin/pendle" "$HOME/.local/bin/.pendle-core" 2>/dev/null
+# Clean up old installation
 rm -f "$HOME/.local/bin/pendle-plugin" "$HOME/.local/bin/.pendle-plugin-core" 2>/dev/null
 
 # Download binary
@@ -94,15 +93,15 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pendle-plugin@0.2.7/pendle-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pendle-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pendle-plugin@0.2.8/pendle-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pendle-plugin-core${EXT}
 chmod +x ~/.local/bin/.pendle-plugin-core${EXT}
 
-# Symlink CLI name to pendle-plugin
+# Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/pendle-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.7" > "$HOME/.plugin-store/managed/pendle-plugin"
+echo "0.2.8" > "$HOME/.plugin-store/managed/pendle-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -122,7 +121,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"pendle-plugin","version":"0.2.7"}' >/dev/null 2>&1 || true
+    -d '{"name":"pendle-plugin","version":"0.2.8"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -246,6 +245,35 @@ All write commands include `router` and `calldata` in their output for this purp
 ---
 
 ## Commands
+
+### quickstart — Onboarding Status
+
+**Trigger phrases:** "pendle quickstart", "get started with pendle", "pendle onboarding", "what can I do with pendle"
+
+```bash
+pendle-plugin --chain <CHAIN_ID> quickstart [--user <ADDR>]
+```
+
+**Parameters:**
+- `--user` — wallet address to query (defaults to the connected onchainos wallet)
+- Global `--chain` selects which chain's balances to inspect (default 42161 Arbitrum)
+
+**Output fields:** `about`, `wallet`, `chain`, `assets.{gas_symbol, gas_balance, stable_symbol, stable_balance, active_positions}`, `status`, `suggestion`, `next_command`, `onboarding_steps[]`.
+
+**Status values:** `active` (has positions), `ready` (funded, no positions), `needs_gas` (has stable, no gas), `needs_funds` (has gas, no stable), `no_funds` (neither).
+
+**Examples:**
+```bash
+# Check Arbitrum (default) onboarding status
+pendle-plugin quickstart
+
+# Check Base onboarding status for a specific wallet
+pendle-plugin --chain 8453 quickstart --user 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+```
+
+Use `next_command` or `onboarding_steps` to drive the next action. Read-only — no transactions broadcast.
+
+---
 
 ### list-markets — Browse Pendle Markets
 
@@ -793,6 +821,4 @@ pendle-plugin --chain 42161 --confirm sell-pt \
 | "Pendle SDK convert returned HTTP 403" | API rate limit, geographic restriction, or unsupported market | Wait and retry; verify market addresses are correct for the target chain |
 | `get-asset-price` returns empty priceMap | IDs not chain-prefixed | Use format `42161-0x...` not bare `0x...` |
 | Approval or main tx times out after ~40 seconds | Network congestion; the binary polls for confirmation every 2s for up to 20 retries (40s hard limit) | The tx may still confirm on-chain. Check the returned `tx_hash` on a block explorer; if confirmed, safe to proceed. If still pending, wait for the next block and retry the command (the approval is idempotent). |
-
-
 

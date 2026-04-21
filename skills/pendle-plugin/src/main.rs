@@ -34,6 +34,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Onboarding status — check gas + stable balance + active positions, then suggest the next command.
+    Quickstart {
+        /// Wallet address to query (defaults to current logged-in wallet)
+        #[arg(long)]
+        user: Option<String>,
+    },
+
     /// List active Pendle markets with APY and TVL
     ListMarkets {
         /// Filter by chain ID (omit for all chains)
@@ -333,6 +340,10 @@ async fn main() {
     let confirm = cli.confirm;
 
     let result = match cli.command {
+        Commands::Quickstart { user } => {
+            commands::quickstart::run(user.as_deref(), chain, api_key).await
+        }
+
         Commands::ListMarkets {
             chain_id,
             active_only,

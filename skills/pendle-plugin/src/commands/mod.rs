@@ -1,3 +1,4 @@
+pub mod quickstart;
 pub mod list_markets;
 pub mod get_market;
 pub mod get_market_info;

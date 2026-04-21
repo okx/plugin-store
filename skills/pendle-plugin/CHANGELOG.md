@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.8 — 2026-04-21
+
+### Added
+
+- **`quickstart` command**: New onboarding surface that returns a `status` (`active` / `ready` /
+  `needs_gas` / `needs_funds` / `no_funds`) based on wallet gas + stablecoin balance + Pendle
+  positions, with a concrete `next_command` and `onboarding_steps` for each state. Read-only,
+  chain-aware (uses the global `--chain` flag to pick the correct USDC address and native gas
+  token). Purely additive — no existing command code was modified.
+
 ## v0.2.7 — 2026-04-17
 
 ### Changed
