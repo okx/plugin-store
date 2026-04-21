@@ -9,6 +9,7 @@ pub mod get_positions;
 pub mod get_series;
 pub mod list_5m;
 pub mod list_markets;
+pub mod quickstart;
 pub mod redeem;
 pub mod sell;
 pub mod setup_proxy;

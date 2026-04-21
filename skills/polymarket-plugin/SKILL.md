@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit, BTC 5分钟, ETH 5分钟, 5分钟市场, 5min market, 五分钟市场, 短线市场, list 5-minute, BTC up or down, 找5分钟, 看5分钟, 5m updown, crypto 5m, 5分钟涨跌, 五分钟涨跌, updown market, BTC 5min, ETH 5min, SOL 5min, 5分钟预测."
-version: "0.4.8"
+version: "0.4.9"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.8"
+LOCAL_VER="0.4.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -98,7 +98,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.8/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.4.9/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -106,7 +106,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.6" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.4.9" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -126,7 +126,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"polymarket-plugin","version":"0.4.8"}' >/dev/null 2>&1 || true
+    -d '{"name":"polymarket-plugin","version":"0.4.9"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -309,7 +309,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.4.8`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.4.9`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2 — Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -357,6 +357,7 @@ Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`
 
 | Command | Auth | Description |
 |---------|------|-------------|
+| `quickstart` | No | Check wallet state and get a guided next-step command |
 | `check-access` | No | Verify region is not restricted |
 | `list-markets` | No | Browse active prediction markets |
 | `get-market` | No | Get market details and order book |
@@ -369,6 +370,47 @@ Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`
 | `setup-proxy` | Yes | Deploy proxy wallet for gasless trading (one-time) |
 | `deposit` | Yes | Transfer USDC.e from EOA to proxy wallet |
 | `switch-mode` | Yes | Switch default trading mode (eoa / proxy) |
+
+---
+
+### `quickstart` — Check Status and Get a Guided Next Step
+
+**Trigger phrases:** get started with polymarket, just installed polymarket, how do I use polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, 怎么开始用 polymarket, 我要开始玩 polymarket
+
+```
+polymarket-plugin quickstart [--address <ADDRESS>]
+```
+
+**Auth required:** No
+
+**How it works:** In parallel, checks CLOB region access, reads EOA POL + USDC.e balances, reads proxy USDC.e balance (if `setup-proxy` has been run), and queries open positions on the maker wallet (proxy if initialized, else EOA). Computes a `status` and returns a ready-to-run `next_command`. Silently tolerates transient RPC failures (returns 0 balance + still emits guidance) — this command is a status probe, not a trading command.
+
+**Parameters:**
+- `--address <ADDRESS>` (optional) — Query a specific wallet instead of the connected onchainos wallet
+
+**Output fields:** `ok`, `about`, `wallet.eoa`, `wallet.proxy` (null if not set up), `accessible` (bool), `assets.eoa_pol`, `assets.eoa_usdc_e`, `assets.proxy_usdc_e` (only if proxy initialized), `positions` (summary array), `open_positions_count`, `status`, `suggestion`, `next_command`, `onboarding_steps` (optional array)
+
+**Status values:**
+
+| `status` | Meaning | Recommended next step |
+|----------|---------|-----------------------|
+| `restricted` | CLOB blocked this IP (US / OFAC) | Switch region, re-run |
+| `active` | Has open positions | `polymarket-plugin get-positions` |
+| `proxy_ready` | Proxy wallet funded ≥ $5 USDC.e | `polymarket-plugin list-markets` → `buy` (gasless) |
+| `needs_deposit` | Proxy set up but under-funded; EOA has ≥ $5 | `polymarket-plugin deposit --amount <N>` |
+| `needs_setup` | EOA has ≥ $5 but proxy not set up (default: recommend gasless) | `polymarket-plugin setup-proxy` |
+| `low_balance` | EOA has some USDC.e but below $5 minimum | Top up EOA, re-run |
+| `no_funds` | EOA has no USDC.e | Send USDC.e to EOA on Polygon, re-run |
+
+> Use `next_command` directly — it is already formatted with a reasonable deposit amount (90 % of EOA USDC.e, floored to cents, clamped to ≥ $5) where applicable.
+
+**Agent flow:** Run this first for any new/returning user before `buy` or `balance`. Relay `status` and `suggestion` to the user, then either execute `next_command` or let the user decide. For `restricted` / `low_balance` / `no_funds`, do not proceed with trading commands.
+
+**Example:**
+```bash
+polymarket-plugin quickstart
+# status: needs_setup → next_command: polymarket-plugin setup-proxy
+```
 
 ---
 

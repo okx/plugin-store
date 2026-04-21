@@ -22,6 +22,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Check wallet assets and get a recommended next step (region check, balances, positions, onboarding guidance)
+    Quickstart(commands::quickstart::QuickstartArgs),
+
     /// Check whether Polymarket is accessible from your current IP (run before topping up USDC)
     CheckAccess,
 
@@ -289,6 +292,9 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::Quickstart(args) => {
+            commands::quickstart::run(args).await
+        }
         Commands::CheckAccess => {
             commands::check_access::run().await
         }
