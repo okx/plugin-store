@@ -30,6 +30,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Check wallet state and get a recommended next step (supply/borrow/earning overview)
+    Quickstart {
+        /// Wallet address (defaults to logged-in onchainos wallet)
+        #[arg(long)]
+        wallet: Option<String>,
+    },
+
     /// List market info: supply APR, borrow APR, utilization, TVL
     GetMarkets,
 
@@ -109,6 +116,9 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::Quickstart { wallet } => {
+            commands::quickstart::run(cli.chain, &cli.market, wallet).await
+        }
         Commands::GetMarkets => {
             commands::get_markets::run(cli.chain, &cli.market).await
         }

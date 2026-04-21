@@ -5,3 +5,4 @@ pub mod borrow;
 pub mod repay;
 pub mod withdraw;
 pub mod claim_rewards;
+pub mod quickstart;

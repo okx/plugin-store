@@ -1,20 +1,23 @@
 
-# compound-v3 -- Skill Summary
+# compound-v3-plugin -- Skill Summary
 
 ## Overview
-This skill enables interaction with Compound V3 (Comet) lending markets across Ethereum, Base, Arbitrum, and Polygon. It provides complete lending functionality including supplying collateral, borrowing base assets, repaying debt, withdrawing collateral, and claiming COMP rewards. All write operations require user confirmation and support dry-run previews for safety.
+This plugin provides complete access to Compound V3 (Comet) lending markets across Ethereum, Base, Arbitrum, and Polygon. Users can supply assets to earn yield, borrow against collateral, repay debt, withdraw funds, and claim COMP token rewards. The plugin emphasizes safety with preview-first execution and automatic collateralization validation before submitting transactions.
 
 ## Usage
-Install the plugin via OKX plugin store, ensure your wallet is connected with `onchainos wallet login`, then use commands like `compound-v3 supply`, `compound-v3 borrow`, or `compound-v3 repay` with appropriate parameters.
+Install via the OKX plugin store, connect your wallet with `onchainos wallet login`, then run `compound-v3 quickstart` for guided onboarding. All write operations use a preview-then-confirm workflow for safety.
 
 ## Commands
-- `get-markets` - View market statistics (utilization, APRs, total supply/borrow)
-- `get-position` - View account position (supply/borrow balances, collateralization)
-- `supply` - Supply collateral or base asset (auto-repays debt if supplying base)
-- `borrow` - Borrow base asset (requires sufficient collateral)
-- `repay` - Repay borrowed base asset (partial or full repayment)
-- `withdraw` - Withdraw supplied collateral (requires zero debt)
-- `claim-rewards` - Claim COMP rewards from CometRewards contract
+| Command | Purpose |
+|---------|---------|
+| `compound-v3 quickstart` | Check account status and get personalized next steps |
+| `compound-v3 get-markets` | View current market rates and statistics |
+| `compound-v3 get-position` | Check supply/borrow balances and collateral health |
+| `compound-v3 supply --asset ADDRESS --amount X` | Supply collateral or base asset to earn yield |
+| `compound-v3 borrow --amount X` | Borrow base asset against supplied collateral |
+| `compound-v3 repay [--amount X]` | Repay borrowed funds (defaults to full repayment) |
+| `compound-v3 withdraw --asset ADDRESS --amount X` | Withdraw supplied collateral (requires zero debt) |
+| `compound-v3 claim-rewards` | Claim accrued COMP token rewards |
 
 ## Triggers
-Activate when users mention compound lending operations, supplying/borrowing assets on Compound, checking compound positions or markets, claiming COMP rewards, or managing compound debt positions. Trigger phrases include "compound supply", "compound borrow", "compound repay", "compound withdraw", "compound rewards", "compound position", and "compound market".
+Activate when users mention Compound lending activities, DeFi yield farming, borrowing against crypto collateral, or need to check lending positions. Also trigger for phrases like "compound supply", "compound borrow", "compound rewards", or "lending rates".
