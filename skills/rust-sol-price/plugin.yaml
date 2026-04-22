@@ -1,0 +1,20 @@
+schema_version: 1
+name: rust-sol-price
+version: "9.0.0"
+description: "Query real-time SOL price via OKX API with a Rust CLI tool"
+author:
+  name: "yz06276"
+  github: "yz06276"
+license: MIT
+category: analytics
+tags:
+  - solana
+  - price
+  - rust
+components:
+  skill:
+    dir: skills/rust-sol-price
+build:
+  lang: rust
+  binary_name: rust-sol-price
+api_calls: []
