@@ -1,0 +1,10 @@
+{
+  "name": "approval-auditor",
+  "description": "Audit ERC-20 token approvals on any EVM wallet — enumerate active allowances, risk-score each, and produce a prioritized revocation list.",
+  "version": "1.0.0",
+  "author": {
+    "name": "<YOUR_NAME>"
+  },
+  "license": "MIT",
+  "keywords": ["security", "approvals", "erc20", "evm", "wallet", "audit", "revoke"]
+}
