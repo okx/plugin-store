@@ -1,0 +1,30 @@
+schema_version: 1
+name: sol-arb-strategy
+version: "1.0.0"
+description: "SOL arbitrage strategy between Raydium and Orca DEXs"
+author:
+  name: "yz06276"
+  github: "yz06276"
+license: MIT
+category: strategy
+tags:
+  - solana
+  - arbitrage
+  - strategy
+
+dependent_plugin:
+  - name: raydium-plugin
+    version: "^0.2.0"
+  - name: orca-plugin
+    version: "^0.6.0"
+
+risk_level: high
+supported_venues:
+  - raydium
+  - orca
+
+components:
+  skill:
+    dir: skills/sol-arb-strategy
+
+api_calls: []

@@ -1,0 +1,8 @@
+{
+  "name": "sol-arb-strategy",
+  "description": "SOL arbitrage strategy between Raydium and Orca DEXs",
+  "version": "1.0.0",
+  "author": { "name": "yz06276" },
+  "license": "MIT",
+  "keywords": ["solana", "arbitrage", "strategy"]
+}
