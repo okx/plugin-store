@@ -1,0 +1,8 @@
+{
+  "name": "rust-eth-price",
+  "description": "Query real-time ETH price via OKX API with a Rust CLI tool",
+  "version": "8.0.0",
+  "author": { "name": "yz06276" },
+  "license": "MIT",
+  "keywords": ["ethereum", "price", "rust"]
+}
