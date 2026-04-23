@@ -1,24 +1,23 @@
 schema_version: 1
-name: whale-tracker
+name: polymarketsignalbridge
 version: "1.0.0"
-description: "BTC perpetual strategy on Hyperliquid using Smart Money Concepts: tracks institutional Order Blocks, Fair Value Gaps, and liquidity sweeps to follow whale intent"
+description: "Cross-analyze Polymarket prediction odds with Hyperliquid funding rates and OKX smart-money signals to surface convergence and divergence opportunities"
 author:
-  name: "kin"
-  github: "kin684660"
+  name: "kin684660-commits"
+  github: "kin684660-commits"
 license: MIT
 category: trading-strategy
 tags:
+  - polymarket
   - hyperliquid
-  - btc
-  - perpetual
-  - smart-money
-  - smc
-  - order-block
-  - whale
-  - institutional
+  - signal
+  - wallet-analysis
 
 components:
   skill:
     dir: "."
 
-api_calls: []
+api_calls:
+  - "clob.polymarket.com"
+  - "gamma-api.polymarket.com"
+  - "api.hyperliquid.xyz"
