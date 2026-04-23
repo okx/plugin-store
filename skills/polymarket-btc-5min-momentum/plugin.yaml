@@ -1,0 +1,28 @@
+schema_version: 1
+name: polymarket-btc-5min-momentum
+version: "0.1.0"
+description: "Polymarket BTC 5-minute Up/Down momentum strategy — bets on the next 5-min slot based on recent short-term BTC price momentum, routes orders through polymarket-plugin with strategy attribution."
+author:
+  name: "GeoGu360"
+  github: "GeoGu360"
+license: MIT
+category: strategy
+tags:
+  - polymarket
+  - prediction-market
+  - btc
+  - 5min
+  - momentum
+  - python
+  - strategy
+
+components:
+  skill:
+    dir: "."
+
+dependent_plugin:
+  - name: polymarket-plugin
+
+api_calls:
+  - https://api.binance.com
+type: community-developer
