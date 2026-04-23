@@ -1,5 +1,5 @@
 ---
-name: poly-hl-signal-bridge
+name: polymarket-signal-bridge
 description: "Cross-analyze Polymarket prediction odds with Hyperliquid funding rates and OKX smart-money signals to surface convergence and divergence opportunities"
 version: "1.0.0"
 author: "kin684660-commits"
