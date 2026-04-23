@@ -1,0 +1,17 @@
+{
+  "name": "polymarketsignalbridge",
+  "description": "Cross-analyze Polymarket prediction odds with Hyperliquid funding rates and OKX smart-money signals to surface convergence and divergence opportunities",
+  "version": "1.0.0",
+  "author": {
+    "name": "kin684660-commits"
+  },
+  "homepage": "https://github.com/kin684660-commits/plugin-store",
+  "repository": "https://github.com/kin684660-commits/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "hyperliquid",
+    "signal",
+    "wallet-analysis"
+  ]
+}

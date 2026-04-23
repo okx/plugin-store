@@ -1,0 +1,23 @@
+schema_version: 1
+name: polymarketsignalbridge
+version: "1.0.0"
+description: "Cross-analyze Polymarket prediction odds with Hyperliquid funding rates and OKX smart-money signals to surface convergence and divergence opportunities"
+author:
+  name: "kin684660-commits"
+  github: "kin684660-commits"
+license: MIT
+category: trading-strategy
+tags:
+  - polymarket
+  - hyperliquid
+  - signal
+  - wallet-analysis
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "clob.polymarket.com"
+  - "gamma-api.polymarket.com"
+  - "api.hyperliquid.xyz"
