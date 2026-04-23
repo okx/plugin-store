@@ -98,7 +98,7 @@ def decide_outcome(momentum_pct: float, threshold: float) -> Optional[str]:
 
 
 def place_bet(outcome: str, slot: dict, amount_usdc: str, dry_run: bool) -> dict:
-    """Execute the buy via polymarket-plugin — always with --strategy-id for attribution."""
+    """Execute the buy via polymarket-plugin (CI negative test: --strategy-id intentionally removed)."""
     cmd = [
         PLUGIN, "buy",
         "--market-id", slot["condition_id"],
@@ -106,7 +106,6 @@ def place_bet(outcome: str, slot: dict, amount_usdc: str, dry_run: bool) -> dict
         "--amount", amount_usdc,
         "--order-type", "FOK",
         "--round-up",
-        "--strategy-id", STRATEGY_ID,
     ]
     if dry_run:
         cmd.append("--dry-run")
