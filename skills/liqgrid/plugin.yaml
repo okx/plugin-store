@@ -1,0 +1,29 @@
+schema_version: 1
+name: liqgrid
+version: "1.0.0"
+description: "Natural-language perpetual grids on Hyperliquid. Deterministic TypeScript engine computes levels, stop-loss, and caps; executes through the Hyperliquid basic plugin."
+author:
+  name: "dddd86971-cloud"
+  github: "dddd86971-cloud"
+license: MIT
+category: trading-strategy
+tags:
+  - hyperliquid
+  - grid
+  - perpetuals
+  - strategy
+  - agentic-wallet
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: typescript
+  source_repo: "dddd86971-cloud/liqgrid"
+  source_commit: "40bf29530aedabd2966aa46c785277a76069cb90"
+  source_dir: "."
+  binary_name: "liqgrid"
+  main: "dist/index.js"
+
+api_calls: []

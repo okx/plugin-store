@@ -1,0 +1,10 @@
+{
+  "name": "liqgrid",
+  "description": "Natural-language perpetual grids on Hyperliquid. Deterministic TypeScript engine computes levels, stop-loss, and caps; executes through the Hyperliquid basic plugin.",
+  "version": "1.0.0",
+  "author": {
+    "name": "dddd86971-cloud"
+  },
+  "license": "MIT",
+  "keywords": ["hyperliquid", "grid", "perpetuals", "strategy", "agentic-wallet"]
+}
