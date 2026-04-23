@@ -9,11 +9,13 @@ use clap::{Parser, Subcommand};
 use commands::{
     address::AddressArgs,
     cancel::CancelArgs,
+    cancel_batch::CancelBatchArgs,
     close::CloseArgs,
     deposit::DepositArgs,
     evm_send::EvmSendArgs,
     get_gas::GetGasArgs,
     order::OrderArgs,
+    order_batch::OrderBatchArgs,
     orders::OrdersArgs,
     positions::PositionsArgs,
     prices::PricesArgs,
@@ -55,6 +57,12 @@ enum Commands {
     Tpsl(TpslArgs),
     /// Cancel an open perp order by order ID (requires --confirm)
     Cancel(CancelArgs),
+    /// Place multiple perp orders in a single signed request (requires --confirm)
+    #[command(name = "order-batch")]
+    OrderBatch(OrderBatchArgs),
+    /// Cancel multiple perp orders in a single signed request (requires --confirm)
+    #[command(name = "cancel-batch")]
+    CancelBatch(CancelBatchArgs),
     /// Deposit USDC to Hyperliquid perp account via Arbitrum bridge (minimum $5)
     Deposit(DepositArgs),
     /// Detect your onchainos signing address on Hyperliquid and show setup instructions
@@ -92,6 +100,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::Close(args) => commands::close::run(args).await,
         Commands::Tpsl(args) => commands::tpsl::run(args).await,
         Commands::Cancel(args) => commands::cancel::run(args).await,
+        Commands::OrderBatch(args) => commands::order_batch::run(args).await,
+        Commands::CancelBatch(args) => commands::cancel_batch::run(args).await,
         Commands::Deposit(args) => commands::deposit::run(args).await,
         Commands::Register(args) => commands::register::run(args).await,
         Commands::Address(args) => commands::address::run(args).await,

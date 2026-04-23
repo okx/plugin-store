@@ -116,6 +116,20 @@ pub fn build_limit_order_action(
     })
 }
 
+/// Build an `order` action carrying multiple order elements in a single signed request.
+///
+/// Each element of `orders` is a pre-built order JSON object produced by one of the
+/// per-order builders above (or an inline `json!` following the same schema).
+/// One EIP-712 signature covers the whole batch; HL returns a `statuses[]` array
+/// with one entry per order, in the same order as input.
+pub fn build_batch_order_action(orders: Vec<Value>) -> Value {
+    json!({
+        "type": "order",
+        "orders": orders,
+        "grouping": "na"
+    })
+}
+
 // ─── Close ───────────────────────────────────────────────────────────────────
 
 /// Market close: reduce-only IOC limit at slippage price in the opposite direction.

@@ -241,7 +241,7 @@
     },
     {
       "name": "hyperliquid-plugin",
-      "version": "0.3.8",
+      "version": "0.3.9",
       "description": "Trade perpetuals on Hyperliquid — check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC",
       "author": {
         "name": "GeoGu360",
@@ -264,7 +264,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "hyperliquid-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/hyperliquid-plugin@0.3.8"
+          "release_tag": "plugins/hyperliquid-plugin@0.3.9"
         }
       },
       "api_calls": [
@@ -959,6 +959,50 @@
         "https://transaction-v1.raydium.io",
         "https://api.mainnet-beta.solana.com"
       ]
+    },
+    {
+      "name": "rwa-alpha",
+      "version": "1.1.0",
+      "description": "RWA Alpha — Real World Asset intelligence trading. Macro event detection + Polymarket confirmation + on-chain price action → auto-trade tokenized treasury/gold/yield/governance tokens via OKX DEX. Three modes: Yield Optimizer / Macro Trader / Full Alpha. Multi-chain Ethereum + Solana.",
+      "author": {
+        "name": "VibeCodeDaddy",
+        "github": "VibeCodeDaddy69"
+      },
+      "license": "MIT",
+      "category": "trading-strategy",
+      "tags": [
+        "rwa",
+        "real-world-assets",
+        "treasury",
+        "gold",
+        "macro",
+        "yield",
+        "spot-trading",
+        "ethereum",
+        "solana",
+        "polymarket"
+      ],
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "dir": "."
+        }
+      },
+      "api_calls": [
+        "news.google.com",
+        "gamma-api.polymarket.com",
+        "api.anthropic.com"
+      ],
+      "link": "https://github.com/okx/plugin-store",
+      "extra": {
+        "chains": [
+          "solana",
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "high"
+      }
     },
     {
       "name": "smart-money-signal-copy-trade",

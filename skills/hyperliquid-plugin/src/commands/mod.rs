@@ -1,10 +1,12 @@
 pub mod address;
 pub mod cancel;
+pub mod cancel_batch;
 pub mod close;
 pub mod deposit;
 pub mod evm_send;
 pub mod get_gas;
 pub mod order;
+pub mod order_batch;
 pub mod orders;
 pub mod positions;
 pub mod prices;

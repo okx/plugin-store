@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RWA Alpha — Dashboard</title>
+    <style>
+        :root {
+            --bg-0:          #090b10;
+            --bg-1:          #0e1117;
+            --bg-2:          #141720;
+            --bg-3:          #1a1e2a;
+            --bg-hover:      #1e2235;
+            --border:        #1c2030;
+            --border-l:      #252a3a;
+
+            --t1:            #e8eaed;
+            --t2:            #9ba1b0;
+            --t3:            #5c6275;
+
+            --blue:          #5b8def;
+            --blue-d:        rgba(91,141,239,0.10);
+            --green:         #3dd68c;
+            --green-d:       rgba(61,214,140,0.10);
+            --red:           #ef6b6b;
+            --red-d:         rgba(239,107,107,0.10);
+            --gold:          #e5b85c;
+            --gold-d:        rgba(229,184,92,0.10);
+            --purple:        #a78bfa;
+            --purple-d:      rgba(167,139,250,0.10);
+            --cyan:          #67d4e2;
+            --cyan-d:        rgba(103,212,226,0.10);
+            --orange:        #e67e5a;
+            --orange-d:      rgba(230,126,90,0.10);
+            --pink:          #d4699e;
+            --pink-d:        rgba(212,105,158,0.10);
+
+            --f:             'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --mono:          'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+            --r:             8px;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:var(--f);background:var(--bg-0);color:var(--t1);min-height:100vh;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+        /* ── App Shell ──────────────────────────── */
+        .app{display:flex;min-height:100vh}
+        .side{width:200px;background:var(--bg-1);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+        .brand{padding:0 16px 14px;border-bottom:1px solid var(--border);margin-bottom:8px}
+        .brand h1{font-size:15px;font-weight:700;letter-spacing:-0.3px}
+        .brand span{font-size:10px;color:var(--t3)}
+        .nav-sec{padding:0 8px;margin-bottom:6px}
+        .nav-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--t3);padding:6px 8px 2px}
+        .nav-i{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:5px;color:var(--t2);font-size:12px;font-weight:500;cursor:default}
+        .nav-i.active{background:var(--blue-d);color:var(--blue)}
+        .nav-i .c{margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--t3);background:var(--bg-0);padding:1px 5px;border-radius:8px}
+        .nav-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+        .side-foot{margin-top:auto;padding:10px 16px;border-top:1px solid var(--border)}
+        .side-foot .row{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t3);margin-bottom:2px}
+        .pulse{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+        .pulse.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+        .pulse.off{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+        .main{flex:1;padding:20px 24px;overflow-y:auto}
+
+        /* ── Header ─────────────────────────────── */
+        .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+        .hdr h2{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+        .hdr-r{display:flex;align-items:center;gap:10px}
+        .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg-2)}
+        .pill.paper{border-color:rgba(61,214,140,0.25);color:var(--green)}
+        .pill.live{border-color:rgba(239,107,107,0.25);color:var(--red)}
+        .pill.strat{color:var(--blue);border-color:rgba(91,141,239,0.25)}
+        .clock{font-family:var(--mono);font-size:11px;color:var(--t3)}
+
+        /* ── Stats ──────────────────────────────── */
+        .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+        .st{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+        .st .l{font-size:10px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .st .v{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-.5px}
+        .st .v.pos{color:var(--green)}.st .v.neg{color:var(--red)}
+        .st .s{font-size:10px;color:var(--t3);margin-top:3px}
+
+        /* ── Cards ──────────────────────────────── */
+        .card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px}
+        .card-h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border)}
+        .card-h h3{font-size:12px;font-weight:600}
+        .card-h .sub{font-size:10px;color:var(--t3)}
+        .card-b{padding:0}
+        .card-b.pad{padding:14px 16px}
+
+        /* ── Tables ─────────────────────────────── */
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        thead th{text-align:left;padding:8px 12px;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg-1);position:sticky;top:0;white-space:nowrap}
+        thead th.r{text-align:right}
+        tbody td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--t2);vertical-align:middle}
+        tbody td.r{text-align:right}
+        tbody tr:last-child td{border-bottom:none}
+        tbody tr:hover{background:var(--bg-hover)}
+        .mono{font-family:var(--mono);font-size:11px}
+        .pos{color:var(--green);font-weight:600}.neg{color:var(--red);font-weight:600}
+
+        /* ── 2-col / 3-col grids ────────────────── */
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+        .g3{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+
+        /* ── Positions (priority section) ───────── */
+        .pos-sym{font-weight:600;color:var(--t1)}
+        .pos-chain{font-size:10px;color:var(--t3)}
+        .conv-bar{width:36px;height:3px;background:var(--bg-0);border-radius:2px;overflow:hidden;display:inline-block}
+        .conv-fill{height:100%;background:var(--blue);border-radius:2px}
+        .src-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--bg-0);color:var(--t3);border:1px solid var(--border)}
+        .trail-m{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:var(--green-d);border:1px solid rgba(61,214,140,.2);color:var(--green);font-size:8px;font-weight:700}
+
+        /* ── Token ticker strip (跑马灯) ────────── */
+        .ticker-wrap{overflow:hidden;margin-bottom:14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r);position:relative}
+        .ticker-wrap::before,.ticker-wrap::after{content:'';position:absolute;top:0;bottom:0;width:32px;z-index:2;pointer-events:none}
+        .ticker-wrap::before{left:0;background:linear-gradient(90deg,var(--bg-2) 0%,transparent 100%)}
+        .ticker-wrap::after{right:0;background:linear-gradient(270deg,var(--bg-2) 0%,transparent 100%)}
+        .ticker-inner{display:flex;width:max-content;animation:marquee var(--marquee-dur,40s) linear infinite}
+        .ticker-wrap:hover .ticker-inner{animation-play-state:paused}
+        @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .tk{display:flex;align-items:center;gap:8px;padding:8px 16px;border-right:1px solid var(--border);flex-shrink:0;cursor:default;transition:background .15s}
+        .tk:hover{background:var(--bg-hover)}
+        .tk-logo{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:var(--bg-3);display:flex;align-items:center;justify-content:center;overflow:hidden}
+        .tk-logo img{width:100%;height:100%;object-fit:cover}
+        .tk-logo .fb{font-size:9px;font-weight:700;color:var(--t2)}
+        .tk-sym{font-weight:600;font-size:12px;color:var(--t1)}
+        .tk-price{font-family:var(--mono);font-size:11px;color:var(--t2)}
+        .tk-chg{font-size:10px;font-weight:600}
+
+        /* ── Token Universe (compact, collapsible) ─ */
+        .collapse-btn{font-size:10px;color:var(--blue);cursor:pointer;border:none;background:none;font-weight:600;padding:2px 6px;border-radius:4px}
+        .collapse-btn:hover{background:var(--blue-d)}
+        .uni-row{display:flex;align-items:center;gap:10px}
+        .uni-logo{width:24px;height:24px;border-radius:50%;flex-shrink:0;background:var(--bg-3);overflow:hidden;display:flex;align-items:center;justify-content:center}
+        .uni-logo img{width:100%;height:100%;object-fit:cover}
+        .uni-logo .fb{font-size:9px;font-weight:700;color:var(--t2)}
+        .cat-b{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap}
+        .cat-b.treasury{background:var(--blue-d);color:var(--blue)}
+        .cat-b.gold{background:var(--gold-d);color:var(--gold)}
+        .cat-b.defi_yield{background:var(--green-d);color:var(--green)}
+        .cat-b.rwa_gov{background:var(--purple-d);color:var(--purple)}
+        .cat-b.yield_protocol{background:var(--cyan-d);color:var(--cyan)}
+        .cat-b.rwa_infra{background:var(--orange-d);color:var(--orange)}
+        .cat-b.rwa_credit{background:var(--pink-d);color:var(--pink)}
+        .gate{font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px}
+        .gate.ok{background:var(--green-d);color:var(--green)}
+        .gate.no{background:var(--red-d);color:var(--red)}
+
+        /* ── Allocation ─────────────────────────── */
+        .al-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .al-row:last-child{margin-bottom:0}
+        .al-lbl{font-size:11px;font-weight:500;color:var(--t2);min-width:75px}
+        .al-bar{flex:1;height:18px;background:var(--bg-0);border-radius:4px;overflow:hidden}
+        .al-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:600;color:rgba(255,255,255,.9);transition:width .5s}
+        .al-fill.treasury{background:var(--blue)}
+        .al-fill.gold{background:var(--gold);color:#1a1500}
+        .al-fill.defi_yield{background:var(--green);color:#0a2a1a}
+        .al-fill.rwa_gov{background:var(--purple)}
+        .al-fill.yield_protocol{background:var(--cyan);color:#0a2a2d}
+        .al-fill.rwa_infra{background:var(--orange)}
+        .al-fill.rwa_credit{background:var(--pink)}
+        .al-val{font-family:var(--mono);font-size:11px;color:var(--t3);min-width:55px;text-align:right}
+
+        /* ── Feed / Events ──────────────────────── */
+        .feed-i{display:flex;align-items:flex-start;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px}
+        .feed-i:last-child{border-bottom:none}
+        .feed-i:hover{background:var(--bg-hover)}
+        .feed-ts{font-family:var(--mono);font-size:10px;color:var(--t3);flex-shrink:0;min-width:50px;padding-top:1px}
+        .feed-msg{color:var(--t2);flex:1}
+        .feed-tag{font-size:9px;padding:1px 4px;border-radius:3px;background:var(--bg-0);color:var(--t3);border:1px solid var(--border);flex-shrink:0}
+
+        .sig-i{display:flex;align-items:center;gap:8px;padding:6px 16px;border-bottom:1px solid var(--border)}
+        .sig-i:last-child{border-bottom:none}
+        .sig-i:hover{background:var(--bg-hover)}
+        .sig-act{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
+        .sig-act.buy{background:var(--green-d);color:var(--green)}
+        .sig-act.sell{background:var(--red-d);color:var(--red)}
+        .sig-sym{font-weight:600;color:var(--t1);font-size:12px}
+        .sig-src{font-size:10px;color:var(--t3)}
+        .sig-conv{font-family:var(--mono);font-size:10px;color:var(--t3);margin-left:auto}
+
+        .empty{text-align:center;padding:24px 16px;color:var(--t3);font-size:11px}
+
+        /* ── Responsive ─────────────────────────── */
+        @media(max-width:1200px){.stats{grid-template-columns:repeat(3,1fr)}.g2,.g3{grid-template-columns:1fr}}
+        @media(max-width:900px){.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}.main{padding:14px}}
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg-0)}::-webkit-scrollbar-thumb{background:var(--border-l);border-radius:3px}
+    </style>
+</head>
+<body>
+<div class="app">
+    <nav class="side">
+        <div class="brand"><h1>RWA Alpha</h1><span>v1.1 Intelligence Engine</span></div>
+        <div class="nav-sec">
+            <div class="nav-lbl">Markets</div>
+            <div class="nav-i active"><span>Dashboard</span></div>
+            <div class="nav-i"><span>Positions</span><span class="c" id="nPos">0</span></div>
+            <div class="nav-i"><span>Universe</span><span class="c" id="nTok">15</span></div>
+        </div>
+        <div class="nav-sec">
+            <div class="nav-lbl">Intelligence</div>
+            <div class="nav-i"><span>Macro Events</span><span class="c" id="nMacro">0</span></div>
+            <div class="nav-i"><span>Signals</span><span class="c" id="nSig">0</span></div>
+            <div class="nav-i"><span>Trades</span><span class="c" id="nTrade">0</span></div>
+        </div>
+        <div class="nav-sec">
+            <div class="nav-lbl">Categories</div>
+            <div id="catNav"></div>
+        </div>
+        <div class="side-foot">
+            <div class="row"><div class="pulse" id="sDot"></div><span id="sText">--</span></div>
+            <div class="row"><span id="sRefresh">--</span></div>
+        </div>
+    </nav>
+
+    <div class="main">
+        <div class="hdr">
+            <h2>Dashboard</h2>
+            <div class="hdr-r">
+                <div class="pill" id="pMode">--</div>
+                <div class="pill strat" id="pStrat">--</div>
+                <div class="clock" id="clk">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats" id="statsG"></div>
+
+        <!-- Token Ticker Strip (like rwa.xyz top bar) -->
+        <div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
+
+        <!-- PRIORITY: Positions + Allocation side by side -->
+        <div class="g3">
+            <div class="card">
+                <div class="card-h"><h3>Open Positions</h3><span class="sub" id="posSub">0 / 6</span></div>
+                <div class="card-b" style="max-height:260px;overflow-y:auto">
+                    <table><thead><tr>
+                        <th>Token</th><th class="r">Entry</th><th class="r">Current</th><th class="r">PnL</th><th>Conv</th><th>Source</th>
+                    </tr></thead><tbody id="posT"></tbody></table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-h"><h3>Allocation</h3></div>
+                <div class="card-b pad" id="allocB"><div class="empty">No positions</div></div>
+            </div>
+        </div>
+
+        <!-- Macro + Signals side by side -->
+        <div class="g2">
+            <div class="card">
+                <div class="card-h"><h3>Macro Events</h3><span class="sub">15 playbook events</span></div>
+                <div class="card-b" id="macroB" style="max-height:260px;overflow-y:auto"><div class="empty">No events detected</div></div>
+            </div>
+            <div class="card">
+                <div class="card-h"><h3>Signal Log</h3></div>
+                <div class="card-b" id="sigB" style="max-height:260px;overflow-y:auto"><div class="empty">No signals</div></div>
+            </div>
+        </div>
+
+        <!-- Token Universe (compact, collapsible) -->
+        <div class="card">
+            <div class="card-h">
+                <div><h3>Token Universe</h3><span class="sub" id="uniSub">15 tokens</span></div>
+                <button class="collapse-btn" id="uniToggle" onclick="toggleUni()">Collapse</button>
+            </div>
+            <div class="card-b" id="uniB" style="max-height:400px;overflow-y:auto">
+                <table><thead><tr>
+                    <th>Token</th><th>Category</th><th class="r">Price</th><th class="r">MCap</th><th class="r">24h</th><th class="r">Liquidity</th><th class="r">Gate</th>
+                </tr></thead><tbody id="uniT"></tbody></table>
+            </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="card">
+            <div class="card-h"><h3>Activity Feed</h3></div>
+            <div class="card-b" id="actB" style="max-height:220px;overflow-y:auto"><div class="empty">No activity</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CN = {treasury:'Treasury',gold:'Gold',defi_yield:'DeFi Yield',rwa_gov:'RWA Gov',yield_protocol:'Yield',rwa_infra:'RWA Infra',rwa_credit:'Credit'};
+const CC = {treasury:'var(--blue)',gold:'var(--gold)',defi_yield:'var(--green)',rwa_gov:'var(--purple)',yield_protocol:'var(--cyan)',rwa_infra:'var(--orange)',rwa_credit:'var(--pink)'};
+
+// Token universe + TrustWallet logo CDN
+const TOKENS = {
+    USDY:  {name:'Ondo USDY',         cat:'treasury',       backed:true,  addr:'0x96F6eF951840721AdBF46Ac996b59E0235CB985C'},
+    OUSG:  {name:'Ondo OUSG',          cat:'treasury',       backed:true,  addr:'0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92'},
+    sDAI:  {name:'Savings DAI',        cat:'treasury',       backed:true,  addr:'0x83F20F44975D03b1b09e64809B757c47f942BEeA'},
+    bIB01: {name:'Backed IB01 T-Bill', cat:'treasury',       backed:true,  addr:'0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5'},
+    PAXG:  {name:'Pax Gold',           cat:'gold',           backed:true,  addr:'0x45804880De22913dAFE09f4980848ECE6EcbAf78'},
+    XAUT:  {name:'Tether Gold',        cat:'gold',           backed:true,  addr:'0x68749665FF8D2d112Fa859AA293F07A622782F38'},
+    USDe:  {name:'Ethena USDe',        cat:'defi_yield',     backed:true,  addr:'0x4c9EDD5852cd905f086C759E8383e09bff1E68B3'},
+    ONDO:  {name:'Ondo Finance',       cat:'rwa_gov',        backed:false, addr:'0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3'},
+    CFG:   {name:'Centrifuge',         cat:'rwa_gov',        backed:false, addr:'0xc221b7E65FfC80DE234bbB6667aBDd46593D34F0'},
+    MPL:   {name:'Maple Finance',      cat:'rwa_gov',        backed:false, addr:'0x33349B282065b0284d756F0577FB39c158F935e6'},
+    PENDLE:{name:'Pendle Finance',     cat:'yield_protocol', backed:false, addr:'0x808507121B80c02388fAd14726482e061B8da827'},
+    PLUME: {name:'Plume Network',      cat:'rwa_infra',      backed:false, addr:'0x4C1746A800D224393fE2470C70A35717eD4eA5F1'},
+    OM:    {name:'MANTRA',             cat:'rwa_infra',      backed:false, addr:'0x3593D125a4f7849a1B059E64F4517A86Dd60c95d'},
+    GFI:   {name:'Goldfinch',          cat:'rwa_credit',     backed:false, addr:'0xdab396cCF3d84Cf2D07C4454e10C8A6F5b008D2b'},
+    TRU:   {name:'TrueFi',             cat:'rwa_credit',     backed:false, addr:'0x4C19596f5aAfF459fA38B0f7eD92F11AE6543784'},
+};
+
+function logoUrl(addr) {
+    return `https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/${addr}/logo.png`;
+}
+
+function logoHtml(addr, sym) {
+    return `<img src="${logoUrl(addr)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${sym}"><span class="fb" style="display:none">${sym.charAt(0)}</span>`;
+}
+
+let D = null;
+let uniCollapsed = false;
+
+function fmt(n,d=2){return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fU(n){return '$'+fmt(n,2)}
+function fC(n){if(n>=1e9)return '$'+fmt(n/1e9,2)+'B';if(n>=1e6)return '$'+fmt(n/1e6,1)+'M';if(n>=1e3)return '$'+fmt(n/1e3,0)+'K';return '$'+fmt(n,0)}
+function fP(n){return n>=100?fU(n):'$'+fmt(n,n<0.01?6:4)}
+
+function toggleUni(){
+    uniCollapsed = !uniCollapsed;
+    document.getElementById('uniB').style.display = uniCollapsed ? 'none' : '';
+    document.getElementById('uniToggle').textContent = uniCollapsed ? 'Expand' : 'Collapse';
+}
+
+function render(){
+    if(!D)return;
+    const pr = D.prices||{}, pos = D.positions||{}, feed = D.feed||[], sigs = D.signals||[], trades = D.trades||[], sess = D.session||{}, pf = D.portfolio||{};
+
+    // Pills
+    const live = D.mode==='live';
+    document.getElementById('pMode').className = 'pill '+(live?'live':'paper');
+    document.getElementById('pMode').textContent = live?'LIVE':'PAPER';
+    document.getElementById('pStrat').textContent = (D.strategy_mode||'').replace('_',' ').toUpperCase();
+    document.getElementById('sDot').className = 'pulse '+(live?'off':'on');
+    document.getElementById('sText').textContent = (live?'Live':'Paper')+(D.paused?' (PAUSED)':'');
+
+    // Sidebar counts
+    document.getElementById('nPos').textContent = Object.keys(pos).length;
+    document.getElementById('nTok').textContent = Object.keys(TOKENS).length;
+    document.getElementById('nMacro').textContent = feed.filter(f=>f.cat==='macro').length;
+    document.getElementById('nSig').textContent = sigs.length;
+    document.getElementById('nTrade').textContent = trades.length;
+
+    // Cat nav
+    const cc = {};
+    for(const [,v] of Object.entries(TOKENS)) cc[v.cat]=(cc[v.cat]||0)+1;
+    document.getElementById('catNav').innerHTML = Object.entries(cc).map(([c,n])=>
+        `<div class="nav-i"><div class="nav-dot" style="background:${CC[c]||'var(--t3)'}"></div><span>${CN[c]||c}</span><span class="c">${n}</span></div>`
+    ).join('');
+
+    // Stats
+    const pc = Object.keys(pos).length, pnl = pf.total_pnl||0, inv = pf.total_invested||0, pv = pf.portfolio_value||0;
+    const ret = inv>0?((pnl/inv)*100).toFixed(1):'0.0';
+    const nPr = Object.keys(pr).length;
+    document.getElementById('statsG').innerHTML = [
+        {l:'Portfolio',v:fU(pv),c:'',s:inv>0?fU(inv)+' invested':'No positions'},
+        {l:'PnL',v:(pnl>=0?'+':'')+fU(pnl),c:pnl>=0?'pos':'neg',s:ret+'% return'},
+        {l:'Positions',v:pc+' / 6',c:'',s:Object.keys(pf.categories||{}).length+' categories'},
+        {l:'Trades',v:sess.daily_trades||0,c:'',s:(sess.wins||0)+'W / '+(sess.losses||0)+'L'},
+        {l:'Prices',v:nPr+'/'+Object.keys(TOKENS).length,c:nPr>0?'pos':'',s:'Live feeds'},
+    ].map(s=>`<div class="st"><div class="l">${s.l}</div><div class="v ${s.c}">${s.v}</div><div class="s">${s.s}</div></div>`).join('');
+
+    // Ticker strip (跑马灯 marquee — duplicated for seamless loop)
+    const sorted = Object.entries(TOKENS).sort((a,b)=>(pr[b[0]]||{}).liquidity||0-(pr[a[0]]||{}).liquidity||0);
+    const priced = sorted.filter(([s])=>pr[s]&&pr[s].price>0);
+    const tkHtml = priced.map(([sym,info])=>{
+        const p = pr[sym]||{};
+        const chg = parseFloat(p.priceChange24H||0);
+        return `<div class="tk">
+            <div class="tk-logo">${logoHtml(info.addr,sym)}</div>
+            <span class="tk-sym">${sym}</span>
+            <span class="tk-price">${fP(p.price)}</span>
+            <span class="tk-chg ${chg>=0?'pos':'neg'}">${chg>=0?'+':''}${fmt(chg,2)}%</span>
+        </div>`;
+    }).join('');
+    const el = document.getElementById('ticker');
+    el.innerHTML = tkHtml + tkHtml;  // duplicate for seamless loop
+    el.parentElement.style.setProperty('--marquee-dur', Math.max(20, priced.length * 4) + 's');
+
+    // Positions
+    const pe = Object.entries(pos);
+    document.getElementById('posSub').textContent = pe.length+' / 6';
+    document.getElementById('posT').innerHTML = pe.length===0
+        ?'<tr><td colspan="6" class="empty">No open positions</td></tr>'
+        :pe.map(([sym,p])=>{
+            const pp=p.pnl_pct||0, pu=p.pnl_usd||0, cl=pp>=0?'pos':'neg';
+            return `<tr>
+                <td><div style="display:flex;align-items:center;gap:8px">
+                    <div class="uni-logo">${logoHtml((TOKENS[sym]||{}).addr||'',sym)}</div>
+                    <div><div class="pos-sym">${p.symbol||sym}</div><div class="pos-chain">${p.chain||'eth'}</div></div>
+                </div></td>
+                <td class="r mono">${fmt(p.entry_price||0,4)}</td>
+                <td class="r mono">${fmt(p.current_price||0,4)}</td>
+                <td class="r"><span class="${cl} mono">${pp>=0?'+':''}${fmt(pp,2)}%</span> <span style="color:var(--t3);font-size:10px">${pu>=0?'+':''}${fU(pu)}</span></td>
+                <td><div class="conv-bar"><div class="conv-fill" style="width:${(p.conviction||0)*100}%"></div></div></td>
+                <td><span class="src-tag">${(p.signal_source||'').split(':').pop()||'-'}</span></td>
+            </tr>`;
+        }).join('');
+
+    // Allocation
+    const cats = pf.categories||{};
+    document.getElementById('allocB').innerHTML = Object.keys(cats).length===0
+        ?'<div class="empty">No positions</div>'
+        :Object.entries(cats).map(([c,d])=>{
+            const pct = inv>0?(d.invested/inv)*100:0;
+            return `<div class="al-row"><div class="al-lbl">${CN[c]||c}</div><div class="al-bar"><div class="al-fill ${c}" style="width:${pct}%">${pct>8?fmt(pct,0)+'%':''}</div></div><div class="al-val">${fU(d.invested)}</div></div>`;
+        }).join('');
+
+    // Macro events
+    const mf = feed.filter(f=>f.cat==='macro').slice(0,15);
+    document.getElementById('macroB').innerHTML = mf.length===0
+        ?'<div class="empty">No events detected</div>'
+        :mf.map(f=>`<div class="feed-i"><span class="feed-ts">${f.t}</span><span class="feed-msg">${f.msg}</span></div>`).join('');
+
+    // Signals
+    document.getElementById('sigB').innerHTML = sigs.length===0
+        ?'<div class="empty">No signals</div>'
+        :sigs.slice(0,12).map(s=>{
+            const buy=(s.action||'').toUpperCase().includes('BUY');
+            return `<div class="sig-i"><span class="sig-act ${buy?'buy':'sell'}">${s.action}</span><span class="sig-sym">${s.sym}</span><span class="sig-src">${s.source||''}</span><span class="sig-conv">${((s.conviction||0)*100).toFixed(0)}%</span></div>`;
+        }).join('');
+
+    // Token universe (compact)
+    const all = Object.entries(TOKENS).sort((a,b)=>(pr[b[0]]||{}).liquidity||0-(pr[a[0]]||{}).liquidity||0);
+    const prU = all.filter(([s])=>pr[s]&&pr[s].price>0), npU = all.filter(([s])=>!pr[s]||!pr[s].price);
+    document.getElementById('uniSub').textContent = `${Object.keys(TOKENS).length} tokens · ${prU.length} live`;
+    document.getElementById('uniT').innerHTML = [...prU,...npU].map(([sym,info])=>{
+        const p=pr[sym]||{}, price=p.price||0, mc=p.mc||0, liq=p.liquidity||0;
+        const chg=parseFloat(p.priceChange24H||0), gate=liq>=200000;
+        return `<tr>
+            <td><div class="uni-row"><div class="uni-logo">${logoHtml(info.addr,sym)}</div><div><div style="font-weight:600;color:var(--t1)">${sym}</div><div style="font-size:10px;color:var(--t3)">${info.name}</div></div></div></td>
+            <td><span class="cat-b ${info.cat}">${CN[info.cat]||info.cat}</span></td>
+            <td class="r mono">${price>0?fP(price):'--'}</td>
+            <td class="r mono">${mc>0?fC(mc):'--'}</td>
+            <td class="r">${price>0?`<span class="${chg>=0?'pos':'neg'}">${chg>=0?'+':''}${fmt(chg,2)}%</span>`:'<span style="color:var(--t3)">--</span>'}</td>
+            <td class="r mono">${liq>0?fC(liq):'--'}</td>
+            <td class="r"><span class="gate ${gate?'ok':'no'}">${gate?'PASS':'BLOCKED'}</span></td>
+        </tr>`;
+    }).join('');
+
+    // Activity
+    document.getElementById('actB').innerHTML = feed.length===0
+        ?'<div class="empty">No activity</div>'
+        :feed.slice(0,20).map(f=>`<div class="feed-i"><span class="feed-ts">${f.t}</span><span class="feed-msg">${f.msg}</span><span class="feed-tag">${f.cat}</span></div>`).join('');
+
+    document.getElementById('sRefresh').textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+}
+
+async function fetchData(){try{const r=await fetch('/api/state');if(!r.ok)throw 0;D=await r.json();render()}catch(e){console.error(e)}}
+function tick(){document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false})}
+fetchData();setInterval(fetchData,3000);tick();setInterval(tick,1000);
+</script>
+</body>
+</html>

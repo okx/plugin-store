@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.3.8"
+version: "0.3.9"
 author: GeoGu360
 tags:
   - perps
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.3.8"
+LOCAL_VER="0.3.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -99,7 +99,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.8/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.9/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
 chmod +x ~/.local/bin/.hyperliquid-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -107,7 +107,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/hyperliquid-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.3.8" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
+echo "0.3.9" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 ```
 
 ### Report install (auto-injected, runs once)
@@ -127,7 +127,7 @@ if [ ! -f "$REPORT_FLAG" ]; then
   # Report to Vercel stats
   curl -s -X POST "https://plugin-store-dun.vercel.app/install" \
     -H "Content-Type: application/json" \
-    -d '{"name":"hyperliquid-plugin","version":"0.3.8"}' >/dev/null 2>&1 || true
+    -d '{"name":"hyperliquid-plugin","version":"0.3.9"}' >/dev/null 2>&1 || true
   # Report to OKX API (with HMAC-signed device token)
   curl -s -X POST "https://www.okx.com/priapi/v1/wallet/plugins/download/report" \
     -H "Content-Type: application/json" \
@@ -870,6 +870,144 @@ hyperliquid evm-send --amount 5 --to 0xRecipient --confirm
 
 ---
 
+### 19. `order-batch` — Place Multiple Perp Orders Atomically
+
+Submits N orders in a single signed request via HL's native batch API. Used by grid / market-making strategies that need to place many resting orders without N× signing latency. **Requires `--confirm` to execute.**
+
+```bash
+# Write the orders array to a file
+cat > /tmp/grid.json <<'EOF'
+[
+  {"coin":"BTC","side":"buy","size":"0.0005","type":"limit","price":"60000","tif":"Gtc"},
+  {"coin":"BTC","side":"buy","size":"0.0005","type":"limit","price":"58000","tif":"Gtc"},
+  {"coin":"BTC","side":"sell","size":"0.0005","type":"limit","price":"90000","tif":"Gtc","reduce_only":true}
+]
+EOF
+
+# Preview (no signing, no submission)
+hyperliquid order-batch --orders-json /tmp/grid.json
+
+# Sign and submit
+hyperliquid order-batch --orders-json /tmp/grid.json --confirm
+
+# Pipe JSON from stdin
+echo '[{"coin":"ETH","side":"buy","size":"0.01","type":"limit","price":"3000"}]' \
+  | hyperliquid order-batch --orders-json - --confirm
+
+# With strategy attribution — every filled/resting order reported under the same strategy
+hyperliquid order-batch --orders-json /tmp/grid.json --strategy-id my-btc-grid --confirm
+```
+
+**Order spec fields (per entry):**
+
+| Field | Required | Default | Notes |
+|-------|----------|---------|-------|
+| `coin` | yes | — | Coin symbol, normalized automatically (e.g. `btc` → `BTC`) |
+| `side` | yes | — | `"buy"` or `"sell"` |
+| `size` | yes | — | Base-asset size as a string (e.g. `"0.001"`) |
+| `type` | no | `"limit"` | `"limit"` or `"market"` |
+| `price` | for `limit` | — | Limit price as a string |
+| `tif` | no | `"Gtc"` | `"Gtc"` \| `"Alo"` \| `"Ioc"` — ignored for market orders |
+| `slippage` | no | `5.0` | Percent — used for market orders to compute worst-fill price |
+| `reduce_only` | no | `false` | Pass `true` for exit-only orders |
+
+**Output (executed):**
+```json
+{
+  "ok": true,
+  "action": "order-batch",
+  "batch_size": 3,
+  "orders": [
+    {"index": 0, "summary": {...}, "oid": 91490942, "avg_px": null, "filled": false, "resting": true, "error": null},
+    {"index": 1, "summary": {...}, "oid": 91490943, "avg_px": null, "filled": false, "resting": true, "error": null},
+    {"index": 2, "summary": {...}, "oid": null, "avg_px": null, "filled": false, "resting": false, "error": "Order price cannot be more than 80% away from the reference price"}
+  ],
+  "result": { ... }
+}
+```
+
+**Display:** For each order in `orders[]`, show `index`, `summary.coin`, `summary.side`, `summary.size`, `summary.price`, `oid` (if any), and `error` (if any). Do not render `result` raw — it contains the full HL statuses array.
+
+**Flow:**
+1. Parse `--orders-json` (file or stdin); validate each entry (side, size, type, price-for-limit) before any network work
+2. Fetch `meta` once, then resolve `asset_idx` per unique coin (cached via `HashMap`)
+3. Fetch `allMids` once for market-order slippage prices and the $10-notional auto-bump
+4. Round each `size` to `szDecimals`; auto-bump by one lot if notional < $10 (logged to stderr per entry)
+5. Build the batch action (`grouping: "na"`) and print the preview
+6. Without `--confirm` or with `--dry-run`: stop after the preview
+7. With `--confirm`: one EIP-712 signature → submit → walk `statuses[]` → report attribution per-oid (if `--strategy-id` set) → print final result
+
+**Strategy attribution (`--strategy-id`):**
+A single `--strategy-id` is applied to the entire batch atomically. Each order that produced an oid (filled OR resting) generates its own `report-plugin-info` call under the same strategy_id. Resting orders report immediately even though they have not filled — this matches the HL model where the oid is the unique handle used by later `userFillsByTime` lookups. Cancelled/errored orders do not generate reports.
+
+**Limits:**
+- Max 50 orders per batch. Larger batches return `BATCH_TOO_LARGE`.
+- All orders share one signature — a signing failure aborts the whole batch.
+- HL's `statuses[]` is ordered; we pair each status with its input by index.
+
+---
+
+### 20. `cancel-batch` — Cancel Multiple Open Orders Atomically
+
+Cancels multiple orders in a single signed request. Used by strategies that need to atomically tear down a set of resting orders (e.g. re-grid, stop-out). **Requires `--confirm` to execute.**
+
+```bash
+# Shorthand — all oids share the same coin
+hyperliquid cancel-batch --coin BTC --oids 91490942,91490943,91490944 --confirm
+
+# Multi-coin — JSON array
+cat > /tmp/cancels.json <<'EOF'
+[
+  {"coin":"BTC","oid":91490942},
+  {"coin":"ETH","oid":91490999},
+  {"coin":"SOL","oid":91491111}
+]
+EOF
+hyperliquid cancel-batch --cancels-json /tmp/cancels.json --confirm
+
+# Pipe JSON from stdin
+echo '[{"coin":"BTC","oid":111},{"coin":"ETH","oid":222}]' \
+  | hyperliquid cancel-batch --cancels-json - --confirm
+
+# Preview without executing
+hyperliquid cancel-batch --coin BTC --oids 111,222,333
+```
+
+**Input modes (mutually exclusive):**
+- `--coin <C> --oids <id,id,...>` — shorthand; all oids assumed to share one coin
+- `--cancels-json <path | ->` — multi-coin batches (JSON array of `{coin, oid}` objects)
+
+**Output (executed):**
+```json
+{
+  "ok": true,
+  "action": "cancel-batch",
+  "batch_size": 3,
+  "cancels": [
+    {"index": 0, "summary": {"index": 0, "coin": "BTC", "oid": 91490942, "asset_index": 0}, "ok": true, "error": null},
+    {"index": 1, "summary": {"index": 1, "coin": "ETH", "oid": 91490999, "asset_index": 4}, "ok": true, "error": null},
+    {"index": 2, "summary": {"index": 2, "coin": "SOL", "oid": 91491111, "asset_index": 5}, "ok": false, "error": "Order was never placed, already canceled, or filled."}
+  ],
+  "result": { ... }
+}
+```
+
+**Display:** For each cancel, show `summary.coin`, `summary.oid`, `ok`, and `error` (if any).
+
+**Flow:**
+1. Parse input — either `--coin` + `--oids` or `--cancels-json`
+2. Resolve `asset_idx` per unique coin (cached via `HashMap`)
+3. Build the batch cancel action and print the preview
+4. Without `--confirm` or with `--dry-run`: stop after the preview
+5. With `--confirm`: one EIP-712 signature → submit → walk `statuses[]` → pair each with its input by index
+
+**Limits & attribution:**
+- Max 50 cancels per batch.
+- `--strategy-id` is accepted for interface symmetry but **does not generate a report** — cancels do not produce new fills.
+- Failed cancels (stale oid, already filled) do not abort the batch; they appear as `ok: false` entries in the output.
+
+---
+
 ## Supported Markets
 
 Hyperliquid supports 100+ perpetual markets. Common examples:
@@ -963,6 +1101,11 @@ All data returned by `hyperliquid positions`, `hyperliquid prices`, and exchange
 ---
 
 ## Changelog
+
+### v0.3.9 (2026-04-23)
+
+- **feat**: `order-batch` — new command. Submits N perp orders (limit or market) in a single signed request using HL's native atomic batch API. Accepts `--orders-json <path | ->` (file path or `-` for stdin) containing a JSON array of order specs (`coin`, `side`, `size`, optional `type`, `price`, `tif`, `slippage`, `reduce_only`). One EIP-712 signature covers the entire batch; HL returns a `statuses[]` array with one entry per order, preserving input order. Per-entry validation runs before any network call; `asset_idx` resolution is cached per coin. Max 50 orders per batch. `--strategy-id <id>` (when set) is applied atomically to every order that produced an oid — each generates its own `report-plugin-info` call under the same strategy. `--dry-run` prints the composed action without signing; `--confirm` signs and submits.
+- **feat**: `cancel-batch` — new command. Cancels multiple open orders in one signed request. Two input modes: shorthand (`--coin BTC --oids 111,222,333`) when all oids share a coin, or `--cancels-json <path | ->` for multi-coin batches (array of `{coin, oid}` objects). Max 50 cancels per batch. `--strategy-id` is a passthrough — cancels do not produce new fills, so no attribution report is generated.
 
 ### v0.3.8 (2026-04-22)
 
