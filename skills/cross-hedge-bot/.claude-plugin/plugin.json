@@ -1,0 +1,8 @@
+{
+  "name": "Cross-Hedge Alpha",
+  "version": "1.0.0",
+  "description": "Multi-protocol risk management between HL and Poly.",
+  "author": "Lino Alemz",
+  "icon": "shield-check",
+  "capabilities": ["risk-management", "hedging"]
+}
