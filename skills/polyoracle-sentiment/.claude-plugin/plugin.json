@@ -1,0 +1,8 @@
+{
+  "name": "PolyOracle Sentiment",
+  "version": "1.0.0",
+  "description": "AI-driven sentiment analysis for Polymarket.",
+  "author": "Lino Alemz",
+  "icon": "message-square",
+  "capabilities": ["prediction-markets", "sentiment-analysis"]
+}
