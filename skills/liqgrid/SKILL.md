@@ -1,7 +1,7 @@
 ---
 name: liqgrid
-description: "Natural-language perpetual grids on Hyperliquid. Deterministic TypeScript engine computes levels, stop-loss, and caps; executes through the Hyperliquid basic plugin."
-version: "1.0.0"
+description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
+version: "1.1.0"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -169,6 +169,27 @@ described here. Under no circumstances should the agent call Hyperliquid
 directly via HTTP, RPC, or any other non-plugin path — all on-chain writes
 must go through the Hyperliquid basic plugin.
 
+## What's new in v1.1.0
+
+- **Funding-aware sizing.** When the current hourly funding rate is passed
+  in `marketMeta.fundingRateHourly`, the grid tilts per-rung notional
+  asymmetrically (up to ±20%) to collect funding as alpha. Symmetric when
+  funding is missing or below the 10% annualized noise floor.
+- **Concentrated-liquidity grid.** Each rung's notional is weighted by its
+  estimated one-day fill probability under a log-normal price-move model.
+  Rungs near the mark get more capital; rungs at the edges get less. Same
+  total notional, higher expected fills per deployed dollar.
+- **`liqgrid backtest`.** New binary subcommand that simulates the plan
+  candle-by-candle over a historical window and reports realized PnL, max
+  drawdown, fill counts, and a Sharpe approximation. Use it before
+  `grid-open` to show the user what the current parameters would have
+  produced on recent history.
+
+All three upgrades run inside the compiled TypeScript binary — same inputs
+still produce byte-identical outputs. `planHash` will differ from v1.0 for
+otherwise-identical inputs because the sizing geometry is now concentrated
+rather than uniform.
+
 ## Commands
 
 ### grid-plan
@@ -193,6 +214,15 @@ for a grid, or asks "what would a grid look like for X". Always run before
 
 1. Call the Hyperliquid basic plugin to fetch market metadata for
    `instrument`: `tickSize`, `minOrderSizeUsd`, `markPrice`, `maxLeverage`.
+   **Also fetch the current funding rate for `instrument` if the basic plugin
+   exposes it** (Hyperliquid publishes hourly funding on its `info`
+   endpoint — the basic plugin's `prices` or `get-meta` command may return
+   it). Pass it through as `marketMeta.fundingRateHourly` (fraction, e.g.
+   0.00003 = 3bp/hour ≈ 26% annualized). **v1.1**: when annualized funding
+   exceeds 10%, liqgrid tilts per-rung notional asymmetrically (up to ±20%)
+   to collect funding as alpha — sell rungs get extra weight under positive
+   funding, buy rungs under negative. If the basic plugin does not expose
+   funding, omit the field; the engine falls back to a symmetric grid.
 2. Call the Hyperliquid basic plugin to fetch recent hourly candles.
    Prefer the last 168 (7 days) for a stable volatility estimate;
    accept as few as 24 (1 day) if that's all the basic plugin returns.
@@ -245,6 +275,62 @@ values. Always use the output from `liqgrid plan` verbatim.**
 breakdown with the fields above already formatted. Useful when the
 user asks "explain this plan in normal English" or when the raw JSON
 is unwieldy.
+
+### grid-backtest
+
+Simulate the plan over historical candles and report what it would have
+produced on recent history. **Does not place any orders.**
+
+**When to use:** Before `grid-open`, whenever the user asks "how would
+this grid have done over the last week / month" or you want to show them
+expected fill counts and PnL-range under the same parameters.
+
+**Agent execution steps:**
+
+1. Fetch a longer hourly-candle window from the Hyperliquid basic plugin
+   than you would for planning alone. Recommended: at least 24h of history
+   bars (for the volatility estimate) + the backtest window. Example: 1h
+   candles for the last 30 days (720 bars total), with
+   `backtestWindowBars: 168` to simulate the most recent 7 days.
+2. Run `liqgrid backtest`, passing the same inputs as `liqgrid plan` plus
+   one extra integer field `backtestWindowBars`:
+
+   ```
+   echo '{
+     "coin": "BTC",
+     "rangeLow": 90000, "rangeHigh": 95000,
+     "totalNotionalUsd": 300, "leverage": 2,
+     "riskProfile": "balanced",
+     "marketMeta": { ... from basic plugin ... },
+     "candles": [ ... 720 hourly bars ... ],
+     "backtestWindowBars": 168
+   }' | liqgrid backtest
+   ```
+
+3. Present the `BacktestResult` JSON to the user, clearly labeled as a
+   **simulation of past performance on historical data, not a prediction**.
+   Include: `fills` (buy/sell split), `realizedPnlUsd`, `unrealizedPnlUsd`,
+   `totalPnlUsd`, `maxDrawdownUsd`, `sharpeApprox`, and `hitStopLoss`.
+   Always accompany with: "Past performance does not indicate future
+   results. Backtest uses a conservative fill model (full-rung fills only,
+   no partials); real execution may have different slippage and timing."
+
+4. If the user then says "open it", proceed to `grid-open` with the same
+   parameters. `planHash` in the backtest result will match the live plan
+   as long as the inputs match.
+
+**Fill model notes:**
+
+- A rung fills when a bar's price range (`[low, high]`) touches the rung's
+  price. No partial fills — each rung either fills entirely or waits.
+- Buys are processed before sells within the same bar (conservative — biases
+  realized PnL lower).
+- Stop-loss triggers when a bar's low (for long-bias plans) crosses the
+  stop price; simulation ends immediately and realizes the loss on all
+  remaining inventory at the trigger price.
+- Short-side grids are not simulated in v1.1 — only buy-first, pair-to-sell.
+  If the plan is short-biased (`stopLossSide === "short"`), backtest still
+  runs but fill counts may under-represent real activity.
 
 ### grid-open
 

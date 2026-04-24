@@ -1,7 +1,7 @@
 schema_version: 1
 name: liqgrid
-version: "1.0.0"
-description: "Natural-language perpetual grids on Hyperliquid. Deterministic TypeScript engine computes levels, stop-loss, and caps; executes through the Hyperliquid basic plugin."
+version: "1.1.0"
+description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
 author:
   name: "dddd86971-cloud"
   github: "dddd86971-cloud"
@@ -29,7 +29,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/liqgrid"
-  source_commit: "40bf29530aedabd2966aa46c785277a76069cb90"
+  source_commit: "4b089a6e6940b4ffdd6846cdc3b1b01fb35a8a78"
   source_dir: "."
   binary_name: "liqgrid"
   main: "dist/index.js"
