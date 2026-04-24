@@ -33,6 +33,7 @@ components:
 
 api_calls:
   - "https://clob.polymarket.com"
+  - "https://data-api.polymarket.com"
   - "https://gamma-api.polymarket.com"
   - "wss://ws-subscriptions-clob.polymarket.com/ws/market"
   - "wss://ws-subscriptions-clob.polymarket.com/ws/user"

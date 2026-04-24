@@ -33,10 +33,14 @@ Challenge: all write operations go through `polymarket-plugin` and include
 - Supports 5-minute, 15-minute, and 1-hour crypto Up/Down markets.
 - Reads live order books from Polymarket market WebSocket.
 - Tracks fills from Polymarket user WebSocket.
-- Places post-only GTC maker bids through `polymarket-plugin buy`.
+- Places post-only maker bids through `polymarket-plugin buy`.
+- Uses GTD expirations by default so resting orders auto-expire before market end.
 - Cancels stale market orders through `polymarket-plugin cancel --market`.
 - Stops when the market is near expiry, price is extreme, tick size changes,
   or the configured budget is reached.
+- Provides setup diagnostics, opportunity reports, and optional JSONL telemetry.
+- Includes a `vidarx` public-profile preset based only on public Polymarket
+  Data API activity: BTC 5m, small laddered BUY entries, strict budget caps.
 
 ## Prerequisites
 
@@ -78,6 +82,13 @@ Important flags:
 | `--min-gap` | Minimum spread gap in cents before bidding | `1` |
 | `--min-depth` | Minimum best-bid depth in shares | `5` |
 | `--slots` | Number of consecutive slots to monitor | `1` |
+| `--profile` | Preset: `spread` or `vidarx` | `spread` |
+| `--order-shares` | Shares per submitted order | `5` |
+| `--order-ttl` | GTD order lifetime in seconds; `<=0` uses GTC | `120` |
+| `--expiry-buffer` | Seconds before market end to stop GTD expiries | `20` |
+| `--max-seconds` | Optional hard runtime cap for testing sessions | none |
+| `--report` | Print an opportunity report before trading | `false` |
+| `--jsonl` | Append structured telemetry to a JSONL path | none |
 | `--dry-run` | Simulate decisions without real orders | `false` |
 | `--strategy-id` | Strategy attribution passed to `polymarket-plugin` | `polymarket-spread-arb` |
 | `--account` | Optional onchainos wallet account ID | none |
@@ -86,10 +97,19 @@ Examples:
 
 ```bash
 # OKX-compliant dry run
-python3 scripts/fast_arb.py run --coin btc --tf 5m --budget 25 --dry-run
+python3 scripts/fast_arb.py run --coin btc --tf 5m --budget 25 --dry-run --report
 
 # OKX-compliant live run through polymarket-plugin
-python3 scripts/fast_arb.py run --coin eth --tf 15m --budget 50 --min-gap 1 --slots 2
+python3 scripts/fast_arb.py run --coin eth --tf 15m --budget 50 --min-gap 1 --slots 2 --jsonl telemetry/spread-arb.jsonl
+
+# Public-profile preset inspired by @vidarx public activity
+python3 scripts/fast_arb.py run --profile vidarx --budget 25 --dry-run --report --max-seconds 20
+
+# Inspect the public profile sample used by the preset
+python3 scripts/fast_arb.py profile-report --profile-user vidarx --sample 500
+
+# Pre-flight environment and API diagnostics
+python3 scripts/fast_arb.py doctor --dry-run-only --skip-balance
 
 # Optional account switch before running
 python3 scripts/fast_arb.py run --coin sol --tf 1h --budget 30 --account <wallet-account-id>
@@ -107,11 +127,15 @@ polymarket-plugin buy \
   --outcome yes|no \
   --amount <usdc> \
   --price <limit-price> \
-  --order-type GTC \
+  --expires <unix-timestamp> \
   --post-only \
   --round-up \
   --strategy-id polymarket-spread-arb
 ```
+
+If a safe GTD expiry is unavailable because the market is too close to
+resolution, the strategy stops instead of leaving a fresh resting order near
+expiry. Passing `--order-ttl 0` falls back to GTC.
 
 Market cleanup uses:
 
@@ -134,12 +158,14 @@ polymarket-plugin cancel --market <condition-id>
 ## Risk Controls
 
 - Dry-run mode is available and should be used first.
-- Only post-only GTC maker bids are submitted in plugin mode.
+- Only post-only maker bids are submitted in plugin mode.
+- GTD auto-expiry is used by default for resting orders.
 - No market orders are used.
 - Per-slot filled budget is enforced with `--budget`.
 - The strategy stops near market expiry.
 - The strategy stops when a side reaches an extreme price or tick-size changes.
 - Existing orders for the current market are cancelled before each new pair.
+- JSONL telemetry excludes credentials and raw wallet secrets.
 
 ## Output
 
@@ -149,6 +175,7 @@ The script prints a JSON summary:
 {
   "mode": "v5_single_slot",
   "execution": "plugin",
+  "profile": "spread",
   "strategy_id": "polymarket-spread-arb",
   "coin": "BTC",
   "tf": "5m",

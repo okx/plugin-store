@@ -19,7 +19,7 @@ OKX Challenge compliance:
   - Default execution path is polymarket-plugin buy/cancel with --strategy-id
 """
 
-import argparse, asyncio, datetime, json, os, sys, time
+import argparse, asyncio, datetime, importlib.util, json, os, sys, time
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
@@ -30,12 +30,14 @@ except ImportError:
 
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
+DATA_API = "https://data-api.polymarket.com"
 WS_MARKET = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
 WS_USER = "wss://ws-subscriptions-clob.polymarket.com/ws/user"
 CREDS_PATH = os.path.expanduser("~/.config/polymarket/creds.json")
 STRATEGY_ID = "polymarket-spread-arb"
 ORDER_SHARES = 5.0
 PLUGIN_BIN = "polymarket-plugin"
+VIDARX_WALLET = "0x2d8b401d2f0e6937afebf18e19e11ca568a5260a"
 
 COINS = ["btc", "eth", "sol", "xrp", "bnb", "doge", "hype"]
 COIN_LONG = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana", "xrp": "xrp",
@@ -46,6 +48,22 @@ TF_STEP = {"5m": 300, "15m": 900}
 
 # Stop trading when any side hits this price (tick changes 1¢ → 0.1¢)
 TICK_CHANGE_THRESHOLD = 0.96
+
+PROFILE_DEFAULTS = {
+    "spread": {
+        "budget": 50.0, "min_gap": 1.0, "min_depth": 5.0, "slots": 1,
+        "order_shares": ORDER_SHARES, "order_ttl": 120, "expiry_buffer": 20,
+        "max_seconds": None,
+    },
+    "vidarx": {
+        # Public @vidarx activity is concentrated in BTC 5m Up/Down markets with
+        # many small BUY entries. This preset keeps the execution path safe while
+        # matching the observed market/timeframe and smaller laddered sizing.
+        "coin": "btc", "tf": "5m", "budget": 25.0, "min_gap": 0.5,
+        "min_depth": 5.0, "slots": 1, "order_shares": 10.0,
+        "order_ttl": 120, "expiry_buffer": 20, "max_seconds": None,
+    },
+}
 
 
 def sf(v, d=0.0):
@@ -63,6 +81,30 @@ def api_sync(url):
             return json.loads(resp.read().decode())
     except:
         return None
+
+def telemetry(path, event, **payload):
+    if not path:
+        return
+    row = {
+        "ts": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "event": event,
+        **payload,
+    }
+    try:
+        parent = os.path.dirname(os.path.abspath(path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(row, sort_keys=True) + "\n")
+    except Exception as e:
+        log(f"  ⚠ telemetry write failed: {e}")
+
+def quantile(values, q):
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return 0.0
+    idx = int((len(vals) - 1) * q)
+    return vals[idx]
 
 def load_polymarket_creds():
     with open(CREDS_PATH) as f:
@@ -86,6 +128,55 @@ def find_order_id(value):
             if found:
                 return found
     return ""
+
+def expiry_ts(end_ts, order_ttl, expiry_buffer):
+    if not order_ttl or order_ttl <= 0:
+        return None
+    now = time.time()
+    target = min(now + order_ttl, end_ts - expiry_buffer)
+    # Polymarket GTD orders require an expiration at least ~90s in the future.
+    if target < now + 95:
+        return None
+    return int(target)
+
+def opportunity_report(mkt, book, min_gap, min_depth, order_shares, budget, strategy_id, expires, order_ttl):
+    p_up = book.up_bid
+    p_dn = book.dn_bid
+    projected_pair_cost = p_up + p_dn
+    reasons = []
+    if not book.both_sides_live:
+        reasons.append("book_not_populated")
+    if book.gap_cents < min_gap:
+        reasons.append("gap_below_threshold")
+    if book.up_bid_depth < min_depth and book.dn_bid_depth < min_depth:
+        reasons.append("both_sides_depth_below_threshold")
+    if book.any_side_extreme:
+        reasons.append("price_extreme")
+    if order_ttl and expires is None:
+        reasons.append("gtd_expiry_unavailable_near_market_end")
+
+    expiry_flag = f" --expires {expires}" if expires else " --order-type GTC"
+    report_shares = order_shares
+    if projected_pair_cost > 0:
+        report_shares = min(order_shares, budget / projected_pair_cost)
+    return {
+        "slug": mkt["slug"],
+        "condition_id": mkt["condition_id"],
+        "up_bid": round(book.up_bid, 4),
+        "up_ask": round(book.up_ask, 4),
+        "up_depth": round(book.up_bid_depth, 2),
+        "down_bid": round(book.dn_bid, 4),
+        "down_ask": round(book.dn_ask, 4),
+        "down_depth": round(book.dn_bid_depth, 2),
+        "gap_cents": book.gap_cents,
+        "projected_pair_cost": round(projected_pair_cost, 4),
+        "eligible": not reasons,
+        "skip_reasons": reasons,
+        "example_commands": [
+            f"{PLUGIN_BIN} buy --token-id {mkt['up_token']} --outcome yes --amount {fmt_amount(p_up * report_shares)} --price {fmt_amount(p_up)}{expiry_flag} --post-only --round-up --strategy-id {strategy_id}",
+            f"{PLUGIN_BIN} buy --token-id {mkt['dn_token']} --outcome no --amount {fmt_amount(p_dn * report_shares)} --price {fmt_amount(p_dn)}{expiry_flag} --post-only --round-up --strategy-id {strategy_id}",
+        ],
+    }
 
 async def run_cmd(args, timeout=60):
     proc = await asyncio.create_subprocess_exec(
@@ -130,7 +221,7 @@ class PluginExecutor:
     async def cancel_market(self, condition_id):
         return await run_cmd([PLUGIN_BIN, "cancel", "--market", condition_id], timeout=45)
 
-    async def buy(self, token_id, outcome, price, shares, dry_run=False):
+    async def buy(self, token_id, outcome, price, shares, dry_run=False, expires=None):
         amount = max(price * shares, 0.01)
         cmd = [
             PLUGIN_BIN, "buy",
@@ -138,11 +229,14 @@ class PluginExecutor:
             "--outcome", outcome,
             "--amount", fmt_amount(amount),
             "--price", fmt_amount(price),
-            "--order-type", "GTC",
             "--post-only",
             "--round-up",
             "--strategy-id", self.strategy_id,
         ]
+        if expires:
+            cmd.extend(["--expires", str(int(expires))])
+        else:
+            cmd.extend(["--order-type", "GTC"])
         if dry_run:
             cmd.append("--dry-run")
         return await run_cmd(cmd, timeout=75)
@@ -481,24 +575,123 @@ def would_improve_pair(a_up, a_dn, f_up, f_dn, new_price_c, side, new_shares):
     old_pair = a_up + a_dn if (f_up > 0 and f_dn > 0) else 999
     return new_pair < 100 and new_pair <= old_pair + 0.5
 
+def resolve_run_config(args):
+    defaults = PROFILE_DEFAULTS[args.profile].copy()
+    cfg = {
+        "profile": args.profile,
+        "coin": (args.coin or defaults.get("coin") or "").lower(),
+        "tf": args.tf or defaults.get("tf"),
+        "budget": args.budget if args.budget is not None else defaults["budget"],
+        "min_gap": args.min_gap if args.min_gap is not None else defaults["min_gap"],
+        "min_depth": args.min_depth if args.min_depth is not None else defaults["min_depth"],
+        "slots": args.slots if args.slots is not None else defaults["slots"],
+        "order_shares": args.order_shares if args.order_shares is not None else defaults["order_shares"],
+        "order_ttl": args.order_ttl if args.order_ttl is not None else defaults["order_ttl"],
+        "expiry_buffer": args.expiry_buffer if args.expiry_buffer is not None else defaults["expiry_buffer"],
+        "max_seconds": args.max_seconds if args.max_seconds is not None else defaults["max_seconds"],
+    }
+    return cfg
+
+def summarize_public_activity(rows):
+    by_coin = {}
+    by_tf = {}
+    by_outcome = {}
+    by_side = {}
+    prices, usdc, lead = [], [], []
+    starts = {}
+    for r in rows:
+        slug = r.get("slug", "") or ""
+        title = r.get("title", "") or ""
+        outcome = r.get("outcome", "") or ""
+        side = r.get("side", "") or ""
+        price = sf(r.get("price"))
+        amount = sf(r.get("usdcSize"))
+        ts = int(r.get("timestamp") or 0)
+
+        by_side[side] = by_side.get(side, 0) + 1
+        by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
+        prices.append(price); usdc.append(amount)
+
+        coin = "other"
+        if slug.startswith("btc-updown") or "Bitcoin Up or Down" in title: coin = "btc"
+        elif slug.startswith("eth-updown") or "Ethereum Up or Down" in title: coin = "eth"
+        elif slug.startswith("sol-updown") or "Solana Up or Down" in title: coin = "sol"
+        elif slug.startswith("xrp-updown") or "XRP Up or Down" in title: coin = "xrp"
+        elif slug.startswith("bnb-updown") or "BNB Up or Down" in title: coin = "bnb"
+        elif slug.startswith("doge-updown") or "Dogecoin Up or Down" in title: coin = "doge"
+        elif slug.startswith("hype-updown") or "HYPE Up or Down" in title: coin = "hype"
+        by_coin[coin] = by_coin.get(coin, 0) + 1
+
+        tf = "other"
+        if "-5m-" in slug: tf = "5m"
+        elif "-15m-" in slug: tf = "15m"
+        elif "up-or-down" in slug: tf = "1h"
+        by_tf[tf] = by_tf.get(tf, 0) + 1
+
+        if slug.startswith("btc-updown-5m-") or slug.startswith("btc-updown-15m-"):
+            start = int(slug.rsplit("-", 1)[-1])
+            lead.append(start - ts)
+            starts.setdefault(start, {"trades": 0, "usdc": 0.0})
+            starts[start]["trades"] += 1
+            starts[start]["usdc"] += amount
+
+    slots = list(starts.values())
+    return {
+        "sample_size": len(rows),
+        "coin_counts": dict(sorted(by_coin.items(), key=lambda kv: -kv[1])),
+        "timeframe_counts": dict(sorted(by_tf.items(), key=lambda kv: -kv[1])),
+        "side_counts": dict(sorted(by_side.items(), key=lambda kv: -kv[1])),
+        "outcome_counts": dict(sorted(by_outcome.items(), key=lambda kv: -kv[1])),
+        "price": {
+            "p10": round(quantile(prices, 0.10), 4),
+            "median": round(quantile(prices, 0.50), 4),
+            "p90": round(quantile(prices, 0.90), 4),
+        },
+        "usdc_size": {
+            "p10": round(quantile(usdc, 0.10), 4),
+            "median": round(quantile(usdc, 0.50), 4),
+            "p90": round(quantile(usdc, 0.90), 4),
+        },
+        "lead_seconds_start_minus_trade": {
+            "median": round(quantile(lead, 0.50), 2) if lead else None,
+            "p10": round(quantile(lead, 0.10), 2) if lead else None,
+            "p90": round(quantile(lead, 0.90), 2) if lead else None,
+        },
+        "slots_observed": len(slots),
+        "avg_trades_per_slot": round(sum(s["trades"] for s in slots) / len(slots), 2) if slots else 0,
+        "avg_usdc_per_slot": round(sum(s["usdc"] for s in slots) / len(slots), 2) if slots else 0,
+    }
+
 
 # ── MAIN ───────────────────────────────────────────────────────
 
 async def run(args):
-    coin = args.coin.lower(); tf = args.tf
-    budget = args.budget; dry_run = args.dry_run
-    min_gap = args.min_gap; min_depth = args.min_depth
-    slots = args.slots
+    cfg = resolve_run_config(args)
+    coin = cfg["coin"]; tf = cfg["tf"]
+    budget = cfg["budget"]; dry_run = args.dry_run
+    min_gap = cfg["min_gap"]; min_depth = cfg["min_depth"]
+    slots = cfg["slots"]; order_shares = cfg["order_shares"]
+    order_ttl = cfg["order_ttl"]; expiry_buffer = cfg["expiry_buffer"]
+    max_seconds = cfg["max_seconds"]
     strategy_id = args.strategy_id
+    run_deadline = time.time() + max_seconds if max_seconds else None
 
+    if not coin or not tf:
+        print(json.dumps({"error": "--coin and --tf are required unless --profile vidarx supplies defaults"})); return
     if coin not in COINS:
         print(json.dumps({"error": f"Unknown coin. Use: {','.join(COINS)}"})); return
 
-    log(f"=== SPREAD ARB v5: {coin.upper()} {tf} | ${budget} budget | gap≥{min_gap}¢ | depth≥{min_depth}sh | {slots} slots | plugin execution ===")
+    log(f"=== SPREAD ARB v5: {coin.upper()} {tf} | profile={cfg['profile']} | ${budget} budget | gap≥{min_gap}¢ | depth≥{min_depth}sh | order={order_shares}sh | {slots} slots | plugin execution ===")
+    if cfg["profile"] == "vidarx":
+        log(f"  Profile note: @vidarx public-data preset; BTC 5m, small laddered BUY entries, plugin-only execution")
     if dry_run: log("*** DRY RUN ***")
+    telemetry(args.jsonl, "run_start", profile=cfg["profile"], coin=coin, tf=tf,
+              budget=budget, min_gap=min_gap, min_depth=min_depth,
+              slots=slots, order_shares=order_shares, dry_run=dry_run,
+              strategy_id=strategy_id, max_seconds=max_seconds)
 
     executor = PluginExecutor(strategy_id)
-    creds = load_polymarket_creds()
+    creds = None if dry_run else load_polymarket_creds()
     log(f"  Execution: {PLUGIN_BIN} with --strategy-id {strategy_id}")
     if not dry_run:
         bal = await executor.balance()
@@ -513,12 +706,15 @@ async def run(args):
     log(f"Found {len(markets)} markets")
 
     book = LiveBook()
-    user = UserStream(creds["api_key"], creds["secret"], creds["passphrase"])
+    user = UserStream(creds["api_key"], creds["secret"], creds["passphrase"]) if creds else UserStream("", "", "")
     user_connected = False
     user_ws_task = user_ping_task = None
     all_results = []
 
     for mkt in markets:
+        if run_deadline and time.time() >= run_deadline:
+            log("Max runtime reached before next slot")
+            break
         slug = mkt["slug"]; condition_id = mkt["condition_id"]
         try: end_ts = datetime.datetime.fromisoformat(mkt["end_date"].replace("Z", "+00:00")).timestamp()
         except: end_ts = time.time() + 3600
@@ -530,6 +726,8 @@ async def run(args):
         log(f"\n{'='*60}")
         log(f"SLOT: {slug}")
         log(f"  {mkt['question']} | {int(remaining)}s left")
+        telemetry(args.jsonl, "slot_start", slug=slug, condition_id=condition_id,
+                  remaining_seconds=int(remaining))
 
         # Reset state
         user.up_token = str(mkt["up_token"]); user.dn_token = str(mkt["dn_token"])
@@ -547,13 +745,13 @@ async def run(args):
         ping_task = asyncio.create_task(book.ping_loop()) if book._connected else None
 
         # Connect User WS
-        if not user_connected:
+        if creds and not user_connected:
             await user.connect(condition_id)
             if user._connected:
                 user_ws_task = asyncio.create_task(user.read_loop())
                 user_ping_task = asyncio.create_task(user.ping_loop())
                 user_connected = True
-        else:
+        elif creds:
             if user._ws and user._connected:
                 await user._ws.send(json.dumps({"markets": [condition_id], "operation": "subscribe"}))
 
@@ -582,6 +780,17 @@ async def run(args):
 
         log(f"  Book ready: UP {book.up_bid:.2f}/{book.up_ask:.2f} (depth {book.up_bid_depth:.0f}) | "
             f"DN {book.dn_bid:.2f}/{book.dn_ask:.2f} (depth {book.dn_bid_depth:.0f}) | gap={book.gap_cents}¢")
+        first_expiry = expiry_ts(end_ts, order_ttl, expiry_buffer)
+        report = opportunity_report(mkt, book, min_gap, min_depth, order_shares, budget, strategy_id, first_expiry, order_ttl)
+        telemetry(args.jsonl, "opportunity_report", **{k: v for k, v in report.items() if k != "example_commands"})
+        if args.report or dry_run:
+            log("  Opportunity report:")
+            log(f"    pair_cost={report['projected_pair_cost']:.4f} gap={report['gap_cents']}¢ eligible={report['eligible']}")
+            if report["skip_reasons"]:
+                log(f"    skip_reasons={','.join(report['skip_reasons'])}")
+            if dry_run:
+                for cmd in report["example_commands"]:
+                    log(f"    would run: {cmd}")
 
         # Check tick threshold at start
         if book.any_side_extreme:
@@ -594,7 +803,7 @@ async def run(args):
         orders_placed = 0; stop_reason = ""
         last_order_time = 0
 
-        while time.time() < end_ts - 10:
+        while time.time() < end_ts - 10 and (not run_deadline or time.time() < run_deadline):
             # Wait for book change
             book.changed.clear()
             try:
@@ -646,6 +855,11 @@ async def run(args):
             if book.dn_ask > 0 and p_dn >= book.dn_ask: p_dn = round(book.dn_ask - 0.01, 2)
             if p_up <= 0 or p_dn <= 0: continue
             if p_up * 100 + p_dn * 100 >= 100: continue
+            expires = expiry_ts(end_ts, order_ttl, expiry_buffer)
+            if order_ttl and not expires:
+                stop_reason = "gtd_expiry_unavailable"
+                log("  STOP: too close to market end for a safe GTD expiry")
+                break
 
             # Depth check: enough liquidity on the other side to fill us?
             if book.up_bid_depth < min_depth and book.dn_bid_depth < min_depth:
@@ -659,9 +873,9 @@ async def run(args):
                 if lo and hi:
                     if r > hi: want_up = False
                     elif r < lo: want_dn = False
-                if want_up and not would_improve_pair(user.avg_up, user.avg_dn, user.f_up, user.f_dn, p_up * 100, "up", ORDER_SHARES):
+                if want_up and not would_improve_pair(user.avg_up, user.avg_dn, user.f_up, user.f_dn, p_up * 100, "up", order_shares):
                     want_up = False
-                if want_dn and not would_improve_pair(user.avg_up, user.avg_dn, user.f_up, user.f_dn, p_dn * 100, "down", ORDER_SHARES):
+                if want_dn and not would_improve_pair(user.avg_up, user.avg_dn, user.f_up, user.f_dn, p_dn * 100, "down", order_shares):
                     want_dn = False
             elif user.f_up > 0 and user.f_dn == 0:
                 want_up = False  # need DN to balance
@@ -669,6 +883,17 @@ async def run(args):
                 want_dn = False  # need UP to balance
 
             if not want_up and not want_dn: continue
+            planned_cost_per_share = (p_up if want_up else 0.0) + (p_dn if want_dn else 0.0)
+            remaining_budget = max(budget - (user.filled_usd if not dry_run else 0.0), 0.0)
+            trade_shares = min(order_shares, remaining_budget / planned_cost_per_share) if planned_cost_per_share > 0 else 0.0
+            if trade_shares <= 0:
+                stop_reason = "budget_planned"
+                log(f"  STOP: no remaining budget for planned orders (${remaining_budget:.2f})")
+                break
+            if trade_shares < 1:
+                stop_reason = "order_too_small_after_budget_cap"
+                log(f"  STOP: budget cap leaves only {trade_shares:.2f} shares")
+                break
 
             # Cancel previous orders, place new pair
             if not dry_run:
@@ -679,33 +904,45 @@ async def run(args):
             posted = 0
             if want_up:
                 if dry_run:
-                    log(f"  UP: {ORDER_SHARES:.0f}sh @ {p_up:.2f} via {PLUGIN_BIN} --dry-run")
+                    log(f"  UP: {trade_shares:.2f}sh @ {p_up:.2f} GTD={expires} via {PLUGIN_BIN} --dry-run")
                     posted += 1
                 else:
-                    res = await executor.buy(mkt["up_token"], "yes", p_up, ORDER_SHARES)
+                    res = await executor.buy(mkt["up_token"], "yes", p_up, trade_shares, expires=expires)
                     if res["ok"]:
                         posted += 1
                         oid = find_order_id(res["data"]) or "ok"
-                        log(f"  UP: {ORDER_SHARES:.0f}sh @ {p_up:.2f} via {PLUGIN_BIN} → {oid[:16]}")
+                        log(f"  UP: {trade_shares:.2f}sh @ {p_up:.2f} via {PLUGIN_BIN} → {oid[:16]}")
+                        telemetry(args.jsonl, "order_submitted", slug=slug, side="UP",
+                                  outcome="yes", price=p_up, shares=trade_shares,
+                                  expires=expires, order_id=oid, strategy_id=strategy_id)
                     elif "not enough balance" in res["error"].lower() or "insufficient" in res["error"].lower():
                         log("  UP: no balance"); stop_reason = "no_balance"; break
                     else:
                         log(f"  UP FAIL via {PLUGIN_BIN}: {res['error'][:120]}")
+                        telemetry(args.jsonl, "order_failed", slug=slug, side="UP",
+                                  outcome="yes", price=p_up, shares=trade_shares,
+                                  error=res["error"][:240])
 
             if want_dn:
                 if dry_run:
-                    log(f"  DN: {ORDER_SHARES:.0f}sh @ {p_dn:.2f} via {PLUGIN_BIN} --dry-run")
+                    log(f"  DN: {trade_shares:.2f}sh @ {p_dn:.2f} GTD={expires} via {PLUGIN_BIN} --dry-run")
                     posted += 1
                 else:
-                    res = await executor.buy(mkt["dn_token"], "no", p_dn, ORDER_SHARES)
+                    res = await executor.buy(mkt["dn_token"], "no", p_dn, trade_shares, expires=expires)
                     if res["ok"]:
                         posted += 1
                         oid = find_order_id(res["data"]) or "ok"
-                        log(f"  DN: {ORDER_SHARES:.0f}sh @ {p_dn:.2f} via {PLUGIN_BIN} → {oid[:16]}")
+                        log(f"  DN: {trade_shares:.2f}sh @ {p_dn:.2f} via {PLUGIN_BIN} → {oid[:16]}")
+                        telemetry(args.jsonl, "order_submitted", slug=slug, side="DN",
+                                  outcome="no", price=p_dn, shares=trade_shares,
+                                  expires=expires, order_id=oid, strategy_id=strategy_id)
                     elif "not enough balance" in res["error"].lower() or "insufficient" in res["error"].lower():
                         log("  DN: no balance"); stop_reason = "no_balance"; break
                     else:
                         log(f"  DN FAIL via {PLUGIN_BIN}: {res['error'][:120]}")
+                        telemetry(args.jsonl, "order_failed", slug=slug, side="DN",
+                                  outcome="no", price=p_dn, shares=trade_shares,
+                                  error=res["error"][:240])
 
             if posted > 0:
                 orders_placed += posted
@@ -718,6 +955,8 @@ async def run(args):
 
             if stop_reason: break
 
+        if not stop_reason and run_deadline and time.time() >= run_deadline:
+            stop_reason = "max_runtime"
         if not stop_reason:
             stop_reason = "slot_ended"
 
@@ -741,6 +980,7 @@ async def run(args):
             "guaranteed": pnl[0] > 0 and pnl[1] > 0,
         }
         all_results.append(result)
+        telemetry(args.jsonl, "slot_done", **result)
         log(f"--- {slug} done: {stop_reason} | {orders_placed} orders | "
             f"UP={user.f_up:.0f}@{user.avg_up:.1f}¢ DN={user.f_dn:.0f}@{user.avg_dn:.1f}¢ ---")
 
@@ -750,10 +990,15 @@ async def run(args):
         if user_ws_task: user_ws_task.cancel()
         if user_ping_task: user_ping_task.cancel()
 
-    print(json.dumps({"mode": "v5_single_slot", "execution": "plugin",
+    summary = {"mode": "v5_single_slot", "execution": "plugin",
+                       "profile": cfg["profile"],
                        "strategy_id": strategy_id,
                        "coin": coin.upper(), "tf": tf,
-                       "dry_run": dry_run, "markets": all_results}, indent=2))
+                       "dry_run": dry_run, "order_ttl": order_ttl,
+                       "order_shares": order_shares, "max_seconds": max_seconds,
+                       "markets": all_results}
+    telemetry(args.jsonl, "run_done", **summary)
+    print(json.dumps(summary, indent=2))
     log(f"=== DONE ===")
 
 
@@ -777,20 +1022,106 @@ def ensure_wallet(account_id=None):
     if account_id:
         subprocess.run(["onchainos", "wallet", "switch", account_id], capture_output=True, timeout=10, env=env)
 
+async def doctor(args):
+    checks = []
+
+    def add(name, ok, detail=""):
+        checks.append({"name": name, "ok": bool(ok), "detail": detail})
+
+    add("python", sys.version_info >= (3, 8), sys.version.split()[0])
+    add("websockets", importlib.util.find_spec("websockets") is not None, "required for market/user streams")
+    add("polymarket_creds", os.path.isfile(CREDS_PATH), CREDS_PATH)
+
+    for name, cmd in [
+        ("onchainos_version", ["onchainos", "--version"]),
+        ("polymarket_plugin_version", [PLUGIN_BIN, "--version"]),
+        ("polymarket_access", [PLUGIN_BIN, "check-access"]),
+    ]:
+        res = await run_cmd(cmd, timeout=30)
+        detail = (res["stdout"] or res["stderr"] or res["error"])[:240]
+        add(name, res["ok"], detail)
+
+    if not args.skip_balance:
+        res = await run_cmd([PLUGIN_BIN, "balance"], timeout=45)
+        detail = (res["stdout"] or res["stderr"] or res["error"])[:240]
+        add("polymarket_balance", res["ok"], detail)
+
+    add("gamma_api", isinstance(api_sync(f"{GAMMA}/markets?limit=1"), list), GAMMA)
+    add("clob_api", api_sync(f"{CLOB}/ok") is not None, CLOB)
+    add("data_api", api_sync(f"{DATA_API}/activity?user={VIDARX_WALLET}&limit=1&type=TRADE") is not None, DATA_API)
+
+    ok = all(c["ok"] for c in checks if c["name"] != "polymarket_creds" or not args.dry_run_only)
+    print(json.dumps({"ok": ok, "checks": checks}, indent=2))
+
+def fetch_activity(user, sample):
+    rows = []
+    for offset in range(0, sample, 100):
+        limit = min(100, sample - offset)
+        url = f"{DATA_API}/activity?user={user}&limit={limit}&offset={offset}&type=TRADE"
+        data = api_sync(url)
+        if not isinstance(data, list):
+            break
+        rows.extend(data)
+        if len(data) < limit:
+            break
+    return rows
+
+async def profile_report(args):
+    user = VIDARX_WALLET if args.profile_user == "vidarx" else args.profile_user
+    rows = fetch_activity(user, args.sample)
+    summary = summarize_public_activity(rows)
+    report = {
+        "profile": args.profile_user,
+        "address": user,
+        "source": {
+            "profile_url": f"https://polymarket.com/profile/{user}",
+            "activity_api": f"{DATA_API}/activity?user={user}",
+        },
+        "summary": summary,
+        "inferred_rules": [
+            "public activity is BUY-only in the sampled set",
+            "recent sampled activity concentrates on BTC Up/Down 5m markets",
+            "entries are laddered in many small clips rather than one large order",
+            "both Up and Down are accumulated across volatile slots; this is not risk-free arbitrage",
+            "the local vidarx preset therefore uses BTC 5m, smaller repeated post-only/GTD BUY orders, and strict budget caps",
+        ],
+        "safety": [
+            "uses public Data API only; no private account data or credential bypass",
+            "profile inference is heuristic and should start with --dry-run",
+            "live writes remain delegated to polymarket-plugin with --strategy-id",
+        ],
+    }
+    print(json.dumps(report, indent=2))
+
 def main():
     p = argparse.ArgumentParser(description="Polymarket Spread Arb v5 (Single-Slot Event-Driven)")
-    p.add_argument("cmd", choices=["run"])
-    p.add_argument("--coin", required=True, help="btc,eth,sol,xrp,bnb,doge,hype")
-    p.add_argument("--tf", required=True, help="5m, 15m, 1h")
-    p.add_argument("--budget", type=float, default=50, help="Max USD to deploy per slot")
-    p.add_argument("--min-gap", type=float, default=1, help="Min gap cents to trigger")
-    p.add_argument("--min-depth", type=float, default=5, help="Min depth (shares) at best bid to trade")
-    p.add_argument("--slots", type=int, default=1, help="How many consecutive slots to trade")
+    p.add_argument("cmd", choices=["run", "doctor", "profile-report"])
+    p.add_argument("--profile", choices=["spread", "vidarx"], default="spread", help="Strategy preset")
+    p.add_argument("--coin", default=None, help="btc,eth,sol,xrp,bnb,doge,hype")
+    p.add_argument("--tf", default=None, help="5m, 15m, 1h")
+    p.add_argument("--budget", type=float, default=None, help="Max USD to deploy per slot")
+    p.add_argument("--min-gap", type=float, default=None, help="Min gap cents to trigger")
+    p.add_argument("--min-depth", type=float, default=None, help="Min depth (shares) at best bid to trade")
+    p.add_argument("--slots", type=int, default=None, help="How many consecutive slots to trade")
+    p.add_argument("--order-shares", type=float, default=None, help="Shares per submitted order")
+    p.add_argument("--order-ttl", type=int, default=None, help="GTD order lifetime in seconds; <=0 uses GTC")
+    p.add_argument("--expiry-buffer", type=int, default=None, help="Seconds before market end to stop GTD expiries")
+    p.add_argument("--max-seconds", type=int, default=None, help="Stop the run after this many seconds")
     p.add_argument("--dry-run", action="store_true", help="No real orders")
+    p.add_argument("--dry-run-only", action="store_true", help="Doctor: do not fail if user websocket credentials are absent")
+    p.add_argument("--report", action="store_true", help="Print opportunity report to stderr")
+    p.add_argument("--jsonl", default=None, help="Append structured telemetry JSONL to this path")
+    p.add_argument("--profile-user", default="vidarx", help="profile-report: vidarx or 0x wallet address")
+    p.add_argument("--sample", type=int, default=500, help="profile-report: public activity rows to sample")
+    p.add_argument("--skip-balance", action="store_true", help="Doctor: skip polymarket-plugin balance call")
     p.add_argument("--strategy-id", default=STRATEGY_ID, help="OKX strategy ID passed to polymarket-plugin")
     p.add_argument("--account", default=None, help="Wallet account ID")
     args = p.parse_args()
     load_env()
+    if args.cmd == "doctor":
+        asyncio.run(doctor(args)); return
+    if args.cmd == "profile-report":
+        asyncio.run(profile_report(args)); return
     ensure_wallet(args.account)
     asyncio.run(run(args))
 

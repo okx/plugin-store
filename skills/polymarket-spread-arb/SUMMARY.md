@@ -14,9 +14,12 @@ Core capabilities:
 - Market WebSocket book monitoring
 - User WebSocket fill tracking
 - Corridor math for balanced UP/DOWN exposure
-- Post-only GTC maker orders through `polymarket-plugin`
+- Post-only maker orders through `polymarket-plugin`
+- GTD auto-expiring orders through `--expires`
 - Market-scoped cancel before each new pair
 - Dry-run mode, budget caps, depth checks, tick-size stop, expiry stop
+- Setup doctor, opportunity reports, public-profile report, JSONL telemetry, runtime cap
+- Optional `vidarx` preset derived from public Polymarket Data API activity
 
 Tags: `polymarket` `arbitrage` `spread` `market-making` `crypto` `polygon` `websocket` `strategy-id`
 
@@ -31,7 +34,8 @@ Tags: `polymarket` `arbitrage` `spread` `market-making` `crypto` `polygon` `webs
 ## Quick Start
 
 1. Install dependencies: `pip3 install websockets`
-2. Check setup: `polymarket-plugin balance`
-3. Dry run: `python3 scripts/fast_arb.py run --coin btc --tf 5m --budget 25 --dry-run`
-4. Live run: `python3 scripts/fast_arb.py run --coin eth --tf 15m --budget 50 --min-gap 1 --slots 2`
-5. Confirm output includes `"execution": "plugin"` and `"strategy_id": "polymarket-spread-arb"`
+2. Check setup: `python3 scripts/fast_arb.py doctor --dry-run-only --skip-balance`
+3. Inspect public profile preset: `python3 scripts/fast_arb.py profile-report --profile-user vidarx --sample 500`
+4. Dry run: `python3 scripts/fast_arb.py run --coin btc --tf 5m --budget 25 --dry-run --report --max-seconds 20`
+5. Live run: `python3 scripts/fast_arb.py run --coin eth --tf 15m --budget 50 --min-gap 1 --slots 2 --jsonl telemetry/spread-arb.jsonl`
+6. Confirm output includes `"execution": "plugin"` and `"strategy_id": "polymarket-spread-arb"`
