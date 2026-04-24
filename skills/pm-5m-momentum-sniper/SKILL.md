@@ -491,16 +491,20 @@ After buy, if held token price rises above 0.80:
 
 ## Error Handling
 
+**CRITICAL — Ghost Orders**: The `polymarket-plugin buy` command may return a non-zero exit code or unparseable output (due to stderr mixing with stdout), yet the order may have already been submitted and matched on the CLOB. Before retrying a "failed" buy, ALWAYS run `polymarket-plugin get-positions` to check if the position was actually created. Never retry a buy on the same market without checking positions first — this causes duplicate orders that push up the average entry price and destroy profitability.
+
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `check-access` returns blocked | User in restricted jurisdiction | Inform user, stop session |
 | Insufficient USDC.e balance | Not enough funds | Suggest `polymarket-plugin deposit` from Polygon wallet |
 | `list-5m` returns no active markets | No 5M market currently open for this coin | Wait 1-2 minutes and retry; if persistent, try a different coin |
-| `buy` returns minimum size error | Stake below market minimum | Increase stake to meet minimum shown in error |
+| `buy` returns minimum size error | Stake below market minimum | Use `--order-type FOK --round-up` to auto-adjust, or increase stake |
 | `buy` returns "market not accepting orders" | Market too close to settlement | Skip this round, wait for next market |
+| `buy` returns error but balance decreased | Order was actually submitted (ghost order) | Run `get-positions` to verify; do NOT retry buy on same market |
 | `get-market` shows no bids/asks | Market has no liquidity | Skip this round |
 | `sell` fails with "insufficient shares" | Share count mismatch | Re-check positions with `get-positions`, use exact share count |
 | `sell` fails with no best_bid | No buyer available for early exit | Cannot exit early; hold until resolution |
+| `redeem` fails with "TEE sign-tx" | Insufficient POL for gas | Top up POL on EOA wallet, then retry |
 | `redeem` fails | Market not yet resolved | Wait and retry after 1 minute |
 | Price drifted significantly between signal and execution | Market moved during confirmation | Re-check price; if now above threshold, skip |
 
