@@ -1,7 +1,7 @@
 schema_version: 1
 name: kairos-floor-strategy
 version: "1.0.0"
-description: "Autonomous AI trading strategy for Hyperliquid perpetual futures with multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management"
+description: "Autonomous AI trading strategy for Hyperliquid perpetual futures — 4-phase pipeline with multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management"
 author:
   name: "Kairos Lab"
   github: "Valisthea"
@@ -20,7 +20,7 @@ tags:
 components:
   skill:
     repo: "Valisthea/kairos-floor-strategy"
-    commit: "66b067e93d5c2255271bd1a9c774b7ef66a23f32"
+    commit: "4de30c3305540b5f591f5714c7ce7fef770d38b7"
 
 api_calls:
   - "api.hyperliquid.xyz"

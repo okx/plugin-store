@@ -1,6 +1,6 @@
 {
   "name": "kairos-floor-strategy",
-  "description": "Autonomous AI trading strategy for Hyperliquid perpetual futures with multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management",
+  "description": "Autonomous AI trading strategy for Hyperliquid perpetual futures — 4-phase pipeline with multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management",
   "version": "1.0.0",
   "author": {
     "name": "Kairos Lab"
