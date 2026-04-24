@@ -1,0 +1,38 @@
+schema_version: 1
+name: polymarket-spread-arb
+version: "5.0.0"
+description: "Event-driven spread arbitrage on Polymarket crypto Up/Down markets using polymarket-plugin execution with OKX strategy attribution"
+author:
+  name: "checkra1neth"
+  github: "checkra1neth"
+license: MIT
+category: strategy
+tags:
+  - polymarket
+  - prediction-market
+  - arbitrage
+  - spread
+  - market-making
+  - polygon
+  - websocket
+  - strategy-id
+  - onchainos
+type: community-developer
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.4.0"
+
+risk_level: advanced
+supported_venues:
+  - polymarket
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "https://clob.polymarket.com"
+  - "https://gamma-api.polymarket.com"
+  - "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+  - "wss://ws-subscriptions-clob.polymarket.com/ws/user"

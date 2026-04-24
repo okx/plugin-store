@@ -1,0 +1,20 @@
+{
+  "name": "polymarket-spread-arb",
+  "description": "Event-driven spread arbitrage on Polymarket crypto Up/Down markets using polymarket-plugin execution with OKX strategy attribution",
+  "version": "5.0.0",
+  "author": {
+    "name": "checkra1neth"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "prediction-market",
+    "arbitrage",
+    "spread",
+    "market-making",
+    "polygon",
+    "okx",
+    "onchainos",
+    "strategy-id"
+  ]
+}
