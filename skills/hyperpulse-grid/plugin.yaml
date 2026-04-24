@@ -1,30 +1,15 @@
-name: "HyperPulse Grid"
-id: "hyperpulse-grid"
+schema_version: 1
+name: "hyperpulse-grid"
 version: "1.0.0"
-description: "Advanced NLP-driven grid trading bot for Hyperliquid perps. High transaction count and volume optimization."
-author: "Lino Alemz"
-strategy-id: "HP_GRID_2026_S1" # CRITICAL: Used by OKX for leaderboard tracking
+description: "Automated perpetual grid trader for Hyperliquid."
+author:
+  name: "Lino Alemz"
+  github: "linoxbt"
+license: "MIT"
 category: "trading-strategy"
-dependencies:
-  - "okx/hyperliquid-plugin"
-  - "okx/agentic-wallet"
-  - "okx-security"
-permissions:
-  - "automated-trading"
-  - "wallet-access"
-  - "read-market-data"
-actions:
-  - name: "start-grid"
-    description: "Initialize a grid trading bot on Hyperliquid"
-    parameters:
-      symbol: "Pair to trade (e.g., HYPE-USDC)"
-      amount: "Total USDC to allocate"
-      grids: "Number of grid levels"
-      upper_price: "Upper boundary for the grid"
-      lower_price: "Lower boundary for the grid"
-  - name: "stop-grid"
-    description: "Stop an active grid bot and close positions"
-    parameters:
-      bot_id: "Unique ID of the bot to stop"
-  - name: "status"
-    description: "Check the current status and PnL of active grid bots"
+tags:
+  - "hyperliquid"
+  - "grid-bot"
+components:
+  skill:
+    dir: "."
