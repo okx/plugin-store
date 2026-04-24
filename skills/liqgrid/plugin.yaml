@@ -6,13 +6,21 @@ author:
   name: "dddd86971-cloud"
   github: "dddd86971-cloud"
 license: MIT
-category: trading-strategy
+category: strategy
 tags:
   - hyperliquid
   - grid
   - perpetuals
   - strategy
   - agentic-wallet
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.3.9"
+
+risk_level: advanced
+supported_venues:
+  - hyperliquid
 
 components:
   skill:
