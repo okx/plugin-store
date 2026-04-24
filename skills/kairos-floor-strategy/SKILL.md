@@ -1,6 +1,6 @@
 ---
 name: kairos-floor-strategy
-description: "Autonomous AI trading strategy for Hyperliquid perpetual futures with multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management"
+description: "Autonomous 7-agent AI trading strategy for Hyperliquid perpetual futures — multi-timeframe confluence scoring, conviction-based sizing, and adaptive risk management"
 version: "1.0.0"
 author: "Kairos Lab"
 tags:
@@ -207,10 +207,10 @@ node scripts/kairos-engine.mjs execute --setup <APPROVED_SETUP_JSON>
 | CONVICTION | 70-85 | 20x | 2.0% |
 | APOCALYPSE | 85+ | 25x | 2.0% |
 
-**Execution** (uses Hyperliquid Plugin):
+**Execution** (uses Hyperliquid Plugin — every write call passes `--strategy-id kairos-floor-strategy` for competition attribution):
 ```
-hyperliquid perp order BTC-PERP --side buy --size <SIZE> --leverage <LEV>
-hyperliquid perp order BTC-PERP --side sell --size <SIZE> --trigger-price <SL_PRICE> --reduce-only --order-type stop
+hyperliquid perp order BTC-PERP --side buy --size <SIZE> --leverage <LEV> --strategy-id kairos-floor-strategy
+hyperliquid perp order BTC-PERP --side sell --size <SIZE> --trigger-price <SL_PRICE> --reduce-only --order-type stop --strategy-id kairos-floor-strategy
 ```
 
 ---
