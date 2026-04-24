@@ -1,23 +1,16 @@
-name: "Cross-Hedge Alpha"
-id: "cross-hedge-bot"
+schema_version: 1
+name: "cross-hedge-bot"
 version: "1.0.0"
-description: "Advanced delta-neutral strategy using Hyperliquid perps and Polymarket prediction events. Protects your portfolio from market volatility."
-author: "Lino Alemz"
-strategy-id: "CH_ALPHA_2026_S1"
-category: "cross-protocol-strategy"
-dependencies:
-  - "okx/hyperliquid-plugin"
-  - "okx/polymarket-plugin"
-  - "okx-wallet-portfolio"
-permissions:
-  - "wallet-access"
-  - "automated-trading"
-  - "read-market-data"
-actions:
-  - name: "hedge-position"
-    description: "Hedge a Hyperliquid position with a Polymarket event"
-    parameters:
-      perp_position: "The HL position to hedge (e.g., ETH-USD Long)"
-      hedge_ratio: "Percentage of position to hedge (0-1)"
-  - name: "arbitrage-scan"
-    description: "Find price discrepancies between HL perps and Polymarket odds"
+description: "Multi-protocol risk management between HL and Poly."
+author:
+  name: "Lino Alemz"
+  github: "linoxbt"
+license: "MIT"
+category: "strategy"
+tags:
+  - "hyperliquid"
+  - "polymarket"
+  - "hedging"
+components:
+  skill:
+    dir: "."
