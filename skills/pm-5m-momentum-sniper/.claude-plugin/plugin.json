@@ -1,0 +1,18 @@
+{
+  "name": "pm-5m-momentum-sniper",
+  "description": "Momentum-driven 5-minute crypto prediction sniper for Polymarket with auto direction signal and continuous session loop",
+  "version": "1.0.0",
+  "author": {
+    "name": "awan"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "prediction-market",
+    "crypto",
+    "momentum",
+    "trading-strategy",
+    "five-minute",
+    "automated"
+  ]
+}

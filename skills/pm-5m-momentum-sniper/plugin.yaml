@@ -1,0 +1,37 @@
+schema_version: 1
+name: pm-5m-momentum-sniper
+version: "1.0.0"
+description: "Momentum-driven 5-minute crypto prediction sniper for Polymarket with auto direction signal and continuous session loop"
+author:
+  name: "awan"
+  github: "gunksd"
+license: MIT
+category: strategy
+tags:
+  - polymarket
+  - prediction-market
+  - crypto
+  - momentum
+  - trading-strategy
+  - five-minute
+  - automated
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: python
+  binary_name: pm-5m-signal
+  main: "src/main.py"
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.4.10"
+
+risk_level: standard
+supported_venues:
+  - polymarket
+
+api_calls:
+  - api.binance.com
