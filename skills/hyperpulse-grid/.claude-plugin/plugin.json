@@ -1,0 +1,8 @@
+{
+  "name": "HyperPulse Grid",
+  "version": "1.0.0",
+  "description": "Automated grid trading strategy for Hyperliquid.",
+  "author": "Lino Alemz",
+  "icon": "trending-up",
+  "capabilities": ["trading", "automation"]
+}
