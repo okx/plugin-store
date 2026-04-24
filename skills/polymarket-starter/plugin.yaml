@@ -1,6 +1,6 @@
 schema_version: 1
 name: polymarket-starter
-version: "0.2.0"
+version: "0.2.1"
 description: "Guided first-trade flow on Polymarket with budget protection and $1/$5/$10 presets for new prediction-market users. Routes orders through polymarket-plugin with strategy attribution."
 author:
   name: "Lucas"

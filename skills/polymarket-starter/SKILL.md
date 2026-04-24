@@ -1,7 +1,7 @@
 ---
 name: polymarket-starter
 description: "Guided first-trade flow on Polymarket with budget protection and $1/$5/$10 presets for new prediction-market users. Routes orders through polymarket-plugin with --strategy-id attribution. Trigger phrases: polymarket starter kit, first polymarket trade, polymarket for beginners, safe polymarket bet, small polymarket bet, bet $1 on polymarket, bet $5 on polymarket, bet $10 on polymarket, help me start betting on polymarket, new to prediction markets, polymarket 新手, 第一次下注 polymarket, polymarket 小额试水, 帮我买 polymarket, 1 美元下注, 5 美元下注, polymarket 入门, polymarket 怎么开始, 安全下注"
-version: "0.2.0"
+version: "0.2.1"
 author: "Lucas"
 tags:
   - polymarket
@@ -32,7 +32,21 @@ This skill provides a **guided first-trade flow** on Polymarket for users who ar
 
 All on-chain operations are delegated to `polymarket-plugin`, which submits signed transactions via the onchainos Agentic Wallet (TEE-protected). This skill adds no new signing logic and performs no direct API calls. Every write step in the Starter Flow is preceded by an explicit user confirmation at Step 8.
 
-**Attribution.** Every write operation invoked from this skill carries `--strategy-id polymarket-starter` so that `polymarket-plugin` attributes the trade to this strategy on the OKX backend. Read-only commands (`check-access`, `balance`, `list-markets`, `get-positions`) do not require the flag.
+**Attribution.** Every write operation invoked from this skill carries `--strategy-id polymarket-starter` so that `polymarket-plugin` attributes the trade to this strategy on the OKX backend. The full list of write verbs that MUST carry the flag when invoked through this skill:
+
+| Verb | --strategy-id required |
+|---|---|
+| `buy` | ✅ Required |
+| `sell` | ✅ Required |
+| `cancel` | ✅ Required |
+| `redeem` | ✅ Required |
+| `setup-proxy` | ✅ Required |
+| `deposit` | ✅ Required |
+| `withdraw` | ✅ Required |
+| `switch-mode` | ✅ Required |
+| `check-access`, `balance`, `list-markets`, `list-5m`, `get-market`, `get-positions`, `get-series`, `quickstart` | ❌ Read-only, no flag needed |
+
+If any write verb is invoked without `--strategy-id polymarket-starter` during a session that started from this skill, attribution is lost and the trade is not credited to `polymarket-starter` on the OKX backend.
 
 **Supported chain:** Polygon Mainnet (chain 137).
 
@@ -72,6 +86,21 @@ onchainos wallet sign-message --help
 
 If this errors or is not found, run `onchainos upgrade` and re-verify. Do not attempt to work around a missing `sign-message` by manually signing EIP-712 messages, bypassing the plugin with raw HTTP, suggesting the user trade via the Polymarket website, or asking the user to export their private key. The only correct fix is to upgrade onchainos.
 
+5. **report-plugin-info subcommand available** (REQUIRED for strategy attribution)
+
+```bash
+onchainos wallet report-plugin-info --help
+```
+
+This subcommand is the attribution channel used by `polymarket-plugin` after a successful write operation. If `--help` errors with `unrecognized subcommand`, the installed onchainos is too old and **trades will execute but will not be attributed to this skill** on the OKX backend. If missing:
+
+```bash
+onchainos upgrade
+onchainos wallet report-plugin-info --help   # must succeed before proceeding
+```
+
+Do not proceed to Step 9 (buy) until this check passes. If the subcommand cannot be installed on the user's environment, report the situation to the user and stop — do not trade without attribution.
+
 ## Starter Flow
 
 When a user triggers this skill (see trigger phrases in frontmatter), execute these 10 steps in order. **Do not skip steps.** Each step's output informs the next.
@@ -94,7 +123,7 @@ polymarket-plugin check-access
 - If `accessible: true` → continue to Step 3.
 - If `accessible: false` → **stop**. Tell the user their IP region is not permitted by Polymarket (US and OFAC jurisdictions are blocked). Do not proceed to any funding or trading steps.
 
-### Step 3 — Check balance and enforce budget protection
+### Step 3 — Check balance
 
 ```bash
 polymarket-plugin balance
@@ -102,10 +131,17 @@ polymarket-plugin balance
 
 Parse the output for `eoa_wallet.usdc_e` (and `eoa_wallet.pol` for gas in EOA mode).
 
-- If USDC.e < $20 → tell the user: "Your balance is low. I recommend funding at least $20 USDC.e on Polygon before your first bet. You can bridge via the OKX Web3 bridge or withdraw from a CEX to the Polygon network. Your Polygon address is the one shown in Step 1." Wait for them to confirm funding before proceeding.
-- If USDC.e ≥ $20 → continue to Step 4.
+Note the balance and continue to Step 4. **The balance gate is enforced tier-aware in Step 7**, once the user picks a bet tier — not here. This avoids turning away users who want a small $1 trade but have e.g. $3 on hand.
 
-**Budget protection rule:** later in Step 7, reject any requested bet size that exceeds `USDC.e / 2` even if the user insists. The hard cap is always 50% of current balance.
+**Minimum balance reference** (applied in Step 7):
+
+| Chosen tier | Minimum USDC.e required |
+|---|---|
+| $1 | ≥ $2 |
+| $5 | ≥ $10 |
+| $10 | ≥ $20 |
+
+Rule: minimum = 2× chosen tier. Rationale: prevents an approve + buy sequence from leaving the wallet at $0, which would block follow-up actions (sell, redeem, another bet). If the user has < $2, recommend bridging before continuing — otherwise proceed.
 
 ### Step 4 — Ask the user for a topic
 
@@ -146,7 +182,13 @@ Ask: "Which market (1/2/3), which side (**YES** or **NO**), and what size (**$1*
 
 **Only accept `$1`, `$5`, or `$10`.** If the user asks for any other amount, tell them: "Starter Kit is limited to $1/$5/$10. For larger bets, use `polymarket-plugin` directly (e.g. `polymarket-plugin buy --market-id <id> --outcome yes --amount 50 --strategy-id polymarket-starter`)." Then re-ask the question.
 
-Enforce the budget-protection cap: if the user picks $10 but their USDC.e is under $20, downgrade the suggestion to the highest affordable tier ($5 or $1) and explain why.
+**Enforce the tier-aware budget gate** before the confirmation card:
+
+- User picks **$1** → requires USDC.e ≥ $2
+- User picks **$5** → requires USDC.e ≥ $10
+- User picks **$10** → requires USDC.e ≥ $20
+
+If the chosen tier fails its gate, **downgrade** to the highest affordable tier ($5 or $1) and explain: "Your balance covers a $X bet but not $Y. Proceed with $X, or top up and retry?" If even $2 isn't available, stop and recommend bridging more USDC.e before any trade.
 
 ### Step 8 — Show confirmation card
 
