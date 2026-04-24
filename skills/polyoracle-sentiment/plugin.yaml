@@ -1,23 +1,15 @@
-name: "PolyOracle Sentiment"
-id: "polyoracle-sentiment"
+schema_version: 1
+name: "polyoracle-sentiment"
 version: "1.0.0"
-description: "AI-driven sentiment analysis for Polymarket. Automatically bets based on social signals and trending news."
-author: "Lino Alemz"
-strategy-id: "PO_SENT_2026_S1"
-category: "prediction-market"
-dependencies:
-  - "okx/polymarket-plugin"
-  - "okx-dex-signal"
-  - "okx-security"
-permissions:
-  - "wallet-access"
-  - "read-social-data"
-actions:
-  - name: "analyze-and-bet"
-    description: "Analyze sentiment for a market and place a bet"
-    parameters:
-      market_slug: "Polymarket market identifier"
-      sentiment_source: "Source (e.g., twitter, whale-signals)"
-      confidence_threshold: "Minimum confidence to bet (0-100)"
-  - name: "hot-markets"
-    description: "Find trending Polymarket events with high social volume"
+description: "Sentiment analysis betting agent for Polymarket."
+author:
+  name: "Lino Alemz"
+  github: "linoxbt"
+license: "MIT"
+category: "strategy"
+tags:
+  - "polymarket"
+  - "sentiment"
+components:
+  skill:
+    dir: "."
