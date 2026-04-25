@@ -1,58 +1,137 @@
 # liqgrid — Plugin Store Skill
 
-Natural-language perpetual grid strategy on Hyperliquid, powered by a
-deterministic TypeScript engine.
+Natural-language perpetual grids on Hyperliquid, powered by a **deterministic
+TypeScript engine** with **funding-aware asymmetric sizing**, **concentrated-
+liquidity weighting**, and a **built-in backtest engine**.
 
 ## Install
 
-```
+```bash
 npx skills add okx/plugin-store --skill liqgrid
 ```
+
+## At a glance
+
+```
+User: "BTC 90k-95k range, $500 at 2x"
+  │
+  ▼
+liqgrid Skill  (natural-language parsing)
+  │
+  ├─► hyperliquid-plugin   →  fetch mark / funding / 1h candles
+  └─► liqgrid binary       →  deterministic grid math
+  │
+  ▼
+Dry-run Plan:
+  • 23 tick-aligned rungs (concentrated: ~$20/rung at mark, ~$3/rung at edges)
+  • funding −12% annualized  →  +6.6% notional tilt toward buy side
+  • stop-loss $87,500        →  max loss 6.9% / $34.50
+  • backtest past 7d         →  +$7.57 realized / 15 fills / 0 drawdown
+  • planHash a3f82b...       (same input → same plan, always)
+  │
+  ▼
+User: "go live"
+  │
+  ▼
+Limit orders via hyperliquid-plugin  --strategy-id liqgrid
+Stop-loss trigger  via hyperliquid-plugin  tpsl  --strategy-id liqgrid
+  │
+  ▼
+Agentic Wallet TEE signing  →  on-chain fills
+```
+
+## What liqgrid actually does for a user
+
+| Pain point | Without liqgrid | With liqgrid |
+|---|---|---|
+| Setting up 20+ tick-aligned rung prices by hand | 30 min of arithmetic, high chance of slipping | One sentence → plan in 2 seconds, math guaranteed correct |
+| Capital wasted on edge rungs that rarely fill | Uniform sizing pays ~25% of capital to fill-probability-<1% zones | Concentrated-liquidity weighting, same $300 gets denser near mark |
+| Paying funding passively | Symmetric grid eats all funding | At ≥10% annualized funding, tilt up to ±20% toward the profitable side |
+| No way to know how this parameter set would have performed | Blind decision | `liqgrid backtest` gives concrete PnL / fills / drawdown / Sharpe on real past candles |
+| LLM picks different rung prices across runs | Same prompt, different grid → plan drifts | Compiled binary, stable `planHash` fingerprint, byte-identical across models |
+| Accidental $5,000 / 50× blow-up request | Platform accepts it, you liquidate | Binary hard-caps $5k / 10× / 50 rungs / stop-loss ≤30% of notional — refused at plan stage |
+
+## Hard differentiators vs other Hyperliquid grid bots
+
+1. **Deterministic binary, not LLM math** — grid-level prices, stop-loss, and
+   sizing run in a compiled TypeScript engine. Same inputs → byte-identical
+   outputs. Other AI grid Skills leave it to the LLM and drift each call.
+
+2. **Funding rate as alpha, not drag** — liqgrid reads the live hourly funding
+   rate and tilts per-rung notional up to ±20% toward the side that *collects*
+   funding. Hyperliquid-specific feature; zero other grid Skill does this.
+
+3. **Concentrated-liquidity rung sizing** — per-rung notional weighted by
+   Gaussian fill-probability in log-price space. Center-heavy, edge-light —
+   higher expected fill density per dollar deployed than uniform spacing.
+
+4. **Built-in backtest** — `liqgrid backtest` runs the plan bar-by-bar over
+   historical candles and returns realized PnL, max DD, fill counts, Sharpe.
+   Runs in the same deterministic binary; same input candles → same numbers.
+
+## Safety (enforced in binary, not just documented)
+
+| Cap / check | Value |
+|---|---|
+| Max notional per grid | $5,000 |
+| Max leverage | 10× |
+| Max / min grid rungs | 50 / 4 |
+| Max loss at range break | 30% of notional (warning enforced) |
+| Conservative + >5× leverage | auto-downshift to 5× with warning |
+| Mark-vs-candle drift >3% | warning (volatility estimate may be stale) |
+| Mark far outside range | REFUSE (range premise is wrong) |
+| `rangeLow >= rangeHigh` | hard failure, empty plan + `INPUT:` warning |
+| Non-positive `rangeLow` / `tickSize` | hard failure |
+| Sum(sizeUsd) invariant | always equals `totalNotionalUsd` |
+
+**Behavioral:** dry-run default on every session; explicit user confirmation
+before any order batch; first-session training wheels cap $200 / 2× even if
+user asks for more.
+
+**No private keys** handled by liqgrid — all signing via Agentic Wallet TEE
+through `hyperliquid-plugin`. `api_calls: []` — binary makes zero network
+calls of its own.
+
+## When to use
+
+**Good fit:**
+- Range-bound view on a liquid Hyperliquid perp (BTC / ETH / SOL / etc.)
+- Want passive execution via limit orders working at pre-computed levels
+- Want predictable, reproducible parameters across agent sessions and models
+
+**Bad fit:**
+- Directional thesis ("BTC breaks out to 100k") — grid accumulates a losing
+  position against trends
+- Market in clear strong trend — Skill refuses with explanation
+- Want leverage > 10× or notional > $5k — hard caps, not preferences
 
 ## Requires
 
 - `onchainos` CLI + unlocked Agentic Wallet
-- `hyperliquid-plugin` (basic plugin) installed separately:
+- **`hyperliquid-plugin` ≥ 0.3.9**:
   `npx skills add okx/plugin-store --skill hyperliquid-plugin`
-- ≥ 20 USDC on your Hyperliquid perp account
-
-## Usage
-
-Once installed, talk to any Onchain-OS agent in natural language:
-
-> "BTC 90k to 95k, balanced grid, $500 at 2x"
-
-The agent will:
-1. Fetch BTC market data via the Hyperliquid basic plugin.
-2. Run `liqgrid plan` (the compiled binary shipped with this Skill) to
-   compute a deterministic grid.
-3. Show the DRY-RUN plan with grid count, stop-loss, max loss, and
-   expected fills/day.
-4. Execute only after you confirm — through the Hyperliquid basic plugin.
-
-## Safety (hardcoded in the binary)
-
-- Dry-run default
-- Max $5,000 / 10× / 50 rungs per grid
-- Max loss at range break: 30% of notional (warning enforced)
-- No private key handling — all signing via Agentic Wallet TEE
-- Binary makes no network calls (`api_calls: []`)
+- ≥ 20 USDC on your Hyperliquid perp account (for minimum collateral)
 
 ## Source
 
-The binary is TypeScript, compiled to JS, distributed via `bun install -g`
-by the Plugin Store CI. Source:
-https://github.com/dddd86971-cloud/liqgrid
+TypeScript → compiled to JS, distributed via `bun install -g` by the Plugin
+Store CI from [dddd86971-cloud/liqgrid](https://github.com/dddd86971-cloud/liqgrid)
+at a pinned commit (see `plugin.yaml` `build.source_commit`).
 
-See `SKILL.md` for the full command reference and Security Notices.
+Self-test suite: `npm test` — 26 invariants covering determinism, cap
+enforcement, funding bias noise-floor / saturation / sign, concentrated-
+liquidity sizing, backtest determinism, and input validation.
+
+## Strategy-id Attribution
+
+Every write operation carries `--strategy-id liqgrid` (or `lg-{planHash[:6]}`
+for per-plan granularity). `hyperliquid-plugin` calls
+`onchainos wallet report-plugin-info` after each successful order so OKX's
+Plugin Store Season 1 leaderboard can attribute trades to this Skill.
 
 ## License
 
 MIT — see `LICENSE`.
 
-## Season 1 Developer Challenge
-
-This Skill is submitted to the OKX Onchain OS Plugin Store Season 1
-Developer Challenge (2026-04-23 → 2026-05-07). All on-chain writes flow
-through the Hyperliquid basic plugin as required by challenge eligibility
-rules.
+See `SKILL.md` for the full command reference, error handling, and
+Security Notices. See `SUMMARY.md` for the 30-second user pitch.
