@@ -6,5 +6,7 @@
     "name": "dddd86971-cloud"
   },
   "license": "MIT",
+  "homepage": "https://github.com/dddd86971-cloud/hyperliquid-aigrid",
+  "repository": "https://github.com/dddd86971-cloud/hyperliquid-aigrid",
   "keywords": ["hyperliquid", "grid", "perpetuals", "strategy", "agentic-wallet", "passive-income", "automated-trading", "funding-aware", "backtest", "range-bound"]
 }

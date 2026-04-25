@@ -7,6 +7,8 @@ author:
   github: "dddd86971-cloud"
 license: MIT
 category: strategy
+type: community-developer
+github_link: "https://github.com/dddd86971-cloud/hyperliquid-aigrid"
 tags:
   - hyperliquid
   - grid
@@ -34,7 +36,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/hyperliquid-aigrid"
-  source_commit: "ac066095de327c108ca06b5118fdb29a69440932"
+  source_commit: "2a8d6cc9705c55306d59f9083af51f319cea72ba"
   source_dir: "."
   binary_name: "hyperliquid-aigrid"
   main: "dist/index.js"

@@ -185,15 +185,28 @@ hyperliquid-plugin v0.3.9. The agent reads it directly from Hyperliquid's
 public read-only info endpoint (declared in `plugin.yaml` `api_calls`):
 
 ```bash
+# Replace BTC with the target coin (case-sensitive, matches universe[].name)
+COIN=BTC
 curl -s -X POST https://api.hyperliquid.xyz/info \
   -H 'Content-Type: application/json' \
   -d '{"type":"metaAndAssetCtxs"}' \
-  | jq '.[1] | .[<universe-index-of-coin>] | .funding'
+  | jq -r --arg coin "$COIN" '
+      (.[0].universe | map(.name) | index($coin)) as $i
+      | if $i == null then "null" else (.[1][$i].funding) end
+    '
+# Output is the hourly funding rate as a string (e.g. "0.000019")
+# or "null" if the coin is not found.
 ```
 
 Pass that hourly funding rate (a fraction, e.g. `0.000019`) into the binary
-as `marketMeta.fundingRateHourly`. If the call fails or the value is missing,
-omit the field — hyperliquid-aigrid falls back to a symmetric grid.
+as `marketMeta.fundingRateHourly`. If the call fails or returns "null", omit
+the field — hyperliquid-aigrid falls back to a symmetric grid.
+
+> **Mainnet only.** This Skill targets Hyperliquid mainnet. The testnet
+> endpoint (`api.hyperliquid-testnet.xyz`) is intentionally *not* declared
+> in `api_calls` because testnet funding is synthetic and can't be used
+> as alpha. For dry-run testing without real money, use the binary's
+> built-in `backtest` subcommand on real mainnet candles instead.
 
 Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
@@ -495,8 +508,8 @@ Notes:
   `sizeUsd` is for human-readable display only.
 - **Always pass `--price`** — without it, market orders use unbounded
   slippage. hyperliquid-aigrid always places resting limit orders at the planned price.
-- For per-plan granularity, use `--strategy-id lg-<planHash[:5]>` instead
-  (8 chars total; SKILL.md Attribution Rule documents both forms).
+- For per-plan granularity, use `--strategy-id ha-<planHash[:6]>` instead
+  (Attribution Rule above documents both forms).
 - For high-rung-count plans, prefer `hyperliquid-plugin order-batch`
   (single signed request for many orders) to stay under the rate limit.
 
@@ -545,10 +558,13 @@ existing grid placed earlier.
 
 1. Call the Hyperliquid basic plugin to fetch all open orders for the
    user's Hyperliquid account.
-2. Filter orders whose strategy tag starts with `lg-` — these are
+2. Filter orders whose strategy tag is `hyperliquid-aigrid` (fixed) or
+   starts with `ha-` (per-plan form `ha-{planHash[:6]}`) — these are the
    hyperliquid-aigrid-tagged orders.
-3. Group by the tag suffix (the 6-char planHash prefix). Each group
-   represents one active grid.
+3. For per-plan-tagged orders, group by the 6-char `planHash` suffix.
+   Each group represents one active grid. Fixed-tag orders may share
+   the `hyperliquid-aigrid` tag across multiple grids — disambiguate
+   by `coin` + placement timestamp cluster.
 4. Present the list to the user: `coin`, `planHash[:6]`, count of open
    orders, current mark price. Let them pick which grid to manage.
 5. Once identified, run `grid-status` or `grid-close` as requested.
@@ -619,7 +635,7 @@ Cancel all open grid orders and optionally flatten the position.
 1. Refuse silently clamping. Explain: leverage capped at 10x by hyperliquid-aigrid,
    notional capped at $5000 by hyperliquid-aigrid.
 2. Offer: "I can open up to a 10x $5000 grid. That's the hard safety
-   ceiling of hyperliquid-aigrid v1.0.0. Want to proceed at 10x $5000?"
+   ceiling of hyperliquid-aigrid. Want to proceed at 10x $5000?"
 3. Never compute or execute a plan above the caps — the binary would
    clamp them silently and produce a warning, but the agent must stop
    before even running `hyperliquid-aigrid plan` in this case.

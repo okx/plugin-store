@@ -122,9 +122,10 @@ TypeScript → compiled to JS, distributed via `bun install -g` by the Plugin
 Store CI from [dddd86971-cloud/hyperliquid-aigrid](https://github.com/dddd86971-cloud/hyperliquid-aigrid)
 at a pinned commit (see `plugin.yaml` `build.source_commit`).
 
-Self-test suite: `npm test` — 26 invariants covering determinism, cap
+Self-test suite: `npm test` — 30 invariants covering determinism, cap
 enforcement, funding bias noise-floor / saturation / sign, concentrated-
-liquidity sizing, backtest determinism, and input validation.
+liquidity sizing, backtest determinism, quickstart, optimize ranking, and
+input validation across all subcommands.
 
 ## Strategy-id Attribution
 
