@@ -47,7 +47,7 @@ Tags: `hyperliquid` `grid` `perpetuals` `strategy` `agentic-wallet`
 3. **Go live only after explicit confirmation**
    Reply "go live" (or "place real orders") to execute. The agent places
    limit orders and the stop-loss trigger through the Hyperliquid basic
-   plugin, tagged `lg-{planHash[:6]}` so every fill is attributable to
+   plugin with `--strategy-id liqgrid1` so every fill is attributable to
    this Skill on the Plugin Store leaderboard. If any plan warning
    would allow a loss above the 30% of-notional threshold, the agent
    quotes the warning verbatim and waits for "yes, I'm OK with that"

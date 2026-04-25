@@ -29,7 +29,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/liqgrid"
-  source_commit: "4b089a6e6940b4ffdd6846cdc3b1b01fb35a8a78"
+  source_commit: "0c34b3c634bb6f84c607cab4f8d509be6dab3320"
   source_dir: "."
   binary_name: "liqgrid"
   main: "dist/index.js"
