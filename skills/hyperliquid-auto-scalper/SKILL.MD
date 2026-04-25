@@ -54,3 +54,5 @@ When the user says a command containing “run”, the agent will:
 Run hyperliquid auto scalper
 or
 Run scalper
+
+**Features from(via Hyperliquid Plugin)**

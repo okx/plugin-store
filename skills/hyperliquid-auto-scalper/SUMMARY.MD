@@ -29,7 +29,7 @@ Tags: `hyperliquid` `autotrade` `smarttrade` `scalping` `perpetuals` `btc`
 1. **Install this skill** from the Plugin Store
 2. **Open your Onchain OS Agent**
 3. Simply type:  
-   **`Run hl steady scalper`**  
+   **`Run hyperliquid auto scalper`**  
    or  
    **`Run scalper`**
 

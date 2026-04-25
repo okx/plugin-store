@@ -41,3 +41,9 @@ Only trades when funding rate is very low
 RSI < 30 → Buy
 RSI > 70 → Sell
 Creates 10 micro orders per signal  - TWAP (Time-Averaged Price) is an algorithmic trading strategy that breaks down a large buy or sell order into multiple smaller orders. Apply TWAP to get the best price.
+## Strategy ID
+`hyperliquid-auto-scalper`
+
+## Quick Usage
+Tell the agent:
+> `Run scalper`
