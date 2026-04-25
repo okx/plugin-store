@@ -138,16 +138,21 @@ Before using this Skill, the agent must verify:
 ## Attribution Rule
 
 Every write operation routed to the Hyperliquid basic plugin must include
-the strategy tag `liqgrid` in whatever tag/cloid/strategy-id field the
+the strategy tag `liqgrid1` in whatever tag/cloid/strategy-id field the
 basic plugin exposes:
 
 - If the basic plugin accepts a `strategy_id`, `tag`, or `clientOrderId`
-  parameter, pass `liqgrid` (or `lg-{planHash[:6]}` for per-plan
+  parameter, pass `liqgrid1` (or `lg-{planHash[:5]}` for per-plan
   granularity).
 - If the basic plugin exposes a `--strategy-id` CLI flag, append
-  `--strategy-id liqgrid`.
-- If no such field exists, embed `liqgrid` in any free-form order-label
+  `--strategy-id liqgrid1`.
+- If no such field exists, embed `liqgrid1` in any free-form order-label
   field available.
+
+> **Why 8 characters?** OKX Plugin Store Season 1 strategy-id field is
+> sized for 8 characters. `liqgrid` (the plugin name, 7 chars) is fine
+> as the plugin's filesystem identifier; `liqgrid1` is the strategy-id
+> string passed on every write operation for leaderboard attribution.
 
 Read-only market inspection (getting mark price, candles, meta) does not
 need tagging.
@@ -262,7 +267,7 @@ for a grid, or asks "what would a grid look like for X". Always run before
      extends close to this estimate, surface that explicitly.
    - Any warnings from `plan.warnings`
    - `plan.planHash` (present as a short identifier, e.g. the first 6
-     characters — matching the `lg-{hash[:6]}` form used in the
+     characters — matching the `lg-{hash[:5]}` form used in the
      strategy tag so users see consistent identifiers across the plan
      view and their order tags). `planHash` is stable across identical
      inputs and can be referenced for support.
@@ -374,14 +379,14 @@ order-placing tool with:
 - `order_type = "limit"`
 - `post_only = true`
 - `reduce_only = false`
-- **strategy tag**: `lg-{planHash[:6]}` (see Attribution Rule).
+- **strategy tag**: `lg-{planHash[:5]}` (see Attribution Rule).
   This is what makes the orders attributable to this Skill on the
   Plugin Store leaderboard.
 
 After all limit orders succeed, call the Hyperliquid basic plugin's
 trigger-order tool to install a stop-market at
 `plan.stopLossTriggerPrice` with `reduce_only = true` **and the same
-strategy tag** `lg-{planHash[:6]}`.
+strategy tag** `lg-{planHash[:5]}`.
 
 If any single order is rejected (insufficient margin, price band, rate
 limit), stop immediately, quote the exact error from the basic plugin, and
@@ -400,7 +405,7 @@ grids (across different coins or replaced plans), ask them which by
 disambiguation needed.
 
 **Execution:** Call the Hyperliquid basic plugin to fetch open orders
-(filter by strategy tag `lg-{planHash[:6]}` if supported), account
+(filter by strategy tag `lg-{planHash[:5]}` if supported), account
 state, and fills since the grid was opened. Return: filled count,
 realized PnL from filled pairs, unrealized PnL on current position,
 distance to stop-loss in absolute price and percentage.
@@ -440,11 +445,11 @@ Cancel all open grid orders and optionally flatten the position.
 
 1. Call the Hyperliquid basic plugin to cancel all open orders for the
    instrument. If the basic plugin supports tag-scoped cancellation,
-   prefer canceling only orders tagged with `lg-{planHash[:6]}`,
+   prefer canceling only orders tagged with `lg-{planHash[:5]}`,
    so other non-liqgrid orders the user might have are preserved.
 2. If the user explicitly asks to flatten, call the basic plugin to place
    a market order in the opposite direction of the current position with
-   `reduce_only = true` **and strategy tag** `lg-{planHash[:6]}`.
+   `reduce_only = true` **and strategy tag** `lg-{planHash[:5]}`.
    Warn the user briefly that a market-order flatten on a large
    leveraged position can have meaningful slippage.
 3. Confirm completion and report final realized PnL.
