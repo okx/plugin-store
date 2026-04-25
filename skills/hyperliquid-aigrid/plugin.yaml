@@ -1,0 +1,46 @@
+schema_version: 1
+name: hyperliquid-aigrid
+version: "1.2.0"
+description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
+author:
+  name: "dddd86971-cloud"
+  github: "dddd86971-cloud"
+license: MIT
+category: strategy
+tags:
+  - hyperliquid
+  - grid
+  - perpetuals
+  - strategy
+  - agentic-wallet
+  - passive-income
+  - automated-trading
+  - funding-aware
+  - backtest
+  - range-bound
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.3.9"
+
+risk_level: advanced
+supported_venues:
+  - hyperliquid
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: typescript
+  source_repo: "dddd86971-cloud/hyperliquid-aigrid"
+  source_commit: "aed9868e8950ecb6b49c852bc75e92fd150ecd6d"
+  source_dir: "."
+  binary_name: "hyperliquid-aigrid"
+  main: "dist/index.js"
+
+api_calls:
+  # Read-only public endpoint: agent fetches funding rate + candles from
+  # Hyperliquid's info API for v1.1 funding-aware bias and `hyperliquid-aigrid backtest`.
+  # All write operations still go through hyperliquid-plugin (Agentic Wallet TEE).
+  - "https://api.hyperliquid.xyz"

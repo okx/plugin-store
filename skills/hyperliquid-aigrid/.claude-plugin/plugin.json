@@ -1,0 +1,10 @@
+{
+  "name": "hyperliquid-aigrid",
+  "description": "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out.",
+  "version": "1.2.0",
+  "author": {
+    "name": "dddd86971-cloud"
+  },
+  "license": "MIT",
+  "keywords": ["hyperliquid", "grid", "perpetuals", "strategy", "agentic-wallet", "passive-income", "automated-trading", "funding-aware", "backtest", "range-bound"]
+}
