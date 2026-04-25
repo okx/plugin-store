@@ -33,8 +33,8 @@ Dry-run Plan:
 User: "go live"
   │
   ▼
-Limit orders via hyperliquid-plugin  --strategy-id liqgrid
-Stop-loss trigger  via hyperliquid-plugin  tpsl  --strategy-id liqgrid
+Limit orders via hyperliquid-plugin  --strategy-id liqgrid1
+Stop-loss trigger  via hyperliquid-plugin  tpsl  --strategy-id liqgrid1
   │
   ▼
 Agentic Wallet TEE signing  →  on-chain fills
@@ -89,8 +89,12 @@ before any order batch; first-session training wheels cap $200 / 2× even if
 user asks for more.
 
 **No private keys** handled by liqgrid — all signing via Agentic Wallet TEE
-through `hyperliquid-plugin`. `api_calls: []` — binary makes zero network
-calls of its own.
+through `hyperliquid-plugin`. The compiled `liqgrid` binary itself makes
+**zero** network calls (no `Math.random`, no `Date.now`, no I/O). The Skill
+declares only one external endpoint in `plugin.yaml` — `api.hyperliquid.xyz`,
+the public read-only info API used to fetch the live funding rate and
+historical candles for `liqgrid backtest`. Every write operation still flows
+through `hyperliquid-plugin`.
 
 ## When to use
 
@@ -124,7 +128,7 @@ liquidity sizing, backtest determinism, and input validation.
 
 ## Strategy-id Attribution
 
-Every write operation carries `--strategy-id liqgrid` (or `lg-{planHash[:6]}`
+Every write operation carries `--strategy-id liqgrid1` (or `lg-{planHash[:5]}`
 for per-plan granularity). `hyperliquid-plugin` calls
 `onchainos wallet report-plugin-info` after each successful order so OKX's
 Plugin Store Season 1 leaderboard can attribute trades to this Skill.

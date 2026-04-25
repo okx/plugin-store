@@ -34,4 +34,8 @@ build:
   binary_name: "liqgrid"
   main: "dist/index.js"
 
-api_calls: []
+api_calls:
+  # Read-only public endpoint: agent fetches funding rate + candles from
+  # Hyperliquid's info API for v1.1 funding-aware bias and `liqgrid backtest`.
+  # All write operations still go through hyperliquid-plugin (Agentic Wallet TEE).
+  - "https://api.hyperliquid.xyz"

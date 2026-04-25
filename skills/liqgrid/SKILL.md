@@ -162,17 +162,43 @@ correctly attribute trades to this Skill. Untagged trades may be
 aggregated to the generic `hyperliquid-plugin` and not counted toward
 liqgrid's leaderboard position.
 
-## Tool Name Adaptation
+## Hyperliquid basic-plugin command map
 
-This Skill refers to Hyperliquid basic-plugin operations by their semantic
-purpose (`get_market_meta`, `get_candles`, `place_order`,
-`place_trigger_order`, `cancel_all_orders`, `get_open_orders`,
-`get_user_state`, `get_user_fills`). If the basic plugin exposes these
-under different names at runtime, the agent should map to the real names
-using the basic plugin's own documentation while preserving the semantics
-described here. Under no circumstances should the agent call Hyperliquid
-directly via HTTP, RPC, or any other non-plugin path — all on-chain writes
-must go through the Hyperliquid basic plugin.
+This Skill is built against `hyperliquid-plugin` **v0.3.9** (the version
+pinned in `dependent_plugin` in `plugin.yaml`). Concrete commands the agent
+calls:
+
+| Semantic purpose | hyperliquid-plugin command |
+|---|---|
+| Get current mid price for a coin | `hyperliquid-plugin prices --coin <COIN>` |
+| Place a perp limit / market order | `hyperliquid-plugin order --coin <COIN> --side buy\|sell --size <COIN_QTY> --price <PRICE> --order-type limit\|market --strategy-id liqgrid1 --confirm` |
+| Place a stop-loss bracket on a position | `hyperliquid-plugin tpsl --coin <COIN> --sl-px <PRICE> --strategy-id liqgrid1 --confirm` |
+| Close a position at market | `hyperliquid-plugin close --coin <COIN> --strategy-id liqgrid1 --confirm` |
+| Cancel a single resting order | `hyperliquid-plugin cancel --order-id <OID> --confirm` |
+| Cancel many in one signed request | `hyperliquid-plugin cancel-batch --order-ids <OID,OID,...> --confirm` |
+| List open orders for the wallet | `hyperliquid-plugin orders` |
+| List open positions + margin summary | `hyperliquid-plugin positions` |
+| Place many limit orders in one signed batch | `hyperliquid-plugin order-batch --orders <FILE> --strategy-id liqgrid1 --confirm` |
+
+**Funding rate (used for v1.1 funding-aware bias)** is **not** exposed by
+hyperliquid-plugin v0.3.9. The agent reads it directly from Hyperliquid's
+public read-only info endpoint (declared in `plugin.yaml` `api_calls`):
+
+```bash
+curl -s -X POST https://api.hyperliquid.xyz/info \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"metaAndAssetCtxs"}' \
+  | jq '.[1] | .[<universe-index-of-coin>] | .funding'
+```
+
+Pass that hourly funding rate (a fraction, e.g. `0.000019`) into the binary
+as `marketMeta.fundingRateHourly`. If the call fails or the value is missing,
+omit the field — liqgrid falls back to a symmetric grid.
+
+Under no circumstances should the agent call Hyperliquid for **writes** via
+HTTP / RPC / any non-plugin path — every order must go through
+`hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
+`--strategy-id liqgrid1` for leaderboard attribution.
 
 ## What's new in v1.1.0
 
@@ -367,26 +393,39 @@ context.
 
 **Execution:**
 
-For each level in `plan.levels`, call the Hyperliquid basic plugin's
-order-placing tool with:
-- `coin = plan.coin`
-- `side = level.side` (`"buy"` or `"sell"`)
-- `price = level.price`
-- `size = level.sizeCoin` — Hyperliquid's order API takes contract
-  quantity, not USD notional. Use `sizeCoin`. `sizeUsd` in the plan is
-  only for human-readable display and must not be passed as the order
-  size.
-- `order_type = "limit"`
-- `post_only = true`
-- `reduce_only = false`
-- **strategy tag**: `lg-{planHash[:5]}` (see Attribution Rule).
-  This is what makes the orders attributable to this Skill on the
-  Plugin Store leaderboard.
+For each level in `plan.levels`, run:
 
-After all limit orders succeed, call the Hyperliquid basic plugin's
-trigger-order tool to install a stop-market at
-`plan.stopLossTriggerPrice` with `reduce_only = true` **and the same
-strategy tag** `lg-{planHash[:5]}`.
+```bash
+hyperliquid-plugin order \
+  --coin <plan.coin> \
+  --side <level.side> \
+  --size <level.sizeCoin> \
+  --price <level.price> \
+  --order-type limit \
+  --strategy-id liqgrid1 \
+  --confirm
+```
+
+Notes:
+
+- **`--size` is `level.sizeCoin`** (contract quantity), NOT `level.sizeUsd`.
+  `sizeUsd` is for human-readable display only.
+- **Always pass `--price`** — without it, market orders use unbounded
+  slippage. liqgrid always places resting limit orders at the planned price.
+- For per-plan granularity, use `--strategy-id lg-<planHash[:5]>` instead
+  (8 chars total; SKILL.md Attribution Rule documents both forms).
+- For high-rung-count plans, prefer `hyperliquid-plugin order-batch`
+  (single signed request for many orders) to stay under the rate limit.
+
+After all limit orders succeed, install the stop-loss bracket:
+
+```bash
+hyperliquid-plugin tpsl \
+  --coin <plan.coin> \
+  --sl-px <plan.stopLossTriggerPrice> \
+  --strategy-id liqgrid1 \
+  --confirm
+```
 
 If any single order is rejected (insufficient margin, price band, rate
 limit), stop immediately, quote the exact error from the basic plugin, and
