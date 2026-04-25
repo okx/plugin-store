@@ -34,7 +34,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/hyperliquid-aigrid"
-  source_commit: "aed9868e8950ecb6b49c852bc75e92fd150ecd6d"
+  source_commit: "ac066095de327c108ca06b5118fdb29a69440932"
   source_dir: "."
   binary_name: "hyperliquid-aigrid"
   main: "dist/index.js"
