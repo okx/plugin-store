@@ -1,0 +1,27 @@
+schema_version: 1
+name: hyperliquid-auto-scalper
+version: "1.0.0"
+description: "Intelligent multi-coin scalping strategy with RSI mean-reversion, funding rate filter and micro-batch execution on Hyperliquid"
+author:
+  name: "Nolan Rothschild"
+  github: "CZVault"
+license: MIT
+category: strategy
+tags:
+  - hyperliquid
+  - scalping
+  - perps
+  - mean-reversion
+  - rsi
+  - multi-coin
+  - risk-management
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^1.0.0"
+risk_level: low
+supported_venues:
+  - hyperliquid
+components:
+  skill:
+    dir: "."
+api_calls: []

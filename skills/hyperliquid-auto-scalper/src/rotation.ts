@@ -1,0 +1,1 @@
+export const getRotationList = () => ["BTC-PERP","ETH-PERP","SOL-PERP"]

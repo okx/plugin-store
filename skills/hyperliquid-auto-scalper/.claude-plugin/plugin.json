@@ -1,0 +1,10 @@
+{
+  "name": "hyperliquid-auto-scalper",
+  "description": "Intelligent multi-coin scalping strategy with RSI mean-reversion, funding rate filter and micro-batch execution on Hyperliquid",
+  "version": "1.1.0",
+  "author": {
+    "name": "Nolan Rothschild"
+  },
+  "license": "MIT",
+  "keywords": ["hyperliquid", "scalping", "rsi", "mean-reversion", "multi-coin", "batch"]
+}
