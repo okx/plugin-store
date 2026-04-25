@@ -1,7 +1,7 @@
 schema_version: 1
 name: liqgrid
 version: "1.2.0"
-description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
+description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
 author:
   name: "dddd86971-cloud"
   github: "dddd86971-cloud"
@@ -13,6 +13,11 @@ tags:
   - perpetuals
   - strategy
   - agentic-wallet
+  - passive-income
+  - automated-trading
+  - funding-aware
+  - backtest
+  - range-bound
 
 dependent_plugin:
   - name: hyperliquid-plugin

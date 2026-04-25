@@ -1,6 +1,6 @@
 ---
 name: liqgrid
-description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
+description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
 version: "1.2.0"
 author: "dddd86971-cloud"
 tags:
@@ -9,6 +9,11 @@ tags:
   - perpetuals
   - strategy
   - agentic-wallet
+  - passive-income
+  - automated-trading
+  - funding-aware
+  - backtest
+  - range-bound
 ---
 
 # liqgrid

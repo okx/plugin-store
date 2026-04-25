@@ -17,7 +17,47 @@ Core operations:
 - Execute all limit orders + the stop-loss trigger through the Hyperliquid basic plugin
 - Resume, inspect, or close an existing grid across sessions via a stable strategy tag
 
-Tags: `hyperliquid` `grid` `perpetuals` `strategy` `agentic-wallet`
+Tags: `hyperliquid` `grid` `perpetuals` `strategy` `agentic-wallet` `passive-income` `automated-trading` `funding-aware` `backtest` `range-bound`
+
+## How It Works
+
+```
+User: "BTC 90k-95k range, $300 at 2x"
+   ↓
+liqgrid Skill (natural-language parsing)
+   ↓
+   ├─► hyperliquid-plugin            → mark price + 1h candles
+   ├─► api.hyperliquid.xyz/info      → live funding rate (read-only)
+   └─► liqgrid binary                → deterministic plan
+   ↓
+Dry-run plan + 7-day backtest preview:
+   • 23 tick-aligned rungs, concentrated near mark
+   • funding-tilted ±20% (collects funding as alpha)
+   • stop-loss + max-loss bound, hard caps enforced
+   • realized PnL / max DD / fills on past 7 days
+   ↓
+User: "go live"
+   ↓
+hyperliquid-plugin order ... --strategy-id liqgrid1
+hyperliquid-plugin tpsl  ... --strategy-id liqgrid1
+   ↓
+Agentic Wallet TEE signing → on-chain fills
+```
+
+Five steps, deterministic at each layer. The compiled binary makes the math
+reproducible (same inputs → same plan, byte-identical); the agent layer
+handles natural-language parsing and orchestration; all on-chain writes flow
+through `hyperliquid-plugin` so signing stays inside the Agentic Wallet TEE.
+
+Two helper subcommands beyond the core flow:
+
+- **`liqgrid quickstart`** — given just `coin` + `notional` + recent candles,
+  the binary derives sensible `(rangeLow, rangeHigh, leverage, riskProfile)`
+  from the recent vol regime. Use this when the user doesn't pick a range.
+- **`liqgrid optimize`** — sweeps 75 (range × leverage × profile) combinations
+  on past 30 days, ranks by Calmar score (`realizedPnl / max(maxDD, 1)`),
+  returns the top N. Use this to compare hand-picked params to the
+  historically-best ones.
 
 ## Prerequisites
 
