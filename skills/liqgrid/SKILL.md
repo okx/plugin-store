@@ -1,7 +1,7 @@
 ---
 name: liqgrid
 description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
-version: "1.1.0"
+version: "1.2.0"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -200,6 +200,20 @@ HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id liqgrid1` for leaderboard attribution.
 
+## What's new in v1.2.0
+
+- **`liqgrid quickstart`** — zero-friction first-time use. From just
+  `coin` + `totalNotionalUsd` + recent `candles` + `marketMeta`, the binary
+  derives a sensible `(rangeLow, rangeHigh, leverage, riskProfile)` and
+  returns a ready-to-pipe `PlanInput`. Use this when the user describes
+  their notional and intent ("$300 BTC grid, conservative") but doesn't
+  specify a range. Saves the agent from inventing a range.
+- **`liqgrid optimize`** — deterministic parameter sweep. Iterates 75
+  combinations (5 range widths × 5 leverages × 3 profiles), runs a
+  backtest on each over the recent window, ranks by Calmar score
+  (`realizedPnl / max(maxDD, 1)`), returns the top N. Use when the user
+  asks "what's the best parameter set" or wants a comparison.
+
 ## What's new in v1.1.0
 
 - **Funding-aware sizing.** When the current hourly funding rate is passed
@@ -222,6 +236,75 @@ otherwise-identical inputs because the sizing geometry is now concentrated
 rather than uniform.
 
 ## Commands
+
+### grid-quickstart
+
+Zero-friction first-time use. Given a coin, notional, and recent candles,
+derive a sensible plan without the user having to pick a range.
+
+**When to use:** User says something like "$300 BTC grid, conservative"
+without specifying a range, or when first-session training wheels are
+active. Always prefer `grid-quickstart` over inventing a range yourself.
+
+**Agent execution steps:**
+
+1. Fetch the live `markPrice`, `tickSize`, `minOrderSizeUsd`,
+   `maxLeverage` from `hyperliquid-plugin prices` + the static meta.
+2. Fetch ~7 days of hourly candles from `https://api.hyperliquid.xyz/info`
+   (`type: candleSnapshot`, `interval: 1h`).
+3. Pipe into `liqgrid quickstart`:
+
+   ```
+   echo '{
+     "coin": "BTC",
+     "totalNotionalUsd": 300,
+     "candles": [...],
+     "marketMeta": { "coin": "BTC", "tickSize": 1, "minOrderSizeUsd": 10,
+                     "markPrice": 77519, "maxLeverage": 40 },
+     "riskProfile": "conservative"
+   }' | liqgrid quickstart
+   ```
+
+4. The result includes a `planInput` field — pipe that **directly** into
+   `liqgrid plan` to get the full GridPlan. Show the user the
+   `recommendedRangeLow/High`, `recommendedLeverage`, and the `rationale`
+   string before running the plan.
+
+### grid-optimize
+
+Deterministic parameter sweep over (range_width, leverage, risk_profile)
+combinations on historical candles.
+
+**When to use:** User asks "what's the optimal parameters" / "find me the
+best grid" / "compare profiles", or as a sanity check before running a
+hand-picked plan ("how does my chosen params rank in the sweep?").
+
+**Agent execution steps:**
+
+1. Fetch ~30 days of hourly candles from Hyperliquid info (need
+   `> backtestWindowBars + 24` so the per-trial backtest has both history
+   and a window).
+2. Run:
+
+   ```
+   echo '{
+     "coin": "BTC",
+     "totalNotionalUsd": 300,
+     "candles": [...],
+     "marketMeta": { ... },
+     "backtestWindowBars": 168,
+     "topN": 3
+   }' | liqgrid optimize
+   ```
+
+3. Present the top-N candidates as a table: rangeWidth%, leverage,
+   profile, fills, realizedPnl, maxDD, score. **Always tell the user**:
+   "These are deterministic backtest results on past 7 days, not a
+   prediction of future performance. The top candidate is what would have
+   maximised Calmar score on recent history."
+4. If the user picks one, run `grid-plan` with those exact parameters
+   (the candidate already specifies `rangeLow`, `rangeHigh`, `leverage`,
+   `riskProfile`).
 
 ### grid-plan
 

@@ -1,6 +1,6 @@
 schema_version: 1
 name: liqgrid
-version: "1.1.0"
+version: "1.2.0"
 description: "Natural-language perpetual grids on Hyperliquid with funding-aware asymmetric sizing, concentrated-liquidity weighting, and a deterministic backtest engine — all on top of hyperliquid-plugin."
 author:
   name: "dddd86971-cloud"
@@ -29,7 +29,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/liqgrid"
-  source_commit: "0c34b3c634bb6f84c607cab4f8d509be6dab3320"
+  source_commit: "0837e8c9111bc90eacda6f061e2edc6921bbd08b"
   source_dir: "."
   binary_name: "liqgrid"
   main: "dist/index.js"
