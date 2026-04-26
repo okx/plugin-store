@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.1"
+version: "1.2.2"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,30 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.2
+
+- **Three new plan output fields** for direct UI / agent visibility,
+  no need to walk `levels[]`:
+  - `buySideNotionalUsd` — sum of `sizeUsd` across all buy rungs.
+  - `sellSideNotionalUsd` — sum across all sell rungs. The ratio
+    `buySideNotionalUsd / sellSideNotionalUsd` directly reveals the
+    funding-bias tilt (positive funding → < 1, negative → > 1).
+  - `rangeWidthPct` — `(rangeHigh - rangeLow) / markPrice`. Lets the
+    Skill quickly screen "this grid is too wide for the budget" without
+    recomputing.
+- **`expected fills/day < 1` warning** — when realized vol is too low
+  for the configured range, the grid would sit idle and pay funding
+  for nothing. The warning suggests a tighter range (≈ ±2σ daily of
+  mark) or waiting for higher vol. See `pre-execution check #5` below.
+- **REFUSE-prefix abort rule** — explicit pre-execution guard that
+  any `plan.warnings` entry starting with `REFUSE:` is a hard stop;
+  the agent must not place orders. See `pre-execution check #3` below.
+- **planHash unchanged for the same input** — the new output fields
+  are derived from existing inputs, so v1.2.2 produces the same
+  `planHash` as v1.2.1 for identical input bytes. No migration needed.
+
+37 self-tests (was 33 in v1.2.1).
 
 ## What's new in v1.2.1
 
@@ -515,7 +539,17 @@ context.
 1. Dry-run flag off (user explicitly went live this session).
 2. The `GridPlan` was produced by `hyperliquid-aigrid plan` in this session — never
    hand-constructed.
-3. If `plan.warnings` contains a stop-loss warning (e.g. "stop-loss would
+3. **REFUSE-prefix warnings are a hard stop.** If any element of
+   `plan.warnings` starts with the literal string `REFUSE:`, the agent
+   MUST abort immediately. Do not call `hyperliquid-plugin order`. Quote
+   the warning verbatim to the user and ask them to fix the input
+   (typically: refresh the mark price and re-pick a range that contains
+   it). The most common trigger is a stale `rangeLow`/`rangeHigh` no
+   longer covering the current mark — executing such a plan would open
+   a one-sided losing position. There are no overrides; if the user
+   insists, they must re-run `hyperliquid-aigrid plan` with a corrected
+   range.
+4. If `plan.warnings` contains a stop-loss warning (e.g. "stop-loss would
    allow loss of X% > 30% cap"), the agent must:
    - Quote the warning to the user verbatim — do not paraphrase away
      the number.
@@ -524,7 +558,13 @@ context.
      with that'** to continue, or **'safer'** to rebuild with lower
      leverage or a tighter range."
    - Only proceed after the user explicitly accepts the risk.
-4. Present a **final one-line confirmation** and wait for a clear "yes":
+5. If `plan.warnings` contains an `expected fills/day < 1` warning
+   (added in v1.2.2), surface it. The grid would sit idle at current
+   volatility and pay funding for nothing. Ask the user whether they
+   want to (a) tighten the range as suggested in the warning, (b)
+   wait for a higher-vol session, or (c) proceed anyway (e.g. if they
+   genuinely want a passive limit-ladder rather than an active grid).
+6. Present a **final one-line confirmation** and wait for a clear "yes":
    > Opening {gridCount} {coin}-PERP limit orders, total ${totalNotional}
    > at {leverage}x, stop-loss at {stopLossTriggerPrice}. Confirm?
 
