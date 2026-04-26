@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.2"
+version: "1.2.3"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,35 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.3
+
+- **Notional-aware `quickstart` range** — previously `quickstart`
+  recommended the same ±4-7% range regardless of account size, which
+  was a disaster for small accounts: 4 forced rungs spread across 4-7%
+  meant ~1% gaps between rungs, while hourly vol is ~0.3% — so the
+  grid would sit inactive for hours waiting for an outlier move.
+  v1.2.3 picks the **tighter** of:
+  - **natural geometry** — `(rungs - 1) × σ_hourly × profileGap`, where
+    `rungs = clamp(floor(notional × lev / minOrder), 4, 50)`. Each gap
+    ≈ one hourly σ, so the grid actually trades on ordinary wiggles.
+  - **vol envelope** — the original `k × σ_daily × √7 × profileWidth`,
+    kept as an upper bound so big accounts don't blow out to ±15% ranges.
+- Real-world impact at σ_d=1.35% (BTC calm day):
+
+  | Account | Pre-1.2.3 | Post-1.2.3 | Source |
+  |---|---|---|---|
+  | $24 | ±4.4% | **±0.41%** | natural — 4 rungs |
+  | $100 | ±4.4% | **±2.61%** | natural — 20 rungs |
+  | $5000 | ±4.4% | ±4.36% | vol envelope (unchanged) |
+
+- **`tiny notional` warning** in `quickstart` output when
+  `notional × leverage < MIN_GRID_COUNT × minOrder` — the rationale
+  shows the exact bump needed to restore full 4-rung concentrated
+  coverage instead of falling back to uniform sizing.
+- 41 self-tests (was 37 in v1.2.2).
+- **`plan()` semantics unchanged.** Only `quickstart()` was modified.
+  Users who pass explicit `(rangeLow, rangeHigh)` see no change.
 
 ## What's new in v1.2.2
 
