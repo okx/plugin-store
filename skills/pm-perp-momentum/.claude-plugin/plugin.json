@@ -1,0 +1,19 @@
+{
+  "name": "pm-perp-momentum",
+  "description": "Polymarket-to-Hyperliquid momentum strategy for Onchain OS.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Taylan Bal",
+    "email": "midasbal50@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "strategy",
+    "polymarket",
+    "hyperliquid",
+    "momentum",
+    "trading"
+  ],
+  "homepage": "https://github.com/midasbal/pm-perp-momentum",
+  "repository": "https://github.com/midasbal/pm-perp-momentum"
+}

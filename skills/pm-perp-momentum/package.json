@@ -1,0 +1,33 @@
+{
+  "name": "pm-perp-momentum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Polymarket to Hyperliquid signal propagation strategy core",
+  "type": "module",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "submission:check": "node scripts/submission-check.mjs",
+    "submission:check:strict": "node scripts/submission-check.mjs --strict",
+    "submission:bundle": "node scripts/prepare-release.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.15.17",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

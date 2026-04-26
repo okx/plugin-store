@@ -1,0 +1,31 @@
+schema_version: 1
+name: pm-perp-momentum
+version: "0.1.0"
+description: "Polymarket-to-Hyperliquid momentum strategy for Onchain OS."
+author:
+  name: "Taylan Bal"
+  github: "midasbal"
+  email: "midasbal50@gmail.com"
+license: MIT
+category: strategy
+tags:
+  - polymarket
+  - hyperliquid
+  - momentum
+  - trading-strategy
+  - automation
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^1.0.0"
+  - name: hyperliquid-plugin
+    version: "^1.0.0"
+
+risk_level: advanced
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - gamma-api.polymarket.com
