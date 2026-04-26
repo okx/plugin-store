@@ -1,7 +1,7 @@
 ---
 name: pm-5m-momentum-sniper
 description: "Momentum-driven 5-minute crypto prediction sniper for Polymarket with auto direction signal and continuous session loop"
-version: "1.0.0"
+version: "1.1.0"
 author: "awan"
 tags:
   - polymarket
@@ -257,10 +257,19 @@ The signal engine provides the direction. The SKILL.md then combines it with Pol
    → Run: polymarket-plugin get-market --market-id <active_market_id>
    → Read the token price for the signal direction
 
-4. Apply odds filter:
+4. Apply price band filter:
+   - Token price must be between 0.30 and 0.65 (skip one-sided markets)
+
+5. Apply odds filter:
+   - confidence >= 0.4 AND token price <= 0.52 → TRADE
    - confidence >= 0.5 AND token price <= 0.58 → TRADE
    - confidence >= 0.7 AND token price <= 0.62 → TRADE (strong signal gets relaxed threshold)
    - Otherwise → SKIP (odds too expensive for the signal strength)
+
+6. Place order with limit price protection:
+   - Limit price = token_price + 0.05 slippage, capped at 0.65
+   - Use `--price <limit>` flag to prevent fills above the cap
+   - This prevents buying at 0.97 when the market moves between signal and execution
 ```
 
 This two-layer filter means a trade only happens when BOTH the technical signal AND the market odds are favorable.
@@ -343,7 +352,7 @@ Round N:
 │       "📊 Round N | Signal: UP (conf 72%) | RSI 62 | EMA +12bps | Price: 0.52 | Stake: $7.50 (half-kelly)"
 │       "Confirm? (yes/no/stop)"
 │     → On "yes":
-│       polymarket-plugin buy --market-id <id> --outcome up --amount <kelly_stake> --strategy-id pm-5m-momentum-sniper --confirm
+│       polymarket-plugin buy --market-id <id> --outcome up --amount <kelly_stake> --price <limit_price> --order-type FOK --round-up --strategy-id pm-5m-momentum-sniper --confirm
 │     → On "no": skip this round
 │     → On "stop": end session
 │
@@ -423,11 +432,13 @@ These rules are MANDATORY. Never bypass them.
 1. **Per-round cap**: Never exceed the user's configured stake per round
 2. **Session budget**: Track cumulative spend. Stop when budget is exhausted
 3. **Consecutive loss pause**: After N consecutive losses (default 3), skip one round automatically. Print "⚠️ Cooling down — 3 consecutive losses. Skipping one round."
-4. **Odds ceiling**: Never buy an outcome priced above 0.62, regardless of signal strength
-5. **No chasing**: After a loss, do NOT increase stake. Keep it constant
-6. **User confirmation**: Every trade requires explicit user confirmation before execution. Never place a trade without the user saying "yes" or equivalent
-7. **Strategy attribution**: Always include `--strategy-id pm-5m-momentum-sniper` on every buy and sell command
-8. **Daily loss limit**: If cumulative session losses reach 20% of the initial session budget, end the session automatically. Print "🛑 Daily loss limit reached. Session ended to protect capital."
+4. **Odds ceiling**: Never buy an outcome priced above 0.65, regardless of signal strength. Use `--price` limit on all buy orders
+5. **Price band**: Skip markets where token price is below 0.30 or above 0.65 — these are already decided
+6. **No chasing**: After a loss, do NOT increase stake. Keep it constant
+7. **User confirmation**: Every trade requires explicit user confirmation before execution. Never place a trade without the user saying "yes" or equivalent
+8. **Strategy attribution**: Always include `--strategy-id pm-5m-momentum-sniper` on every buy and sell command
+9. **Daily loss limit**: If cumulative session losses reach 20% of the initial session budget, end the session automatically. Print "🛑 Daily loss limit reached. Session ended to protect capital."
+10. **Time window**: Only enter trades when 90-270 seconds remain before settlement. Avoid the volatile edges near open and close
 
 ### Mid-Round Early Exit (Stop-Loss)
 
