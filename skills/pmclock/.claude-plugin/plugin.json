@@ -1,0 +1,12 @@
+{
+  "name": "pmclock",
+  "description": "5-minute crypto Up/Down arbitrage scanner for Polymarket. Compares CEX-implied probability vs PM ask, deploys risk-bounded buys via polymarket-plugin when edge >= 1.5%.",
+  "version": "1.0.0",
+  "author": {
+    "name": "dddd86971-cloud"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/dddd86971-cloud/pmclock",
+  "repository": "https://github.com/dddd86971-cloud/pmclock",
+  "keywords": ["polymarket", "prediction-market", "arbitrage", "5min", "latency-arb", "crypto", "automated-trading", "passive-income", "agentic-wallet", "strategy"]
+}

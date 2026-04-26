@@ -1,0 +1,51 @@
+schema_version: 1
+name: pmclock
+version: "1.0.0"
+description: "5-minute crypto Up/Down arbitrage scanner for Polymarket. Compares CEX-implied probability vs PM ask, deploys risk-bounded buys via polymarket-plugin when edge >= 1.5%."
+author:
+  name: "dddd86971-cloud"
+  github: "dddd86971-cloud"
+license: MIT
+category: strategy
+type: community-developer
+github_link: "https://github.com/dddd86971-cloud/pmclock"
+tags:
+  - polymarket
+  - prediction-market
+  - arbitrage
+  - 5min
+  - latency-arb
+  - crypto
+  - automated-trading
+  - passive-income
+  - agentic-wallet
+  - strategy
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.4.10"
+
+risk_level: advanced
+supported_venues:
+  - polymarket
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: typescript
+  source_repo: "dddd86971-cloud/pmclock"
+  source_commit: "01226c38aa94f910a033b2a130b4b5fc7f30a55b"
+  source_dir: "."
+  binary_name: "pmclock"
+  main: "dist/index.js"
+
+api_calls:
+  # Read-only public endpoints. The agent fetches CEX spot price + recent
+  # realized vol from Binance public ticker (no auth needed) and current
+  # 5-minute Up/Down market state from Polymarket's read-only data API.
+  # ALL write operations (buy / sell / cancel / redeem) flow through
+  # polymarket-plugin (Agentic Wallet, no key handling here).
+  - "https://api.binance.com"
+  - "https://gamma-api.polymarket.com"
