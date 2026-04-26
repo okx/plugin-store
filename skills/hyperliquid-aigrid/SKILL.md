@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.4"
+version: "1.2.5"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,34 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.5
+
+- **Two new fine-grained user commands** documented in SKILL.md:
+  - **`grid-cancel-rung`** — cancel ONE specific rung from an active
+    grid, leaving the others intact. Resolves natural-language
+    references like "撤掉最下面那个 buy" / "cancel the $77,608 rung" /
+    "drop the closest sell" to the right oid via a documented
+    disambiguation table. If ambiguous, lists candidates and asks.
+  - **`grid-roll`** — atomically re-center an active grid around the
+    current mark. Cancels old rungs, recomputes range from current
+    markPrice + fresh candles (using v1.2.3's notional-aware
+    geometry), places new rungs. Existing position is preserved by
+    default; user can opt to flatten first ("roll + flatten").
+- **`grid-roll` safety rules** — refuses if the existing position
+  would be liquidated by the new range, or if any old rungs failed
+  to cancel before new ones are placed. Never lets state get
+  inconsistent (no double-deployment, no orphaned rungs).
+- **No binary changes.** v1.2.5 is a Skill-orchestration layer release
+  — `plan()` / `quickstart()` / `runBacktest()` / `runOptimize()` are
+  byte-identical to v1.2.4. Documentation-only.
+- 45 self-tests (unchanged from v1.2.4).
+
+**Why these matter:** before v1.2.5, users who wanted to adjust an
+active grid had to manually orchestrate `grid-close` → `grid-plan` →
+`grid-open` (three commands, three confirmations, error-prone). The
+new commands make "撤一根" and "整个挪" first-class operations with
+one confirmation each.
 
 ## What's new in v1.2.4
 
@@ -731,6 +759,143 @@ Cancel all open grid orders and optionally flatten the position.
    Warn the user briefly that a market-order flatten on a large
    leveraged position can have meaningful slippage.
 3. Confirm completion and report final realized PnL.
+
+### grid-cancel-rung
+
+Cancel one specific rung from an active grid, leaving the others intact.
+
+**When to use:** User asks to cancel a specific rung — e.g. "撤掉最下面那个 buy",
+"cancel the $77,608 rung", "drop the bottom buy", "take off the top sell",
+"cancel my buy at 77.6k". Use this instead of `grid-close` when the user
+wants surgical removal rather than full teardown.
+
+**Disambiguation rules (resolve the user's natural-language reference to one oid):**
+
+The Skill must resolve which rung to cancel from the user's words. Run
+`hyperliquid-plugin orders` (filtered to the active hyperliquid-aigrid grid
+via `--strategy-id` tag), then map:
+
+| User says | Pick |
+|---|---|
+| "lowest" / "bottom" / "最下面" | order with smallest `limitPx` |
+| "highest" / "top" / "最上面" | order with largest `limitPx` |
+| "closest to mid" / "最近的" | order with smallest abs(`limitPx` − markPrice) |
+| "furthest" / "最远的" | order with largest abs(`limitPx` − markPrice) |
+| "the buy at 77.6k" / explicit price | order whose `limitPx` is closest to the named price (within 1% tolerance) |
+| "the sell at $X" | sell-side order whose `limitPx` is closest to X |
+| Just "the buy" / "the sell" with one match | the only matching order; if multiple, ASK |
+
+If the description is ambiguous (e.g. "the buy" but multiple buys are
+open), enumerate the candidates with their oid + price and let the user
+pick — never guess.
+
+**Execution:**
+
+1. Fetch open orders via `hyperliquid-plugin orders --coin <coin>`.
+2. Filter to hyperliquid-aigrid-tagged ones (`--strategy-id` match if the
+   basic plugin supports the filter; otherwise filter by recent placement
+   timestamp + `cloid` heuristics from `grid-resume`).
+3. Resolve the user's natural-language reference to exactly one `oid`
+   (per the table above). If ambiguous, present candidates and stop.
+4. Quote the resolution back to the user verbatim and ask for confirmation:
+   > "Cancelling **{side} @ ${price}** (oid {oid}). The other 3 rungs stay
+   > active. Confirm?"
+5. On confirmation, run:
+   ```
+   hyperliquid-plugin cancel --coin <coin> --order-id <oid> --confirm
+   ```
+6. After cancel, optionally fetch the remaining open orders so the user
+   sees the updated grid state.
+
+**Side effects to remember:**
+
+- The original `GridPlan`'s `gridCount` no longer matches reality. The
+  Skill should NOT auto-rebalance the remaining rungs — that would change
+  geometry mid-flight and confuse the audit trail. If the user wants
+  to also resize / re-space, recommend `grid-roll` instead.
+- Per-rung cancellation does NOT close any already-filled position. If
+  the cancelled rung had already filled (creating a position), use
+  `grid-close` to flatten or place an explicit reverse market order.
+- The cancelled rung is gone — there's no "uncancel". User can place a
+  fresh single rung via `hyperliquid-plugin order` if they change their
+  mind, but it won't be tied to the original `planHash`.
+
+### grid-roll
+
+Re-center an active grid around the current mark price. Cancels the
+existing rungs, recomputes range/levels from current `markPrice` + recent
+vol, and places fresh orders. Position (if any) is preserved unless the
+user opts to flatten first.
+
+**When to use:** User asks to "shift the grid", "follow the price",
+"roll up/down", "tighten the grid", "rebuild around current price",
+"按当前价重挂", "网格往上挪". Use this when the user wants the grid to
+keep working but with refreshed parameters — typically because:
+- Mark drifted to the edge of the original range,
+- Vol regime changed (BTC went from 1% σ_d → 3% σ_d → tighter is fine),
+- User picked too wide / too tight initially and wants a do-over.
+
+**Execution:**
+
+1. **Pre-flight.** Fetch current `markPrice`, fresh candles, and
+   currently-open hyperliquid-aigrid orders. Compute the existing position
+   (if any) so the user knows what they're carrying through the roll.
+
+2. **Surface the proposed roll** *before* cancelling anything:
+   - Run `grid-quickstart` with current `markPrice` + fresh candles +
+     same `totalNotionalUsd` + same `riskProfile` as the existing grid
+     (so the new range respects the v1.2.3 notional-aware geometry).
+   - Show the user a side-by-side: current rungs vs. proposed new rungs,
+     existing position (if any), expected fee per roundtrip, planHash.
+   - Ask for confirmation: "Roll the grid to **${newLow}–${newHigh}**?
+     Your **{coin} {long/short} {size}** position stays open. Reply
+     'roll' to proceed, 'roll + flatten' to also close the position
+     first, or 'cancel' to abort."
+
+3. **Cancel old rungs.** On "roll" / "roll + flatten":
+   - If "roll + flatten": call `grid-close` first (cancel + reduce-only
+     market exit). Confirm flat before continuing.
+   - Otherwise: call `hyperliquid-plugin cancel --coin <coin>`
+     (or tag-scoped equivalent) to remove all hyperliquid-aigrid rungs.
+   - Verify all hyperliquid-aigrid-tagged orders are gone before placing
+     new ones. **Never proceed to step 4 if any old rungs remain** —
+     that risks double-deployment and accidental fills against stale
+     prices.
+
+4. **Place new rungs.** Run `grid-open` on the new `GridPlan` from
+   step 2. Each new order carries `--strategy-id hyperliquid-aigrid` and
+   the new `planHash[:6]` for attribution.
+
+5. **Report.** Final state: new range, new rung count, new planHash,
+   existing position (if not flattened) + its breakeven distance to
+   the new range edges.
+
+**Safety rules — abort the roll if any of these:**
+
+- **Mark price out of new range** (per `grid-plan`'s `REFUSE:` warning).
+  This shouldn't happen if you used `grid-quickstart` in step 2, but
+  guard against it anyway.
+- **Existing position would be liquidated by the new range**: compute
+  the new stop-loss trigger; if the existing position's entry is on the
+  wrong side of it, refuse with: "Your existing position would breach
+  the new grid's stop-loss. Either widen the new range, or flatten
+  first with 'roll + flatten'."
+- **Open orders failed to cancel** (any remaining hyperliquid-aigrid-tagged
+  order after step 3): abort. Do NOT place new rungs on top of stale
+  ones.
+- **Net position size > new grid's `totalNotional × leverage`**: would
+  put the account near margin liquidation. Refuse and ask the user to
+  reduce position first.
+
+**Why `grid-roll` is one command, not three:**
+
+Without `grid-roll`, users must orchestrate `grid-close` → `grid-plan`
+→ `grid-open` themselves, with three confirmation prompts. The compound
+flow is error-prone (e.g. cancelling old orders but failing to place
+new ones leaves them flat). `grid-roll` makes the transition atomic
+from the user's perspective: one decision, one confirmation, one
+result. The Skill internally enforces the safety rules above so the
+state never gets inconsistent.
 
 ## Examples
 
