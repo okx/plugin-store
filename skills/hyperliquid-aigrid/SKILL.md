@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.5"
+version: "1.2.6"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,31 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.6
+
+- **`explain` finally surfaces all the v1.2.2 / v1.2.4 fee + notional
+  fields in human form** — pre-v1.2.6 the binary computed them but
+  `explain` showed only the basic plan; users had to read raw JSON.
+  New sections in `explain`:
+  - `Notional split` — buy/sell aggregate + ratio + funding-tilt label
+  - `Fee economics` — rung gap with safety margin (× break-even),
+    expected fee per RT, net edge per RT, estimated daily net
+- **`runOptimize` now ranks by net (post-fee) score, not gross.**
+  Pre-v1.2.6 a tight grid that grossed $2 but burned $1.50 in fees
+  could top the leaderboard. v1.2.6 uses
+  `realizedPnlNetUsd / max(maxDD, 1)` so fee drag is part of the
+  ranking, not papered over.
+- **`BacktestResult.feesPaidUsd` + `realizedPnlNetUsd`** added —
+  every simulated fill accumulates a maker fee, reported alongside
+  the original (now-explicitly-gross) `realizedPnlUsd`.
+- **`OptimizeCandidate` exposes the same breakdown** — users can
+  audit "why does candidate A rank lower than B if A has higher
+  gross?" right from the JSON.
+- 49 self-tests (was 45 in v1.2.5).
+
+`computeGridPlan()` and `quickstart()` semantics unchanged.
+`planHash` byte-stable for the same input across v1.2.5 → v1.2.6.
 
 ## What's new in v1.2.5
 
