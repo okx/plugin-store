@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.0"
+version: "1.2.1"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,38 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.1
+
+- **Small-account auto-adapt.** When `totalNotionalUsd × leverage` is too
+  small for concentrated-liquidity sizing to keep every rung above
+  `marketMeta.minOrderSizeUsd`, the engine now (a) iteratively reduces
+  `gridCount` toward `MIN_GRID_COUNT`, then (b) falls back to UNIFORM
+  per-rung sizing if even the minimum count can't satisfy the order-size
+  floor. Two clear warnings are emitted so the user knows what happened
+  and how to restore concentrated geometry (typically: bump notional to
+  ≥ $100 or leverage to ≥ 2×). Existing behavior at large notionals is
+  unchanged.
+
+### Small-account guidance
+
+Hyperliquid's per-order minimum is typically **$10**. With v1.2's
+concentrated-liquidity sizing, edge rungs are ~2-5% of average rung weight,
+so a 25-rung grid at $50 notional × 1× leverage produces edge rungs around
+$0.05 — below min and rejected on placement.
+
+| Account size | What you get | Behavior |
+|---|---|---|
+| **≥ $300 notional × 1×** | Full concentrated geometry, ~20-25 rungs | optimal |
+| **$100-$300 × 1×** | gridCount auto-reduced to 6-12 rungs | concentrated, slightly less density |
+| **$50-$100 × 1×** | gridCount → 4-6 rungs, **uniform sizing fallback** | each rung ~$10-20, every order placeable |
+| **< $50 × 1×** | gridCount → 4 rungs uniform; may still warn if rung < $10 | use 2× leverage to recover |
+| **Any size with 2-3× leverage** | Per-rung effective notional × leverage clears $10 more easily | recommended for small accounts |
+
+**Recommendation for $50 accounts:** use `leverage: 2` — each rung's effective
+notional is 2× the sizeUsd, so 4 rungs × $12.5 each = $25 effective per rung,
+well above $10 minimum. Liquidation buffer at 2× cross is 25% (BTC needs to
+move 25% in adverse direction; weekly vol is 4-5% — extremely safe).
 
 ## What's new in v1.2.0
 
