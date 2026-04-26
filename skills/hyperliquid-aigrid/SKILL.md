@@ -232,18 +232,27 @@ concentrated-liquidity sizing, edge rungs are ~2-5% of average rung weight,
 so a 25-rung grid at $50 notional × 1× leverage produces edge rungs around
 $0.05 — below min and rejected on placement.
 
-| Account size | What you get | Behavior |
-|---|---|---|
-| **≥ $300 notional × 1×** | Full concentrated geometry, ~20-25 rungs | optimal |
-| **$100-$300 × 1×** | gridCount auto-reduced to 6-12 rungs | concentrated, slightly less density |
-| **$50-$100 × 1×** | gridCount → 4-6 rungs, **uniform sizing fallback** | each rung ~$10-20, every order placeable |
-| **< $50 × 1×** | gridCount → 4 rungs uniform; may still warn if rung < $10 | use 2× leverage to recover |
-| **Any size with 2-3× leverage** | Per-rung effective notional × leverage clears $10 more easily | recommended for small accounts |
+Real concentration thresholds (assuming 5% wide range, 1.7% daily realized
+vol — typical BTC). The Gaussian decay used in concentrated-liquidity
+sizing means edge rungs are ~1.6% of center weight, so the "every rung
+≥ $10" floor needs surprisingly large notional × leverage:
 
-**Recommendation for $50 accounts:** use `leverage: 2` — each rung's effective
-notional is 2× the sizeUsd, so 4 rungs × $12.5 each = $25 effective per rung,
-well above $10 minimum. Liquidation buffer at 2× cross is 25% (BTC needs to
-move 25% in adverse direction; weekly vol is 4-5% — extremely safe).
+| Account size × leverage | What user gets | Behavior |
+|---|---|---|
+| **≥ $1,500 × 1×** OR **≥ $300 × 5×** | Full concentrated, 20-25 rungs | optimal — center rungs 5-10× edge rungs |
+| $300-$1,500 × 1× | gridCount auto-reduced to 4 rungs, **then fallback to uniform** | every rung placeable, just no concentration |
+| $50-$300 × 1× | Same — 4 rungs uniform (each $12-$75 depending on size) | every order valid, no concentration alpha |
+| < $50 × 1× | 4 rungs uniform; may still warn if individual rung < $10 | use ≥ 2× leverage |
+
+**Recommendation for typical $30-$200 accounts:** use `leverage: 2` to 3×
+— this multiplies the per-rung effective notional, more easily clearing
+$10 minimum *and* enabling concentrated geometry on smaller accounts.
+At 2× cross leverage, liquidation buffer is 25% (BTC weekly vol 4-5% —
+liquidation is extremely improbable).
+
+**Recommendation for $1,500+ accounts:** stay at 1× for zero-liquidation
+safety; the binary will deliver the full 20-25 rung concentrated grid
+that captures the most fills per dollar deployed.
 
 ## What's new in v1.2.0
 
