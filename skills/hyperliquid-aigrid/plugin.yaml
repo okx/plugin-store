@@ -1,6 +1,6 @@
 schema_version: 1
 name: hyperliquid-aigrid
-version: "1.2.3"
+version: "1.2.4"
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
 author:
   name: "dddd86971-cloud"
@@ -36,7 +36,7 @@ components:
 build:
   lang: typescript
   source_repo: "dddd86971-cloud/hyperliquid-aigrid"
-  source_commit: "dd30dec42e7f48643a3eaec57bc18ed250fb3bde"
+  source_commit: "098a21aaf7d3ffee16a806036e085fac04e91eb7"
   source_dir: "."
   binary_name: "hyperliquid-aigrid"
   main: "dist/index.js"

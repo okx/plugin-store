@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-aigrid
 description: "AI-driven Hyperliquid grids. Deterministic binary, funding-aware sizing (±20% tilt), concentrated liquidity, 75-combo parameter optimizer, 30-day backtest. One sentence in, risk-capped plan out."
-version: "1.2.3"
+version: "1.2.4"
 author: "dddd86971-cloud"
 tags:
   - hyperliquid
@@ -212,6 +212,36 @@ Under no circumstances should the agent call Hyperliquid for **writes** via
 HTTP / RPC / any non-plugin path — every order must go through
 `hyperliquid-plugin` so it goes through the Agentic Wallet TEE and carries
 `--strategy-id hyperliquid-aigrid` for leaderboard attribution.
+
+## What's new in v1.2.4
+
+- **Fee-aware plan output** — discovered during live $24-account testing
+  on PR #360: maker fills carry a 1.5 bps fee on Hyperliquid tier-0,
+  even with `crossed: false`. Pre-v1.2.4 the plan reported
+  `expectedFillsPerDay` but never what each fill *netted* after fees.
+  Four new fields:
+  - `avgRungGapPct` — gap between adjacent same-side rungs.
+  - `expectedFeePerRoundtripUsd` — fee for one full rung roundtrip
+    (buy + sell, both at maker rate).
+  - `breakEvenGapPct` — `2 × feeRateMaker`. Below this gap fees swallow
+    gross profit. For HL tier-0 = 3 bps.
+  - `feeAwareNetEdgePerRoundtripUsd` — what each completed roundtrip
+    actually puts in your pocket.
+- **`MarketMeta.feeRateMaker` / `feeRateTaker`** (optional). Defaults
+  match HL tier-0 (1.5 / 4.5 bps); override for VIP tiers or fee-free
+  venues.
+- **Fee-erosion warning** when `avgRungGapPct < 2 × breakEvenGapPct`
+  (fees eat ≥ 50% of gross profit per roundtrip).
+- 45 self-tests (was 41 in v1.2.3).
+- `plan()` semantics, `planHash`, and `levels[]` byte-identical to
+  v1.2.3 for the same input. Purely additive output extension.
+
+**Real-world example** from the v1.2.3 live test:
+$24 grid, gap 0.275%, maker 1.5 bps:
+- gross/RT = $0.034
+- fee/RT = $0.0036 (10.6% of gross)
+- net/RT = $0.0294
+- breakEven = 0.030% (gap is 9× breakEven — comfortable)
 
 ## What's new in v1.2.3
 
