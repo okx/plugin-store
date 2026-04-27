@@ -1,0 +1,20 @@
+{
+  "name": "otto-mispricing-assistant",
+  "description": "Otto Mispricing Assistant — Scan near-resolution Polymarket markets where implied probability diverges from Otto's news + KOL + funding signals, then trade a single market only after explicit user confirmation. Dry-run by default.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Otto AI"
+  },
+  "homepage": "https://useotto.xyz",
+  "repository": "https://github.com/useOttoAI/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "prediction-markets",
+    "polymarket",
+    "polygon",
+    "onchainos",
+    "trading-strategy",
+    "mispricing",
+    "news-signals"
+  ]
+}
