@@ -1,0 +1,21 @@
+{
+  "name": "otto-alpha-sniper",
+  "description": "Otto Alpha Sniper — Hyperliquid perp execution driven by live crypto-alpha signals (trending altcoins, funding-rate skews, KOL-sentiment). Natural-language intent in, one-click perp with TP/SL out. Dry-run by default.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Otto AI"
+  },
+  "homepage": "https://useotto.xyz",
+  "repository": "https://github.com/useOttoAI/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "perpetuals",
+    "hyperliquid",
+    "onchainos",
+    "trading-strategy",
+    "alpha-signals",
+    "kol-sentiment",
+    "funding-rates",
+    "trending"
+  ]
+}
