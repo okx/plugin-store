@@ -158,37 +158,42 @@ fi
 
 When a user signals they are **new or just installed** this plugin — e.g. "I just installed polymarket", "how do I get started", "what can I do with this", "help me set up", "I'm new to polymarket" — **do not wait for them to ask specific questions.** Proactively walk them through the Quickstart in order, one step at a time, waiting for confirmation before proceeding to the next:
 
-1. **Check wallet** — run `onchainos wallet addresses --chain 137`. If no address or if the binary returns an error mentioning "session", "login required", "unauthenticated", or "unauthorized" — the session has expired. Follow the **Session Recovery** steps below before proceeding.
+1. **Check wallet** — run `onchainos wallet addresses --chain 137`. If no address or session error, direct them to connect via `onchainos wallet login` (see **Session Recovery** below). Also verify `onchainos wallet sign-message --help` works — if missing, run `onchainos upgrade` and re-verify. Do not proceed to trading or suggest workarounds (MetaMask, private key export, manual curl signing) until sign-message is confirmed working.
 2. **Check access** — run `polymarket-plugin check-access`. If `accessible: false`, stop and show the warning. Do not proceed to funding.
-3. **Choose trading mode** — explain the two modes and ask which they prefer:
+3. **Check for existing proxy** — run `polymarket-plugin quickstart`. If `wallet.proxy` is non-null in the output, the user already has a proxy wallet (possibly from a previous setup on another machine). Skip `setup-proxy` and go directly to step 5. Do NOT run `setup-proxy` if a proxy already exists — it is idempotent but wastes POL.
+4. **Choose trading mode** — explain the two modes and ask which they prefer:
    - **EOA mode** (default): trade directly from the onchainos wallet; each buy requires a USDC.e `approve` tx (POL gas, typically < $0.01)
    - **POLY_PROXY mode** (recommended): deploy a proxy wallet once via `polymarket setup-proxy` (one-time ~$0.01 POL), then trade without any gas. USDC.e must be deposited into the proxy via `polymarket-plugin deposit`.
-4. **Check balance** — run `polymarket-plugin balance`. Shows POL and USDC.e for both EOA and proxy wallet (if set up). If insufficient, explain bridging options (OKX Web3 bridge or CEX withdrawal to Polygon). Verify the `usdc_e_contract` field matches `0x2791...a84174` before bridging.
-5. **Find a market** — run `polymarket-plugin list-markets` and offer to help them find something interesting. Ask what topics they care about.
-6. **Place a trade** — once they pick a market, guide them through `buy` or `sell` with explicit confirmation of market, outcome, and amount before executing.
+5. **Check balance** — run `polymarket-plugin balance`. Shows POL and USDC.e for both EOA and proxy wallet (if set up). If insufficient, explain bridging options (OKX Web3 bridge or CEX withdrawal to Polygon). Verify the `usdc_e_contract` field matches `0x2791...a84174` before bridging.
+6. **Find a market** — run `polymarket-plugin list-markets` and offer to help them find something interesting. Ask what topics they care about.
+7. **Place a trade** — once they pick a market, guide them through `buy` or `sell` with explicit confirmation of market, outcome, and amount before executing.
 
 Do not dump all steps at once. Guide conversationally — confirm each step before moving on.
 
 ---
 
-## Session Recovery
+## Session Recovery (onchainos session expired)
 
-If any command fails with a message containing "session has expired", "not connected", "login required", or "unauthenticated", the onchainos session needs to be renewed:
+**Trigger**: any plugin command fails with "session has expired", "not logged in", "Could not determine wallet address", or similar onchainos auth error.
 
-**Step 1** — Re-login to onchainos (in a terminal or using `!` in this chat):
-```bash
-! onchainos wallet login your@email.com
-```
-Complete the OTP prompt in the terminal, then confirm login succeeded.
+**Root cause**: onchainos sessions expire after inactivity. Polymarket cached credentials (`~/.config/polymarket/creds.json`) become invalid once the underlying onchainos signing key can no longer be used.
 
-**Step 2** — Clear stale Polymarket credentials (cached credentials bound to the old session):
-```bash
-! rm -f ~/.config/polymarket-plugin/creds.json
-```
+**Recovery steps — tell the user exactly this:**
 
-**Step 3** — Retry the original command. New credentials will be derived automatically on the next `buy`, `sell`, or `cancel`.
+1. Re-authenticate onchainos. In Claude Code you can try running it directly in the chat:
+   ```
+   ! onchainos wallet login your@email.com
+   ```
+   If that command is interactive (requires OTP entry or browser), open a **separate terminal** window and run it there instead. Complete the login before continuing.
 
-> Note: the `!` prefix runs a command directly in the Claude Code terminal session, so the output is visible in this chat. Use it for interactive login flows.
+2. Clear stale Polymarket credentials so they are re-derived fresh:
+   ```
+   ! rm -f ~/.config/polymarket/creds.json
+   ```
+
+3. Retry the original command. The plugin will automatically re-derive CLOB API credentials using the new onchainos session.
+
+**Do not** suggest retrying the original command before completing both steps — re-login without clearing `creds.json` will still fail with "NOT AUTHORIZED" from the CLOB API.
 
 ---
 
@@ -223,7 +228,7 @@ Polymarket is a prediction market platform on Polygon where users trade outcome 
 - **Approval model (EOA)**: `buy` uses exact-amount USDC.e `approve(exchange, amount)`. `sell` uses `setApprovalForAll(exchange, true)` for CTF tokens (blanket ERC-1155 approval; same as Polymarket's web interface). No on-chain approvals needed in POLY_PROXY mode.
 
 **How it works:**
-1. On first trading command, API credentials are auto-derived from the onchainos wallet via Polymarket's CLOB API and cached at `~/.config/polymarket-plugin/creds.json`
+1. On first trading command, API credentials are auto-derived from the onchainos wallet via Polymarket's CLOB API and cached at `~/.config/polymarket/creds.json`
 2. Plugin signs EIP-712 Order structs via `onchainos sign-message --type eip712` and submits them off-chain to Polymarket's CLOB with L2 HMAC headers
 3. When orders are matched, Polymarket's operator settles on-chain via CTF Exchange (gasless for user)
 4. USDC.e flows from the onchainos wallet (buyer); conditional tokens flow from the onchainos wallet (seller)
@@ -388,6 +393,7 @@ Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`
 
 | Command | Auth | Description |
 |---------|------|-------------|
+| `quickstart` | No | Check wallet state and get a guided next-step command |
 | `check-access` | No | Verify region is not restricted |
 | `list-markets` | No | Browse active prediction markets |
 | `get-market` | No | Get market details and order book |
@@ -407,6 +413,47 @@ Shows both EOA and proxy wallet balances. EOA mode → check `eoa_wallet.usdc_e`
 | `withdraw` | Yes | Transfer USDC.e from proxy wallet back to EOA |
 | `switch-mode` | Yes | Switch default trading mode (eoa / proxy) |
 | `create-readonly-key` | Yes | Create a read-only Polymarket API key |
+
+---
+
+### `quickstart` — Check Status and Get a Guided Next Step
+
+**Trigger phrases:** get started with polymarket, just installed polymarket, how do I use polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, 怎么开始用 polymarket, 我要开始玩 polymarket
+
+```
+polymarket-plugin quickstart [--address <ADDRESS>]
+```
+
+**Auth required:** No
+
+**How it works:** In parallel, checks CLOB region access, reads EOA POL + USDC.e balances, reads proxy USDC.e balance (if `setup-proxy` has been run), and queries open positions on the maker wallet (proxy if initialized, else EOA). Computes a `status` and returns a ready-to-run `next_command`. Silently tolerates transient RPC failures (returns 0 balance + still emits guidance) — this command is a status probe, not a trading command.
+
+**Parameters:**
+- `--address <ADDRESS>` (optional) — Query a specific wallet instead of the connected onchainos wallet
+
+**Output fields:** `ok`, `about`, `wallet.eoa`, `wallet.proxy` (null if not set up), `accessible` (bool), `assets.eoa_pol`, `assets.eoa_usdc_e`, `assets.proxy_usdc_e` (only if proxy initialized), `positions` (summary array), `open_positions_count`, `status`, `suggestion`, `next_command`, `onboarding_steps` (optional array)
+
+**Status values:**
+
+| `status` | Meaning | Recommended next step |
+|----------|---------|-----------------------|
+| `restricted` | CLOB blocked this IP (US / OFAC) | Switch region, re-run |
+| `active` | Has open positions | `polymarket-plugin get-positions` |
+| `proxy_ready` | Proxy wallet funded ≥ $5 USDC.e | `polymarket-plugin list-markets` → `buy` (gasless) |
+| `needs_deposit` | Proxy set up but under-funded; EOA has ≥ $5 | `polymarket-plugin deposit --amount <N>` |
+| `needs_setup` | EOA has ≥ $5 but proxy not set up (default: recommend gasless) | `polymarket-plugin setup-proxy` |
+| `low_balance` | EOA has some USDC.e but below $5 minimum | Top up EOA, re-run |
+| `no_funds` | EOA has no USDC.e | Send USDC.e to EOA on Polygon, re-run |
+
+> Use `next_command` directly — it is already formatted with a reasonable deposit amount (90 % of EOA USDC.e, floored to cents, clamped to ≥ $5) where applicable.
+
+**Agent flow:** Run this first for any new/returning user before `buy` or `balance`. Relay `status` and `suggestion` to the user, then either execute `next_command` or let the user decide. For `restricted` / `low_balance` / `no_funds`, do not proceed with trading commands.
+
+**Example:**
+```bash
+polymarket-plugin quickstart
+# status: needs_setup → next_command: polymarket-plugin setup-proxy
+```
 
 ---
 
@@ -593,7 +640,7 @@ polymarket-plugin get-positions --address 0xAbCd...
 ### `buy` — Buy Outcome Shares
 
 ```
-polymarket-plugin buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--round-up]
+polymarket-plugin buy --market-id <id> --outcome <outcome> --amount <usdc> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--round-up] [--strategy-id <id>]
 ```
 
 > **Amount vs shares**: `buy` takes `--amount` in **USDC.e** (dollars you spend). `sell` takes `--shares` in **outcome tokens** (shares you hold). They are different units — a user saying "I want to sell $50" means sell enough shares to receive ~$50 USDC; you must first check their share balance via `get-positions` and convert using the current bid price.
@@ -613,6 +660,7 @@ polymarket-plugin buy --market-id <id> --outcome <outcome> --amount <usdc> [--pr
 | `--expires` | Unix timestamp (seconds, UTC) at which the order auto-cancels. Minimum 90 seconds in the future (CLOB enforces a "now + 1 min 30 s" security threshold). Automatically sets `order_type` to `GTD` (Good Till Date) — do not also pass `--order-type GTC`. Example: `--expires $(date -d '+1 hour' +%s)` | — |
 | `--mode` | Override trading mode for this order only: `eoa` or `proxy`. Does not change the stored default. | — |
 | `--token-id` | Skip market lookup — use a known token ID directly (from `get-series` or `get-market` output). `--market-id` is optional when this is provided. | — |
+| `--strategy-id` | Strategy ID for attribution reporting. When provided and non-empty, the plugin calls `onchainos wallet report-plugin-info` after successful order placement with order metadata (`wallet`, `proxyAddress`, `order_id`, `tx_hashes`, `market_id`, `side`, `amount`, `symbol`, `price`, `strategy_id`, `plugin_name`). `tx_hashes` is an array of on-chain settlement tx hashes — non-empty for FOK/immediate-fill orders, empty for resting GTC limits that haven't crossed yet. Omit or pass `""` to skip reporting. Failures are logged to stderr and do not affect the order result. | — |
 | `--confirm` | Confirm a previously gated action (reserved for future use) | false |
 
 **Auth required:** Yes — onchainos wallet; EIP-712 order signing via `onchainos sign-message --type eip712`
@@ -657,7 +705,7 @@ polymarket-plugin buy --market-id 0xabc... --outcome no --amount 100
 ### `sell` — Sell Outcome Shares
 
 ```
-polymarket-plugin sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--dry-run]
+polymarket-plugin sell --market-id <id> --outcome <outcome> --shares <amount> [--price <0-1>] [--order-type <GTC|FOK>] [--approve] [--dry-run] [--strategy-id <id>]
 ```
 
 **Flags:**
@@ -674,6 +722,7 @@ polymarket-plugin sell --market-id <id> --outcome <outcome> --shares <amount> [-
 | `--dry-run` | Simulate without submitting the order or triggering any on-chain approval. Prints a confirmation JSON and exits. Use to verify parameters before a real sell. | false |
 | `--mode` | Override trading mode for this order only: `eoa` or `proxy`. Does not change the stored default. | — |
 | `--token-id` | Skip market lookup — use a known token ID directly. `--market-id` is optional when this is provided. | — |
+| `--strategy-id` | Strategy ID for attribution reporting. When provided and non-empty, the plugin calls `onchainos wallet report-plugin-info` after successful order placement. Omit or pass `""` to skip reporting. Failures are logged to stderr and do not affect the order result. | — |
 | `--confirm` | Confirm a low-price market sell that was previously gated | false |
 
 **Auth required:** Yes — onchainos wallet; EIP-712 order signing via `onchainos sign-message --type eip712`
@@ -889,7 +938,7 @@ polymarket create-readonly-key
 **Key properties:**
 - Accepts all `GET` operations (read order book, positions, orders)
 - CLOB server rejects any write operations (order placement, cancellation, etc.)
-- **Not saved to `~/.config/polymarket-plugin/creds.json`** — printed once to stdout; store it securely
+- **Not saved to `~/.config/polymarket/creds.json`** — printed once to stdout; store it securely
 - Useful for monitoring pipelines, dashboards, or CI checks that need market data without trading access
 
 **Example:**
@@ -1099,14 +1148,14 @@ polymarket switch-mode --mode eoa
 **No manual credential setup required.** On the first trading command, the plugin:
 1. Resolves the onchainos wallet address via `onchainos wallet addresses --chain 137`
 2. Derives Polymarket API credentials for that address via the CLOB API (L1 ClobAuth signed by onchainos)
-3. Caches them at `~/.config/polymarket-plugin/creds.json` (0600 permissions) for all future calls
+3. Caches them at `~/.config/polymarket/creds.json` (0600 permissions) for all future calls
 
 The onchainos wallet address is the Polymarket trading identity. Credentials are automatically re-derived if the active wallet changes.
 
 **Credential rotation**: If `buy` or `sell` returns `"credentials are stale or invalid"`, the plugin automatically clears the cached credentials and prompts you to re-run — no manual action needed. To manually force re-derivation:
 
 ```bash
-rm ~/.config/polymarket-plugin/creds.json
+rm ~/.config/polymarket/creds.json
 ```
 
 **Override via environment variables** (optional — takes precedence over cached credentials):
@@ -1125,7 +1174,7 @@ export POLYMARKET_PASSPHRASE=<passphrase>
 | `POLYMARKET_SECRET` | Optional override | Base64url-encoded HMAC secret for L2 auth |
 | `POLYMARKET_PASSPHRASE` | Optional override | CLOB API passphrase |
 
-**Credential storage:** Credentials are cached at `~/.config/polymarket-plugin/creds.json` with `0600` permissions (owner read/write only). A warning is printed at startup if the file has looser permissions — run `chmod 600 ~/.config/polymarket-plugin/creds.json` to fix. The file remains in plaintext; avoid storing it on shared machines.
+**Credential storage:** Credentials are cached at `~/.config/polymarket/creds.json` with `0600` permissions (owner read/write only). A warning is printed at startup if the file has looser permissions — run `chmod 600 ~/.config/polymarket/creds.json` to fix. The file remains in plaintext; avoid storing it on shared machines.
 
 ---
 

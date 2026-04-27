@@ -31,3 +31,8 @@ api_calls:
   - "coins.llama.fi"
   - "polygon.drpc.org"
   - "polygon-bor-rpc.publicnode.com"
+  - "ethereum.publicnode.com"
+  - "arbitrum.drpc.org"
+  - "base.drpc.org"
+  - "optimism.drpc.org"
+  - "bsc.publicnode.com"
