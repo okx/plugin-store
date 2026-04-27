@@ -1,0 +1,27 @@
+schema_version: 1
+name: otto-mispricing-assistant
+version: "0.1.0"
+description: "Otto Mispricing Assistant — Scan near-resolution Polymarket markets where implied probability diverges from Otto's news + KOL + funding signals, then trade a single market only after explicit user confirmation. Dry-run by default."
+author:
+  name: "Otto AI"
+  github: "useOttoAI"
+license: MIT
+category: trading-strategy
+tags:
+  - prediction-markets
+  - polymarket
+  - polygon
+  - onchainos
+  - trading-strategy
+  - mispricing
+  - news-signals
+
+components:
+  skill:
+    dir: .
+
+api_calls:
+  - "signals.useotto.xyz"
+  - "gamma-api.polymarket.com"
+
+type: community-developer
