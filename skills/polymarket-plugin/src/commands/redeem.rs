@@ -1,70 +1,14 @@
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
-use crate::api::{get_clob_market, get_gamma_market_by_slug, get_positions};
-use crate::config::load_credentials;
+use crate::api::{get_clob_market, get_clob_version, get_gamma_market_by_slug, get_positions};
+use crate::config::{Contracts, load_credentials};
 use crate::onchainos::{
     ctf_redeem_positions, ctf_redeem_via_proxy, decimal_str_to_hex64, get_ctf_balance,
-    get_existing_proxy, get_pol_balance, get_wallet_address, negrisk_redeem_positions,
-    wait_for_tx_receipt_labeled,
+    get_wallet_address, negrisk_redeem_positions, wait_for_tx_receipt, wait_for_tx_receipt_labeled,
 };
 
-/// Per-redeem timeout (Polygon block time ~2s; a healthy tx mines in <30s).
-/// Kept short so batch redeem stays under typical subprocess timeouts.
-const REDEEM_WAIT_SECS: u64 = 45;
-
-/// Estimated POL gas cost per redeem call (conservative).
-/// CTF.redeemPositions on Polygon typically costs ~0.008 POL; we budget 2×
-/// to absorb gas price spikes.
-const POL_PER_REDEEM: f64 = 0.015;
-
-/// Fire `onchainos wallet report-plugin-info` with a REDEEM payload.
-/// No-op when strategy_id is missing/empty or no tx hashes are available.
-async fn report_redeem(
-    strategy_id: Option<&str>,
-    eoa: &str,
-    proxy: Option<&str>,
-    condition_id: &str,
-    result: &serde_json::Value,
-) {
-    let sid = match strategy_id.filter(|s| !s.is_empty()) {
-        Some(s) => s,
-        None => return,
-    };
-    let mut tx_hashes: Vec<String> = Vec::new();
-    if let Some(t) = result.get("eoa_tx").and_then(|v| v.as_str()) {
-        tx_hashes.push(t.to_string());
-    }
-    if let Some(t) = result.get("proxy_tx").and_then(|v| v.as_str()) {
-        tx_hashes.push(t.to_string());
-    }
-    if tx_hashes.is_empty() {
-        return;
-    }
-    let ts_now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let cid_display = format!("0x{}", condition_id.trim_start_matches("0x"));
-    let payload = serde_json::json!({
-        "wallet": eoa,
-        "proxyAddress": proxy.unwrap_or(""),
-        "order_id": tx_hashes[0],
-        "tx_hashes": tx_hashes,
-        "market_id": cid_display,
-        "asset_id": "",
-        "side": "REDEEM",
-        "amount": "",
-        "symbol": "USDC.e",
-        "price": "",
-        "timestamp": ts_now,
-        "strategy_id": sid,
-        "plugin_name": "polymarket-plugin",
-    });
-    if let Err(e) = crate::onchainos::report_plugin_info(&payload).await {
-        eprintln!("[polymarket] Warning: report-plugin-info failed: {}", e);
-    }
-}
+const REDEEM_WAIT_SECS: u64 = 120;
 
 /// Resolve (condition_id, neg_risk, question) from a market_id (condition_id or slug).
 async fn resolve_market(client: &Client, market_id: &str) -> Result<(String, bool, String)> {
@@ -76,7 +20,7 @@ async fn resolve_market(client: &Client, market_id: &str) -> Result<(String, boo
         let m = get_gamma_market_by_slug(client, market_id).await?;
         let cid = m
             .condition_id
-            .ok_or_else(|| anyhow!("market has no conditionId: {}", market_id))?;
+            .ok_or_else(|| anyhow::anyhow!("market has no conditionId: {}", market_id))?;
         let q = m.question.unwrap_or_default();
         let neg_risk = match get_clob_market(client, &cid).await {
             Ok(clob) => clob.neg_risk,
@@ -86,264 +30,228 @@ async fn resolve_market(client: &Client, market_id: &str) -> Result<(String, boo
     }
 }
 
-/// Summary of which wallet(s) hold redeemable tokens for a given condition_id.
-#[derive(Default)]
-struct Redeemability {
-    eoa: bool,
-    proxy: bool,
-}
-
-async fn check_redeemability(
-    client: &Client,
-    condition_id: &str,
-    eoa_addr: &str,
-    proxy_addr: Option<&str>,
-) -> Redeemability {
-    let cid_hex = condition_id.trim_start_matches("0x");
-    let cid_display = format!("0x{}", cid_hex);
-    let matches = |cid_opt: Option<&str>| -> bool {
-        cid_opt == Some(condition_id) || cid_opt == Some(&cid_display)
-    };
-
-    let eoa_positions = get_positions(client, eoa_addr).await.unwrap_or_default();
-    let eoa = eoa_positions
-        .iter()
-        .any(|p| matches(p.condition_id.as_deref()) && p.redeemable);
-
-    let proxy = if let Some(proxy) = proxy_addr {
-        let positions = get_positions(client, proxy).await.unwrap_or_default();
-        positions
-            .iter()
-            .any(|p| matches(p.condition_id.as_deref()) && p.redeemable)
-    } else {
-        false
-    };
-
-    Redeemability { eoa, proxy }
-}
-
 /// Core redeem logic for a single condition_id.
 ///
-/// Never falls back — if Data API shows no redeemable positions on either
-/// wallet, returns an error (caller should surface NO_REDEEMABLE_POSITIONS).
+/// Checks which wallet(s) hold redeemable tokens via the Data API, submits the
+/// appropriate tx(es), and waits for each to confirm on-chain before returning.
 ///
-/// For neg_risk markets, `token_ids` must be provided (YES token first, then NO).
-/// These are the decimal-string token IDs from the CLOB market, used to query
-/// on-chain ERC-1155 balances before calling NegRiskAdapter.redeemPositions.
+/// `collateral_addr`: USDC.e for V1 positions, pUSD for V2 positions.
+///
+/// Returns a JSON Value summarising the result (for use in both single and batch flows).
 async fn redeem_one(
     client: &Client,
     condition_id: &str,
     question: &str,
-    neg_risk: bool,
-    token_ids: &[String],
     eoa_addr: &str,
     proxy_addr: Option<&str>,
+    collateral_addr: &str,
 ) -> Result<serde_json::Value> {
     let cid_hex = condition_id.trim_start_matches("0x");
     let cid_display = format!("0x{}", cid_hex);
 
-    let r = check_redeemability(client, condition_id, eoa_addr, proxy_addr).await;
+    let eoa_redeemable = {
+        let positions = get_positions(client, eoa_addr).await.unwrap_or_default();
+        let has = positions.iter().any(|p| {
+            (p.condition_id.as_deref() == Some(condition_id)
+                || p.condition_id.as_deref() == Some(&cid_display))
+                && p.redeemable
+        });
+        if !has {
+            let lost: f64 = positions
+                .iter()
+                .filter(|p| {
+                    p.condition_id.as_deref() == Some(condition_id)
+                        || p.condition_id.as_deref() == Some(&cid_display)
+                })
+                .map(|p| p.current_value.unwrap_or(0.0))
+                .sum();
+            if lost < 0.000_001
+                && positions.iter().any(|p| {
+                    p.condition_id.as_deref() == Some(condition_id)
+                        || p.condition_id.as_deref() == Some(&cid_display)
+                })
+            {
+                eprintln!(
+                    "[polymarket] Note: EOA has positions for this market but current_value ≈ $0 \
+                     (market resolved against your EOA positions)."
+                );
+            }
+        }
+        has
+    };
 
-    if !r.eoa && !r.proxy {
-        return Err(anyhow!(
-            "No redeemable positions found for {} on EOA ({}) {}. \
-             Outcome tokens are held in a wallet this plugin does not know about — \
-             if you traded in POLY_PROXY mode, run `setup-proxy` first so the plugin \
-             can look up the proxy address.",
-            cid_display,
-            eoa_addr,
-            proxy_addr
-                .map(|p| format!("or proxy ({})", p))
-                .unwrap_or_else(|| "(no proxy configured)".into())
-        ));
-    }
+    let proxy_redeemable = if let Some(proxy) = proxy_addr {
+        let positions = get_positions(client, proxy).await.unwrap_or_default();
+        positions.iter().any(|p| {
+            (p.condition_id.as_deref() == Some(condition_id)
+                || p.condition_id.as_deref() == Some(&cid_display))
+                && p.redeemable
+        })
+    } else {
+        false
+    };
 
     let mut out = serde_json::json!({
         "condition_id": cid_display,
         "question": question,
-        "neg_risk": neg_risk,
     });
 
-    if neg_risk {
-        // NegRisk markets: call NegRiskAdapter.redeemPositions(conditionId, [yes_bal, no_bal]).
-        // Proxy-via-PROXY_FACTORY routing for neg_risk is not yet implemented; EOA only.
-        if r.proxy && !r.eoa {
-            return Err(anyhow!(
-                "Neg_risk redeem from proxy wallet is not yet supported by this plugin. \
-                 If your winning tokens are in the proxy wallet, use the Polymarket web UI \
-                 to redeem. EOA redeem via NegRiskAdapter is fully supported."
-            ));
-        }
-
-        // Query on-chain ERC-1155 balances for each outcome token.
-        let wallet = if r.proxy && proxy_addr.is_some() { proxy_addr.unwrap() } else { eoa_addr };
-        let mut amounts: Vec<u128> = Vec::with_capacity(token_ids.len());
-        for tid in token_ids {
-            let bal = get_ctf_balance(wallet, tid).await.unwrap_or(0);
-            amounts.push(bal);
-        }
-
-        // Validate we can encode the token IDs (catches malformed API data early).
-        for tid in token_ids {
-            decimal_str_to_hex64(tid)
-                .with_context(|| format!("token_id '{}' is not a valid decimal integer", tid))?;
-        }
-
-        if amounts.iter().all(|&a| a == 0) {
-            return Err(anyhow!(
-                "No outcome token balance found on-chain for {} in wallet {}. \
-                 The market may not be resolved yet, or winning tokens may be in a \
-                 different wallet.",
-                cid_display,
-                wallet
-            ));
-        }
-
-        let total_shares: u128 = amounts.iter().sum();
+    // Fallback: if Data API shows nothing (can lag after resolution), attempt EOA redeem.
+    if !eoa_redeemable && !proxy_redeemable {
         eprintln!(
-            "[polymarket] NegRisk redeem: {} total shares across {} outcomes — submitting NegRiskAdapter.redeemPositions...",
-            total_shares, amounts.len()
+            "[polymarket] Warning: Data API shows no redeemable positions for {} \
+             (may lag after resolution). Attempting EOA redeem as fallback.",
+            cid_display
         );
-        let tx = negrisk_redeem_positions(condition_id, &amounts, eoa_addr).await?;
-        eprintln!(
-            "[polymarket] NegRisk redeem tx {} — waiting up to {}s for on-chain confirmation...",
-            tx, REDEEM_WAIT_SECS
+        let tx_hash = ctf_redeem_positions(condition_id, collateral_addr).await?;
+        eprintln!("[polymarket] Waiting for EOA redeem tx to confirm...");
+        wait_for_tx_receipt(&tx_hash, 120).await?;
+        out["eoa_tx"] = serde_json::Value::String(tx_hash);
+        out["source"] = serde_json::Value::String("fallback_eoa".into());
+        out["note"] = serde_json::Value::String(
+            "EOA redeemPositions confirmed (fallback).".into(),
         );
-        wait_for_tx_receipt_labeled(&tx, REDEEM_WAIT_SECS, "NegRisk redeem").await?;
+        return Ok(out);
+    }
+
+    if eoa_redeemable {
+        eprintln!("[polymarket] EOA has winning tokens — submitting EOA redeemPositions...");
+        let tx = ctf_redeem_positions(condition_id, collateral_addr).await?;
+        eprintln!("[polymarket] Waiting for EOA redeem tx to confirm...");
+        wait_for_tx_receipt(&tx, 120).await?;
         out["eoa_tx"] = serde_json::Value::String(tx);
-        out["amounts"] = serde_json::Value::Array(
-            amounts.iter().map(|a| serde_json::Value::String(a.to_string())).collect()
-        );
-        out["note"] = serde_json::Value::String(
-            "NegRiskAdapter.redeemPositions confirmed. USDC.e transferred to EOA.".into(),
-        );
-    } else {
-        // Standard binary market: call CTF.redeemPositions.
-        if r.eoa {
-            eprintln!("[polymarket] EOA holds winning tokens — submitting EOA redeemPositions...");
-            let tx = ctf_redeem_positions(condition_id, eoa_addr).await?;
-            eprintln!(
-                "[polymarket] EOA redeem tx {} — waiting up to {}s for on-chain confirmation...",
-                tx, REDEEM_WAIT_SECS
-            );
-            wait_for_tx_receipt_labeled(&tx, REDEEM_WAIT_SECS, "EOA redeem").await?;
-            out["eoa_tx"] = serde_json::Value::String(tx);
-            out["eoa_note"] =
-                serde_json::Value::String("EOA redeemPositions confirmed.".into());
-        }
+        out["eoa_note"] =
+            serde_json::Value::String("EOA redeemPositions confirmed.".into());
+    }
 
-        if r.proxy {
-            eprintln!(
-                "[polymarket] Proxy holds winning tokens — submitting proxy redeemPositions via PROXY_FACTORY..."
-            );
-            let tx = ctf_redeem_via_proxy(condition_id, eoa_addr).await?;
-            eprintln!(
-                "[polymarket] Proxy redeem tx {} — waiting up to {}s for on-chain confirmation...",
-                tx, REDEEM_WAIT_SECS
-            );
-            wait_for_tx_receipt_labeled(&tx, REDEEM_WAIT_SECS, "Proxy redeem").await?;
-            out["proxy_tx"] = serde_json::Value::String(tx);
-            out["proxy_note"] = serde_json::Value::String(
-                "Proxy redeemPositions confirmed via PROXY_FACTORY.".into(),
-            );
-        }
-
-        out["note"] = serde_json::Value::String(
-            "USDC.e transferred to the respective wallet(s).".into(),
+    if proxy_redeemable {
+        eprintln!(
+            "[polymarket] Proxy has winning tokens — submitting proxy redeemPositions via PROXY_FACTORY..."
+        );
+        let tx = ctf_redeem_via_proxy(condition_id, collateral_addr).await?;
+        eprintln!("[polymarket] Waiting for proxy redeem tx to confirm...");
+        wait_for_tx_receipt(&tx, 120).await?;
+        out["proxy_tx"] = serde_json::Value::String(tx);
+        out["proxy_note"] = serde_json::Value::String(
+            "Proxy redeemPositions confirmed via PROXY_FACTORY.".into(),
         );
     }
 
+    let collateral_sym = if collateral_addr.eq_ignore_ascii_case(Contracts::PUSD) { "pUSD" } else { "USDC.e" };
+    out["note"] = serde_json::Value::String(
+        format!("{} transferred to the respective wallet(s).", collateral_sym),
+    );
     Ok(out)
 }
 
-/// Look up an on-chain proxy wallet that is not yet recorded in credentials.
-///
-/// Safe to call freely: uses `debug_traceCall` (read-only, no gas, no tx). If the
-/// RPC doesn't support `debug_traceCall` or anything else fails, returns None and
-/// callers should fall through silently — this is purely a UX hint.
-async fn discover_uncached_proxy(eoa: &str, creds_proxy: Option<&str>) -> Option<String> {
-    if creds_proxy.is_some() {
-        return None;
-    }
-    get_existing_proxy(eoa).await.ok().flatten()
-}
+/// Redeem neg_risk (multi-outcome) market via NegRiskAdapter.redeemPositions.
+/// Queries on-chain ERC-1155 balances for each token_id, then broadcasts.
+async fn redeem_one_negrisk(
+    condition_id: &str,
+    question: &str,
+    token_ids: &[String],
+    eoa_addr: &str,
+) -> Result<serde_json::Value> {
+    let cid_display = format!("0x{}", condition_id.trim_start_matches("0x"));
 
-/// Build a human-readable hint pointing at a proxy wallet discovered on-chain,
-/// to be appended to an error's `suggestion` field. Empty string if no proxy found.
-fn proxy_hint(discovered: Option<&str>) -> String {
-    match discovered {
-        Some(addr) => format!(
-            "Detected existing proxy wallet on-chain for this EOA: {}. \
-             Run `polymarket-plugin setup-proxy` to save it to credentials — \
-             once saved, redeem will route through the proxy automatically.",
-            addr
-        ),
-        None => String::new(),
+    // Validate token IDs can be encoded.
+    for tid in token_ids {
+        decimal_str_to_hex64(tid)
+            .with_context(|| format!("token_id '{}' is not a valid decimal integer", tid))?;
     }
-}
 
-/// Fail-fast POL balance check: EOA pays gas for both EOA and proxy redeem paths.
-async fn check_pol_budget(eoa_addr: &str, tx_count: usize) -> Result<f64> {
-    let pol = get_pol_balance(eoa_addr).await?;
-    let needed = tx_count as f64 * POL_PER_REDEEM;
-    if pol < needed {
-        return Err(anyhow!(
-            "Insufficient POL for gas: EOA {} has {:.4} POL but redeeming {} market(s) \
-             needs ~{:.4} POL (budgeting {} POL per market). \
-             Top up {:.4} more POL.",
-            eoa_addr,
-            pol,
-            tx_count,
-            needed,
-            POL_PER_REDEEM,
-            needed - pol
-        ));
+    // Query on-chain ERC-1155 balances for each outcome.
+    let mut amounts: Vec<u128> = Vec::with_capacity(token_ids.len());
+    for tid in token_ids {
+        let bal = get_ctf_balance(eoa_addr, tid).await.unwrap_or(0);
+        amounts.push(bal);
     }
-    Ok(pol)
+
+    if amounts.iter().all(|&a| a == 0) {
+        bail!(
+            "No outcome token balance found on-chain for {} in EOA wallet {}. \
+             Market may not be resolved yet, or tokens may be in a different wallet.",
+            cid_display, eoa_addr
+        );
+    }
+
+    let total_shares: u128 = amounts.iter().sum();
+    eprintln!(
+        "[polymarket] NegRisk redeem: {} total shares across {} outcomes — submitting NegRiskAdapter.redeemPositions...",
+        total_shares, amounts.len()
+    );
+    let tx = negrisk_redeem_positions(condition_id, &amounts, eoa_addr).await?;
+    eprintln!(
+        "[polymarket] NegRisk redeem tx {} — waiting up to {}s for on-chain confirmation...",
+        tx, REDEEM_WAIT_SECS
+    );
+    wait_for_tx_receipt_labeled(&tx, REDEEM_WAIT_SECS, "NegRisk redeem").await?;
+
+    Ok(serde_json::json!({
+        "condition_id": cid_display,
+        "question": question,
+        "neg_risk": true,
+        "eoa_tx": tx,
+        "amounts": amounts.iter().map(|a| a.to_string()).collect::<Vec<_>>(),
+        "note": "NegRiskAdapter.redeemPositions confirmed. USDC.e transferred to EOA.",
+    }))
 }
 
 /// Redeem a single market by market_id (condition_id or slug).
-pub async fn run(market_id: &str, dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
+pub async fn run(market_id: &str, dry_run: bool) -> Result<()> {
     let client = Client::new();
+    let (condition_id, neg_risk, question) = resolve_market(&client, market_id).await?;
 
-    let (condition_id, neg_risk, question) = match resolve_market(&client, market_id).await {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", super::error_response(&e, Some("redeem"), None));
+    if neg_risk {
+        // Fetch CLOB token IDs for on-chain balance queries.
+        let clob = get_clob_market(&client, &condition_id).await
+            .context("Failed to fetch CLOB market for NegRisk token IDs")?;
+        let token_ids: Vec<String> = clob.tokens.iter().map(|t| t.token_id.clone()).collect();
+
+        if dry_run {
+            let cid_display = format!("0x{}", condition_id.trim_start_matches("0x"));
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "ok": true,
+                    "data": {
+                        "dry_run": true,
+                        "market_id": market_id,
+                        "condition_id": cid_display,
+                        "question": question,
+                        "neg_risk": true,
+                        "action": "NegRiskAdapter.redeemPositions",
+                        "token_ids": token_ids,
+                        "note": "dry-run: will query on-chain ERC-1155 balances and call NegRiskAdapter.redeemPositions."
+                    }
+                }))?
+            );
             return Ok(());
         }
-    };
 
-    // Fetch CLOB token IDs (needed for neg_risk on-chain balance queries).
-    // For standard markets, tokens are also available but unused in the redeem path.
-    let token_ids: Vec<String> = match get_clob_market(&client, &condition_id).await {
-        Ok(m) => m.tokens.into_iter().map(|t| t.token_id).collect(),
-        Err(_) => vec![],
-    };
+        let eoa_addr = get_wallet_address().await?;
+        let result = redeem_one_negrisk(&condition_id, &question, &token_ids, &eoa_addr).await?;
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({ "ok": true, "data": result }))?
+        );
+        return Ok(());
+    }
 
     let cid_display = format!("0x{}", condition_id.trim_start_matches("0x"));
-    let eoa_addr = match get_wallet_address().await {
-        Ok(a) => a,
-        Err(e) => {
-            println!("{}", super::error_response(&e, Some("redeem"), None));
-            return Ok(());
-        }
-    };
+    let (eoa_addr, clob_version_raw) = tokio::join!(
+        get_wallet_address(),
+        get_clob_version(&client),
+    );
+    let eoa_addr = eoa_addr?;
+    let clob_version_raw = clob_version_raw?;
+    // Use pUSD as collateral for V2 markets (cutover ~2026-04-28).
+    let collateral_addr = if clob_version_raw == 2 { Contracts::PUSD } else { Contracts::USDC_E };
     let creds = load_credentials().unwrap_or_default();
     let proxy_addr = creds.and_then(|c| c.proxy_wallet);
 
-    // Best-effort: if no proxy in creds, check on-chain so error hints can cite the address.
-    let discovered_proxy = discover_uncached_proxy(&eoa_addr, proxy_addr.as_deref()).await;
-    let hint = proxy_hint(discovered_proxy.as_deref());
-    let hint_opt = if hint.is_empty() { None } else { Some(hint.as_str()) };
-
     if dry_run {
-        let r = check_redeemability(&client, &condition_id, &eoa_addr, proxy_addr.as_deref()).await;
-        let action = if neg_risk {
-            "NegRiskAdapter.redeemPositions"
-        } else {
-            "CTF.redeemPositions"
-        };
+        let collateral_sym = if clob_version_raw == 2 { "pUSD" } else { "USDC.e" };
         println!(
             "{}",
             serde_json::to_string_pretty(&serde_json::json!({
@@ -353,63 +261,43 @@ pub async fn run(market_id: &str, dry_run: bool, strategy_id: Option<&str>) -> R
                     "market_id": market_id,
                     "condition_id": cid_display,
                     "question": question,
-                    "neg_risk": neg_risk,
+                    "neg_risk": false,
                     "eoa_wallet": eoa_addr,
                     "proxy_wallet": proxy_addr,
-                    "discovered_proxy": discovered_proxy,
-                    "eoa_redeemable": r.eoa,
-                    "proxy_redeemable": r.proxy,
-                    "action": action,
-                    "token_ids": token_ids,
-                    "note": "dry-run: will redeem from whichever wallet holds the winning tokens. \
-                             If both eoa_redeemable and proxy_redeemable are false, run `setup-proxy` first."
+                    "action": "redeemPositions",
+                    "collateral": collateral_sym,
+                    "index_sets": [1, 2],
+                    "note": "dry-run: will redeem from whichever wallet (EOA / proxy) holds the winning tokens."
                 }
             }))?
         );
         return Ok(());
     }
 
-    if let Err(e) = check_pol_budget(&eoa_addr, 1).await {
-        println!("{}", super::error_response(&e, Some("redeem"), hint_opt));
-        return Ok(());
-    }
-
-    match redeem_one(&client, &condition_id, &question, neg_risk, &token_ids, &eoa_addr, proxy_addr.as_deref()).await {
-        Ok(result) => {
-            report_redeem(strategy_id, &eoa_addr, proxy_addr.as_deref(), &condition_id, &result).await;
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "ok": true,
-                    "data": result
-                }))?
-            );
-        }
-        Err(e) => {
-            println!("{}", super::error_response(&e, Some("redeem"), hint_opt));
-        }
-    }
+    let result = redeem_one(&client, &condition_id, &question, &eoa_addr, proxy_addr.as_deref(), collateral_addr).await?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "ok": true, "data": result }))?
+    );
     Ok(())
 }
 
 /// Redeem ALL redeemable positions across EOA and proxy wallets in one pass.
-pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
+///
+/// Discovers redeemable condition_ids from both wallets via the Data API, then
+/// redeems each sequentially, waiting for on-chain confirmation between markets.
+pub async fn run_all(dry_run: bool) -> Result<()> {
     let client = Client::new();
-    let eoa_addr = match get_wallet_address().await {
-        Ok(a) => a,
-        Err(e) => {
-            println!("{}", super::error_response(&e, Some("redeem"), None));
-            return Ok(());
-        }
-    };
+    let (eoa_addr, clob_version_raw) = tokio::join!(
+        get_wallet_address(),
+        get_clob_version(&client),
+    );
+    let eoa_addr = eoa_addr?;
+    let clob_version_raw = clob_version_raw?;
+    // Use pUSD as collateral for V2 markets (cutover ~2026-04-28).
+    let collateral_addr = if clob_version_raw == 2 { Contracts::PUSD } else { Contracts::USDC_E };
     let creds = load_credentials().unwrap_or_default();
     let proxy_addr = creds.and_then(|c| c.proxy_wallet);
-
-    // Best-effort discovery: if creds has no proxy but one exists on-chain,
-    // surface it in error hints so the user knows `setup-proxy` is the fix.
-    let discovered_proxy = discover_uncached_proxy(&eoa_addr, proxy_addr.as_deref()).await;
-    let hint = proxy_hint(discovered_proxy.as_deref());
-    let hint_opt = if hint.is_empty() { None } else { Some(hint.as_str()) };
 
     // Collect all unique redeemable condition_ids from both wallets.
     let mut redeemable: Vec<(String, String)> = Vec::new(); // (condition_id, title)
@@ -441,24 +329,22 @@ pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
     }
 
     if redeemable.is_empty() {
-        let e = anyhow!(
-            "No redeemable positions found on EOA ({}) {}. \
-             If you traded in POLY_PROXY mode, run `setup-proxy` first so the plugin \
-             can look up the proxy address.",
-            eoa_addr,
-            proxy_addr
-                .as_ref()
-                .map(|p| format!("or proxy ({})", p))
-                .unwrap_or_else(|| "(no proxy configured)".into())
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "ok": true,
+                "data": {
+                    "message": "No redeemable positions found.",
+                    "redeemed_count": 0
+                }
+            }))?
         );
-        println!("{}", super::error_response(&e, Some("redeem"), hint_opt));
         return Ok(());
     }
 
-    let n = redeemable.len();
     eprintln!(
         "[polymarket] Found {} redeemable position(s). Redeeming sequentially...",
-        n
+        redeemable.len()
     );
 
     if dry_run {
@@ -472,9 +358,7 @@ pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
                 "ok": true,
                 "data": {
                     "dry_run": true,
-                    "redeemable_count": n,
-                    "estimated_pol_needed": n as f64 * POL_PER_REDEEM,
-                    "discovered_proxy": discovered_proxy,
+                    "redeemable_count": items.len(),
                     "positions": items,
                     "note": "dry-run: would redeem each position sequentially, waiting for on-chain confirmation between each."
                 }
@@ -483,21 +367,6 @@ pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
         return Ok(());
     }
 
-    // Fail fast if EOA does not have enough POL to cover all redeems.
-    let pol_balance = match check_pol_budget(&eoa_addr, n).await {
-        Ok(b) => b,
-        Err(e) => {
-            println!("{}", super::error_response(&e, Some("redeem"), hint_opt));
-            return Ok(());
-        }
-    };
-    eprintln!(
-        "[polymarket] POL budget OK: {:.4} POL available, ~{:.4} POL needed for {} redeem(s).",
-        pol_balance,
-        n as f64 * POL_PER_REDEEM,
-        n
-    );
-
     let mut results = Vec::new();
     let mut errors = Vec::new();
 
@@ -505,32 +374,27 @@ pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
         eprintln!(
             "[polymarket] [{}/{}] Redeeming: {}",
             i + 1,
-            n,
+            redeemable.len(),
             title
         );
-        // Fetch neg_risk flag and token_ids for each market (needed for NegRisk redeem path).
-        let (market_neg_risk, market_token_ids) = match get_clob_market(&client, cid).await {
-            Ok(m) => (m.neg_risk, m.tokens.into_iter().map(|t| t.token_id).collect()),
-            Err(_) => (false, vec![]),
+        // Fetch neg_risk status + token IDs for each market.
+        let clob = get_clob_market(&client, cid).await;
+        let is_neg_risk = clob.as_ref().map(|m| m.neg_risk).unwrap_or(false);
+        let token_ids: Vec<String> = clob.as_ref()
+            .map(|m| m.tokens.iter().map(|t| t.token_id.clone()).collect())
+            .unwrap_or_default();
+
+        let result = if is_neg_risk && !token_ids.is_empty() {
+            redeem_one_negrisk(cid, title, &token_ids, &eoa_addr).await
+        } else {
+            redeem_one(&client, cid, title, &eoa_addr, proxy_addr.as_deref(), collateral_addr).await
         };
-        match redeem_one(&client, cid, title, market_neg_risk, &market_token_ids, &eoa_addr, proxy_addr.as_deref()).await {
-            Ok(r) => {
-                report_redeem(strategy_id, &eoa_addr, proxy_addr.as_deref(), cid, &r).await;
-                results.push(r);
-            }
+
+        match result {
+            Ok(r) => results.push(r),
             Err(e) => {
-                eprintln!("[polymarket] Error redeeming {}: {:#}", cid, e);
-                let classified: serde_json::Value = serde_json::from_str(
-                    &super::error_response(&e, Some("redeem"), hint_opt),
-                )
-                .unwrap_or_else(|_| serde_json::json!({ "error": e.to_string() }));
-                errors.push(serde_json::json!({
-                    "condition_id": cid,
-                    "title": title,
-                    "error": classified.get("error"),
-                    "error_code": classified.get("error_code"),
-                    "suggestion": classified.get("suggestion"),
-                }));
+                eprintln!("[polymarket] Error redeeming {}: {}", cid, e);
+                errors.push(serde_json::json!({ "condition_id": cid, "error": e.to_string() }));
             }
         }
     }
@@ -544,7 +408,7 @@ pub async fn run_all(dry_run: bool, strategy_id: Option<&str>) -> Result<()> {
                 "error_count": errors.len(),
                 "results": results,
                 "errors": errors,
-                "note": "USDC.e transferred to respective wallet(s) for all confirmed redemptions."
+                "note": "Collateral (pUSD/USDC.e) transferred to respective wallet(s) for all confirmed redemptions."
             }
         }))?
     );

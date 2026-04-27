@@ -2,26 +2,17 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_buy_worst_price, get_clob_market, get_market_fee, get_orderbook,
-    post_order, round_price,
-    OrderBody, OrderRequest,
+    compute_buy_worst_price, get_balance_allowance, get_clob_market, get_clob_version,
+    get_market_fee, get_orderbook, post_order, round_price, OrderBody, OrderBodyV2,
+    OrderRequest, OrderRequestV2,
 };
 use crate::auth::ensure_credentials;
-use crate::onchainos::{approve_usdc, get_usdc_allowance, get_usdc_balance, get_wallet_address};
+use crate::config::OrderVersion;
+use crate::onchainos::{approve_timeout_secs, get_pusd_balance, get_usdc_balance, get_wallet_address,
+    proxy_pusd_approve, proxy_wrap_usdc_to_pusd, wait_for_tx_receipt, wrap_usdc_to_pusd};
 use crate::series;
-use crate::signing::{sign_order_via_onchainos, OrderParams};
-
-/// Approval confirmation timeout in seconds.
-///
-/// Polygon block time is ~2s; under typical conditions approvals mine in <30s.
-/// We default to 90s to absorb network congestion and gas price spikes.
-/// Override with `POLYMARKET_APPROVE_TIMEOUT_SECS` env var for testing or custom networks.
-fn approve_timeout_secs() -> u64 {
-    std::env::var("POLYMARKET_APPROVE_TIMEOUT_SECS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(90)
-}
+use crate::signing::{sign_order_v2_via_onchainos, sign_order_via_onchainos, OrderParams,
+    OrderParamsV2, BYTES32_ZERO};
 
 /// Run the buy command.
 ///
@@ -43,7 +34,6 @@ pub async fn run(
     expires: Option<u64>,
     mode_override: Option<&str>,
     token_id_fast: Option<&str>,
-    strategy_id: Option<&str>,
 ) -> Result<()> {
     // Parse USDC amount early so we can enforce the minimum order size
     // check even on dry-run (the agent needs to know before placing).
@@ -277,6 +267,14 @@ pub async fn run(
 
     // ── Dry-run exit — full projected order fields ────────────────────────────
     if dry_run {
+        use crate::config::Contracts;
+        // Fetch CLOB version to show which exchange contract + collateral would be used.
+        let dry_clob_version_raw = get_clob_version(&client).await?;
+        let dry_clob_version = if dry_clob_version_raw == 2 { OrderVersion::V2 } else { OrderVersion::V1 };
+        let dry_exchange_addr = Contracts::exchange(dry_clob_version, neg_risk);
+        let dry_collateral = if dry_clob_version == OrderVersion::V2 { Contracts::PUSD } else { Contracts::USDC_E };
+        let dry_version_label = if dry_clob_version == OrderVersion::V2 { "V2" } else { "V1" };
+
         println!(
             "{}",
             serde_json::json!({
@@ -296,6 +294,10 @@ pub async fn run(
                     "fee_rate_bps": fee_rate_bps,
                     "post_only": post_only,
                     "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
+                    "clob_version": dry_version_label,
+                    "exchange_address": dry_exchange_addr,
+                    "collateral_token": dry_collateral,
+                    "neg_risk": neg_risk,
                     "note": "dry-run: order not submitted"
                 }
             })
@@ -339,65 +341,166 @@ pub async fn run(
         TradingMode::Eoa       => signer_addr.as_str(),
     };
 
-    // Fetch on-chain USDC.e balance and on-chain allowance(s) in parallel.
-    // Both use direct eth_call (authoritative) — not the CLOB API, which can return
-    // stale values or incorrect MAX_UINT and cause unnecessary re-approvals.
-    let (onchain_balance_result, allowance_raw) = if neg_risk {
-        let (bal, a_exchange, a_adapter) = tokio::join!(
-            get_usdc_balance(balance_addr),
-            get_usdc_allowance(balance_addr, Contracts::NEG_RISK_CTF_EXCHANGE),
-            get_usdc_allowance(balance_addr, Contracts::NEG_RISK_ADAPTER),
-        );
-        // Both spenders must have sufficient allowance for a neg_risk order.
-        let ae = a_exchange.unwrap_or(0).min(u64::MAX as u128) as u64;
-        let aa = a_adapter.unwrap_or(0).min(u64::MAX as u128) as u64;
-        (bal, ae.min(aa))
-    } else {
-        let (bal, a) = tokio::join!(
-            get_usdc_balance(balance_addr),
-            get_usdc_allowance(balance_addr, Contracts::CTF_EXCHANGE),
-        );
-        let a_val = a.unwrap_or(0).min(u64::MAX as u128) as u64;
-        (bal, a_val)
-    };
+    // Fetch CLOB version, on-chain balances (USDC.e + pUSD), and CLOB allowance in parallel.
+    // Version determines which collateral token and exchange contract to use:
+    //   V1 → USDC.e + old exchange contracts
+    //   V2 → pUSD  + new exchange contracts (V2 cutover ~2026-04-28)
+    let (clob_version_raw, usdc_e_balance_result, pusd_balance_result, allowance_info) = tokio::join!(
+        get_clob_version(&client),
+        get_usdc_balance(balance_addr),
+        get_pusd_balance(balance_addr),
+        get_balance_allowance(&client, balance_addr, &creds, "COLLATERAL", None),
+    );
+    let clob_version_raw = clob_version_raw?;
+    let clob_version = if clob_version_raw == 2 { OrderVersion::V2 } else { OrderVersion::V1 };
+    let allowance_info = allowance_info?;
 
-    // Pre-flight: bail if on-chain USDC.e balance is insufficient.
-    match onchain_balance_result {
-        Ok(bal_usdc) => {
-            let bal_raw = (bal_usdc * 1_000_000.0).floor() as u64;
-            if bal_raw < usdc_needed_raw {
-                let tip = match &effective_mode {
-                    TradingMode::PolyProxy => format!(
-                        "Run `polymarket deposit --amount {:.2}` to top up the proxy wallet.",
-                        actual_usdc
-                    ),
-                    TradingMode::Eoa => {
-                        // Check if proxy wallet has enough USDC and hint mode switch.
-                        let proxy_hint = crate::config::load_credentials()
-                            .ok()
-                            .flatten()
-                            .and_then(|c| c.proxy_wallet)
-                            .map(|proxy| format!(
-                                " Or switch to proxy mode (`polymarket switch-mode --mode proxy`) \
-                                 if your USDC.e is already in the proxy wallet ({}).",
-                                proxy
-                            ))
-                            .unwrap_or_default();
-                        format!(
-                            "Top up USDC.e on Polygon before placing this order.{}",
-                            proxy_hint
-                        )
+    // Pre-flight balance check — collateral token depends on CLOB version.
+    // V2 uses pUSD. If pUSD balance is insufficient but USDC.e balance is sufficient,
+    // we automatically wrap USDC.e → pUSD via the Collateral Onramp before placing the order.
+    match clob_version {
+        OrderVersion::V2 => {
+            let pusd_bal = pusd_balance_result.unwrap_or(0.0);
+            let pusd_raw = (pusd_bal * 1_000_000.0).floor() as u64;
+
+            // V2 server deducts order_amount + fee from pUSD at submission time.
+            // Compute required pUSD including fee (ceiling division to avoid rounding short).
+            let fee_buffer = ((usdc_needed_raw as u128 * fee_rate_bps as u128) + 9_999) / 10_000;
+            let total_needed = usdc_needed_raw + fee_buffer as u64;
+
+            // Pre-flight POL gas check (POLY_PROXY only):
+            // V2 trading on a proxy may need up to two EOA-paid txs — USDC.e→pUSD wrap
+            // and a one-time pUSD approve to V2 contracts. Surface the requirement up
+            // front so the user isn't half-way through the flow when they run out of gas.
+            // Skipped if no on-chain action is needed (pUSD already covers + already approved).
+            if effective_mode == TradingMode::PolyProxy && !dry_run {
+                let will_wrap = pusd_raw < total_needed;
+                let exchange_addr = Contracts::exchange(clob_version, neg_risk);
+                let pusd_allowance = crate::onchainos::get_pusd_allowance(
+                    maker_addr.as_str(), exchange_addr,
+                ).await.unwrap_or(0);
+                let will_approve = pusd_allowance < (usdc_needed_raw as u128);
+                if will_wrap || will_approve {
+                    let pol = crate::onchainos::get_pol_balance(&signer_addr)
+                        .await.unwrap_or(0.0);
+                    const MIN_POL: f64 = 0.05;
+                    if pol < MIN_POL {
+                        let mut actions = Vec::new();
+                        if will_wrap   { actions.push("USDC.e→pUSD wrap"); }
+                        if will_approve { actions.push("V2 pUSD approve"); }
+                        bail!(
+                            "Insufficient POL gas on EOA wallet ({}) for V2 trading: have {:.4} POL, \
+                             need ≥ {:.2} POL to cover the {} transaction(s). \
+                             Send POL to your EOA on Polygon and retry.",
+                            signer_addr, pol, MIN_POL, actions.join(" + ")
+                        );
                     }
-                };
-                bail!(
-                    "Insufficient USDC.e balance: have ${:.2}, need ${:.2}. {}",
-                    bal_usdc, actual_usdc, tip
-                );
+                }
+            }
+
+            if pusd_raw < total_needed {
+                // pUSD insufficient — check USDC.e for auto-wrap opportunity.
+                let usdc_e_bal = usdc_e_balance_result.unwrap_or(0.0);
+                let usdc_e_raw = (usdc_e_bal * 1_000_000.0).floor() as u64;
+                // Wrap only the shortfall: existing pUSD partially covers order + fee.
+                let shortfall = total_needed - pusd_raw;
+                if usdc_e_raw >= shortfall {
+                    // Auto-wrap USDC.e → pUSD (shortfall only) before placing the order.
+                    eprintln!(
+                        "[polymarket] V2 requires pUSD collateral. pUSD balance ${:.6} < ${:.6} needed \
+                         (order ${:.6} + fee ${:.6}). Auto-wrapping ${:.6} USDC.e → pUSD...",
+                        pusd_bal,
+                        total_needed as f64 / 1_000_000.0,
+                        actual_usdc,
+                        fee_buffer as f64 / 1_000_000.0,
+                        shortfall as f64 / 1_000_000.0,
+                    );
+                    let wrap_tx = match &effective_mode {
+                        TradingMode::Eoa => {
+                            wrap_usdc_to_pusd(balance_addr, shortfall as u128).await?
+                        }
+                        TradingMode::PolyProxy => {
+                            proxy_wrap_usdc_to_pusd(balance_addr, shortfall as u128).await?
+                        }
+                    };
+                    eprintln!("[polymarket] Wrap tx: {}. Waiting for confirmation...", wrap_tx);
+                    wait_for_tx_receipt(&wrap_tx, approve_timeout_secs()).await?;
+                    eprintln!("[polymarket] Wrapped. Proceeding with order.");
+                } else {
+                    // Neither pUSD nor USDC.e is sufficient.
+                    let total_needed_f64 = total_needed as f64 / 1_000_000.0;
+                    let tip = match &effective_mode {
+                        TradingMode::PolyProxy => format!(
+                            "Run `polymarket deposit --amount {:.2}` to top up the proxy wallet, \
+                             then the deposit will be auto-wrapped to pUSD on the next buy.",
+                            total_needed_f64
+                        ),
+                        TradingMode::Eoa => {
+                            let proxy_hint = crate::config::load_credentials()
+                                .ok()
+                                .flatten()
+                                .and_then(|c| c.proxy_wallet)
+                                .map(|proxy| format!(
+                                    " Or switch to proxy mode (`polymarket switch-mode --mode proxy`) \
+                                     if your USDC.e is in the proxy wallet ({}).",
+                                    proxy
+                                ))
+                                .unwrap_or_default();
+                            format!(
+                                "Top up USDC.e on Polygon (it will be auto-wrapped to pUSD).{}",
+                                proxy_hint
+                            )
+                        }
+                    };
+                    bail!(
+                        "Insufficient balance for V2 order: have ${:.6} pUSD + ${:.6} USDC.e, \
+                         need ${:.6} (order ${:.6} + fee ${:.6}). {}",
+                        pusd_bal, usdc_e_bal,
+                        total_needed_f64, actual_usdc,
+                        fee_buffer as f64 / 1_000_000.0,
+                        tip
+                    );
+                }
             }
         }
-        Err(e) => {
-            // On-chain read failed — log and fall through (CLOB will catch it at settlement).
-            eprintln!("[polymarket] Warning: could not verify on-chain USDC.e balance ({}); proceeding.", e);
+        OrderVersion::V1 => {
+            // V1 uses USDC.e.
+            match usdc_e_balance_result {
+                Ok(bal_usdc) => {
+                    let bal_raw = (bal_usdc * 1_000_000.0).floor() as u64;
+                    if bal_raw < usdc_needed_raw {
+                        let tip = match &effective_mode {
+                            TradingMode::PolyProxy => format!(
+                                "Run `polymarket deposit --amount {:.2}` to top up the proxy wallet.",
+                                actual_usdc
+                            ),
+                            TradingMode::Eoa => {
+                                let proxy_hint = crate::config::load_credentials()
+                                    .ok()
+                                    .flatten()
+                                    .and_then(|c| c.proxy_wallet)
+                                    .map(|proxy| format!(
+                                        " Or switch to proxy mode (`polymarket switch-mode --mode proxy`) \
+                                         if your USDC.e is already in the proxy wallet ({}).",
+                                        proxy
+                                    ))
+                                    .unwrap_or_default();
+                                format!(
+                                    "Top up USDC.e on Polygon before placing this order.{}",
+                                    proxy_hint
+                                )
+                            }
+                        };
+                        bail!(
+                            "Insufficient USDC.e balance: have ${:.2}, need ${:.2}. {}",
+                            bal_usdc, actual_usdc, tip
+                        );
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[polymarket] Warning: could not verify on-chain USDC.e balance ({}); proceeding.", e);
+                }
+            }
         }
     }
 
@@ -422,66 +525,162 @@ pub async fn run(
 
     // EOA mode: submit on-chain approve if allowance is insufficient.
     // POLY_PROXY mode: approvals are set once during `setup-proxy` — no per-trade approve needed.
+    //
+    // V2 migration: V2 uses a new exchange contract address. If the user has only approved V1,
+    // the V2 allowance will be 0 and a fresh approval to the V2 contract is triggered automatically.
     if effective_mode == TradingMode::Eoa {
+        let exchange_addr = Contracts::exchange(clob_version, neg_risk);
+        let allowance_raw = if neg_risk {
+            let a_exchange = allowance_info.allowance_for(exchange_addr);
+            let a_adapter  = allowance_info.allowance_for(Contracts::NEG_RISK_ADAPTER);
+            a_exchange.min(a_adapter)
+        } else {
+            allowance_info.allowance_for(exchange_addr)
+        };
+
         if allowance_raw < usdc_needed_raw || auto_approve {
-            let exchange_label = if neg_risk { "Neg Risk CTF Exchange" } else { "CTF Exchange" };
-            eprintln!("[polymarket] Approving unlimited USDC.e for {}...", exchange_label);
-            let tx_hash = approve_usdc(neg_risk).await?;
+            let (version_label, collateral_label) = if clob_version == OrderVersion::V2 {
+                (" V2", "pUSD")
+            } else {
+                ("", "USDC.e")
+            };
+            let exchange_label = if neg_risk {
+                format!("Neg Risk CTF Exchange{}", version_label)
+            } else {
+                format!("CTF Exchange{}", version_label)
+            };
+            eprintln!("[polymarket] Approving {:.6} {} for {}...", actual_usdc, collateral_label, exchange_label);
+            let tx_hash = approve_usdc_versioned(neg_risk, clob_version, usdc_needed_raw).await?;
             eprintln!("[polymarket] Approval tx: {}", tx_hash);
             eprintln!("[polymarket] Waiting for approval to confirm on-chain...");
             crate::onchainos::wait_for_tx_receipt(&tx_hash, approve_timeout_secs()).await?;
             eprintln!("[polymarket] Approval confirmed.");
         }
+    } else if effective_mode == TradingMode::PolyProxy && clob_version == OrderVersion::V2 {
+        // POLY_PROXY + V2: query pUSD allowance on-chain (not via CLOB API).
+        // The CLOB /balance-allowance endpoint hard-codes signature_type=0, which scopes
+        // the lookup to the EOA address — but the V2 pUSD approvals live on the proxy
+        // wallet (set by setup-proxy or a prior lazy approve). Querying on-chain matches
+        // the source of truth and prevents redundant approve txs on every buy.
+        // Idempotent — unlimited approval (maxUint) means it only fires once.
+        let exchange_addr = Contracts::exchange(clob_version, neg_risk);
+        let needed_u128 = usdc_needed_raw as u128;
+        let allowance_raw = if neg_risk {
+            let a_exchange = crate::onchainos::get_pusd_allowance(maker_addr.as_str(), exchange_addr)
+                .await.unwrap_or(0);
+            let a_adapter  = crate::onchainos::get_pusd_allowance(maker_addr.as_str(), Contracts::NEG_RISK_ADAPTER)
+                .await.unwrap_or(0);
+            a_exchange.min(a_adapter)
+        } else {
+            crate::onchainos::get_pusd_allowance(maker_addr.as_str(), exchange_addr)
+                .await.unwrap_or(0)
+        };
+        if allowance_raw < needed_u128 {
+            let version_label = if neg_risk { "Neg Risk CTF Exchange V2" } else { "CTF Exchange V2" };
+            eprintln!("[polymarket] Proxy pUSD allowance insufficient for {}. Approving via proxy...", version_label);
+            let tx = proxy_pusd_approve(exchange_addr).await?;
+            eprintln!("[polymarket] Proxy pUSD approval tx: {}. Waiting for confirmation...", tx);
+            wait_for_tx_receipt(&tx, approve_timeout_secs()).await?;
+            if neg_risk {
+                eprintln!("[polymarket] Approving pUSD for Neg Risk Adapter via proxy...");
+                let tx2 = proxy_pusd_approve(Contracts::NEG_RISK_ADAPTER).await?;
+                wait_for_tx_receipt(&tx2, approve_timeout_secs()).await?;
+            }
+            eprintln!("[polymarket] Proxy pUSD approval confirmed.");
+        }
     }
-    // POLY_PROXY mode: approvals are set once during `setup-proxy` and verified on-chain there.
-    // The CLOB server checks allowance independently at order submission — no pre-flight needed.
+    // POLY_PROXY V1: approvals (USDC.e) are set once at setup-proxy time — no per-trade check needed.
 
     let salt = rand_salt();
 
-    let params = OrderParams {
-        salt,
-        maker: maker_addr.clone(),
-        signer: signer_addr.clone(),
-        taker: "0x0000000000000000000000000000000000000000".to_string(),
-        token_id: token_id.clone(),
-        maker_amount: maker_amount_raw as u64,
-        taker_amount: taker_amount_raw as u64,
-        expiration,
-        nonce: 0,
-        fee_rate_bps,
-        side: 0, // BUY
-        signature_type: sig_type,
+    // Sign and submit the order using the correct version's struct and exchange contract.
+    let resp = match clob_version {
+        OrderVersion::V2 => {
+            let timestamp_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            let params = OrderParamsV2 {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw as u64,
+                taker_amount: taker_amount_raw as u64,
+                side: 0, // BUY
+                signature_type: sig_type,
+                timestamp_ms,
+                metadata: BYTES32_ZERO.to_string(),
+                builder: BYTES32_ZERO.to_string(),
+            };
+            let signature = sign_order_v2_via_onchainos(&params, neg_risk).await?;
+            let order_body = OrderBodyV2 {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw.to_string(),
+                taker_amount: taker_amount_raw.to_string(),
+                side: "BUY".to_string(),
+                signature_type: sig_type,
+                timestamp: timestamp_ms.to_string(),
+                metadata: BYTES32_ZERO.to_string(),
+                builder: BYTES32_ZERO.to_string(),
+                signature,
+            };
+            // In V2, expiration moves to the outer wrapper (not part of the signed struct).
+            let order_req = OrderRequestV2 {
+                order: order_body,
+                owner: creds.api_key.clone(),
+                order_type: effective_order_type.to_uppercase(),
+                post_only,
+                expiration: if expiration > 0 { expiration.to_string() } else { String::new() },
+            };
+            post_order(&client, &signer_addr, &creds, &order_req).await?
+        }
+        OrderVersion::V1 => {
+            let params = OrderParams {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                taker: "0x0000000000000000000000000000000000000000".to_string(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw as u64,
+                taker_amount: taker_amount_raw as u64,
+                expiration,
+                nonce: 0,
+                fee_rate_bps,
+                side: 0, // BUY
+                signature_type: sig_type,
+            };
+            let signature = sign_order_via_onchainos(&params, neg_risk).await?;
+            let order_body = OrderBody {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                taker: "0x0000000000000000000000000000000000000000".to_string(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw.to_string(),
+                taker_amount: taker_amount_raw.to_string(),
+                expiration: expiration.to_string(),
+                nonce: "0".to_string(),
+                fee_rate_bps: fee_rate_bps.to_string(),
+                side: "BUY".to_string(),
+                signature_type: sig_type,
+                signature,
+            };
+            let order_req = OrderRequest {
+                order: order_body,
+                owner: creds.api_key.clone(),
+                order_type: effective_order_type.to_uppercase(),
+                post_only,
+            };
+            // The order owner for L2 auth must always be the EOA (API key holder),
+            // regardless of trading mode. In POLY_PROXY mode the maker field in the
+            // order struct is the proxy, but the HTTP owner must match the API key.
+            post_order(&client, &signer_addr, &creds, &order_req).await?
+        }
     };
-
-    let signature = sign_order_via_onchainos(&params, neg_risk).await?;
-
-    let order_body = OrderBody {
-        salt,
-        maker: maker_addr.clone(),
-        signer: signer_addr.clone(),
-        taker: "0x0000000000000000000000000000000000000000".to_string(),
-        token_id: token_id.clone(),
-        maker_amount: maker_amount_raw.to_string(),
-        taker_amount: taker_amount_raw.to_string(),
-        expiration: expiration.to_string(),
-        nonce: "0".to_string(),
-        fee_rate_bps: fee_rate_bps.to_string(),
-        side: "BUY".to_string(),
-        signature_type: sig_type,
-        signature,
-    };
-
-    let order_req = OrderRequest {
-        order: order_body,
-        owner: creds.api_key.clone(),
-        order_type: effective_order_type.to_uppercase(),
-        post_only,
-    };
-
-    // The order owner for L2 auth must always be the EOA (API key holder),
-    // regardless of trading mode. In POLY_PROXY mode the maker field in the
-    // order struct is the proxy, but the HTTP owner must match the API key.
-    let resp = post_order(&client, &signer_addr, &creds, &order_req).await?;
 
     if resp.success != Some(true) {
         let msg = resp.error_msg.as_deref().unwrap_or("unknown error");
@@ -500,33 +699,15 @@ pub async fn run(
                 msg
             );
         }
-        bail!("Order placement failed: {}", msg);
-    }
-
-    let actual_shares = taker_amount_raw as f64 / 1_000_000.0;
-    if let Some(sid) = strategy_id.filter(|s| !s.is_empty()) {
-        let ts_now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let report_payload = serde_json::json!({
-            "wallet": signer_addr,
-            "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
-            "order_id": resp.order_id.clone().unwrap_or_default(),
-            "tx_hashes": resp.tx_hashes,
-            "market_id": condition_id,
-            "asset_id": token_id,
-            "side": "BUY",
-            "amount": format!("{}", actual_shares),
-            "symbol": "USDC.e",
-            "price": format!("{}", limit_price),
-            "timestamp": ts_now,
-            "strategy_id": sid,
-            "plugin_name": "polymarket-plugin",
-        });
-        if let Err(e) = crate::onchainos::report_plugin_info(&report_payload).await {
-            eprintln!("[polymarket] Warning: report-plugin-info failed: {}", e);
+        if msg_upper.contains("ORDER_VERSION_MISMATCH") || msg_upper.contains("VERSION_MISMATCH") {
+            bail!(
+                "Order rejected: CLOB version mismatch (server reported: {}). \
+                 The server may have just switched to a different order version. \
+                 Run the command again to re-detect the current version.",
+                msg
+            );
         }
+        bail!("Order placement failed: {}", msg);
     }
 
     let result = serde_json::json!({
@@ -542,7 +723,7 @@ pub async fn run(
             "limit_price": limit_price,
             "usdc_amount": actual_usdc,
             "usdc_requested": usdc_amount,
-            "shares": actual_shares,
+            "shares": taker_amount_raw as f64 / 1_000_000.0,
             "rounded_up": round_up && actual_usdc > usdc_amount + 1e-6,
             "post_only": post_only,
             "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
@@ -655,41 +836,35 @@ fn rand_salt() -> u64 {
     u64::from_le_bytes(bytes) & 0x001F_FFFF_FFFF_FFFF
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Approve the collateral token for the correct exchange contract based on CLOB version.
+///
+/// V1 → approves USDC.e to CTF_EXCHANGE (or NEG_RISK_CTF_EXCHANGE for neg-risk).
+/// V2 → approves pUSD to CTF_EXCHANGE_V2 (or NEG_RISK_CTF_EXCHANGE_V2 for neg-risk).
+///
+/// pUSD (Polymarket USD) replaced USDC.e as collateral for V2 exchange contracts
+/// from ~2026-04-28. This function routes to the correct token automatically so users
+/// get a V2 pUSD approval on their first V2 trade without any manual intervention.
+async fn approve_usdc_versioned(
+    neg_risk: bool,
+    version: OrderVersion,
+    _amount_raw: u64,
+) -> anyhow::Result<String> {
+    use crate::config::Contracts;
+    use crate::onchainos::usdc_approve;
 
-    // Serialize env-var tests so they don't contaminate each other when run in parallel.
-    static ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let collateral_token = match version {
+        OrderVersion::V2 => Contracts::PUSD,
+        OrderVersion::V1 => Contracts::USDC_E,
+    };
+    let exchange_addr = Contracts::exchange(version, neg_risk);
 
-    // ── Bug #6: Approval timeout env var ────────────────────────────────────
-
-    /// Default timeout is 90 seconds when env var is not set.
-    /// Rationale: Polygon block time ~2s; 30s was too short for congested periods.
-    #[test]
-    fn test_approve_timeout_default() {
-        let _lock = ENV_MUTEX.lock().unwrap();
-        std::env::remove_var("POLYMARKET_APPROVE_TIMEOUT_SECS");
-        assert_eq!(approve_timeout_secs(), 90, "default timeout should be 90s");
+    // Always approve u128::MAX — setting an exact amount causes unnecessary re-approval
+    // on every trade when a MAX_UINT allowance was already granted previously.
+    if neg_risk {
+        let adapter_addr = Contracts::NEG_RISK_ADAPTER;
+        usdc_approve(collateral_token, exchange_addr, u128::MAX).await?;
+        return usdc_approve(collateral_token, adapter_addr, u128::MAX).await;
     }
 
-    /// Env var override is respected and parsed correctly.
-    #[test]
-    fn test_approve_timeout_env_override() {
-        let _lock = ENV_MUTEX.lock().unwrap();
-        std::env::set_var("POLYMARKET_APPROVE_TIMEOUT_SECS", "120");
-        let t = approve_timeout_secs();
-        std::env::remove_var("POLYMARKET_APPROVE_TIMEOUT_SECS");
-        assert_eq!(t, 120, "env var should override default");
-    }
-
-    /// Invalid env var value falls back to default (no panic).
-    #[test]
-    fn test_approve_timeout_invalid_env() {
-        let _lock = ENV_MUTEX.lock().unwrap();
-        std::env::set_var("POLYMARKET_APPROVE_TIMEOUT_SECS", "not_a_number");
-        let t = approve_timeout_secs();
-        std::env::remove_var("POLYMARKET_APPROVE_TIMEOUT_SECS");
-        assert_eq!(t, 90, "invalid env var value should fall back to default 90s");
-    }
+    usdc_approve(collateral_token, exchange_addr, u128::MAX).await
 }

@@ -100,27 +100,56 @@ pub fn save_credentials(creds: &Credentials) -> Result<()> {
     Ok(())
 }
 
+/// CLOB order version — determines which exchange contract and EIP-712 struct to use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OrderVersion {
+    /// Original exchange (0x4bFb41...). EIP-712 domain version "1".
+    V1,
+    /// New exchange released 2026-04-21 (0xE11118...). EIP-712 domain version "2".
+    V2,
+}
+
 /// Contract addresses on Polygon (chain 137)
 pub struct Contracts;
 
 impl Contracts {
+    // ── V1 exchange contracts (legacy) ────────────────────────────────────────
     pub const CTF_EXCHANGE: &'static str = "0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E";
     pub const NEG_RISK_CTF_EXCHANGE: &'static str = "0xC5d563A36AE78145C45a50134d48A1215220f80a";
+
+    // ── V2 exchange contracts (released 2026-04-21) ───────────────────────────
+    pub const CTF_EXCHANGE_V2: &'static str = "0xE111180000d2663C0091e4f400237545B87B996B";
+    pub const NEG_RISK_CTF_EXCHANGE_V2: &'static str = "0xe2222d279d744050d28e00520010520000310F59";
+
+    // ── Shared / unchanged contracts ──────────────────────────────────────────
     pub const NEG_RISK_ADAPTER: &'static str = "0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296";
     pub const CTF: &'static str = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
     pub const USDC_E: &'static str = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+    /// Polymarket USD — replaces USDC.e as collateral for V2 exchange contracts (live ~2026-04-28).
+    pub const PUSD: &'static str = "0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB";
+    /// Collateral Onramp: wrap(address _asset, address _to, uint256 _amount) USDC.e → pUSD.
+    pub const COLLATERAL_ONRAMP: &'static str = "0x93070a847efEf7F70739046A929D47a521F5B8ee";
     pub const PROXY_FACTORY: &'static str = "0xaB45c5A4B0c941a2F231C04C3f49182e1A254052";
     pub const GNOSIS_SAFE_FACTORY: &'static str = "0xaacfeea03eb1561c4e67d661e40682bd20e3541b";
     pub const UMA_ADAPTER: &'static str = "0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74";
 
+    /// Return the V1 exchange address for the given market type.
     pub fn exchange_for(neg_risk: bool) -> &'static str {
-        if neg_risk {
-            Self::NEG_RISK_CTF_EXCHANGE
-        } else {
-            Self::CTF_EXCHANGE
-        }
+        if neg_risk { Self::NEG_RISK_CTF_EXCHANGE } else { Self::CTF_EXCHANGE }
     }
 
+    /// Return the V2 exchange address for the given market type.
+    pub fn exchange_for_v2(neg_risk: bool) -> &'static str {
+        if neg_risk { Self::NEG_RISK_CTF_EXCHANGE_V2 } else { Self::CTF_EXCHANGE_V2 }
+    }
+
+    /// Return the exchange address for the given version and market type.
+    pub fn exchange(version: OrderVersion, neg_risk: bool) -> &'static str {
+        match version {
+            OrderVersion::V1 => Self::exchange_for(neg_risk),
+            OrderVersion::V2 => Self::exchange_for_v2(neg_risk),
+        }
+    }
 }
 
 /// Base URLs
@@ -137,33 +166,4 @@ impl Urls {
     pub const BASE_RPC:     &'static str = "https://base.drpc.org";
     pub const OPTIMISM_RPC: &'static str = "https://optimism.drpc.org";
     pub const BNB_RPC:      &'static str = "https://bsc.publicnode.com";
-
-    // ── Env-var-overridable accessors ────────────────────────────────────────
-    //
-    // These are used in place of the const fields throughout the codebase so
-    // that integration tests can redirect HTTP traffic to local mock servers
-    // by setting the corresponding POLYMARKET_TEST_* env vars.
-    //
-    // Production code never sets these vars, so the const defaults always apply
-    // in normal operation.
-
-    pub fn polygon_rpc() -> String {
-        std::env::var("POLYMARKET_TEST_POLYGON_RPC")
-            .unwrap_or_else(|_| Self::POLYGON_RPC.to_string())
-    }
-
-    pub fn clob() -> String {
-        std::env::var("POLYMARKET_TEST_CLOB_URL")
-            .unwrap_or_else(|_| Self::CLOB.to_string())
-    }
-
-    pub fn gamma() -> String {
-        std::env::var("POLYMARKET_TEST_GAMMA_URL")
-            .unwrap_or_else(|_| Self::GAMMA.to_string())
-    }
-
-    pub fn data() -> String {
-        std::env::var("POLYMARKET_TEST_DATA_URL")
-            .unwrap_or_else(|_| Self::DATA.to_string())
-    }
 }

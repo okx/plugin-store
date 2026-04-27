@@ -2,14 +2,16 @@ use anyhow::{bail, Context, Result};
 use reqwest::Client;
 
 use crate::api::{
-    compute_sell_worst_price, get_balance_allowance, get_market_fee, get_orderbook,
-    post_order, round_price, to_token_units, OrderBody,
-    OrderRequest,
+    compute_sell_worst_price, get_balance_allowance, get_clob_version, get_market_fee,
+    get_orderbook, post_order, round_price, to_token_units, OrderBody, OrderBodyV2,
+    OrderRequest, OrderRequestV2,
 };
 use crate::auth::ensure_credentials;
-use crate::onchainos::{approve_ctf, get_wallet_address, is_ctf_approved_for_all};
+use crate::config::OrderVersion;
+use crate::onchainos::{get_wallet_address, is_ctf_approved_for_all};
 use crate::series;
-use crate::signing::{sign_order_via_onchainos, OrderParams};
+use crate::signing::{sign_order_v2_via_onchainos, sign_order_via_onchainos, OrderParams,
+    OrderParamsV2, BYTES32_ZERO};
 
 use super::buy::{resolve_from_gamma, resolve_market_token};
 
@@ -31,7 +33,6 @@ pub async fn run(
     expires: Option<u64>,
     mode_override: Option<&str>,
     token_id_fast: Option<&str>,
-    strategy_id: Option<&str>,
 ) -> Result<()> {
     // Parse shares and validate order flags up front (before any network calls).
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
@@ -251,6 +252,10 @@ pub async fn run(
 
     use crate::config::{Contracts, TradingMode};
 
+    // Fetch CLOB version in parallel with credentials.
+    let clob_version_raw = get_clob_version(&client).await?;
+    let clob_version = if clob_version_raw == 2 { OrderVersion::V2 } else { OrderVersion::V1 };
+
     // Wallet address was pre-fetched in parallel with the order book (non-dry-run path).
     let signer_addr = signer_addr_opt.expect("signer_addr must be set in non-dry-run path");
     let creds = ensure_credentials(&client, &signer_addr).await?;
@@ -357,12 +362,16 @@ pub async fn run(
 
     // EOA mode: check and submit CTF setApprovalForAll if needed.
     // POLY_PROXY mode: no approval tx — relayer handles settlement through the proxy.
+    //
+    // V2 migration: V2 uses a new exchange contract address for CTF approval.
+    // If the user approved V1 exchange but not V2, the V2 exchange will be approved here.
     if effective_mode == TradingMode::Eoa {
+        let exchange_addr = Contracts::exchange(clob_version, neg_risk);
         let already_approved = if neg_risk {
-            let ok1 = match is_ctf_approved_for_all(&signer_addr, Contracts::NEG_RISK_CTF_EXCHANGE).await {
+            let ok1 = match is_ctf_approved_for_all(&signer_addr, exchange_addr).await {
                 Ok(v) => v,
                 Err(e) => {
-                    eprintln!("[polymarket] Note: could not verify NEG_RISK_CTF_EXCHANGE approval ({}); will re-approve.", e);
+                    eprintln!("[polymarket] Note: could not verify exchange approval ({}); will re-approve.", e);
                     false
                 }
             };
@@ -375,18 +384,23 @@ pub async fn run(
             };
             ok1 && ok2
         } else {
-            match is_ctf_approved_for_all(&signer_addr, Contracts::CTF_EXCHANGE).await {
+            match is_ctf_approved_for_all(&signer_addr, exchange_addr).await {
                 Ok(v) => v,
                 Err(e) => {
-                    eprintln!("[polymarket] Note: could not verify CTF_EXCHANGE approval ({}); will re-approve.", e);
+                    eprintln!("[polymarket] Note: could not verify exchange approval ({}); will re-approve.", e);
                     false
                 }
             }
         };
         if !already_approved || auto_approve {
-            let exchange_label = if neg_risk { "Neg Risk CTF Exchange" } else { "CTF Exchange" };
+            let version_label = if clob_version == OrderVersion::V2 { " V2" } else { "" };
+            let exchange_label = if neg_risk {
+                format!("Neg Risk CTF Exchange{}", version_label)
+            } else {
+                format!("CTF Exchange{}", version_label)
+            };
             eprintln!("[polymarket] Approving CTF tokens for {}...", exchange_label);
-            let tx_hash = approve_ctf(neg_risk).await?;
+            let tx_hash = approve_ctf_versioned(neg_risk, clob_version).await?;
             eprintln!("[polymarket] Approval tx: {}", tx_hash);
             eprintln!("[polymarket] Waiting for approval to confirm on-chain...");
             crate::onchainos::wait_for_tx_receipt(&tx_hash, 30).await?;
@@ -396,50 +410,93 @@ pub async fn run(
 
     let salt = rand_salt();
 
-    let params = OrderParams {
-        salt,
-        maker: maker_addr.clone(),
-        signer: signer_addr.clone(),
-        taker: "0x0000000000000000000000000000000000000000".to_string(),
-        token_id: token_id.clone(),
-        maker_amount: maker_amount_raw as u64,
-        taker_amount: taker_amount_raw as u64,
-        expiration,
-        nonce: 0,
-        fee_rate_bps,
-        side: 1, // SELL
-        signature_type: sig_type,
+    // Sign and submit the order using the correct version's struct and exchange contract.
+    let resp = match clob_version {
+        OrderVersion::V2 => {
+            let timestamp_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            let params = OrderParamsV2 {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw as u64,
+                taker_amount: taker_amount_raw as u64,
+                side: 1, // SELL
+                signature_type: sig_type,
+                timestamp_ms,
+                metadata: BYTES32_ZERO.to_string(),
+                builder: BYTES32_ZERO.to_string(),
+            };
+            let signature = sign_order_v2_via_onchainos(&params, neg_risk).await?;
+            let order_body = OrderBodyV2 {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw.to_string(),
+                taker_amount: taker_amount_raw.to_string(),
+                side: "SELL".to_string(),
+                signature_type: sig_type,
+                timestamp: timestamp_ms.to_string(),
+                metadata: BYTES32_ZERO.to_string(),
+                builder: BYTES32_ZERO.to_string(),
+                signature,
+            };
+            let order_req = OrderRequestV2 {
+                order: order_body,
+                owner: creds.api_key.clone(),
+                order_type: effective_order_type.to_uppercase(),
+                post_only,
+                expiration: if expiration > 0 { expiration.to_string() } else { String::new() },
+            };
+            post_order(&client, &signer_addr, &creds, &order_req).await?
+        }
+        OrderVersion::V1 => {
+            let params = OrderParams {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                taker: "0x0000000000000000000000000000000000000000".to_string(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw as u64,
+                taker_amount: taker_amount_raw as u64,
+                expiration,
+                nonce: 0,
+                fee_rate_bps,
+                side: 1, // SELL
+                signature_type: sig_type,
+            };
+            let signature = sign_order_via_onchainos(&params, neg_risk).await?;
+            let order_body = OrderBody {
+                salt,
+                maker: maker_addr.clone(),
+                signer: signer_addr.clone(),
+                taker: "0x0000000000000000000000000000000000000000".to_string(),
+                token_id: token_id.clone(),
+                maker_amount: maker_amount_raw.to_string(),
+                taker_amount: taker_amount_raw.to_string(),
+                expiration: expiration.to_string(),
+                nonce: "0".to_string(),
+                fee_rate_bps: fee_rate_bps.to_string(),
+                side: "SELL".to_string(),
+                signature_type: sig_type,
+                signature,
+            };
+            let order_req = OrderRequest {
+                order: order_body,
+                owner: creds.api_key.clone(),
+                order_type: effective_order_type.to_uppercase(),
+                post_only,
+            };
+            // The order owner for L2 auth must always be the EOA (API key holder),
+            // regardless of trading mode. In POLY_PROXY mode the maker field in the
+            // order struct is the proxy, but the HTTP owner must match the API key.
+            post_order(&client, &signer_addr, &creds, &order_req).await?
+        }
     };
-
-    let signature = sign_order_via_onchainos(&params, neg_risk).await?;
-
-    let order_body = OrderBody {
-        salt,
-        maker: maker_addr.clone(),
-        signer: signer_addr.clone(),
-        taker: "0x0000000000000000000000000000000000000000".to_string(),
-        token_id: token_id.clone(),
-        maker_amount: maker_amount_raw.to_string(),
-        taker_amount: taker_amount_raw.to_string(),
-        expiration: expiration.to_string(),
-        nonce: "0".to_string(),
-        fee_rate_bps: fee_rate_bps.to_string(),
-        side: "SELL".to_string(),
-        signature_type: sig_type,
-        signature,
-    };
-
-    let order_req = OrderRequest {
-        order: order_body,
-        owner: creds.api_key.clone(),
-        order_type: effective_order_type.to_uppercase(),
-        post_only,
-    };
-
-    // The order owner for L2 auth must always be the EOA (API key holder),
-    // regardless of trading mode. In POLY_PROXY mode the maker field in the
-    // order struct is the proxy, but the HTTP owner must match the API key.
-    let resp = post_order(&client, &signer_addr, &creds, &order_req).await?;
 
     if resp.success != Some(true) {
         let msg = resp.error_msg.as_deref().unwrap_or("unknown error");
@@ -458,33 +515,15 @@ pub async fn run(
                 msg
             );
         }
-        bail!("Order placement failed: {}", msg);
-    }
-
-    let shares_filled = maker_amount_raw as f64 / 1_000_000.0;
-    if let Some(sid) = strategy_id.filter(|s| !s.is_empty()) {
-        let ts_now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let report_payload = serde_json::json!({
-            "wallet": signer_addr,
-            "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
-            "order_id": resp.order_id.clone().unwrap_or_default(),
-            "tx_hashes": resp.tx_hashes,
-            "market_id": condition_id,
-            "asset_id": token_id,
-            "side": "SELL",
-            "amount": format!("{}", shares_filled),
-            "symbol": "USDC.e",
-            "price": format!("{}", limit_price),
-            "timestamp": ts_now,
-            "strategy_id": sid,
-            "plugin_name": "polymarket-plugin",
-        });
-        if let Err(e) = crate::onchainos::report_plugin_info(&report_payload).await {
-            eprintln!("[polymarket] Warning: report-plugin-info failed: {}", e);
+        if msg_upper.contains("ORDER_VERSION_MISMATCH") || msg_upper.contains("VERSION_MISMATCH") {
+            bail!(
+                "Order rejected: CLOB version mismatch (server reported: {}). \
+                 The server may have just switched to a different order version. \
+                 Run the command again to re-detect the current version.",
+                msg
+            );
         }
+        bail!("Order placement failed: {}", msg);
     }
 
     let result = serde_json::json!({
@@ -498,7 +537,7 @@ pub async fn run(
             "side": "SELL",
             "order_type": effective_order_type.to_uppercase(),
             "limit_price": limit_price,
-            "shares": shares_filled,
+            "shares": maker_amount_raw as f64 / 1_000_000.0,
             "usdc_out": taker_amount_raw as f64 / 1_000_000.0,
             "post_only": post_only,
             "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
@@ -514,4 +553,23 @@ fn rand_salt() -> u64 {
     let mut bytes = [0u8; 8];
     getrandom::getrandom(&mut bytes).expect("getrandom failed");
     u64::from_le_bytes(bytes) & 0x001F_FFFF_FFFF_FFFF
+}
+
+/// Approve CTF tokens (setApprovalForAll) for the correct exchange contract based on CLOB version.
+///
+/// V2 migration: V2 introduces new exchange contract addresses. Users who already
+/// approved V1 contracts will get an automatic V2 approval on their first V2 sell.
+async fn approve_ctf_versioned(neg_risk: bool, version: OrderVersion) -> anyhow::Result<String> {
+    use crate::config::Contracts;
+    use crate::onchainos::ctf_set_approval_for_all;
+
+    let ctf = Contracts::CTF;
+    let exchange_addr = Contracts::exchange(version, neg_risk);
+
+    if neg_risk {
+        ctf_set_approval_for_all(ctf, exchange_addr).await?;
+        ctf_set_approval_for_all(ctf, Contracts::NEG_RISK_ADAPTER).await
+    } else {
+        ctf_set_approval_for_all(ctf, exchange_addr).await
+    }
 }

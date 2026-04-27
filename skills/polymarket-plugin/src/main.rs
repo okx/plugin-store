@@ -22,9 +22,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Check wallet assets and get a recommended next step (region check, balances, positions, onboarding guidance)
-    Quickstart(commands::quickstart::QuickstartArgs),
-
     /// Check whether Polymarket is accessible from your current IP (run before topping up USDC)
     CheckAccess,
 
@@ -65,6 +62,13 @@ enum Commands {
     /// Show POL and USDC.e balances for the EOA wallet (and proxy wallet if initialized)
     Balance,
 
+    /// Check Polymarket status, wallet balances, open positions, and onboarding readiness
+    Quickstart {
+        /// Wallet address to query (defaults to active onchainos wallet)
+        #[arg(long)]
+        address: Option<String>,
+    },
+
     /// Show current and next slot for a recurring series market (no auth required)
     GetSeries {
         /// Series identifier (e.g. btc-5m, eth-15m, btc-4h). Omit to list all.
@@ -95,7 +99,8 @@ enum Commands {
         #[arg(long)]
         price: Option<f64>,
 
-        /// Order type: GTC (resting limit) or FOK (fill-or-kill market)
+        /// Order type: GTC (resting limit), FOK (fill-or-kill market), GTD (good-till-date),
+        /// or FAK (fill-and-kill: fills as much as possible, cancels remainder)
         #[arg(long, default_value = "GTC")]
         order_type: String,
 
@@ -135,10 +140,6 @@ enum Commands {
         /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
         #[arg(long)]
         token_id: Option<String>,
-
-        /// Strategy ID for attribution — reported to OKX backend alongside the order
-        #[arg(long)]
-        strategy_id: Option<String>,
     },
 
     /// Sell YES or NO shares in a market (signs via onchainos wallet)
@@ -160,7 +161,8 @@ enum Commands {
         #[arg(long)]
         price: Option<f64>,
 
-        /// Order type: GTC (resting limit) or FOK (fill-or-kill market)
+        /// Order type: GTC (resting limit), FOK (fill-or-kill market), GTD (good-till-date),
+        /// or FAK (fill-and-kill: fills as much as possible, cancels remainder)
         #[arg(long, default_value = "GTC")]
         order_type: String,
 
@@ -194,10 +196,6 @@ enum Commands {
         /// Skip market lookup — use a known token ID directly (from get-series or get-market output).
         #[arg(long)]
         token_id: Option<String>,
-
-        /// Strategy ID for attribution — reported to OKX backend alongside the order
-        #[arg(long)]
-        strategy_id: Option<String>,
     },
 
     /// Create a Polymarket proxy wallet and switch to gasless POLY_PROXY trading mode.
@@ -254,7 +252,7 @@ enum Commands {
     /// Redeem winning outcome tokens after a market resolves (signs via onchainos wallet)
     Redeem {
         /// Market identifier: condition_id (0x-prefixed hex) or slug. Omit when using --all.
-        #[arg(long)]
+        #[arg(long, alias = "condition-id")]
         market_id: Option<String>,
 
         /// Redeem all redeemable positions across EOA and proxy wallets in one pass
@@ -264,10 +262,6 @@ enum Commands {
         /// Preview the redemption call without submitting the transaction
         #[arg(long)]
         dry_run: bool,
-
-        /// Strategy ID for attribution — reported to OKX backend after successful redeem
-        #[arg(long)]
-        strategy_id: Option<String>,
     },
 
     /// Cancel a single open order by order ID (signs via onchainos wallet)
@@ -284,6 +278,66 @@ enum Commands {
         #[arg(long)]
         all: bool,
     },
+
+    /// List open orders for the authenticated user (requires auth).
+    /// Detects V1 vs V2 order signing automatically — useful during CLOB v2 migration.
+    Orders {
+        /// Filter by order state: OPEN, MATCHED, DELAYED, UNMATCHED (default: OPEN)
+        #[arg(long, default_value = "OPEN")]
+        state: String,
+
+        /// Show only V1-signed orders placed before the CLOB v2 upgrade (2026-04-21)
+        #[arg(long)]
+        v1: bool,
+
+        /// Maximum number of orders to return (default: all)
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+
+    /// Watch live trade activity for a market, polling every few seconds (Ctrl+C to stop).
+    Watch {
+        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        #[arg(long)]
+        market_id: String,
+
+        /// Poll interval in seconds (minimum 2, default 5)
+        #[arg(long, default_value = "5")]
+        interval: u64,
+
+        /// Maximum number of events to fetch per poll
+        #[arg(long, default_value = "10")]
+        limit: u32,
+    },
+
+    /// Request a block-trade quote from a Polymarket market maker (CLOB v2 RFQ).
+    /// Re-run with --confirm to accept the quote and execute the trade.
+    Rfq {
+        /// Market identifier: condition_id (0x-prefixed hex) or slug
+        #[arg(long)]
+        market_id: String,
+
+        /// Outcome to buy: "yes" or "no"
+        #[arg(long)]
+        outcome: String,
+
+        /// USDC.e amount to spend (e.g. "5000" = $5,000)
+        #[arg(long)]
+        amount: String,
+
+        /// Accept the quoted price and execute the block trade
+        #[arg(long)]
+        confirm: bool,
+
+        /// Preview without requesting a quote
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Create a read-only Polymarket API key (CLOB v2). Useful for monitoring
+    /// scripts and dashboards that need read access without trading capability.
+    #[command(name = "create-readonly-key")]
+    CreateReadonlyKey,
 
     /// List upcoming 5-minute crypto Up/Down markets on Polymarket.
     /// Supported coins: BTC, ETH, SOL, XRP, BNB, DOGE, HYPE
@@ -304,9 +358,6 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Quickstart(args) => {
-            commands::quickstart::run(args).await
-        }
         Commands::CheckAccess => {
             commands::check_access::run().await
         }
@@ -321,6 +372,9 @@ async fn main() {
         }
         Commands::Balance => {
             commands::balance::run().await
+        }
+        Commands::Quickstart { address } => {
+            commands::quickstart::run(commands::quickstart::QuickstartArgs { address }).await
         }
         Commands::GetSeries { series, list } => {
             commands::get_series::run(series.as_deref(), list).await
@@ -339,9 +393,8 @@ async fn main() {
             mode,
             confirm: _confirm,
             token_id,
-            strategy_id,
         } => {
-            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref()).await
+            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref(), token_id.as_deref()).await
         }
         Commands::Sell {
             market_id,
@@ -356,9 +409,8 @@ async fn main() {
             mode,
             confirm: _confirm,
             token_id,
-            strategy_id,
         } => {
-            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref()).await
+            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref(), token_id.as_deref()).await
         }
         Commands::SetupProxy { dry_run } => {
             commands::setup_proxy::run(dry_run).await
@@ -372,11 +424,11 @@ async fn main() {
         Commands::SwitchMode { mode } => {
             commands::switch_mode::run(&mode).await
         }
-        Commands::Redeem { market_id, all, dry_run, strategy_id } => {
+        Commands::Redeem { market_id, all, dry_run } => {
             if all {
-                commands::redeem::run_all(dry_run, strategy_id.as_deref()).await
+                commands::redeem::run_all(dry_run).await
             } else if let Some(mid) = market_id {
-                commands::redeem::run(&mid, dry_run, strategy_id.as_deref()).await
+                commands::redeem::run(&mid, dry_run).await
             } else {
                 eprintln!("Error: provide --market-id <ID> or --all");
                 std::process::exit(1);
@@ -394,6 +446,18 @@ async fn main() {
                     "Specify --order-id <id>, --market <condition_id>, or --all"
                 ))
             }
+        }
+        Commands::Orders { state, v1, limit } => {
+            commands::orders::run(&state, v1, limit).await
+        }
+        Commands::Watch { market_id, interval, limit } => {
+            commands::watch::run(&market_id, interval, limit).await
+        }
+        Commands::Rfq { market_id, outcome, amount, confirm, dry_run } => {
+            commands::rfq::run(&market_id, &outcome, &amount, confirm, dry_run).await
+        }
+        Commands::CreateReadonlyKey => {
+            commands::create_readonly_key::run().await
         }
         Commands::List5m { coin, count } => {
             commands::list_5m::run(coin.as_deref(), count).await

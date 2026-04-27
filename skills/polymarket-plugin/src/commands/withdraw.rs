@@ -1,12 +1,19 @@
-/// `polymarket withdraw` — transfer USDC.e from proxy wallet back to EOA wallet.
+/// `polymarket withdraw` — transfer collateral from proxy wallet back to EOA wallet.
 ///
-/// Uses PROXY_FACTORY.proxy([op]) to execute a USDC.e transfer from the proxy's context.
-/// The op encodes: transfer(eoa_address, amount) on the USDC.e contract.
+/// Uses PROXY_FACTORY.proxy([op]) to execute an ERC-20 transfer from the proxy's context.
+/// The token depends on the CLOB version:
+///   V1 → USDC.e  (legacy exchange)
+///   V2 → pUSD    (Polymarket USD, from ~2026-04-28)
+///
+/// The command auto-detects which token the proxy holds (pUSD balance checked first,
+/// fallback to USDC.e) and withdraws whichever has the requested amount.
 
 use anyhow::{bail, Result};
-use crate::onchainos::{get_usdc_balance, get_wallet_address};
+use crate::onchainos::{get_pusd_balance, get_usdc_balance, get_wallet_address};
 
 pub async fn run(amount: &str, dry_run: bool) -> Result<()> {
+    use crate::config::Contracts;
+
     let eoa = get_wallet_address().await?;
     let creds = crate::config::load_credentials()
         .ok()
@@ -23,15 +30,29 @@ pub async fn run(amount: &str, dry_run: bool) -> Result<()> {
     }
     let amount_raw = (amount_f * 1_000_000.0).round() as u128;
 
-    // Check proxy balance on-chain
-    let proxy_bal = get_usdc_balance(&proxy).await?;
-    let proxy_bal_raw = (proxy_bal * 1_000_000.0).floor() as u128;
-    if proxy_bal_raw < amount_raw {
+    // Auto-detect which token the proxy holds: pUSD (V2) or USDC.e (V1).
+    // Check both in parallel and pick whichever has enough balance.
+    let (pusd_bal_r, usdc_bal_r) = tokio::join!(
+        get_pusd_balance(&proxy),
+        get_usdc_balance(&proxy),
+    );
+    let pusd_bal  = pusd_bal_r.unwrap_or(0.0);
+    let usdc_e_bal = usdc_bal_r.unwrap_or(0.0);
+    let pusd_raw  = (pusd_bal * 1_000_000.0).floor() as u128;
+    let usdc_e_raw = (usdc_e_bal * 1_000_000.0).floor() as u128;
+
+    // Prefer pUSD (V2 collateral) if it covers the requested amount.
+    let (token_name, token_addr, proxy_bal) = if pusd_raw >= amount_raw {
+        ("pUSD", Contracts::PUSD, pusd_bal)
+    } else if usdc_e_raw >= amount_raw {
+        ("USDC.e", Contracts::USDC_E, usdc_e_bal)
+    } else {
         bail!(
-            "Insufficient proxy wallet balance: have ${:.2}, need ${:.2}",
-            proxy_bal, amount_f
+            "Insufficient proxy wallet balance: have ${:.2} pUSD + ${:.2} USDC.e, need ${:.2}. \
+             Check `polymarket balance` for details.",
+            pusd_bal, usdc_e_bal, amount_f
         );
-    }
+    };
 
     if dry_run {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
@@ -40,17 +61,24 @@ pub async fn run(amount: &str, dry_run: bool) -> Result<()> {
             "data": {
                 "from": proxy,
                 "to": eoa,
-                "token": "USDC.e",
+                "token": token_name,
+                "token_contract": token_addr,
                 "amount": amount_f,
                 "amount_raw": amount_raw,
+                "proxy_balance": proxy_bal,
                 "note": "dry-run: no transaction submitted"
             }
         }))?);
         return Ok(());
     }
 
-    eprintln!("[polymarket] Withdrawing ${:.2} USDC.e from proxy {} to EOA {}...", amount_f, proxy, eoa);
-    let tx_hash = crate::onchainos::withdraw_usdc_from_proxy(&eoa, amount_raw).await?;
+    eprintln!("[polymarket] Withdrawing ${:.2} {} from proxy {} to EOA {}...", amount_f, token_name, proxy, eoa);
+    // Route to the correct onchainos withdraw helper based on token.
+    let tx_hash = if token_addr == Contracts::PUSD {
+        crate::onchainos::withdraw_pusd_from_proxy(&eoa, amount_raw).await?
+    } else {
+        crate::onchainos::withdraw_usdc_from_proxy(&eoa, amount_raw).await?
+    };
     eprintln!("[polymarket] Withdraw tx: {}", tx_hash);
     eprintln!("[polymarket] Waiting for confirmation...");
     crate::onchainos::wait_for_tx_receipt(&tx_hash, 30).await?;
@@ -61,7 +89,7 @@ pub async fn run(amount: &str, dry_run: bool) -> Result<()> {
             "tx_hash": tx_hash,
             "from": proxy,
             "to": eoa,
-            "token": "USDC.e",
+            "token": token_name,
             "amount": amount_f,
         }
     }))?);

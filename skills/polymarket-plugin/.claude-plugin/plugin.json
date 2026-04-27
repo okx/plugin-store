@@ -1,7 +1,7 @@
 {
   "name": "polymarket-plugin",
   "description": "Trade prediction markets on Polymarket \u2014 buy and sell YES/NO outcome tokens on Polygon",
-  "version": "0.4.11",
+  "version": "0.5.1",
   "author": {
     "name": "skylavis-sky",
     "github": "skylavis-sky"

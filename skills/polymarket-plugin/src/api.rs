@@ -267,6 +267,88 @@ pub struct OrderResponse {
     pub tx_hashes: Vec<String>,
 }
 
+/// V2 order body — new field layout, no taker/nonce/feeRateBps; adds timestamp/metadata/builder.
+/// `expiration` is in the outer `OrderRequestV2` wrapper (not in the signed struct).
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrderBodyV2 {
+    pub salt: u64,
+    pub maker: String,
+    pub signer: String,
+    #[serde(rename = "tokenId")]
+    pub token_id: String,
+    #[serde(rename = "makerAmount")]
+    pub maker_amount: String,
+    #[serde(rename = "takerAmount")]
+    pub taker_amount: String,
+    pub side: String,
+    #[serde(rename = "signatureType")]
+    pub signature_type: u8,
+    /// Millisecond Unix timestamp — part of the EIP-712 signed struct.
+    pub timestamp: String,
+    /// bytes32 optional metadata ("0x000...000" for standard orders).
+    pub metadata: String,
+    /// bytes32 builder code ("0x000...000" for non-builders).
+    pub builder: String,
+    pub signature: String,
+}
+
+/// V2 outer order request — wraps `OrderBodyV2` and moves `expiration` out of the signed struct.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OrderRequestV2 {
+    pub order: OrderBodyV2,
+    pub owner: String,
+    #[serde(rename = "orderType")]
+    pub order_type: String,
+    #[serde(rename = "postOnly", default)]
+    pub post_only: bool,
+    /// GTD expiration timestamp (seconds). Present only for GTD orders; empty string otherwise.
+    #[serde(rename = "expiration", skip_serializing_if = "String::is_empty")]
+    pub expiration: String,
+}
+
+/// Open order returned by GET /orders.
+#[derive(Debug, Clone, Deserialize)]
+pub struct OpenOrder {
+    #[serde(rename = "id")]
+    pub order_id: String,
+    pub status: Option<String>,
+    #[serde(rename = "market")]
+    pub condition_id: Option<String>,
+    #[serde(rename = "asset_id")]
+    pub token_id: Option<String>,
+    pub side: Option<String>,
+    #[serde(rename = "original_size")]
+    pub original_size: Option<String>,
+    #[serde(rename = "size_matched")]
+    pub size_matched: Option<String>,
+    pub price: Option<String>,
+    #[serde(rename = "created_at")]
+    pub created_at: Option<u64>,
+    // V1-only fields — presence signals V1 order
+    pub nonce: Option<serde_json::Value>,
+    #[serde(rename = "feeRateBps")]
+    pub fee_rate_bps: Option<serde_json::Value>,
+    // V2-only fields — presence signals V2 order
+    pub timestamp: Option<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl OpenOrder {
+    /// Detect order version from field presence.
+    /// V1 orders have `nonce`/`feeRateBps`; V2 orders have `timestamp`/`metadata`.
+    pub fn version(&self) -> crate::config::OrderVersion {
+        if self.nonce.is_some() || self.fee_rate_bps.is_some() {
+            crate::config::OrderVersion::V1
+        } else {
+            crate::config::OrderVersion::V2
+        }
+    }
+
+    pub fn is_v1(&self) -> bool {
+        self.version() == crate::config::OrderVersion::V1
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct BalanceAllowance {
     pub asset_address: Option<String>,
@@ -306,7 +388,7 @@ impl BalanceAllowance {
 /// false positives (some endpoints return 403 for auth reasons on unrestricted IPs).
 /// Fails open on network errors or unexpected responses.
 pub async fn check_clob_access(client: &Client) -> Option<String> {
-    let url = format!("{}/order", Urls::clob());
+    let url = format!("{}/order", Urls::CLOB);
     let resp = match client
         .post(&url)
         .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -346,7 +428,7 @@ pub async fn check_clob_access(client: &Client) -> Option<String> {
 }
 
 pub async fn get_clob_market(client: &Client, condition_id: &str) -> Result<ClobMarket> {
-    let url = format!("{}/markets/{}", Urls::clob(), condition_id);
+    let url = format!("{}/markets/{}", Urls::CLOB, condition_id);
     let resp = client.get(&url).send().await?;
     if resp.status() == reqwest::StatusCode::NOT_FOUND {
         anyhow::bail!("Market not found: {}", condition_id);
@@ -357,7 +439,7 @@ pub async fn get_clob_market(client: &Client, condition_id: &str) -> Result<Clob
 }
 
 pub async fn get_orderbook(client: &Client, token_id: &str) -> Result<OrderBook> {
-    let url = format!("{}/book?token_id={}", Urls::clob(), token_id);
+    let url = format!("{}/book?token_id={}", Urls::CLOB, token_id);
     client.get(&url)
         .send()
         .await?
@@ -369,7 +451,7 @@ pub async fn get_orderbook(client: &Client, token_id: &str) -> Result<OrderBook>
 /// Fetch the market's maker_base_fee (in basis points) from CLOB market data.
 /// Returns 0 if not found.
 pub async fn get_market_fee(client: &Client, condition_id: &str) -> Result<u64> {
-    let url = format!("{}/markets/{}", Urls::clob(), condition_id);
+    let url = format!("{}/markets/{}", Urls::CLOB, condition_id);
     let v: Value = client.get(&url).send().await?.json().await?;
     let fee = v["maker_base_fee"]
         .as_u64()
@@ -379,7 +461,7 @@ pub async fn get_market_fee(client: &Client, condition_id: &str) -> Result<u64> 
 }
 
 pub async fn get_tick_size(client: &Client, token_id: &str) -> Result<f64> {
-    let url = format!("{}/tick-size?token_id={}", Urls::clob(), token_id);
+    let url = format!("{}/tick-size?token_id={}", Urls::CLOB, token_id);
     let v: Value = client.get(&url).send().await?.json().await?;
     // minimum_tick_size may be a JSON number or a JSON string
     let tick = v["minimum_tick_size"]
@@ -390,13 +472,13 @@ pub async fn get_tick_size(client: &Client, token_id: &str) -> Result<f64> {
 }
 
 pub async fn get_price(client: &Client, token_id: &str, side: &str) -> Result<String> {
-    let url = format!("{}/price?token_id={}&side={}", Urls::clob(), token_id, side);
+    let url = format!("{}/price?token_id={}&side={}", Urls::CLOB, token_id, side);
     let v: Value = client.get(&url).send().await?.json().await?;
     Ok(v["price"].as_str().unwrap_or("0").to_string())
 }
 
 pub async fn get_server_time(client: &Client) -> Result<u64> {
-    let url = format!("{}/time", Urls::clob());
+    let url = format!("{}/time", Urls::CLOB);
     let v: Value = client.get(&url).send().await?.json().await?;
     Ok(v["time"].as_u64().unwrap_or(0))
 }
@@ -427,7 +509,7 @@ pub async fn get_balance_allowance(
         "",
     )?;
 
-    let url = format!("{}{}", Urls::clob(), full_path);
+    let url = format!("{}{}", Urls::CLOB, full_path);
     let mut req = client.get(&url);
     for (k, v) in &headers {
         req = req.header(k.as_str(), v.as_str());
@@ -439,11 +521,11 @@ pub async fn get_balance_allowance(
         .context("parsing balance-allowance response")
 }
 
-pub async fn post_order(
+pub async fn post_order<T: serde::Serialize>(
     client: &Client,
     address: &str,
     creds: &Credentials,
-    order_req: &OrderRequest,
+    order_req: &T,
 ) -> Result<OrderResponse> {
     let body = serde_json::to_string(order_req)?;
     let path = "/order";
@@ -458,7 +540,7 @@ pub async fn post_order(
         &body,
     )?;
 
-    let url = format!("{}{}", Urls::clob(), path);
+    let url = format!("{}{}", Urls::CLOB, path);
     let mut req = client
         .post(&url)
         .header("Content-Type", "application/json")
@@ -484,6 +566,268 @@ pub async fn post_order(
     serde_json::from_str(&raw).with_context(|| format!("parsing post-order response: {}", raw))
 }
 
+/// Query the CLOB server for the active order version (1 or 2).
+///
+/// Detect the active CLOB version (V1 or V2) by querying GET /version.
+///
+/// Returns `Err` on network/parse failure rather than silently defaulting to V1.
+/// Reason: during the V1→V2 cutover (~2026-04-28 11:00 UTC) a transient probe
+/// failure could route a V2-era order through the V1 path, which the upgraded
+/// server will reject with a confusing 404/405. Bailing here gives the user a
+/// clear retry message instead.
+///
+/// Pre-v2 servers (before 2026-04-21) returned 404 on `/version`; that path is
+/// no longer reachable, so a missing endpoint now legitimately indicates a
+/// problem worth surfacing.
+pub async fn get_clob_version(client: &Client) -> Result<u8> {
+    let url = format!("{}/version", Urls::CLOB);
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .with_context(|| "failed to detect CLOB version (network error). \
+            Retry; if persistent, the server may be mid-cutover.")?;
+    let v: serde_json::Value = resp
+        .json()
+        .await
+        .with_context(|| "failed to parse /version response from CLOB. \
+            Retry; if persistent, the server may be mid-cutover.")?;
+    Ok(v["version"].as_u64().unwrap_or(1) as u8)
+}
+
+/// Fetch open orders for the authenticated user.
+///
+/// `state` is one of "OPEN", "MATCHED", "DELAYED", "UNMATCHED" (default: "OPEN").
+/// Returns typed `OpenOrder` values with `version()` for V1/V2 detection.
+pub async fn get_open_orders(
+    client: &Client,
+    address: &str,
+    creds: &Credentials,
+    state: &str,
+) -> Result<Vec<OpenOrder>> {
+    // CLOB v2 moved the orders listing endpoint from GET /orders?state=X to GET /data/orders.
+    // The HMAC signature must be computed over the BASE PATH only (without query string).
+    // The endpoint uses cursor-based pagination with a "next_cursor" field.
+    let sign_path = "/data/orders";
+    let request_path = format!("/data/orders?status={}", state);
+
+    let headers = l2_headers(
+        address,
+        &creds.api_key,
+        &creds.secret,
+        &creds.passphrase,
+        "GET",
+        sign_path, // sign base path only
+        "",
+    )?;
+
+    let url = format!("{}{}", Urls::CLOB, request_path);
+    let mut req = client.get(&url);
+    for (k, v) in &headers {
+        req = req.header(k.as_str(), v.as_str());
+    }
+    let raw = req.send().await?.text().await?;
+    if raw.trim().is_empty() {
+        return Ok(vec![]);
+    }
+    let parsed: serde_json::Value = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing open-orders response: {}", raw))?;
+    // v2 returns {"data": [...], "next_cursor": "...", "limit": 500, "count": N}
+    let arr = if let Some(a) = parsed.get("data").and_then(|d| d.as_array()) {
+        a.clone()
+    } else if let Some(a) = parsed.as_array() {
+        a.clone()
+    } else {
+        vec![]
+    };
+    let orders: Vec<OpenOrder> = arr
+        .into_iter()
+        .filter_map(|v| serde_json::from_value(v).ok())
+        .collect();
+    Ok(orders)
+}
+
+/// Fetch V1-era orders from the pre-migration endpoint introduced in CLOB v2.
+///
+/// During the migration window, orders placed on the V1 exchange may not appear in
+/// `GET /orders` — this endpoint is the authoritative source for those legacy records.
+/// Returns the raw JSON array; callers merge with live-orders results.
+pub async fn get_pre_migration_orders(
+    client: &Client,
+    address: &str,
+    creds: &Credentials,
+) -> Result<Vec<OpenOrder>> {
+    // Also uses base-path-only signing (same convention as /data/orders in v2).
+    let path = "/data/pre-migration-orders";
+    let headers = l2_headers(
+        address,
+        &creds.api_key,
+        &creds.secret,
+        &creds.passphrase,
+        "GET",
+        path,
+        "",
+    )?;
+
+    let url = format!("{}{}", Urls::CLOB, path);
+    let mut req = client.get(&url);
+    for (k, v) in &headers {
+        req = req.header(k.as_str(), v.as_str());
+    }
+    let raw = req.send().await?.text().await?;
+    if raw.trim().is_empty() {
+        return Ok(vec![]);
+    }
+    let parsed: serde_json::Value = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing pre-migration-orders response: {}", raw))?;
+    let arr = if let Some(a) = parsed.as_array() {
+        a.clone()
+    } else if let Some(a) = parsed.get("data").and_then(|d| d.as_array()) {
+        a.clone()
+    } else {
+        vec![]
+    };
+    let orders: Vec<OpenOrder> = arr
+        .into_iter()
+        .filter_map(|v| serde_json::from_value(v).ok())
+        .collect();
+    Ok(orders)
+}
+
+/// A single trade event returned by `GET /markets/live-activity/{condition_id}`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct LiveTradeEvent {
+    #[serde(rename = "tradeId", default)]
+    pub trade_id: Option<String>,
+    pub price: Option<String>,
+    pub size: Option<String>,
+    pub side: Option<String>,
+    pub outcome: Option<String>,
+    #[serde(rename = "timestamp")]
+    pub timestamp: Option<u64>,
+    #[serde(rename = "transactionHash", default)]
+    pub tx_hash: Option<String>,
+}
+
+/// Fetch recent trade events for a market (public, no auth required).
+/// Returns events sorted newest-first. Used by the `watch` command.
+pub async fn get_market_live_activity(
+    client: &Client,
+    condition_id: &str,
+    limit: u32,
+) -> Result<Vec<LiveTradeEvent>> {
+    let url = format!(
+        "{}/markets/live-activity/{}?limit={}",
+        Urls::CLOB, condition_id, limit
+    );
+    let raw = client.get(&url).send().await?.text().await?;
+    let parsed: serde_json::Value = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing live-activity response: {}", raw))?;
+    let arr = if let Some(a) = parsed.as_array() {
+        a.clone()
+    } else if let Some(a) = parsed.get("data").and_then(|d| d.as_array()) {
+        a.clone()
+    } else {
+        vec![]
+    };
+    Ok(arr.into_iter().filter_map(|v| serde_json::from_value(v).ok()).collect())
+}
+
+/// RFQ quote returned by `GET /rfq/quote/{quote_id}`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RfqQuote {
+    #[serde(rename = "quoteId")]
+    pub quote_id: String,
+    pub price: Option<String>,
+    /// USDC amount the quote covers.
+    pub amount: Option<String>,
+    /// Unix timestamp (seconds) when this quote expires.
+    #[serde(rename = "expiresAt")]
+    pub expires_at: Option<u64>,
+    /// Market maker address.
+    pub maker: Option<String>,
+    pub status: Option<String>,
+}
+
+/// Request a RFQ quote for a block trade (no auth required for the request itself).
+/// Returns a quote_id to poll with `get_rfq_quote`.
+pub async fn post_rfq_request(
+    client: &Client,
+    condition_id: &str,
+    token_id: &str,
+    side: &str,
+    amount_usdc: f64,
+) -> Result<String> {
+    let body = serde_json::to_string(&serde_json::json!({
+        "market": condition_id,
+        "asset_id": token_id,
+        "side": side.to_uppercase(),
+        "amount": format!("{:.6}", amount_usdc),
+    }))?;
+    let url = format!("{}/rfq/request", Urls::CLOB);
+    let raw = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await?
+        .text()
+        .await?;
+    let v: serde_json::Value = serde_json::from_str(&raw)
+        .with_context(|| format!("parsing rfq-request response: {}", raw))?;
+    if let Some(err) = v.get("error").and_then(|e| e.as_str()) {
+        anyhow::bail!("RFQ request failed: {}", err);
+    }
+    v.get("quoteId")
+        .or_else(|| v.get("quote_id"))
+        .and_then(|id| id.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("No quoteId in RFQ response: {}", raw))
+}
+
+/// Poll for an RFQ quote by quote_id (no auth required).
+pub async fn get_rfq_quote(client: &Client, quote_id: &str) -> Result<RfqQuote> {
+    let url = format!("{}/rfq/quote/{}", Urls::CLOB, quote_id);
+    let raw = client.get(&url).send().await?.text().await?;
+    serde_json::from_str(&raw)
+        .with_context(|| format!("parsing rfq-quote response: {}", raw))
+}
+
+/// Confirm an RFQ quote — executes the block trade.
+/// The signature is an EIP-712 signed order matching the quoted price/amount.
+pub async fn post_rfq_confirm(
+    client: &Client,
+    address: &str,
+    creds: &Credentials,
+    quote_id: &str,
+    order_body: &OrderBodyV2,
+) -> Result<serde_json::Value> {
+    let body = serde_json::to_string(&serde_json::json!({
+        "quoteId": quote_id,
+        "order": order_body,
+        "owner": address,
+    }))?;
+    let path = "/rfq/confirm";
+    let headers = l2_headers(
+        address,
+        &creds.api_key,
+        &creds.secret,
+        &creds.passphrase,
+        "POST",
+        path,
+        &body,
+    )?;
+    let url = format!("{}{}", Urls::CLOB, path);
+    let mut req = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(body);
+    for (k, v) in &headers {
+        req = req.header(k.as_str(), v.as_str());
+    }
+    req.send().await?.json().await.context("parsing rfq-confirm response")
+}
+
 pub async fn cancel_order(
     client: &Client,
     address: &str,
@@ -504,7 +848,7 @@ pub async fn cancel_order(
         &body,
     )?;
 
-    let url = format!("{}{}", Urls::clob(), path);
+    let url = format!("{}{}", Urls::CLOB, path);
     let mut req = client
         .delete(&url)
         .header("Content-Type", "application/json")
@@ -535,7 +879,7 @@ pub async fn cancel_all_orders(
         "",
     )?;
 
-    let url = format!("{}{}", Urls::clob(), path);
+    let url = format!("{}{}", Urls::CLOB, path);
     let mut req = client.delete(&url);
     for (k, v) in &headers {
         req = req.header(k.as_str(), v.as_str());
@@ -572,7 +916,7 @@ pub async fn cancel_market_orders(
         &body,
     )?;
 
-    let url = format!("{}{}", Urls::clob(), path);
+    let url = format!("{}{}", Urls::CLOB, path);
     let mut req = client
         .delete(&url)
         .header("Content-Type", "application/json")
@@ -601,7 +945,7 @@ pub async fn list_gamma_markets(
     let fetch_limit = if keyword.is_some() { (limit * 5).min(100) } else { limit };
     let url = format!(
         "{}/markets?active=true&closed=false&limit={}&offset={}&order=volume24hrClob&ascending=false",
-        Urls::gamma(), fetch_limit, offset
+        Urls::GAMMA, fetch_limit, offset
     );
 
     let all: Vec<GammaMarket> = client.get(&url)
@@ -639,7 +983,7 @@ async fn fetch_gamma_events(
 ) -> Result<Vec<serde_json::Value>> {
     let url = format!(
         "{}/events?active=true&closed=false&limit={}&order=volume24hr&ascending=false",
-        Urls::gamma(), fetch_limit
+        Urls::GAMMA, fetch_limit
     );
 
     let all: Vec<serde_json::Value> = client
@@ -706,7 +1050,7 @@ pub async fn list_category_events(
 }
 
 pub async fn get_gamma_market_by_slug(client: &Client, slug: &str) -> Result<GammaMarket> {
-    let url = format!("{}/markets/slug/{}", Urls::gamma(), slug);
+    let url = format!("{}/markets/slug/{}", Urls::GAMMA, slug);
     let v: Value = client.get(&url).send().await?.json().await?;
 
     // Response can be an array or single object
@@ -740,7 +1084,7 @@ pub async fn get_gamma_market_by_slug(client: &Client, slug: &str) -> Result<Gam
 /// Calls `GET /profile?user=<address>` on the CLOB API.
 /// Returns None if the user has not completed polymarket.com onboarding.
 pub async fn get_proxy_wallet(client: &Client, signer_addr: &str) -> Result<Option<String>> {
-    let url = format!("{}/profile?user={}", Urls::clob(), signer_addr);
+    let url = format!("{}/profile?user={}", Urls::CLOB, signer_addr);
     let v: Value = client.get(&url).send().await?.json().await
         .context("parsing profile response")?;
     let proxy = v["proxyWallet"]
@@ -755,7 +1099,7 @@ pub async fn get_proxy_wallet(client: &Client, signer_addr: &str) -> Result<Opti
 pub async fn get_positions(client: &Client, user_address: &str) -> Result<Vec<Position>> {
     let url = format!(
         "{}/positions?user={}&sizeThreshold=0.01&limit=100&offset=0",
-        Urls::data(), user_address
+        Urls::DATA, user_address
     );
     client.get(&url)
         .send()
@@ -978,7 +1322,7 @@ pub struct FiveMinMarket {
 /// Fetch a single 5-minute market by its slug from the Gamma API.
 /// Returns `None` if the market does not exist yet.
 pub async fn get_5m_market(client: &Client, slug: &str) -> Result<Option<FiveMinMarket>> {
-    let url = format!("{}/markets?slug={}", Urls::gamma(), slug);
+    let url = format!("{}/markets?slug={}", Urls::GAMMA, slug);
     let resp: serde_json::Value = client
         .get(&url)
         .header("User-Agent", "polymarket-cli/1.0")

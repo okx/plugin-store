@@ -197,6 +197,44 @@ pub async fn derive_api_key(client: &Client, wallet_addr: &str, nonce: u64) -> R
     Ok(creds)
 }
 
+/// Readonly API key — returned by `/auth/readonly-api-key` (CLOB v2).
+/// Carries the same api_key/secret/passphrase triplet but with write operations rejected
+/// by the CLOB server. Useful for monitoring scripts, dashboards, and CI pipelines.
+#[derive(Debug, Deserialize)]
+pub struct ReadonlyApiKeyResponse {
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
+    pub secret: String,
+    pub passphrase: String,
+}
+
+/// Create a read-only API key via L1 auth (CLOB v2 endpoint).
+///
+/// The returned key can be used for `GET /orders`, `GET /trades`, balance lookups, etc.
+/// but the CLOB server will reject any write operations (order placement, cancellation).
+/// Not persisted to `creds.json` — caller is responsible for storing/displaying it.
+pub async fn create_readonly_api_key(
+    client: &Client,
+    wallet_addr: &str,
+) -> Result<ReadonlyApiKeyResponse> {
+    let nonce: u64 = 0;
+    let (sig, timestamp, nonce_used) = sign_clob_auth_onchainos(wallet_addr, nonce).await?;
+    let headers = l1_headers(wallet_addr, &sig, timestamp, nonce_used);
+
+    let mut req = client.post(format!("{}/auth/readonly-api-key", Urls::CLOB));
+    for (k, v) in &headers {
+        req = req.header(k.as_str(), v.as_str());
+    }
+    let resp: serde_json::Value = req.send().await?.json().await?;
+
+    if let Some(err) = resp.get("error").and_then(|e| e.as_str()) {
+        anyhow::bail!("Polymarket /auth/readonly-api-key failed: {}\nResponse: {}", err, resp);
+    }
+
+    serde_json::from_value(resp.clone())
+        .with_context(|| format!("parsing readonly-api-key response: {}", resp))
+}
+
 /// Load stored credentials or auto-derive them using the onchainos wallet.
 /// Re-derives if the cached credentials were for a different wallet address.
 ///
@@ -212,14 +250,26 @@ pub async fn ensure_credentials(client: &Client, wallet_addr: &str) -> Result<Cr
     let env_pass = std::env::var("POLYMARKET_PASSPHRASE").unwrap_or_default();
 
     if !env_key.is_empty() && !env_secret.is_empty() && !env_pass.is_empty() {
+        // Even when credentials come from env vars, look up the proxy wallet so that
+        // `redeem` can reach tokens held in the proxy. /profile is unauthenticated —
+        // it only needs the wallet address, not the API key.
+        let proxy_wallet = crate::api::get_proxy_wallet(client, wallet_addr)
+            .await
+            .ok()
+            .flatten();
+        let mode = if proxy_wallet.is_some() {
+            TradingMode::PolyProxy
+        } else {
+            TradingMode::Eoa
+        };
         return Ok(Credentials {
             api_key: env_key,
             secret: env_secret,
             passphrase: env_pass,
             nonce: 0,
             signing_address: wallet_addr.to_string(),
-            proxy_wallet: None,
-            mode: TradingMode::Eoa,
+            proxy_wallet,
+            mode,
         });
     }
 
