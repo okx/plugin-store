@@ -1,0 +1,20 @@
+{
+  "name": "heat-long-radar",
+  "description": "Combine heat, volume surge, negative funding, and OI expansion to route attributed long setups through hyperliquid-plugin.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "heat",
+    "funding-rate",
+    "open-interest",
+    "long-strategy"
+  ]
+}
+

@@ -1,0 +1,34 @@
+schema_version: 1
+name: heat-long-radar
+version: "1.0.0"
+description: "Combine heat, volume surge, negative funding, and OI expansion to route attributed long setups through hyperliquid-plugin."
+author:
+  name: "ukgorboss"
+  github: "ukgorclawbot-stack"
+license: MIT
+category: trading-strategy
+type: community-developer
+tags:
+  - hyperliquid
+  - heat
+  - funding-rate
+  - open-interest
+  - long-strategy
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: ">=0.3.9"
+
+risk_level: high
+supported_venues:
+  - hyperliquid
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "https://fapi.binance.com"
+  - "https://www.binance.com"
+  - "https://api.coingecko.com"
+
