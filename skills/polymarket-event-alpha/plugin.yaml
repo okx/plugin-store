@@ -6,7 +6,7 @@ author:
   name: "cbl980712-coder"
   github: "cbl980712-coder"
 license: MIT
-category: defi-protocol
+category: strategy
 tags:
   - polymarket
   - prediction-market
@@ -14,6 +14,14 @@ tags:
   - risk-management
   - onchainos
   - polygon
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.5.1"
+
+risk_level: high
+supported_venues:
+  - polymarket
 
 components:
   skill:
