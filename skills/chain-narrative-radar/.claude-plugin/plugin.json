@@ -1,0 +1,20 @@
+{
+  "name": "chain-narrative-radar",
+  "description": "Detect fresh on-chain narratives and route only supported momentum trades through hyperliquid-plugin with attribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "narrative",
+    "momentum",
+    "dexscreener",
+    "trading-strategy"
+  ]
+}
+
