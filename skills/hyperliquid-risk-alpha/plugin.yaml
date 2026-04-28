@@ -1,0 +1,28 @@
+schema_version: 1
+name: hyperliquid-risk-alpha
+version: "1.0.0"
+description: "Hyperliquid Risk Alpha checks readiness, scores BTC/ETH opportunities, plans small trades, and manages risk before and after entry."
+author:
+  name: "cbl980712-coder"
+  github: "cbl980712-coder"
+license: MIT
+category: defi-protocol
+tags:
+  - hyperliquid
+  - perpetuals
+  - trading
+  - risk-management
+  - onchainos
+  - derivatives
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "https://api.hyperliquid.xyz"
+  - "https://api.hyperliquid-testnet.xyz"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://app.hyperliquid.xyz"
+  - "https://rpc.hyperliquid.xyz"
+  - "https://api.relay.link"
