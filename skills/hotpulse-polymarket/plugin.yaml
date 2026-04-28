@@ -1,0 +1,30 @@
+schema_version: 1
+name: hotpulse-polymarket
+version: "1.0.0"
+description: "Scan hot Polymarket markets and execute one clear opportunity through polymarket-plugin with strategy attribution."
+author:
+  name: "ukgorboss"
+  github: "ukgorclawbot-stack"
+license: MIT
+category: trading-strategy
+type: community-developer
+tags:
+  - polymarket
+  - prediction-market
+  - strategy
+  - event-trading
+  - hot-markets
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: ">=0.4.10"
+
+risk_level: high
+supported_venues:
+  - polymarket
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
