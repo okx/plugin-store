@@ -1,0 +1,30 @@
+schema_version: 1
+name: hyperliquid-funding-rate-scout
+version: "1.0.0"
+description: "Identify high-probability mean reversion opportunities by scanning Hyperliquid perpetual futures for statistically significant funding rate imbalances and crowded positioning"
+author:
+  name: "Ritesh"
+  github: "Ritesh59697"
+license: MIT
+category: strategy
+risk_level: standard
+tags:
+  - hyperliquid
+  - funding-rate
+  - mean-reversion
+  - strategy
+  - perpetuals
+  - signal
+  - analytics
+  - crowded-positioning
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.x.0"
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - api.hyperliquid.xyz
