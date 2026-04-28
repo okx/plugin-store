@@ -1,0 +1,29 @@
+schema_version: 1
+name: polymarket-event-alpha
+version: "1.0.0"
+description: "Polymarket Event Alpha screens event markets, checks trading readiness, ranks opportunities, and prepares risk-aware Polymarket plans."
+author:
+  name: "cbl980712-coder"
+  github: "cbl980712-coder"
+license: MIT
+category: defi-protocol
+tags:
+  - polymarket
+  - prediction-market
+  - event-trading
+  - risk-management
+  - onchainos
+  - polygon
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "https://clob.polymarket.com"
+  - "https://gamma-api.polymarket.com"
+  - "https://data-api.polymarket.com"
+  - "https://bridge.polymarket.com"
+  - "coins.llama.fi"
+  - "polygon.drpc.org"
+  - "polygon-bor-rpc.publicnode.com"

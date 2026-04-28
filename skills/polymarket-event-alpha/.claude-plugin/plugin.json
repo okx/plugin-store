@@ -1,0 +1,17 @@
+{
+  "name": "polymarket-event-alpha",
+  "description": "Polymarket Event Alpha screens event markets, checks trading readiness, ranks opportunities, and prepares risk-aware Polymarket plans.",
+  "version": "1.0.0",
+  "author": {
+    "name": "cbl980712-coder"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "prediction-market",
+    "event-trading",
+    "risk-management",
+    "onchainos",
+    "polygon"
+  ]
+}
