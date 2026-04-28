@@ -1,0 +1,19 @@
+{
+  "name": "hyperflow-scout",
+  "description": "Scout one lightweight Hyperliquid micro-trend trade through hyperliquid-plugin with strategy attribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "perpetuals",
+    "strategy",
+    "momentum",
+    "execution"
+  ]
+}
