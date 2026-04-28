@@ -1,0 +1,19 @@
+{
+  "name": "safeedge-polymarket",
+  "description": "Find conservative Polymarket setups and execute through polymarket-plugin with strategy attribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "risk-control",
+    "strategy",
+    "conservative-trading",
+    "event-markets"
+  ]
+}
