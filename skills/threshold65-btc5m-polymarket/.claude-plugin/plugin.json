@@ -1,0 +1,19 @@
+{
+  "name": "threshold65-btc5m-polymarket",
+  "description": "Run a live-tested BTC 5-minute Polymarket threshold strategy through polymarket-plugin with attribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "btc",
+    "five-minute",
+    "strategy",
+    "risk-control"
+  ]
+}
