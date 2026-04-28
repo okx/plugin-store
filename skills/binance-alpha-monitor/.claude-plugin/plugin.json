@@ -1,0 +1,20 @@
+{
+  "name": "binance-alpha-monitor",
+  "description": "Monitor Binance Alpha/listing announcements and route supported event trades through hyperliquid-plugin with attribution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ukgorboss",
+    "github": "ukgorclawbot-stack"
+  },
+  "homepage": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "repository": "https://github.com/ukgorclawbot-stack/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "binance-alpha",
+    "listing-monitor",
+    "event-trading",
+    "narrative"
+  ]
+}
+

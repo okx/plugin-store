@@ -1,0 +1,33 @@
+schema_version: 1
+name: binance-alpha-monitor
+version: "1.0.0"
+description: "Monitor Binance Alpha/listing announcements and route supported event trades through hyperliquid-plugin with attribution."
+author:
+  name: "ukgorboss"
+  github: "ukgorclawbot-stack"
+license: MIT
+category: trading-strategy
+type: community-developer
+tags:
+  - hyperliquid
+  - binance-alpha
+  - listing-monitor
+  - event-trading
+  - narrative
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: ">=0.3.9"
+
+risk_level: high
+supported_venues:
+  - hyperliquid
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "https://www.binance.com"
+  - "https://api.coingecko.com"
+
