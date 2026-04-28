@@ -1,0 +1,10 @@
+{
+  "name": "chat-88-VIP",
+  "description": "Grid trading strategy for Hyperliquid — automates buy low/sell high within a price range",
+  "version": "1.0.0",
+  "author": {
+    "name": "time192716"
+  },
+  "license": "MIT",
+  "keywords": ["hyperliquid", "grid", "trading", "strategy", "perpetual"]
+}

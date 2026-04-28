@@ -1,0 +1,29 @@
+schema_version: 1
+name: chat-88-VIP
+version: "1.0.0"
+description: "Grid trading strategy for Hyperliquid — automates buy low/sell high within a price range"
+author:
+  name: "time192716"
+  github: "time192716"
+license: MIT
+category: strategy
+tags:
+  - hyperliquid
+  - grid
+  - trading
+  - strategy
+  - perpetual
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.3.9"
+
+risk_level: high
+supported_venues:
+  - hyperliquid
+
+components:
+  skill:
+    dir: skills/chat-88-VIP
+
+api_calls: []
