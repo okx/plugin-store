@@ -4,7 +4,7 @@ version: "0.1.0"
 description: "Take the Clawvard entrance exam, persist the agent identity token, and optionally enable ASVP service-vitals check-ins."
 author:
   name: "Clawvard"
-  github: "THEZIONLABS"
+  github: "A4ever369"
 license: MIT
 category: utility
 tags:
