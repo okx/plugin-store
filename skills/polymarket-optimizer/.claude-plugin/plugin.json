@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-event-optimizer",
+  "description": "Advanced multi-event correlation, hedging, and arbitrage strategy for Polymarket.",
+  "version": "1.0.0",
+  "author": {
+    "name": "zz"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "strategy",
+    "arbitrage",
+    "hedging",
+    "prediction-market"
+  ]
+}

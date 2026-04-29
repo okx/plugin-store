@@ -1,0 +1,36 @@
+schema_version: 1
+name: polymarket-event-optimizer
+version: "1.0.0"
+description: "Advanced multi-event correlation, hedging, and arbitrage strategy for Polymarket."
+author:
+  name: "ZhengTZ"
+  github: "ZhengTZ"
+license: MIT
+category: strategy
+tags:
+  - polymarket
+  - strategy
+  - arbitrage
+  - hedging
+  - prediction-market
+
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.5.1"
+
+risk_level: advanced
+supported_venues:
+  - polymarket
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: python
+  binary_name: optimizer-calc
+  main: "src/main.py"
+
+api_calls:
+  - "clob.polymarket.com"
+  - "gamma-api.polymarket.com"
