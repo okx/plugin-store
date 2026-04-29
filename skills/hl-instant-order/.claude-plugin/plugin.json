@@ -1,0 +1,21 @@
+{
+  "name": "hl-instant-order",
+  "description": "Natural-language one-shot perpetual trading on Hyperliquid via OnchainOS Agentic Wallet — open long/short with leverage and OCO stop-loss/take-profit bracket in a single user-confirmed command.",
+  "version": "1.0.0",
+  "author": {
+    "name": "JIAWEI YIN",
+    "email": "jmyjw119@gmail.com"
+  },
+  "homepage": "https://github.com/JarviYin/plugin-store/tree/main/skills/hl-instant-order",
+  "repository": "https://github.com/JarviYin/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "perps",
+    "natural-language",
+    "one-shot",
+    "bracket-order",
+    "stop-loss",
+    "take-profit"
+  ]
+}

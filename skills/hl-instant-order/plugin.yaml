@@ -1,0 +1,32 @@
+schema_version: 1
+name: hl-instant-order
+version: "1.0.0"
+description: "Natural-language one-shot perpetual trading on Hyperliquid via OnchainOS Agentic Wallet — open long/short with leverage and OCO stop-loss/take-profit bracket in a single user-confirmed command."
+author:
+  name: "JIAWEI YIN"
+  github: "JarviYin"
+license: MIT
+category: trading-strategy
+tags:
+  - hyperliquid
+  - perps
+  - natural-language
+  - one-shot
+  - bracket-order
+  - stop-loss
+  - take-profit
+
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.3.9"
+
+risk_level: standard
+supported_venues:
+  - hyperliquid
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
+type: community-developer
