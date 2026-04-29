@@ -1,0 +1,22 @@
+schema_version: 1
+name: football-match-predictor
+version: "1.0.0"
+description: "A risk-limited Polymarket strategy skill for finding and sizing football match prediction market trades."
+author:
+  name: "stefan"
+  github: "xiao-fan"
+license: MIT
+category: trading-strategy
+tags:
+  - polymarket
+  - football
+  - soccer
+  - prediction-market
+  - sports
+  - strategy
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
