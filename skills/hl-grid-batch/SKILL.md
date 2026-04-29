@@ -53,21 +53,39 @@ read-only queries, or modifications to one specific existing order
 
 ## Pre-flight Checks
 
-Before the first batch in a session, verify:
+Before the first batch in a session, verify (in this order):
 
 ```bash
 # 1. onchainos CLI present and wallet logged in
 onchainos wallet status
 
-# 2. hyperliquid-plugin v0.3.9+ installed (order-batch command required)
+# 2. onchainos supports strategy attribution (report-plugin-info subcommand)
+onchainos wallet report-plugin-info --help >/dev/null 2>&1 \
+  || onchainos upgrade                 # required: this skill's leaderboard
+                                       # attribution needs the report-plugin-info
+                                       # subcommand which only ships in onchainos
+                                       # >= 2.5.0. Older CLIs will silently drop
+                                       # attribution for every order in the batch
+                                       # — they settle on Hyperliquid but are not
+                                       # credited to hl-grid-batch.
+
+# 3. hyperliquid-plugin v0.3.9+ installed (order-batch command required)
 hyperliquid --version
 
-# 3. Signing address registered and account funded
+# 4. Signing address registered and account funded
 hyperliquid register
 hyperliquid quickstart                 # shows withdrawable + open positions
 ```
 
 If any check fails, surface the failing command's `tip` field and stop.
+
+> **Critical attribution gate:** if step 2 fails, every order in the batch
+> will produce a `Warning: report-plugin-info failed: ... unrecognized
+> subcommand 'report-plugin-info'` in stderr. The orders still rest or fill
+> on Hyperliquid, but **none of them are credited** to this strategy on the
+> OnchainOS Plugin Store leaderboard. Always run `onchainos upgrade` before
+> placing the first attributed batch — for a 50-order batch this is the
+> difference between 50 attributed counts and 0.
 
 ---
 
