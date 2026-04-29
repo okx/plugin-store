@@ -1,0 +1,21 @@
+{
+  "name": "hl-grid-batch",
+  "description": "Place up to 50 limit orders atomically on Hyperliquid via OnchainOS Agentic Wallet — grid, staged DCA, or staged take-profit from one natural-language intent and one EIP-712 signature.",
+  "version": "1.0.0",
+  "author": {
+    "name": "JIAWEI YIN",
+    "email": "jmyjw119@gmail.com"
+  },
+  "homepage": "https://github.com/JarviYin/plugin-store/tree/main/skills/hl-grid-batch",
+  "repository": "https://github.com/JarviYin/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "perps",
+    "batch-orders",
+    "grid",
+    "dca",
+    "staged-exit",
+    "market-making"
+  ]
+}
