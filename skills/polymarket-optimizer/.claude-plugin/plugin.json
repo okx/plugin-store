@@ -1,5 +1,5 @@
 {
-  "name": "polymarket-event-optimizer",
+  "name": "polymarket-optimizer",
   "description": "Advanced multi-event correlation, hedging, and arbitrage strategy for Polymarket.",
   "version": "1.0.0",
   "author": {

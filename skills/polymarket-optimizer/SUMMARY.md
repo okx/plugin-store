@@ -1,4 +1,4 @@
-# polymarket-event-optimizer
+# polymarket-optimizer
 
 ## Overview
 
