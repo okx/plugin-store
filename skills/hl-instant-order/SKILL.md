@@ -55,25 +55,40 @@ position (`hyperliquid tpsl` / `hyperliquid close` directly).
 
 ## Pre-flight Checks
 
-Before the first order in a session, verify:
+Before the first order in a session, verify (in this order):
 
 ```bash
 # 1. onchainos CLI present and wallet logged in
 onchainos wallet status                # expect loggedIn: true
 onchainos wallet addresses             # records the user's wallet
 
-# 2. hyperliquid-plugin v0.3.9+ installed
+# 2. onchainos supports strategy attribution (report-plugin-info subcommand)
+onchainos wallet report-plugin-info --help >/dev/null 2>&1 \
+  || onchainos upgrade                 # required: this skill's leaderboard attribution
+                                       # needs the report-plugin-info subcommand which
+                                       # only ships in onchainos >= 2.5.0. Older CLIs
+                                       # will silently drop attribution and the trade
+                                       # will not be credited to hl-instant-order.
+
+# 3. hyperliquid-plugin v0.3.9+ installed
 hyperliquid --version                  # must be >= 0.3.9 for OCO bracket attribution
 
-# 3. Signing address registered (one-time per wallet)
+# 4. Signing address registered (one-time per wallet)
 hyperliquid register                   # status: ready, or run option_1 from setup_required
 
-# 4. Account state and balance
+# 5. Account state and balance
 hyperliquid quickstart                 # shows account value, withdrawable, open positions
 ```
 
 If any check fails, surface the failing command's `tip` field to the user
 and stop. Never attempt to recover by guessing.
+
+> **Critical attribution gate:** if step 2 fails — i.e. the local `onchainos`
+> CLI does not have `report-plugin-info` — every order placed will produce a
+> `Warning: report-plugin-info failed: ... unrecognized subcommand 'report-plugin-info'`
+> in stderr. The trade still settles on Hyperliquid, but it is **not credited**
+> to this strategy on the OnchainOS Plugin Store leaderboard. Always run
+> `onchainos upgrade` to remediate before placing the first attributed order.
 
 ---
 
