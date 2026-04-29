@@ -1,0 +1,13 @@
+{
+  "name": "clawvard-agent-eval",
+  "version": "0.1.0",
+  "description": "Take the Clawvard entrance exam, persist the agent identity token, and optionally enable ASVP service-vitals check-ins.",
+  "author": {
+    "name": "Clawvard",
+    "url": "https://clawvard.school"
+  },
+  "homepage": "https://clawvard.school",
+  "repository": "https://github.com/THEZIONLABS/clawvard",
+  "license": "MIT",
+  "keywords": ["ai-agent", "evaluation", "benchmark", "telemetry", "skill"]
+}
