@@ -7,7 +7,7 @@ description: >
   Trigger when the user mentions KOL follow, crypto Twitter sentiment, follow the KOLs,
   consensus trade, crypto X signals, top-50 KOL conviction, who's bullish on {coin},
   mirror the KOLs, or wants to open a Hyperliquid position that tracks crypto-Twitter consensus.
-version: "0.1.2"
+version: "0.1.3"
 author: "Otto AI"
 updated: 2026-04-24
 tags:
@@ -152,7 +152,7 @@ hyperliquid-plugin prices --coin {COIN}
 hyperliquid-plugin order --coin {COIN} --side {buy|sell} --size {size} --leverage {leverage} --strategy-id otto-kol-follow --confirm
 ```
 
-- **Size conversion**: `size_tokens = size_usd × leverage / mark_px`, rounded down to lot size.
+- **Size conversion**: `size_tokens = size_usd / mark_px`, rounded down to lot size. `size_usd` is the position **notional**; `--leverage` controls posted margin (margin = notional / leverage).
 - **Leverage**: capped at `MAX_LEVERAGE_KOL = 3`. Never above the coin's protocol cap.
 - **Dry-run**: if `DRY_RUN = True`, omit `--confirm`.
 - **Strategy attribution**: always include `--strategy-id otto-kol-follow`.
@@ -160,7 +160,7 @@ hyperliquid-plugin order --coin {COIN} --side {buy|sell} --size {size} --leverag
 ### Step 6 — Attach TP/SL bracket
 
 ```bash
-hyperliquid-plugin tpsl --coin {COIN} --sl-px {sl_price} --tp-px {tp_price} --strategy-id otto-kol-follow --confirm
+hyperliquid-plugin tpsl --coin {COIN} --sl-px {sl_price} --tp-px {tp_price} --confirm
 ```
 
 - Atomic — pass both prices in the same call.

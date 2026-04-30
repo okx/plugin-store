@@ -166,18 +166,20 @@ def fire_trade(trade: dict, size_usd: float, live: bool) -> None:
     # Record fire timestamp for cooldown gating
     _LAST_FIRE_TS[trade["coin"]] = datetime.now(timezone.utc)
     if live and not config.DRY_RUN:
+        # tpsl does NOT accept --strategy-id (leaderboard attribution is on
+        # the parent order via the order command; tpsl is per-position).
         bracket_cmd = [
             "hyperliquid-plugin", "tpsl",
             "--coin", trade["coin"],
             "--sl-px", f"{sl:.6f}",
             "--tp-px", f"{tp:.6f}",
-            "--strategy-id", "otto-kol-follow",
             "--confirm",
         ]
         try:
             subprocess.run(bracket_cmd, check=True, timeout=30)
         except subprocess.CalledProcessError as e:
-            log({"event": "bracket_failed", "err": str(e)})
+            log({"event": "bracket_failed", "err": str(e), "coin": trade["coin"],
+                 "warning": "position is OPEN without TP/SL — manual intervention required"})
 
 
 def main() -> None:
