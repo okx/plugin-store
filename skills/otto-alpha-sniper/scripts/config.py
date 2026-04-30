@@ -35,10 +35,16 @@ SESSION_MAX_DRAWDOWN_PCT = 0.15   # halt all new trades after cumulative -15%
 MAX_CONCURRENT_POSITIONS = 3
 
 # ── Signal thresholds ────────────────────────────────────────────────────────
-MIN_SCORE                = 0.65   # trending mode: skip below this signal strength
-MIN_CONFIDENCE_KOL       = 0.70
-MIN_KOL_COUNT            = 40     # min KOLs aggregated for valid KOL signal
-FUNDING_EXTREME_ABS      = 0.0008 # 8h funding skew threshold for funding-fade mode
+# Calibrated against live signals.useotto.xyz data 2026-04-30:
+# - trending: score = token-alpha confidence/100. Real values 0.4-0.85; 0.50
+#   floor keeps quality high while catching mid-cap trending picks.
+# - kol: sentiment_score 25-90 → confidence 0.0-0.80; 0.50 = score ≥75 or ≤25
+# - kol_count: typical 30-40 distinct authors per 24h window (list size 50)
+# - funding: producer not yet shipped (Tier 2 deferred)
+MIN_SCORE                = 0.50   # trending mode floor
+MIN_CONFIDENCE_KOL       = 0.50   # genuine consensus gate
+MIN_KOL_COUNT            = 25     # cohort sample-size floor
+FUNDING_EXTREME_ABS      = 0.0008 # 8h funding skew threshold (Mode 3 / Tier 2)
 
 # ── Market filters ───────────────────────────────────────────────────────────
 MIN_VOLUME_USD           = 10_000_000    # daily HL volume floor — avoid illiquid coins

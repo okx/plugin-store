@@ -173,6 +173,7 @@ def fire_trade(trade: dict, mode: str, size_usd: float, live: bool) -> None:
         "--side", side,
         "--size", str(size_tokens),
         "--leverage", str(lev),
+        "--strategy-id", "otto-alpha-sniper",
     ] + confirm
     try:
         subprocess.run(order_cmd, check=True, timeout=45)
@@ -185,6 +186,7 @@ def fire_trade(trade: dict, mode: str, size_usd: float, live: bool) -> None:
             "--coin", trade["coin"],
             "--sl-px", f"{sl:.6f}",
             "--tp-px", f"{tp:.6f}",
+            "--strategy-id", "otto-alpha-sniper",
             "--confirm",
         ]
         try:
