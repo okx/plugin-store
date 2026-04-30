@@ -20,7 +20,10 @@ MAX_TRADE_SIZE_USD     = 50     # hard cap per single trade
 MAX_SESSION_BUDGET_USD = 200    # cumulative cap per session
 
 # ── Edge + filter thresholds ─────────────────────────────────────────────────
-MIN_EDGE_PCT           = 0.08   # min |otto_estimate - implied_prob| to surface
+# Edge gate stays tight (mispricing is the whole point); only loosened the
+# signal-confidence floor in score_candidate to accommodate news-flash flashes
+# whose severity-derived confidence sits at 0.6-0.8.
+MIN_EDGE_PCT           = 0.05   # min |otto_estimate - implied_prob| to surface
 RESOLUTION_WINDOW_DAYS = 14     # skip markets resolving later than this
 MIN_LIQUIDITY_USD      = 5_000  # on-book liquidity floor
 MIN_VOLUME_USD         = 1_000  # 24h volume floor
@@ -32,10 +35,14 @@ WINDOW_HOURS_KOL      = 24      # rolling KOL sentiment window
 PRICE_STALENESS_SEC   = 60      # re-quote if older than this at Step 7
 
 # ── Signal feed ──────────────────────────────────────────────────────────────
+# Calibrated against live signals.useotto.xyz cadence 2026-04-30:
+# - News-flash producer: top_ten_analysis pipeline runs every 6h (top-of-window).
+# - KOL pipeline: hourly. Funding pipeline: not yet shipped.
+# - 75 min covers the typical refresh latency without firing on stale data.
 SIGNAL_FEED_BASE    = "https://signals.useotto.xyz"
 SIGNAL_FEED_TIMEOUT = 4
 SIGNAL_FEED_RETRIES = 1
-MAX_SIGNAL_AGE_SEC  = 600       # abort if news-flash older than 10 min
+MAX_SIGNAL_AGE_SEC  = 4500      # 75 min — covers full hourly KOL + 6h news cycles
 
 # ── Polymarket categories to scan by default ─────────────────────────────────
 DEFAULT_CATEGORIES = ["crypto", "macro", "elections"]

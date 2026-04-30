@@ -1,6 +1,6 @@
 schema_version: 1
 name: otto-mispricing-assistant
-version: "0.1.0"
+version: "0.1.1"
 description: "Otto Mispricing Assistant — Scan near-resolution Polymarket markets where implied probability diverges from Otto's news + KOL + funding signals, then trade a single market only after explicit user confirmation. Dry-run by default."
 author:
   name: "Otto AI"
@@ -15,6 +15,18 @@ tags:
   - trading-strategy
   - mispricing
   - news-signals
+
+# Strategy plugin metadata — declares the trading plugin this strategy calls,
+# the risk tier, and the venues it operates on. Per FOR-DEVELOPERS.md
+# "Submitting Strategy Plugins" section.
+dependent_plugin:
+  - name: polymarket-plugin
+    version: "^0.5.0"
+
+risk_level: advanced
+
+supported_venues:
+  - polymarket
 
 components:
   skill:
