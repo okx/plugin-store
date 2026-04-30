@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.3.9"
+version: "0.4.0"
 author: GeoGu360
 tags:
   - perps
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.3.9"
+LOCAL_VER="0.4.0"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -99,7 +99,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.3.9/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.4.0/hyperliquid-plugin-${TARGET}${EXT}" -o ~/.local/bin/.hyperliquid-plugin-core${EXT}
 chmod +x ~/.local/bin/.hyperliquid-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -107,7 +107,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/hyperliquid-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.3.9" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
+echo "0.4.0" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 ```
 
 
@@ -159,6 +159,17 @@ Use this plugin when the user says (in any language):
 - "transfer perp to spot" / perp转spot
 - "HL balance" / HL余额
 - "Hyperliquid withdraw" / Hyperliquid提现
+- "HIP-3 builder DEX" / "HIP-3 builder dex"
+- "TradFi on Hyperliquid" / "trade TradFi" / "Hyperliquid TradFi" / 传统金融
+- "trade RWA / commodity / equity / oil / gold / WTI / Brent / NVDA / TSLA / SP500 on Hyperliquid" / 在Hyperliquid交易RWA/原油/黄金/股票/美股
+- "stock perp / equity perp / commodity perp / FX perp / index perp" / 股票永续/商品永续/外汇永续/指数永续
+- "private equity perp" / "OpenAI/Anthropic/SpaceX perp" / 独角兽永续
+- "Hyperliquid xyz / flx / vntl / cash / km dex" — any builder DEX coin like `xyz:CL`, `xyz:NVDA`, `flx:GOLD`, `cash:WTI`
+- "fund builder dex" / "transfer USDC between hyperliquid DEXs" / 转USDC到xyz/flx
+- "list hyperliquid dexs" / 列出 hyperliquid 所有 DEX
+- "list hyperliquid markets" / "what can I trade on Hyperliquid" / 列出可交易市场
+- "top tradfi markets" / "biggest hyperliquid RWAs" / 最大的TradFi市场
+- "find <symbol> on hyperliquid" / "look up xyz:CL / NVDA / SP500" / 查找市场
 
 ---
 
@@ -983,9 +994,163 @@ hyperliquid cancel-batch --coin BTC --oids 111,222,333
 
 ---
 
+### `dex-list` — Enumerate all perp DEXs (HIP-3)
+
+Lists the default Hyperliquid perp DEX + all 8 HIP-3 builder DEXs (xyz / flx / vntl / hyna / km / cash / para / abcd) with each one's:
+- asset count + halted count
+- user's USDC `accountValue` and `withdrawable` per DEX
+- 24h notional volume
+- (with `--verbose`) full asset name list
+
+**Parameters:**
+
+| Flag | Default | Notes |
+|------|---------|-------|
+| `--address` | onchainos wallet | Override wallet for balance lookups |
+| `--verbose` | false | Include full asset names per DEX |
+
+**Use cases:**
+- Find which builder DEX hosts a specific RWA (look at `assets[]` in verbose mode)
+- See where your USDC is allocated across DEXs before placing an order
+- Spot dormant DEXs (asset_count=0 or halted_count=asset_count)
+
+**Output:** JSON with `default_dex` summary + `builder_dexs[]` array.
+
+---
+
+### `dex-transfer` — Move USDC between perp DEXs (HIP-3, requires --confirm)
+
+Moves USDC across DEX clearinghouse boundaries. **Required before trading on a builder DEX** — your default-DEX USDC is NOT shared with builder DEXs.
+
+Implements Hyperliquid's `sendAsset` action via EIP-712 (8-field schema, signed by onchainos). Zero fee for cross-DEX transfers; ecrecover round-trip verified 2026-04-30.
+
+**Parameters:**
+
+| Flag | Default | Notes |
+|------|---------|-------|
+| `--from-dex` | `""` (default DEX) | Source DEX (`""` for default Hyperliquid perp) |
+| `--to-dex` | `""` (default DEX) | Destination DEX |
+| `--amount` | required | USDC amount (positive number, e.g. `5` or `0.5`) |
+| `--dry-run` | — | Build + display action, do not sign |
+| `--confirm` | — | Sign + submit |
+
+**Examples:**
+
+```bash
+# Fund xyz builder DEX with $5 for RWA trading (CL / BRENTOIL / NVDA / TSLA)
+hyperliquid-plugin dex-transfer --to-dex xyz --amount 5 --confirm
+
+# Withdraw $1 from xyz back to default
+hyperliquid-plugin dex-transfer --from-dex xyz --amount 1 --confirm
+
+# Move $0.5 from xyz to flx
+hyperliquid-plugin dex-transfer --from-dex xyz --to-dex flx --amount 0.5 --confirm
+```
+
+**Pre-flight checks:**
+- Source DEX must have >= `--amount` USDC withdrawable (positions tying up margin reduce withdrawable)
+- `--from-dex` and `--to-dex` must differ
+- Both DEX names must exist in `perpDexs` (run `dex-list` to verify)
+
+**Errors:**
+- `INVALID_DEX` — Unknown DEX name
+- `DEX_INSUFFICIENT_BALANCE` — Source DEX withdrawable < amount
+- `INVALID_ARGUMENT` — Bad amount or same-source-and-destination
+- `SIGNING_FAILED` / `TX_SUBMIT_FAILED` — onchainos / HL exchange issue (retry)
+
+---
+
+### `markets` — List tradeable markets (crypto / TradFi / HIP-3 / spot)
+
+Single command to enumerate Hyperliquid markets across products and venues, returning rich metadata (price, 24h volume, max leverage, `onlyIsolated` flag, halt status). Replaces the need to combine `prices`, `dex-list`, and `spot-prices` when you want a sortable / filterable market list.
+
+**Parameters:**
+
+| Flag | Default | Notes |
+|------|---------|-------|
+| `--type` | `crypto` | Semantic preset: `crypto` / `tradfi` / `hip3` / `spot`. Mutually exclusive with `--dex` |
+| `--dex` | — | Specific perp DEX (`default` / `xyz` / `flx` / `vntl` / `cash` / `km` / `hyna` / `para` / `abcd`). Mutually exclusive with `--type` |
+| `--coin` | — | Look up a single symbol (e.g. `BTC`, `xyz:CL`, `HYPE`). When set, all filters are ignored. Falls back to spot if not found on default perp |
+| `--min-vol` | — | Filter: min 24h notional volume in USD (perp only) |
+| `--max-leverage` | — | Filter: min `maxLeverage` (perp only) |
+| `--only-isolated` | false | Filter: only `onlyIsolated=true` markets (perp only) |
+| `--hide-halted` | false | Filter: drop markets with `markPx == null` (perp only) |
+| `--sort` | `vol` | `vol` / `leverage` / `symbol` (perp only) |
+| `--limit` | 30 | Max rows. `0` = no limit |
+
+**`--type` semantics:**
+
+| Preset | Backing query | Use case |
+|--------|---------------|---------|
+| `crypto` | perp + default DEX | Browse the 230+ crypto perps (BTC / ETH / SOL / etc.) |
+| `tradfi` | perp + ∪(builder DEXs), excluding crypto duplicates | Browse RWAs / equities / indices / FX without `xyz:BTC`, `hyna:ETH`, etc. cluttering the list |
+| `hip3` | perp + ∪(builder DEXs), no dedup | Inspect the full HIP-3 universe including crypto duplicates |
+| `spot` | spot universe | Browse spot tokens (HYPE, PURR, USDC pairs) |
+
+**Examples:**
+
+```bash
+# Top-30 crypto perps by 24h volume (default invocation)
+hyperliquid-plugin markets
+
+# Big TradFi markets (>= $10M daily)
+hyperliquid-plugin markets --type tradfi --min-vol 10000000
+
+# All RWA equity markets that require isolated margin
+hyperliquid-plugin markets --type tradfi --only-isolated --limit 0
+
+# Single-coin lookup (auto-routes to default perp / builder perp / spot)
+hyperliquid-plugin markets --coin xyz:CL
+hyperliquid-plugin markets --coin BTC
+hyperliquid-plugin markets --coin AAPL  # falls through to spot
+
+# Specific builder DEX (all flx markets sorted by leverage)
+hyperliquid-plugin markets --dex flx --sort leverage --limit 0
+```
+
+**Output (perp list):**
+
+```json
+{
+  "ok": true,
+  "type": "tradfi",
+  "dex": "(builder DEXs)",
+  "count_total": 143,
+  "count_after_filters": 5,
+  "count_shown": 5,
+  "sort": "vol",
+  "markets": [
+    { "symbol": "xyz:CL", "dex": "xyz", "mark_px": "109.21",
+      "mid_px": "109.215", "day_volume_usd": "928774130",
+      "max_leverage": 20, "only_isolated": true,
+      "sz_decimals": 3, "is_halted": false, "is_delisted": false }
+  ]
+}
+```
+
+**Output (single-coin):** `{ ok, type: "perp" | "spot", dex, market: {...} }`
+
+**Output (spot list):** `{ ok, type: "spot", count_total, count_shown, markets: [{symbol, market_name, market_index, mid_px, sz_decimals, is_canonical}] }`
+
+**Errors:**
+- `INVALID_TYPE` — `--type` not one of `crypto` / `tradfi` / `hip3` / `spot`
+- `INVALID_ARGUMENT` — `--type` and `--dex` both set (mutually exclusive)
+- `INVALID_DEX` — `--dex` value not in registry
+- `MARKET_NOT_FOUND` — `--coin` not found on perp or spot
+- `API_ERROR` — Hyperliquid info endpoint failed
+
+**Notes:**
+- `is_halted=true` indicates `markPx==null` (typical for RWA / equity markets outside trading hours — weekends, after-hours)
+- Delisted markets are always hidden from list output (irrespective of `--hide-halted`)
+- For TradFi RWAs you usually want `--type tradfi --hide-halted --min-vol 1000000` to focus on active high-volume markets
+
+---
+
 ## Supported Markets
 
-Hyperliquid supports 100+ perpetual markets. Common examples:
+Hyperliquid hosts two tiers of perp markets:
+
+**1. Default DEX** (230+ crypto perps):
 
 | Symbol | Asset |
 |--------|-------|
@@ -996,10 +1161,119 @@ Hyperliquid supports 100+ perpetual markets. Common examples:
 | HYPE | Hyperliquid native |
 | OP | Optimism |
 | AVAX | Avalanche |
-| MATIC | Polygon |
 | DOGE | Dogecoin |
 
-Use `hyperliquid prices` to get a full list of available markets.
+Use `hyperliquid-plugin prices` for a flat price-only map, or `hyperliquid-plugin markets` (default `--type crypto`) for a sortable list with 24h volume / leverage / `onlyIsolated` / halt status.
+
+**2. HIP-3 Builder DEXs** (independent perp venues for RWAs / equities / commodities — see "HIP-3 Builder DEXs" section below):
+
+| DEX | Full name | Sample assets |
+|-----|-----------|---------------|
+| `xyz` | XYZ | xyz:CL (WTI), xyz:BRENTOIL, xyz:GOLD, xyz:NVDA, xyz:TSLA, xyz:SP500, xyz:EUR, xyz:JPY |
+| `flx` | Felix Exchange | flx:OIL, flx:GOLD, flx:SILVER, flx:PALLADIUM, flx:USDE, flx:XMR |
+| `vntl` | Ventuals | vntl:OPENAI, vntl:ANTHROPIC, vntl:SPACEX, vntl:MAG7, vntl:BIOTECH |
+| `cash` | dreamcash | cash:WTI, cash:GOLD, cash:NVDA, cash:USA500, cash:META |
+| `km` | Markets by Kinetiq | km:USOIL, km:GOLD, km:US500, km:NVDA, km:AAPL |
+| `hyna` | HyENA | hyna crypto majors + commodity proxies |
+| `para` | Paragon | para:BTCD, para:OTHERS, para:TOTAL2 (crypto-dominance indices) |
+| `abcd` | ABCDEx | (currently empty / dormant) |
+
+Coin names on builder DEXs use the `<dex>:<symbol>` prefix format. Use `hyperliquid-plugin dex-list` for live per-DEX user balances + asset counts, and `hyperliquid-plugin prices --dex <name>` for full per-DEX market list.
+
+---
+
+## HIP-3 Builder DEXs
+
+HIP-3 is Hyperliquid's framework for builder-deployed perp markets — independent perp venues hosting non-crypto assets (real-world assets, equities, commodities, FX, indices). 8 builder DEXs are live as of 2026-04-30 covering ~$3B 24h aggregate volume.
+
+### Per-DEX Margin Isolation (CRITICAL UX)
+
+**Each builder DEX has a SEPARATE clearinghouse and SEPARATE USDC balance.** Your $X on the default DEX is NOT shared with `xyz`, `flx`, etc. Same wallet, same private key, but funds are tracked in separate buckets.
+
+This is a security feature: an oracle attack or solvency issue on builder DEX `xyz` cannot drain default-DEX funds, and vice versa.
+
+**To trade on a builder DEX, you must first fund it:**
+
+```bash
+# Move $5 USDC default → xyz (RWA trading)
+hyperliquid-plugin dex-transfer --to-dex xyz --amount 5 --confirm
+
+# Move $1 from xyz back to default
+hyperliquid-plugin dex-transfer --from-dex xyz --amount 1 --confirm
+
+# Move between builder DEXs
+hyperliquid-plugin dex-transfer --from-dex xyz --to-dex flx --amount 0.5 --confirm
+```
+
+`dex-transfer` uses Hyperliquid's `sendAsset` action (HIP-3 native, EIP-712 signed via onchainos). Zero fee, zero dust — verified live 2026-04-30 with $1 round-trip default <-> xyz.
+
+### Asset ID Math
+
+Default DEX uses asset ids `0..N` (where N is `meta.universe.length`).
+Builder DEX i (1-indexed in `perpDexs[1:]`) uses asset offset `110_000 + (i-1) * 10_000`:
+
+| DEX | Asset offset |
+|-----|---|
+| `xyz` | 110000 |
+| `flx` | 120000 |
+| `vntl` | 130000 |
+| `hyna` | 140000 |
+| `km` | 150000 |
+| `abcd` | 160000 |
+| `cash` | 170000 |
+| `para` | 180000 |
+
+Plugin auto-resolves: `--coin xyz:CL` → asset 110029 (CL is at universe index 29 within xyz). No manual offset math required.
+
+### onlyIsolated Flag (Auto-Promoted)
+
+Many RWA / equity markets on builder DEXs require **isolated margin** — they reject cross-margin orders with `Cross margin is not allowed for this asset`. The plugin reads the `onlyIsolated` flag from per-coin meta and auto-enables `--isolated` when set:
+
+```bash
+$ hyperliquid-plugin order --coin xyz:CL --side buy --type limit --price 100 --size 0.1 --leverage 20 --confirm
+[order] xyz:CL requires isolated margin (onlyIsolated=true) — auto-enabling --isolated.
+```
+
+Known onlyIsolated markets (subset; full list in live `meta`):
+- `xyz`: CL, HOOD, INTC, PLTR, COIN
+- More may be added as builder DEXs grow
+
+### EIP-712 Signing for Builder DEXs
+
+`order` / `cancel` / `updateLeverage` / `tpsl` actions on builder DEXs use the SAME EIP-712 schema as default-DEX actions — the DEX is encoded in the `asset` integer (110000+offset). No special signing required.
+
+`sendAsset` (cross-DEX USDC transfer) uses a NEW 8-field schema (`HyperliquidTransaction:SendAsset`):
+- `hyperliquidChain` (string)
+- `destination` (string) — usually self-transfer
+- `sourceDex` (string) — `""` = default
+- `destinationDex` (string)
+- `token` (string) — `"USDC:0x6d1e7cde53ba9467b783cb7c530ce054"` (HL internal tokenId, NOT Arbitrum contract)
+- `amount` (string)
+- `fromSubAccount` (string)
+- `nonce` (uint64)
+
+onchainos `wallet sign-message --type eip712` accepts arbitrary typed-data, no plugin-side workaround needed.
+
+### RWA Trading Hours
+
+Equity / commodity markets on builder DEXs may halt outside their cash-market hours (xyz:NVDA / xyz:HOOD / etc. follow NY equity hours; xyz:CL / xyz:BRENTOIL follow NYMEX schedules). Halts surface as `markPx == null` in `metaAndAssetCtxs`, and HL returns errors when you try to trade.
+
+The plugin does NOT yet auto-detect halts in pre-flight (planned for v0.4.x). Until then:
+1. Run `hyperliquid-plugin prices --dex xyz` and check if your target coin returns a price; absence indicates halt.
+2. If you submit an order during a halt, HL rejects it explicitly.
+
+### v0.4.0 HIP-3 Live Verification (2026-04-30)
+
+Full end-to-end on `0x87fb...1b90` mainnet:
+
+| Step | Action | Result |
+|------|--------|--------|
+| 1 | `dex-transfer --to-dex xyz --amount 1 --confirm` | sendAsset OK (default $10.45 → $9.45, xyz $0 → $1) |
+| 2 | `order --coin xyz:CL --side buy --type limit --price 100 --size 0.1 --leverage 20 --confirm` | onlyIsolated auto-promoted; updateLeverage + order placed; oid 404402712257 resting |
+| 3 | `cancel --coin xyz:CL --order-id 404402712257 --confirm` | order canceled, $0.50 isolated margin released |
+| 4 | `dex-transfer --from-dex xyz --amount 1 --confirm` | reverse sendAsset OK (xyz $1 → $0, default $9.45 → $10.45) |
+
+Net: 0 dust, account back to starting state.
 
 ---
 
@@ -1020,13 +1294,19 @@ Use `hyperliquid prices` to get a full list of available markets.
 
 ## Error Handling
 
-| Error | Likely Cause | Fix |
-|-------|-------------|-----|
-| `Coin 'X' not found` | Coin not listed on Hyperliquid | Check `hyperliquid prices` for available markets |
+| Error code | Likely cause | Fix |
+|------------|--------------|-----|
+| `Coin 'X' not found in default DEX universe` | Coin not on default DEX (might be a builder-DEX coin) | Try `--coin xyz:X` or `--dex xyz` (run `dex-list` to find the right DEX) |
+| `Coin 'xyz:Y' not found in xyz DEX universe` | Coin not on the named builder DEX | Run `prices --dex xyz` to list valid coins |
+| `INVALID_DEX` | Unknown DEX name in `--dex` / `--from-dex` / `--to-dex` | Run `dex-list` to see registered builder DEXs (xyz / flx / vntl / hyna / km / cash / para / abcd) |
+| `DEX_INSUFFICIENT_BALANCE` | Source DEX has less USDC than `--amount` for `dex-transfer` | Use smaller `--amount` or fund the source DEX first |
+| `Cross margin is not allowed for this asset` | Builder-DEX market has `onlyIsolated: true` (xyz:CL / xyz:HOOD / etc.) | Plugin auto-promotes to `--isolated` in v0.4+; older versions need `--isolated` flag |
+| `Unknown token USDC:0x...` | `dex-transfer` sent wrong tokenId in sendAsset action | Plugin uses HL's internal tokenId `0x6d1e7cde53ba9467b783cb7c530ce054`. If HL changes the tokenId, plugin update needed |
 | `sign-message failed` | onchainos CLI sign-message failed | Ensure onchainos CLI is up to date; use `--dry-run` to get unsigned payload |
 | `Could not resolve wallet address` | onchainos wallet not configured | Run `onchainos wallet addresses` to set up wallet |
-| `Exchange API error 4xx` | Invalid order parameters or insufficient margin | Check size, price, and account balance |
+| `Exchange API error 4xx` | Invalid order parameters or insufficient margin | Check size, price, account balance — for HIP-3, balance pre-flight uses the right DEX (specified by `--dex` or auto-detected from coin prefix) |
 | `meta.universe missing` | API response format changed | Check Hyperliquid API status |
+| `RESERVE_HALTED` *(planned v0.4.x)* | RWA market closed outside cash hours | Wait for market reopen; check `prices --dex xyz` to see live coins |
 
 ---
 

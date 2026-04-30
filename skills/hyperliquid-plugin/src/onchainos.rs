@@ -478,6 +478,135 @@ pub fn onchainos_hl_sign_usd_class_transfer(
     }))
 }
 
+/// HIP-3: Sign a Hyperliquid `sendAsset` action via onchainos (user-signed EIP-712).
+/// Used to move USDC between perp DEXs (default <-> builder DEX like xyz/flx/etc).
+/// Each builder DEX has a SEPARATE clearinghouse balance — the sender must explicitly
+/// route USDC to the destination DEX before they can trade RWA markets there.
+///
+/// EIP-712 schema (8 fields, "HyperliquidTransaction:SendAsset"):
+///   hyperliquidChain (string), destination (address as string), sourceDex (string),
+///   destinationDex (string), token (string, e.g. "USDC:0x..."), amount (string),
+///   fromSubAccount (string, "" for none), nonce (uint64)
+///
+/// Signing-spike-verified 2026-04-30 (offline ecrecover round-trip OK).
+pub fn onchainos_hl_sign_send_asset(
+    action: &Value,
+    nonce: u64,
+    wallet: &str,
+    wallet_chain_id: u64,
+    confirm: bool,
+    dry_run: bool,
+) -> anyhow::Result<Value> {
+    if dry_run {
+        return Ok(serde_json::json!({
+            "ok": true, "dry_run": true,
+            "action": action, "nonce": nonce,
+            "note": "Dry run - sendAsset not signed or submitted"
+        }));
+    }
+    if !confirm {
+        return Ok(serde_json::json!({
+            "ok": true, "preview": true,
+            "action": action, "nonce": nonce,
+            "note": "Preview only - add --confirm to sign and submit"
+        }));
+    }
+
+    let destination = action["destination"].as_str()
+        .ok_or_else(|| anyhow::anyhow!("action.destination must be a string"))?;
+    let source_dex = action["sourceDex"].as_str()
+        .ok_or_else(|| anyhow::anyhow!("action.sourceDex must be a string"))?;
+    let destination_dex = action["destinationDex"].as_str()
+        .ok_or_else(|| anyhow::anyhow!("action.destinationDex must be a string"))?;
+    let token = action["token"].as_str()
+        .ok_or_else(|| anyhow::anyhow!("action.token must be a string (e.g. 'USDC:0x...')"))?;
+    let amount = action["amount"].as_str()
+        .ok_or_else(|| anyhow::anyhow!("action.amount must be a string"))?;
+    let from_sub_account = action["fromSubAccount"].as_str().unwrap_or("");
+
+    let eip712_message = serde_json::json!({
+        "domain": {
+            "chainId": 421614,  // 0x66eee
+            "name": "HyperliquidSignTransaction",
+            "verifyingContract": "0x0000000000000000000000000000000000000000",
+            "version": "1"
+        },
+        "types": {
+            "HyperliquidTransaction:SendAsset": [
+                { "name": "hyperliquidChain", "type": "string" },
+                { "name": "destination",      "type": "string" },
+                { "name": "sourceDex",        "type": "string" },
+                { "name": "destinationDex",   "type": "string" },
+                { "name": "token",            "type": "string" },
+                { "name": "amount",           "type": "string" },
+                { "name": "fromSubAccount",   "type": "string" },
+                { "name": "nonce",            "type": "uint64" }
+            ],
+            "EIP712Domain": [
+                { "name": "name",              "type": "string"  },
+                { "name": "version",           "type": "string"  },
+                { "name": "chainId",           "type": "uint256" },
+                { "name": "verifyingContract", "type": "address" }
+            ]
+        },
+        "primaryType": "HyperliquidTransaction:SendAsset",
+        "message": {
+            "hyperliquidChain": "Mainnet",
+            "destination":      destination,
+            "sourceDex":        source_dex,
+            "destinationDex":   destination_dex,
+            "token":            token,
+            "amount":           amount,
+            "fromSubAccount":   from_sub_account,
+            "nonce":            nonce
+        }
+    });
+
+    let eip712_str = serde_json::to_string(&eip712_message)?;
+    let wallet_chain_str = wallet_chain_id.to_string();
+
+    let output = Command::new("onchainos")
+        .args([
+            "wallet", "sign-message",
+            "--type", "eip712",
+            "--message", &eip712_str,
+            "--chain", &wallet_chain_str,
+            "--from", wallet,
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos sign-message failed (sendAsset): {}", detail.trim());
+    }
+
+    let sign_result: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| anyhow::anyhow!("Failed to parse sign-message output: {}", e))?;
+
+    let signature = sign_result["data"]["signature"]
+        .as_str()
+        .or_else(|| sign_result["signature"].as_str())
+        .ok_or_else(|| anyhow::anyhow!("No signature in sign-message response: {}", serde_json::to_string(&sign_result).unwrap_or_default()))?;
+
+    let sig_hex = signature.trim_start_matches("0x");
+    if sig_hex.len() != 130 {
+        anyhow::bail!("Expected 130-char hex signature, got {} chars", sig_hex.len());
+    }
+    let r = format!("0x{}", &sig_hex[0..64]);
+    let s = format!("0x{}", &sig_hex[64..128]);
+    let v: u64 = u64::from_str_radix(&sig_hex[128..130], 16)
+        .map_err(|e| anyhow::anyhow!("Failed to parse v byte: {}", e))?;
+
+    Ok(serde_json::json!({
+        "action":       action,
+        "nonce":        nonce,
+        "signature":    { "r": r, "s": s, "v": v },
+        "vaultAddress": null
+    }))
+}
+
 /// Report plugin-level order metadata to the OKX backend for strategy attribution.
 ///
 /// Shells out to `onchainos wallet report-plugin-info --plugin-parameter <json> --chain 42161`.

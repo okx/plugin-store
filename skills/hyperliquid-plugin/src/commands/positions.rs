@@ -1,5 +1,5 @@
 use clap::Args;
-use crate::api::{get_clearinghouse_state, get_open_orders};
+use crate::api::{get_clearinghouse_state_for_dex, get_open_orders_for_dex};
 use crate::config::{info_url, CHAIN_ID};
 use crate::onchainos::resolve_wallet;
 
@@ -8,6 +8,11 @@ pub struct PositionsArgs {
     /// Wallet address to query. Defaults to the connected onchainos wallet.
     #[arg(long)]
     pub address: Option<String>,
+    /// HIP-3 builder DEX name (xyz / flx / vntl / hyna / km / cash / para / abcd).
+    /// If omitted, queries the default Hyperliquid perp DEX. Each builder DEX has
+    /// SEPARATE margin and positions — use `dex-list` for an overview.
+    #[arg(long)]
+    pub dex: Option<String>,
     /// Also show open orders for the address.
     #[arg(long)]
     pub show_orders: bool,
@@ -27,9 +32,11 @@ pub async fn run(args: PositionsArgs) -> anyhow::Result<()> {
         },
     };
 
-    eprintln!("Fetching Hyperliquid positions for: {}", address);
+    let dex_arg = args.dex.as_deref();
+    let dex_label = dex_arg.unwrap_or("default");
+    eprintln!("Fetching Hyperliquid {} DEX positions for: {}", dex_label, address);
 
-    let state = match get_clearinghouse_state(url, &address).await {
+    let state = match get_clearinghouse_state_for_dex(url, &address, dex_arg).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
@@ -88,6 +95,7 @@ pub async fn run(args: PositionsArgs) -> anyhow::Result<()> {
     let mut out = serde_json::json!({
         "ok": true,
         "address": address,
+        "dex": dex_label,
         "accountValue": account_value,
         "totalMarginUsed": total_margin_used,
         "totalNotionalPosition": total_ntl_pos,
@@ -96,7 +104,7 @@ pub async fn run(args: PositionsArgs) -> anyhow::Result<()> {
     });
 
     if args.show_orders {
-        let orders = match get_open_orders(url, &address).await {
+        let orders = match get_open_orders_for_dex(url, &address, dex_arg).await {
             Ok(v) => v,
             Err(e) => {
                 println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
