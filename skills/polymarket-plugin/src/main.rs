@@ -137,7 +137,8 @@ enum Commands {
         #[arg(long)]
         token_id: Option<String>,
 
-        /// Strategy ID for attribution — reported to OKX backend alongside the order
+        /// Optional strategy ID tag for attribution. All orders are reported to the OKX
+        /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
         #[arg(long)]
         strategy_id: Option<String>,
     },
@@ -197,7 +198,8 @@ enum Commands {
         #[arg(long)]
         token_id: Option<String>,
 
-        /// Strategy ID for attribution — reported to OKX backend alongside the order
+        /// Optional strategy ID tag for attribution. All orders are reported to the OKX
+        /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
         #[arg(long)]
         strategy_id: Option<String>,
     },
@@ -267,7 +269,8 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
 
-        /// Strategy ID for attribution — reported to OKX backend after successful redeem
+        /// Optional strategy ID tag for attribution. All redeems are reported to the OKX
+        /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
         #[arg(long)]
         strategy_id: Option<String>,
     },
@@ -340,6 +343,12 @@ enum Commands {
         /// Preview without requesting a quote
         #[arg(long)]
         dry_run: bool,
+
+        /// Optional strategy ID tag for attribution. All confirmed RFQ orders are reported
+        /// to the OKX backend regardless; this flag just attaches a strategy label.
+        /// Empty if omitted.
+        #[arg(long)]
+        strategy_id: Option<String>,
     },
 
     /// Create a read-only Polymarket API key (CLOB v2). Useful for monitoring
@@ -463,8 +472,8 @@ async fn main() {
         Commands::Watch { market_id, interval, limit } => {
             commands::watch::run(&market_id, interval, limit).await
         }
-        Commands::Rfq { market_id, outcome, amount, confirm, dry_run } => {
-            commands::rfq::run(&market_id, &outcome, &amount, confirm, dry_run).await
+        Commands::Rfq { market_id, outcome, amount, confirm, dry_run, strategy_id } => {
+            commands::rfq::run(&market_id, &outcome, &amount, confirm, dry_run, strategy_id.as_deref()).await
         }
         Commands::CreateReadonlyKey => {
             commands::create_readonly_key::run().await

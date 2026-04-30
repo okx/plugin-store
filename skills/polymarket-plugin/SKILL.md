@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, 充值, 充钱, 转入, 打钱, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit, BTC 5分钟, ETH 5分钟, 5分钟市场, 5min market, 五分钟市场, 短线市场, list 5-minute, BTC up or down, 找5分钟, 看5分钟, 5m updown, crypto 5m, 5分钟涨跌, 五分钟涨跌, updown market, BTC 5min, ETH 5min, SOL 5min, 5分钟预测."
-version: "0.5.1"
+version: "0.5.2"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.5.1"
+LOCAL_VER="0.5.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -54,8 +54,44 @@ fi
 ### Install onchainos CLI + Skills (auto-injected)
 
 ```bash
-# 1. Install onchainos CLI
-onchainos --version 2>/dev/null || curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh
+# 1. Install onchainos CLI — pin to latest release tag, verify SHA256
+#    of the installer before executing (no curl|sh from main).
+if ! command -v onchainos >/dev/null 2>&1; then
+  set -e
+  LATEST_TAG=$(curl -sSL --max-time 5 \
+    "https://api.github.com/repos/okx/onchainos-skills/releases/latest" \
+    | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  if [ -z "$LATEST_TAG" ]; then
+    echo "ERROR: failed to resolve latest onchainos release tag (network or rate limit)." >&2
+    echo "       Manual install: https://github.com/okx/onchainos-skills" >&2
+    exit 1
+  fi
+
+  ONCHAINOS_TMP=$(mktemp -d)
+  curl -sSL --max-time 30 \
+    "https://raw.githubusercontent.com/okx/onchainos-skills/${LATEST_TAG}/install.sh" \
+    -o "$ONCHAINOS_TMP/install.sh"
+  curl -sSL --max-time 30 \
+    "https://github.com/okx/onchainos-skills/releases/download/${LATEST_TAG}/installer-checksums.txt" \
+    -o "$ONCHAINOS_TMP/installer-checksums.txt"
+
+  EXPECTED=$(awk '$2 ~ /install\.sh$/ {print $1; exit}' "$ONCHAINOS_TMP/installer-checksums.txt")
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum "$ONCHAINOS_TMP/install.sh" | awk '{print $1}')
+  else
+    ACTUAL=$(shasum -a 256 "$ONCHAINOS_TMP/install.sh" | awk '{print $1}')
+  fi
+  if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "ERROR: onchainos installer SHA256 mismatch — refusing to execute." >&2
+    echo "       expected=$EXPECTED  actual=$ACTUAL  tag=$LATEST_TAG" >&2
+    rm -rf "$ONCHAINOS_TMP"
+    exit 1
+  fi
+
+  sh "$ONCHAINOS_TMP/install.sh"
+  rm -rf "$ONCHAINOS_TMP"
+  set +e
+fi
 
 # 2. Install onchainos skills (enables AI agent to use onchainos commands)
 npx skills add okx/onchainos-skills --yes --global
@@ -98,17 +134,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.5.1/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.5.2"
+curl -fsSL "${RELEASE_BASE}/polymarket-plugin-${TARGET}${EXT}" -o "$BIN_TMP/polymarket-plugin${EXT}" || {
+  echo "ERROR: failed to download polymarket-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.5.2" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="polymarket-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/polymarket-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/polymarket-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: polymarket-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/polymarket-plugin${EXT}" ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.5.1" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.5.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
-
 
 ---
 

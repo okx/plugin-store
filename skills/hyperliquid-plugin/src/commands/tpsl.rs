@@ -1,5 +1,8 @@
 use clap::Args;
-use crate::api::{get_asset_meta, get_all_mids, get_clearinghouse_state};
+use crate::api::{
+    fetch_perp_dexs, get_all_mids, get_asset_meta_for_coin, get_clearinghouse_state_for_dex,
+    parse_coin,
+};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{build_standalone_tpsl_action, format_px, round_px, submit_exchange_request};
@@ -57,13 +60,21 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
 
     let info = info_url();
     let exchange = exchange_url();
-    let coin = normalize_coin(&args.coin);
+    // HIP-3: parse dex prefix
+    let (dex_opt, _) = parse_coin(&args.coin);
+    let coin = if dex_opt.is_some() {
+        let (d, b) = parse_coin(&args.coin);
+        format!("{}:{}", d.unwrap(), b.to_uppercase())
+    } else {
+        normalize_coin(&args.coin)
+    };
     let nonce = now_ms();
 
-    let (asset_idx, sz_decimals) = match get_asset_meta(info, &coin).await {
+    let registry = fetch_perp_dexs(info).await.unwrap_or_default();
+    let (asset_idx, sz_decimals) = match get_asset_meta_for_coin(info, &coin, &registry).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list`."));
             return Ok(());
         }
     };
@@ -75,8 +86,8 @@ pub async fn run(args: TpslArgs) -> anyhow::Result<()> {
         }
     };
 
-    // Auto-detect position direction and size
-    let state = match get_clearinghouse_state(info, &wallet).await {
+    // Auto-detect position direction and size (dex-aware)
+    let state = match get_clearinghouse_state_for_dex(info, &wallet, dex_opt.as_deref()).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));

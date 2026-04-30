@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::io::Read;
 
-use crate::api::get_asset_meta;
+use crate::api::{fetch_perp_dexs, get_asset_meta_for_coin, parse_coin};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{build_batch_cancel_action, submit_exchange_request};
@@ -103,22 +103,31 @@ pub async fn run(args: CancelBatchArgs) -> anyhow::Result<()> {
     }
 
     // Resolve asset_idx per coin (cached per unique coin to avoid redundant API calls).
+    // HIP-3: each coin can carry a dex prefix (e.g. "xyz:CL") which routes to a
+    // builder-DEX universe and computes asset_id with the appropriate offset.
     use std::collections::HashMap;
+    let registry = fetch_perp_dexs(info).await.unwrap_or_default();
     let mut asset_cache: HashMap<String, usize> = HashMap::new();
     let mut resolved: Vec<(usize, u64)> = Vec::with_capacity(cancels_raw.len());
     let mut summaries: Vec<Value> = Vec::with_capacity(cancels_raw.len());
 
     for (i, (coin_raw, oid)) in cancels_raw.iter().enumerate() {
-        let coin = normalize_coin(coin_raw);
+        let (dex_opt, _) = parse_coin(coin_raw);
+        let coin = if dex_opt.is_some() {
+            let (d, b) = parse_coin(coin_raw);
+            format!("{}:{}", d.unwrap(), b.to_uppercase())
+        } else {
+            normalize_coin(coin_raw)
+        };
         let asset_idx = if let Some(idx) = asset_cache.get(&coin) {
             *idx
         } else {
-            match get_asset_meta(info, &coin).await {
+            match get_asset_meta_for_coin(info, &coin, &registry).await {
                 Ok((idx, _)) => { asset_cache.insert(coin.clone(), idx); idx }
                 Err(e) => {
                     println!("{}", super::error_response(
                         &format!("cancels[{}]: {:#}", i, e),
-                        "API_ERROR", "Check coin name and connection.",
+                        "API_ERROR", "Check coin name and connection. HIP-3 builder dex coins use prefix like xyz:CL.",
                     ));
                     return Ok(());
                 }

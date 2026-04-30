@@ -1,5 +1,9 @@
 use clap::Args;
-use crate::api::{get_asset_meta, get_all_mids, get_clearinghouse_state, get_spot_clearinghouse_state};
+use crate::api::{
+    fetch_perp_dexs, get_all_mids, get_all_mids_for_dex, get_asset_meta_with_flags,
+    get_clearinghouse_state, get_clearinghouse_state_for_dex, get_spot_clearinghouse_state,
+    parse_coin,
+};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID, USDC_ARBITRUM};
 use crate::onchainos::{onchainos_hl_sign, report_plugin_info, resolve_wallet};
 use crate::rpc::{ARBITRUM_RPC, erc20_balance};
@@ -70,7 +74,8 @@ pub struct OrderArgs {
     #[arg(long)]
     pub confirm: bool,
 
-    /// Strategy ID for attribution — reported to OKX backend alongside the order
+    /// Optional strategy ID tag for attribution. All orders are reported to the OKX
+    /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
     #[arg(long)]
     pub strategy_id: Option<String>,
 }
@@ -88,7 +93,18 @@ fn fmt_size(sz: f64, decimals: u32) -> String {
 pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     let info = info_url();
     let exchange = exchange_url();
-    let coin = normalize_coin(&args.coin);
+    // HIP-3: detect dex prefix from coin name (e.g. "xyz:CL" -> dex="xyz", base="CL").
+    // Coin lookup downstream happens via get_asset_meta_for_coin which understands prefixes.
+    // For position match (post-order), the coin field on a HIP-3 position is the FULL prefixed
+    // name (e.g. "xyz:CL"), so we keep the raw user input for matching.
+    let (dex_opt, _base) = parse_coin(&args.coin);
+    let coin = if dex_opt.is_some() {
+        // Builder dex coins are case-sensitive on the dex prefix; normalize only the symbol.
+        let (d, b) = parse_coin(&args.coin);
+        format!("{}:{}", d.unwrap(), b.to_uppercase())
+    } else {
+        normalize_coin(&args.coin)
+    };
     let is_buy = args.side.to_lowercase() == "buy";
     let nonce = now_ms();
 
@@ -137,18 +153,29 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         }
     }
 
-    // ─── Fetch meta + prices concurrently ────────────────────────────────────
-    let (meta_res, mids_res) = tokio::join!(
-        get_asset_meta(info, &coin),
-        get_all_mids(info)
+    // ─── Fetch dex registry + meta + prices concurrently ─────────────────────
+    let (registry_res, mids_res) = tokio::join!(
+        fetch_perp_dexs(info),
+        get_all_mids_for_dex(info, dex_opt.as_deref()),
     );
-    let (asset_idx, sz_decimals) = match meta_res {
+    let registry = registry_res.unwrap_or_default();
+    let (asset_idx, sz_decimals, only_isolated) = match get_asset_meta_with_flags(info, &coin, &registry).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list` to verify the DEX exists."));
             return Ok(());
         }
     };
+
+    // HIP-3: Some RWA / equity markets (xyz:CL / xyz:HOOD / xyz:INTC / xyz:PLTR / xyz:COIN /
+    // etc.) have `onlyIsolated: true` — HL rejects cross-margin orders on these with
+    // "Cross margin is not allowed for this asset". Auto-promote to --isolated when this
+    // flag is set, so the user doesn't need to memorize per-coin margin restrictions.
+    let auto_isolated = only_isolated && !args.isolated;
+    if auto_isolated {
+        eprintln!("[order] {} requires isolated margin (onlyIsolated=true) — auto-enabling --isolated.", coin);
+    }
+    let use_isolated = args.isolated || only_isolated;
     let mids = match mids_res {
         Ok(v) => v,
         Err(e) => {
@@ -205,8 +232,12 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
 
     let balances_opt: Option<Balances> = if let Some(ref w) = wallet_opt {
         let aw_clone = arb_wallet_opt.clone();
+        // HIP-3: when ordering on a builder DEX, perp margin must come from THAT dex's
+        // clearinghouse — funds are NOT shared with the default DEX. If user has a
+        // builder DEX coin (xyz:CL), query xyz's clearinghouse for the perp balance.
+        let dex_clone = dex_opt.clone();
         let (perp_res, spot_res, arb_raw) = tokio::join!(
-            get_clearinghouse_state(info, w),
+            get_clearinghouse_state_for_dex(info, w, dex_clone.as_deref()),
             get_spot_clearinghouse_state(info, w),
             async move {
                 match aw_clone.as_deref() {
@@ -367,7 +398,9 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     };
 
     let leverage_preview = args.leverage.map(|l| {
-        format!("{}x {}", l, if args.isolated { "isolated" } else { "cross" })
+        format!("{}x {}{}", l,
+            if use_isolated { "isolated" } else { "cross" },
+            if auto_isolated { " (auto, onlyIsolated)" } else { "" })
     });
 
     // ─── Preview ─────────────────────────────────────────────────────────────
@@ -424,7 +457,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
 
     // Set leverage before placing the order if --leverage was provided
     if let Some(lev) = args.leverage {
-        let is_cross = !args.isolated;
+        // HIP-3: respect onlyIsolated auto-promotion (xyz:CL / xyz:HOOD / etc.)
+        let is_cross = !use_isolated;
         let lev_action = build_update_leverage_action(asset_idx, is_cross, lev);
         let lev_nonce = now_ms();
         let lev_signed = match onchainos_hl_sign(&lev_action, lev_nonce, &wallet, ARBITRUM_CHAIN_ID, true, false) {
@@ -481,14 +515,15 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         .as_u64()
         .or_else(|| statuses["resting"]["oid"].as_u64());
 
-    if let (Some(sid), Some(oid_val)) = (
-        args.strategy_id.as_deref().filter(|s| !s.is_empty()),
-        oid,
-    ) {
+    // Attribution: report every order that produced an oid (filled or resting).
+    // strategy_id is optional — when not provided, an empty string is sent so the backend
+    // still receives a record (just unattributed to any specific strategy).
+    if let Some(oid_val) = oid {
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
+        let sid = args.strategy_id.as_deref().unwrap_or("");
         let report_payload = serde_json::json!({
             "wallet": wallet,
             "proxyAddress": "",

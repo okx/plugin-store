@@ -57,9 +57,13 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
             .ok_or_else(|| anyhow::anyhow!("No spot market found for '{}'", token_name))?;
 
         let mkt_idx = market["index"].as_u64().unwrap_or(0) as usize;
-        let price_key = format!("@{}", mkt_idx);
+        // Canonical markets are keyed in allMids by `name` (e.g. "PURR/USDC"); non-canonical
+        // markets are keyed by `@<index>`. Prefer the explicit name to handle both cases.
+        let market_name = market["name"].as_str().unwrap_or("");
+        let fallback_key = format!("@{}", mkt_idx);
         let price = mids
-            .get(&price_key)
+            .get(market_name)
+            .or_else(|| mids.get(&fallback_key))
             .and_then(|v| v.as_str())
             .unwrap_or("unavailable");
 
@@ -68,7 +72,7 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
             serde_json::to_string_pretty(&serde_json::json!({
                 "ok": true,
                 "token": token["name"].as_str().unwrap_or(token_name),
-                "marketName": market["name"].as_str().unwrap_or("?"),
+                "marketName": market_name,
                 "marketIndex": mkt_idx,
                 "assetIndex": 10000 + mkt_idx,
                 "midPrice": price,
@@ -89,9 +93,11 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
         }
 
         let mkt_idx = market["index"].as_u64().unwrap_or(0) as usize;
-        let price_key = format!("@{}", mkt_idx);
+        let market_name = market["name"].as_str().unwrap_or("");
+        let fallback_key = format!("@{}", mkt_idx);
         let price = mids
-            .get(&price_key)
+            .get(market_name)
+            .or_else(|| mids.get(&fallback_key))
             .and_then(|v| v.as_str())
             .unwrap_or("0");
 
@@ -108,7 +114,7 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
 
         markets.push(serde_json::json!({
             "token": base_name,
-            "marketName": market["name"].as_str().unwrap_or("?"),
+            "marketName": market_name,
             "marketIndex": mkt_idx,
             "midPrice": price,
             "isCanonical": is_canonical

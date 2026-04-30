@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::io::Read;
 
-use crate::api::{get_asset_meta, get_all_mids};
+use crate::api::{fetch_perp_dexs, get_all_mids, get_asset_meta_for_coin, parse_coin};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, report_plugin_info, resolve_wallet};
 use crate::signing::{build_batch_order_action, round_px, submit_exchange_request};
@@ -27,7 +27,9 @@ pub struct OrderBatchArgs {
     #[arg(long)]
     pub confirm: bool,
 
-    /// Strategy ID for attribution — applied to every filled/resting order in the batch
+    /// Optional strategy ID tag for attribution — applied to every filled/resting order
+    /// in the batch. All orders are reported regardless; this flag just attaches a
+    /// strategy label. Empty if omitted.
     #[arg(long)]
     pub strategy_id: Option<String>,
 }
@@ -154,18 +156,30 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
         }
     };
 
+    // Fetch dex registry once (HIP-3: resolves "xyz:CL" -> asset 110029 etc.)
+    let registry = fetch_perp_dexs(info).await.unwrap_or_default();
+
     // Build each order element, resolving asset_idx + rounding per-coin.
+    // HIP-3: orders within one batch CAN target different DEXs (signing covers any-asset
+    // body) but margin pre-flight will only catch issues post-submission since each dex
+    // has separate clearinghouse.
     let mut built: Vec<Value> = Vec::with_capacity(inputs.len());
     let mut summaries: Vec<Value> = Vec::with_capacity(inputs.len());
 
     for (i, o) in inputs.iter().enumerate() {
-        let coin = normalize_coin(&o.coin);
-        let (asset_idx, sz_decimals) = match get_asset_meta(info, &coin).await {
+        let (dex_opt_in, _) = parse_coin(&o.coin);
+        let coin = if dex_opt_in.is_some() {
+            let (d, b) = parse_coin(&o.coin);
+            format!("{}:{}", d.unwrap(), b.to_uppercase())
+        } else {
+            normalize_coin(&o.coin)
+        };
+        let (asset_idx, sz_decimals) = match get_asset_meta_for_coin(info, &coin, &registry).await {
             Ok(v) => v,
             Err(e) => {
                 println!("{}", super::error_response(
                     &format!("orders[{}]: {:#}", i, e),
-                    "API_ERROR", "Check coin name and connection.",
+                    "API_ERROR", "Check coin name and connection. HIP-3 builder dex coins use prefix like xyz:CL.",
                 ));
                 return Ok(());
             }
@@ -283,7 +297,8 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
 
     let ts_now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
-    let strategy_id = args.strategy_id.as_deref().filter(|s| !s.is_empty());
+    // strategy_id is optional — empty string when not provided so backend still receives a record.
+    let sid = args.strategy_id.as_deref().unwrap_or("");
 
     for (i, st) in statuses.iter().enumerate() {
         let summary = summaries.get(i).cloned().unwrap_or(Value::Null);
@@ -303,9 +318,14 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
         }));
 
         // Attribution: report every order that produced an oid (filled or resting).
-        if let (Some(sid), Some(oid_val)) = (strategy_id, oid) {
+        if let Some(oid_val) = oid {
             let inp = &inputs[i];
-            let coin = normalize_coin(&inp.coin);
+            // HIP-3: keep the full prefixed coin name for attribution (e.g. "xyz:CL").
+            let coin = {
+                let (dex, base) = parse_coin(&inp.coin);
+                if dex.is_some() { format!("{}:{}", dex.unwrap(), base.to_uppercase()) }
+                else { normalize_coin(&inp.coin) }
+            };
             let side_uc = if inp.side.to_lowercase() == "buy" { "BUY" } else { "SELL" };
             let size_from_summary = summary["size"].as_str().unwrap_or(&inp.size).to_string();
             let price_for_report = avg_px.clone().unwrap_or_else(||

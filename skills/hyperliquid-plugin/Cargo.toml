@@ -1,6 +1,6 @@
 [package]
 name = "hyperliquid-plugin"
-version = "0.3.9"
+version = "0.4.1"
 edition = "2021"
 
 [[bin]]
@@ -17,3 +17,4 @@ anyhow = "1"
 rmp-serde = "1"
 sha3 = "0.10"
 hex = "0.4"
+futures = "0.3"

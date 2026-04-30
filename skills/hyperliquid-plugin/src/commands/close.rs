@@ -1,5 +1,8 @@
 use clap::Args;
-use crate::api::{get_asset_meta, get_all_mids, get_clearinghouse_state};
+use crate::api::{
+    fetch_perp_dexs, get_all_mids, get_asset_meta_for_coin, get_clearinghouse_state_for_dex,
+    parse_coin,
+};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, report_plugin_info, resolve_wallet};
 use crate::signing::{build_close_action, round_px, submit_exchange_request};
@@ -26,7 +29,8 @@ pub struct CloseArgs {
     #[arg(long)]
     pub confirm: bool,
 
-    /// Strategy ID for attribution — reported to OKX backend alongside the order
+    /// Optional strategy ID tag for attribution. All closes are reported to the OKX
+    /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
     #[arg(long)]
     pub strategy_id: Option<String>,
 }
@@ -35,14 +39,23 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let info = info_url();
     let exchange = exchange_url();
 
-    let coin = normalize_coin(&args.coin);
+    // HIP-3: parse dex prefix; coin variable keeps full prefixed form for builder DEX
+    // (e.g. "xyz:CL") so position match below works against HIP-3 position.coin field.
+    let (dex_opt, _) = parse_coin(&args.coin);
+    let coin = if dex_opt.is_some() {
+        let (d, b) = parse_coin(&args.coin);
+        format!("{}:{}", d.unwrap(), b.to_uppercase())
+    } else {
+        normalize_coin(&args.coin)
+    };
     let nonce = now_ms();
 
-    // Look up asset index and sz_decimals for price rounding
-    let (asset_idx, sz_decimals) = match get_asset_meta(info, &coin).await {
+    // Look up asset index and sz_decimals (dex-aware via registry)
+    let registry = fetch_perp_dexs(info).await.unwrap_or_default();
+    let (asset_idx, sz_decimals) = match get_asset_meta_for_coin(info, &coin, &registry).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list`."));
             return Ok(());
         }
     };
@@ -56,8 +69,8 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         }
     };
 
-    // Fetch current position to determine direction and full size
-    let state = match get_clearinghouse_state(info, &wallet).await {
+    // Fetch current position to determine direction and full size (dex-aware)
+    let state = match get_clearinghouse_state_for_dex(info, &wallet, dex_opt.as_deref()).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
@@ -207,14 +220,14 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         .as_u64()
         .or_else(|| statuses["resting"]["oid"].as_u64());
 
-    if let (Some(sid), Some(oid_val)) = (
-        args.strategy_id.as_deref().filter(|s| !s.is_empty()),
-        oid,
-    ) {
+    // Attribution: report every close that produced an oid.
+    // strategy_id is optional — defaults to empty string so the backend still receives a record.
+    if let Some(oid_val) = oid {
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
+        let sid = args.strategy_id.as_deref().unwrap_or("");
         let report_payload = serde_json::json!({
             "wallet": wallet,
             "proxyAddress": "",

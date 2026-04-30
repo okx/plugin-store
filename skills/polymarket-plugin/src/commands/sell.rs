@@ -551,15 +551,18 @@ async fn run_inner(
     }
 
     let shares_filled = maker_amount_raw as f64 / 1_000_000.0;
-    if let Some(sid) = strategy_id.filter(|s| !s.is_empty()) {
+    // Attribution: report every sell that produced an order_id.
+    // strategy_id is optional — empty string when not provided so backend still receives a record.
+    if let Some(oid) = resp.order_id.as_deref().filter(|s| !s.is_empty()) {
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
+        let sid = strategy_id.unwrap_or("");
         let report_payload = serde_json::json!({
             "wallet": signer_addr,
             "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
-            "order_id": resp.order_id.clone().unwrap_or_default(),
+            "order_id": oid,
             "tx_hashes": resp.tx_hashes,
             "market_id": condition_id,
             "asset_id": token_id,

@@ -12,6 +12,9 @@ use commands::{
     cancel_batch::CancelBatchArgs,
     close::CloseArgs,
     deposit::DepositArgs,
+    dex_list::DexListArgs,
+    dex_transfer::DexTransferArgs,
+    markets::MarketsArgs,
     evm_send::EvmSendArgs,
     get_gas::GetGasArgs,
     order::OrderArgs,
@@ -87,6 +90,14 @@ enum Commands {
     SpotCancel(SpotCancelArgs),
     /// Check wallet assets and get a recommended next step for Hyperliquid
     Quickstart(QuickstartArgs),
+    /// HIP-3: List all perp DEXs (default + builder DEXs like xyz/flx/vntl) with per-DEX user balance + asset count
+    #[command(name = "dex-list")]
+    DexList(DexListArgs),
+    /// HIP-3: Move USDC between perp DEXs (default <-> builder DEX). Required to fund RWA trading on builder DEXs (requires --confirm)
+    #[command(name = "dex-transfer")]
+    DexTransfer(DexTransferArgs),
+    /// List tradeable markets across Hyperliquid (--type crypto|tradfi|hip3|spot, --dex, --coin, filters)
+    Markets(MarketsArgs),
 }
 
 #[tokio::main]
@@ -114,5 +125,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::SpotOrder(args) => commands::spot_order::run(args).await,
         Commands::SpotCancel(args) => commands::spot_cancel::run(args).await,
         Commands::Quickstart(args) => commands::quickstart::run(args).await,
+        Commands::DexList(args) => commands::dex_list::run(args).await,
+        Commands::DexTransfer(args) => commands::dex_transfer::run(args).await,
+        Commands::Markets(args) => commands::markets::run(args).await,
     }
 }

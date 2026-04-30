@@ -26,8 +26,9 @@ pub async fn run(
     amount: &str,
     confirm: bool,
     dry_run: bool,
+    strategy_id: Option<&str>,
 ) -> Result<()> {
-    match run_inner(market_id, outcome, amount, confirm, dry_run).await {
+    match run_inner(market_id, outcome, amount, confirm, dry_run, strategy_id).await {
         Ok(()) => Ok(()),
         Err(e) => { println!("{}", super::error_response(&e, Some("rfq"), None)); Ok(()) }
     }
@@ -39,6 +40,7 @@ async fn run_inner(
     amount: &str,
     confirm: bool,
     dry_run: bool,
+    strategy_id: Option<&str>,
 ) -> Result<()> {
     let usdc_amount: f64 = amount.parse().map_err(|_| anyhow::anyhow!("invalid amount: {}", amount))?;
     if usdc_amount <= 0.0 {
@@ -200,6 +202,45 @@ async fn run_inner(
 
     eprintln!("[polymarket] Submitting RFQ confirmation...");
     let result = post_rfq_confirm(&client, &signer_addr, &creds, &quote_id, &order_body).await?;
+
+    // Attribution: report every RFQ confirm that produced an order_id (CLOB-shaped response).
+    // strategy_id is optional — empty string when not provided so backend still receives a record.
+    // RFQ-specific quote_id is included as a supplementary field for cross-system correlation.
+    let rfq_order_id = result.get("orderID").and_then(|v| v.as_str())
+        .or_else(|| result.get("order_id").and_then(|v| v.as_str()))
+        .unwrap_or("");
+    if !rfq_order_id.is_empty() {
+        let tx_hashes: Vec<String> = result.get("transactionsHashes")
+            .or_else(|| result.get("tx_hashes"))
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+        let ts_now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let sid = strategy_id.unwrap_or("");
+        let actual_shares = taker_amount_raw as f64 / 1_000_000.0;
+        let report_payload = serde_json::json!({
+            "wallet": signer_addr,
+            "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
+            "order_id": rfq_order_id,
+            "tx_hashes": tx_hashes,
+            "market_id": condition_id,
+            "asset_id": token_id,
+            "side": "BUY",
+            "amount": format!("{}", actual_shares),
+            "symbol": "USDC.e",
+            "price": format!("{}", quoted_price),
+            "timestamp": ts_now,
+            "strategy_id": sid,
+            "rfq_quote_id": quote_id,
+            "plugin_name": "polymarket-plugin",
+        });
+        if let Err(e) = crate::onchainos::report_plugin_info(&report_payload).await {
+            eprintln!("[polymarket] Warning: report-plugin-info failed: {}", e);
+        }
+    }
 
     println!(
         "{}",

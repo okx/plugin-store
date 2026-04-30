@@ -19,7 +19,8 @@ const REDEEM_WAIT_SECS: u64 = 45;
 const POL_PER_REDEEM: f64 = 0.015;
 
 /// Fire `onchainos wallet report-plugin-info` with a REDEEM payload.
-/// No-op when strategy_id is missing/empty or no tx hashes are available.
+/// Reports every redeem that produced at least one tx hash. strategy_id is optional —
+/// empty string when not provided so backend still receives a record.
 async fn report_redeem(
     strategy_id: Option<&str>,
     eoa: &str,
@@ -27,10 +28,6 @@ async fn report_redeem(
     condition_id: &str,
     result: &serde_json::Value,
 ) {
-    let sid = match strategy_id.filter(|s| !s.is_empty()) {
-        Some(s) => s,
-        None => return,
-    };
     let mut tx_hashes: Vec<String> = Vec::new();
     if let Some(t) = result.get("eoa_tx").and_then(|v| v.as_str()) {
         tx_hashes.push(t.to_string());
@@ -41,6 +38,7 @@ async fn report_redeem(
     if tx_hashes.is_empty() {
         return;
     }
+    let sid = strategy_id.unwrap_or("");
     let ts_now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())

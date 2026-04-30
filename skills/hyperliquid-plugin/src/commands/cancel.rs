@@ -1,5 +1,7 @@
 use clap::Args;
-use crate::api::{get_asset_index, get_meta, get_open_orders};
+use crate::api::{
+    fetch_perp_dexs, get_asset_meta_for_coin, get_meta, get_open_orders_for_dex, parse_coin,
+};
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
 use crate::signing::{build_cancel_action, build_batch_cancel_action, submit_exchange_request};
@@ -46,17 +48,26 @@ pub async fn run(args: CancelArgs) -> anyhow::Result<()> {
 
     // Case 1: single order by ID
     if let Some(oid) = args.order_id {
-        let coin = match args.coin.as_deref() {
-            Some(c) => normalize_coin(c),
+        let raw_coin = match args.coin.as_deref() {
+            Some(c) => c,
             None => {
-                println!("{}", super::error_response("--coin is required when using --order-id", "INVALID_ARGUMENT", "Provide --coin <SYMBOL> alongside --order-id."));
+                println!("{}", super::error_response("--coin is required when using --order-id", "INVALID_ARGUMENT", "Provide --coin <SYMBOL> alongside --order-id (HIP-3: pass full prefixed name e.g. xyz:CL)."));
                 return Ok(());
             }
         };
-        let asset_idx = match get_asset_index(info, &coin).await {
+        // HIP-3: parse dex prefix; coin keeps full prefixed form for builder DEX
+        let (dex_opt, _) = parse_coin(raw_coin);
+        let coin = if dex_opt.is_some() {
+            let (d, b) = parse_coin(raw_coin);
+            format!("{}:{}", d.unwrap(), b.to_uppercase())
+        } else {
+            normalize_coin(raw_coin)
+        };
+        let registry = fetch_perp_dexs(info).await.unwrap_or_default();
+        let (asset_idx, _sz_dec) = match get_asset_meta_for_coin(info, &coin, &registry).await {
             Ok(v) => v,
             Err(e) => {
-                println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+                println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list`."));
                 return Ok(());
             }
         };
@@ -112,8 +123,23 @@ pub async fn run(args: CancelArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Case 2: batch by coin or --all — fetch open orders first
-    let open_orders = match get_open_orders(info, &wallet).await {
+    // Case 2: batch by coin or --all — fetch open orders first.
+    // HIP-3: --coin can carry dex prefix (e.g. "xyz:CL") which routes the open-orders
+    // query to the right builder DEX; otherwise default DEX. Without --coin, the batch
+    // cancels all default-DEX orders only (per-DEX cancel-all not supported in v0.4.0).
+    let (cancel_dex_opt, normalized_filter) = match args.coin.as_deref() {
+        Some(c) => {
+            let (dex, base) = parse_coin(c);
+            let filt = if dex.is_some() {
+                format!("{}:{}", dex.as_ref().unwrap(), base.to_uppercase())
+            } else {
+                normalize_coin(&base)
+            };
+            (dex, Some(filt))
+        }
+        None => (None, None),
+    };
+    let open_orders = match get_open_orders_for_dex(info, &wallet, cancel_dex_opt.as_deref()).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
@@ -131,14 +157,16 @@ pub async fn run(args: CancelArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Filter by coin if provided
-    let coin_filter = args.coin.as_deref().map(normalize_coin);
+    // Filter by coin if provided (already normalized, includes dex prefix when present)
+    let coin_filter = normalized_filter;
 
     let to_cancel: Vec<_> = all_orders
         .iter()
         .filter(|o| {
             if let Some(ref f) = coin_filter {
-                o["coin"].as_str().map(|c| c.to_uppercase()) == Some(f.clone())
+                // case-insensitive compare on both sides (HIP-3 dex prefix is lowercase
+                // while filter may have been built from user's mixed-case input)
+                o["coin"].as_str().map(|c| c.eq_ignore_ascii_case(f)).unwrap_or(false)
             } else {
                 true // --all
             }
