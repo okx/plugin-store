@@ -9,7 +9,7 @@ description: >
   Polymarket, find undervalued prediction markets, find mispriced prediction markets,
   Polymarket news edge, Polymarket odds vs Otto, or wants to find Polymarket markets where
   odds don't match the news.
-version: "0.1.2"
+version: "0.1.3"
 author: "Otto AI"
 updated: 2026-04-24
 tags:

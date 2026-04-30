@@ -1,6 +1,6 @@
 schema_version: 1
 name: otto-mispricing-assistant
-version: "0.1.2"
+version: "0.1.3"
 description: "Otto Mispricing Assistant — Scan near-resolution Polymarket markets where implied probability diverges from Otto's news + KOL + funding signals, then trade a single market only after explicit user confirmation. Dry-run by default."
 author:
   name: "Otto AI"

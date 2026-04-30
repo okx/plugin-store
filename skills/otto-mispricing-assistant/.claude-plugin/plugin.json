@@ -1,7 +1,7 @@
 {
   "name": "otto-mispricing-assistant",
   "description": "Otto Mispricing Assistant \u2014 Scan near-resolution Polymarket markets where implied probability diverges from Otto's news + KOL + funding signals, then trade a single market only after explicit user confirmation. Dry-run by default.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": {
     "name": "Otto AI"
   },
