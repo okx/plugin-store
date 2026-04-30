@@ -8,7 +8,7 @@ description: >
   Trigger when the user mentions Otto alpha, alpha sniper, data-driven perp, momentum trade,
   trending altcoin scalp, KOL follow, funding-rate fade, smart-money perp, Otto AI signals,
   or wants to automatically open a Hyperliquid position based on aggregated crypto intel.
-version: "0.1.2"
+version: "0.1.3"
 author: "Otto AI"
 updated: 2026-04-24
 tags:
@@ -180,7 +180,7 @@ hyperliquid-plugin order --coin {COIN} --side {buy|sell} --size {size} --leverag
 
 - **When to use**: after Step 3 confirmation and Step 4 price read.
 - **Output**: JSON with `order_id`, `filled_px`, `tx_hash`.
-- **Size conversion**: `size = size_usd × leverage / mark_px`, rounded down to the coin's lot size. `--size` is in token units, not USD.
+- **Size conversion**: `size_tokens = size_usd / mark_px`, rounded down to the coin's lot size. `--size` is in token units. `size_usd` is the position **notional** value; `--leverage` controls margin posted (margin = notional / leverage).
 - **Leverage**: always pass `--leverage {leverage}` explicitly — never rely on the exchange default.
 - **Dry-run**: if `DRY_RUN = True`, omit `--confirm`. Plugin will echo the intended order without submitting.
 - **Strategy attribution**: every live order must include `--strategy-id otto-alpha-sniper` for leaderboard attribution on the OKX Plugin Store Developer Challenge.
@@ -188,7 +188,7 @@ hyperliquid-plugin order --coin {COIN} --side {buy|sell} --size {size} --leverag
 ### Step 6 — Attach TP/SL bracket
 
 ```bash
-hyperliquid-plugin tpsl --coin {COIN} --sl-px {sl_price} --tp-px {tp_price} --strategy-id otto-alpha-sniper --confirm
+hyperliquid-plugin tpsl --coin {COIN} --sl-px {sl_price} --tp-px {tp_price} --confirm
 ```
 
 - **When to use**: immediately after Step 5 (same turn).

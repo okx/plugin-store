@@ -36,7 +36,7 @@ SL_PCT                  = 0.02    # 2% stop-loss
 TP_PCT                  = 0.04    # 4% take-profit (2:1 RR)
 SESSION_MAX_DRAWDOWN_PCT = 0.15   # halt all new trades after cumulative -15%
 MAX_CONCURRENT_POSITIONS = 3
-COOLDOWN_HOURS           = 4      # min hours between fires on the SAME coin (per-mode)
+COOLDOWN_HOURS           = 4      # min hours between fires on the SAME coin (any mode)
 
 # ── Signal thresholds ────────────────────────────────────────────────────────
 # Calibrated against live signals.useotto.xyz data 2026-04-30:
