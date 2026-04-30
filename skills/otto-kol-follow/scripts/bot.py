@@ -38,6 +38,18 @@ except Exception:
     sys.path.insert(0, str(Path(__file__).parent))
     import config  # type: ignore[import-not-found]
 
+# Per-coin cooldown: in-memory only (resets on bot restart).
+_LAST_FIRE_TS: dict[str, datetime] = {}
+
+
+def within_cooldown(coin: str) -> bool:
+    """True if this coin was fired within COOLDOWN_HOURS (default 6)."""
+    cooldown_h = getattr(config, "COOLDOWN_HOURS", 6)
+    last = _LAST_FIRE_TS.get(coin)
+    if last is None:
+        return False
+    return (datetime.now(timezone.utc) - last).total_seconds() < cooldown_h * 3600
+
 
 def log(record: dict) -> None:
     record["ts"] = datetime.now(timezone.utc).isoformat()
@@ -130,7 +142,9 @@ def fire_trade(trade: dict, size_usd: float, live: bool) -> None:
     if mark is None:
         log({"event": "mark_price_unavailable", "coin": trade["coin"]})
         return
-    size_tokens = round((size_usd * lev) / mark, 6)
+    # size_usd is the position NOTIONAL (margin = notional / leverage,
+    # enforced by hyperliquid-plugin via --leverage). Token count = notional / mark.
+    size_tokens = round(size_usd / mark, 6)
     sl, tp = compute_bracket(side, mark)
     log({"event": "preparing_trade", "trade": trade, "side": side, "leverage": lev,
          "size_usd": size_usd, "size_tokens": size_tokens, "mark": mark, "sl": sl, "tp": tp,
@@ -149,6 +163,8 @@ def fire_trade(trade: dict, size_usd: float, live: bool) -> None:
     except subprocess.CalledProcessError as e:
         log({"event": "order_failed", "err": str(e)})
         return
+    # Record fire timestamp for cooldown gating
+    _LAST_FIRE_TS[trade["coin"]] = datetime.now(timezone.utc)
     if live and not config.DRY_RUN:
         bracket_cmd = [
             "hyperliquid-plugin", "tpsl",
@@ -192,6 +208,8 @@ def main() -> None:
                     log({"event": "no_trade_this_cycle", "reason": "cohort/confidence/direction gate",
                          "kol_count": payload.get("kol_count"), "confidence": payload.get("confidence"),
                          "direction": payload.get("direction")})
+                elif within_cooldown(trade["coin"]):
+                    log({"event": "cooldown_active", "coin": trade["coin"]})
                 else:
                     fire_trade(trade, args.size_usd, args.live)
 

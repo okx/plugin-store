@@ -15,6 +15,9 @@ DRY_RUN = True             # True = paper mode (no --confirm passed to hyperliqu
 PAUSED  = False            # True = refuse all new trades regardless of DRY_RUN
 
 # ── Sizing ───────────────────────────────────────────────────────────────────
+# DEFAULT_SIZE_USD is the position NOTIONAL value (size × mark), NOT margin.
+# Margin used = notional / leverage. With $25 notional at 3x leverage, the
+# trade locks ~$8.33 of margin.
 DEFAULT_SIZE_USD        = 25      # per-trade notional in USD
 MIN_SIZE_USD            = 10
 MAX_SIZE_USD            = 500
@@ -30,6 +33,7 @@ SL_PCT                   = 0.02   # 2% stop-loss
 TP_PCT                   = 0.04   # 4% take-profit (2:1 RR)
 SESSION_MAX_DRAWDOWN_PCT = 0.15   # halt all new trades after cumulative -15%
 MAX_CONCURRENT_POSITIONS = 3
+COOLDOWN_HOURS           = 6      # min hours between fires on the SAME coin (KOL is slow)
 
 # ── KOL signal thresholds ────────────────────────────────────────────────────
 # Calibrated against live signals.useotto.xyz data 2026-04-30:
