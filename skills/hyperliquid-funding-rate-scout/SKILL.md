@@ -94,8 +94,29 @@ Before using this skill, ensure the following are installed and accessible:
    npx skills add okx/plugin-store --skill hyperliquid-plugin
    ```
 
-> **Note**: No wallet connection is required for this plugin. All operations
-> in this skill are read-only.
+4. The signal scanner binary is included with this skill and requires no separate
+   installation. It uses `curl` for HTTP requests — verify curl is available:
+   ```bash
+   curl --version
+   ```
+
+5. To run the scanner directly (outside of agent context):
+   ```bash
+   # Default scan — top 5 signals above 0.01% hourly threshold
+   hyperliquid-funding-rate-scout
+
+   # Custom threshold and limit
+   hyperliquid-funding-rate-scout --threshold 0.03 --limit 3
+
+   # Filter to specific assets
+   hyperliquid-funding-rate-scout --asset BTC --asset ETH
+
+   # Raw JSON output (for programmatic use)
+   hyperliquid-funding-rate-scout --json
+   ```
+
+> **Note**: No wallet connection is required for this plugin. All scan and
+> analysis operations are strictly read-only.
 
 ---
 

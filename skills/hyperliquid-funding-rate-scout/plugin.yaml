@@ -25,6 +25,11 @@ dependent_plugin:
 components:
   skill:
     dir: "."
+  binary:
+    language: rust
+    entry: src/main.rs
+    build: cargo build --release
+    bin: target/release/hyperliquid-funding-rate-scout
 
 api_calls:
   - api.hyperliquid.xyz
