@@ -1,13 +1,22 @@
 ---
 name: sorin-skill
 description: Use when the user asks crypto-related questions about a token, pool, chain, protocol, or project and the agent should answer with Sorin's DeFi gateway using clear, data-backed analysis.
+version: "1.0.0"
+author: Sahara AI
+tags:
+  - defi
+  - crypto
+  - analytics
+  - tokens
+  - yield
 ---
 
 # Sorin Skill
 
-## Purpose
+## Overview
 
-When the user asks crypto-related questions, identify intent first, call the most relevant API from the gateway, and return concise analysis with data-backed conclusions.
+Sorin Skill helps answer crypto-related questions about tokens, pools, chains, protocols, and projects through Sahara's Sorin DeFi AI Services Gateway.
+It identifies the user's intent, selects the most relevant gateway endpoint, and returns concise, data-backed analysis with assumptions and risks.
 
 ## Gateway
 
@@ -34,6 +43,14 @@ accept: text/plain
 Authorization: Bearer ${DEFI_TOOLS_API_KEY}
 ```
 
+## Quick Start
+
+1. Run `sorin-skill quickstart`.
+2. Verify `DEFI_TOOLS_API_KEY` is set in the agent runtime.
+3. Check gateway connectivity using the pool analysis example.
+4. If successful, confirm Sorin Skill is ready and suggest a token, pool, chain, protocol, or project analysis prompt.
+5. If failed, return the gateway status and exact error message.
+
 ## Intention Routing
 
 1. Detect user intention from natural language.
@@ -50,7 +67,7 @@ Authorization: Bearer ${DEFI_TOOLS_API_KEY}
 - Input:
   - `token_symbol` (required): token symbol, e.g. `BTC`, `ETH`
   - `quote_currency` (optional, default `USDT`): quote currency for the pair
-- curl:
+- Request:
 
 ```bash
 GET https://defi-tools-proxy.saharaa.info/token/analysis?token_symbol=ETH&quote_currency=USDT
@@ -70,7 +87,7 @@ Authorization: Bearer ${DEFI_TOOLS_API_KEY}
   - `token_symbol` (e.g. `ETH`, `USDC`)
   - `pool_id` (optional): unique pool identifier
   - `pool_category` (optional): pool category filter
-- curl:
+- Request:
 
 ```bash
 GET https://defi-tools-proxy.saharaa.info/pool/analysis?chain=Ethereum&protocol=lido&token_symbol=ETH
@@ -86,7 +103,7 @@ Authorization: Bearer ${DEFI_TOOLS_API_KEY}
 - Input (optional, provide one when possible):
   - `chainId` (integer): chain id, e.g. `1`
   - `chainName` (string): chain name, e.g. `Ethereum`
-- curl:
+- Request:
 
 ```bash
 GET https://defi-tools-proxy.saharaa.info/chain/analysis?chainName=Ethereum
@@ -99,7 +116,7 @@ Authorization: Bearer ${DEFI_TOOLS_API_KEY}
 
 - API: `protocolTool`
 - Use when: user asks protocol TVL/fees/revenue/capital flow and comprehensive metrics.
-- curl:
+- Request:
 
 ```bash
 GET https://defi-tools-proxy.saharaa.info/protocol/analysis?protocol=aave
@@ -114,7 +131,7 @@ Authorization: Bearer ${DEFI_TOOLS_API_KEY}
 - Use when: user asks project odds, FDV expectations, short/long-term target prices, market sentiment for a project.
 - Input:
   - `projectName` (required): project name, e.g. `berachain`
-- curl:
+- Request:
 
 ```bash
 GET https://defi-tools-proxy.saharaa.info/project/analysis?projectName=berachain

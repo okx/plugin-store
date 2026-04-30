@@ -10,7 +10,8 @@ Sorin Skill routes DeFi questions about tokens, pools, chains, protocols, and pr
 
 ## Quick Start
 
-1. For token analysis, ask about a token symbol such as `ETH` or `BTC`.
-2. For yield or staking analysis, provide a chain, protocol, token symbol, or pool ID when available.
-3. For protocol or project analysis, provide the protocol or project name.
-4. The skill selects the matching gateway endpoint, calls it with the available parameters, and returns key findings, interpretation, next steps, and caveats.
+1. Run `sorin-skill quickstart` to verify `DEFI_TOOLS_API_KEY` is set and the gateway is reachable.
+2. Ask a token question using a symbol such as `ETH` or `BTC`.
+3. For yield or staking analysis, provide a chain, protocol, token symbol, or pool ID when available.
+4. For protocol or project analysis, provide the protocol or project name.
+5. Review the returned findings, assumptions, risks, next steps, and caveats.

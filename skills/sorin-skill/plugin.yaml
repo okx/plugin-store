@@ -3,7 +3,7 @@ name: sorin-skill
 version: "1.0.0"
 description: "Answer DeFi questions about tokens, pools, chains, protocols, and projects using Sahara's Sorin DeFi AI Services Gateway"
 author:
-  name: "Sahara Labs"
+  name: "Sahara AI"
   github: "SaharaLabsAI"
 license: MIT
 category: analytics
@@ -19,4 +19,4 @@ components:
     dir: "."
 
 api_calls:
-  - https://defi-tools-proxy.saharaa.info
+  - defi-tools-proxy.saharaa.info
