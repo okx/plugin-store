@@ -1,7 +1,7 @@
 {
   "name": "otto-kol-follow",
-  "description": "Otto KOL Follow — Mirror the top 50 crypto KOLs on Twitter/X into a Hyperliquid perp. Natural-language intent in, one-click consensus trade with TP/SL out. Dry-run by default.",
-  "version": "0.1.0",
+  "description": "Otto KOL Follow \u2014 Mirror the top 50 crypto KOLs on Twitter/X into a Hyperliquid perp. Natural-language intent in, one-click consensus trade with TP/SL out. Dry-run by default.",
+  "version": "0.1.1",
   "author": {
     "name": "Otto AI"
   },

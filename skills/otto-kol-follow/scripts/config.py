@@ -32,8 +32,13 @@ SESSION_MAX_DRAWDOWN_PCT = 0.15   # halt all new trades after cumulative -15%
 MAX_CONCURRENT_POSITIONS = 3
 
 # ── KOL signal thresholds ────────────────────────────────────────────────────
-MIN_KOL_COUNT         = 40    # min cohort sample size for a valid consensus read
-MIN_CONFIDENCE_KOL    = 0.70  # Otto's internal confidence gate
+# Calibrated against live signals.useotto.xyz data 2026-04-30:
+# - Daily distinct-author count typically 30-40 (our Twitter list size is 50)
+# - sentiment_score range 25-90; confidence = abs(score - 50) / 50, so 0.50
+#   corresponds to score >= 75 OR score <= 25 (genuine consensus)
+# - KOL pipeline runs hourly; signal age can reach 55-60 min mid-cycle
+MIN_KOL_COUNT         = 25    # min cohort sample size for a valid consensus read
+MIN_CONFIDENCE_KOL    = 0.50  # gate at score >= 75 or <= 25 (real consensus)
 WINDOW_HOURS_DEFAULT  = 24    # rolling sentiment window
 
 # ── Market filters ───────────────────────────────────────────────────────────
@@ -44,7 +49,7 @@ ASSET_BLOCKLIST       = []            # coins to never trade
 SIGNAL_FEED_BASE    = "https://signals.useotto.xyz"
 SIGNAL_FEED_TIMEOUT = 4
 SIGNAL_FEED_RETRIES = 1
-MAX_SIGNAL_AGE_SEC  = 900     # abort if sentiment is older than 15 min
+MAX_SIGNAL_AGE_SEC  = 4500    # 75 min — covers full hourly producer cycle + buffer
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 LOG_TRADES_TO_FILE = True

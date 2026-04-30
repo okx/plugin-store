@@ -1,6 +1,6 @@
 schema_version: 1
 name: otto-kol-follow
-version: "0.1.0"
+version: "0.1.1"
 description: "Otto KOL Follow — Mirror the top 50 crypto KOLs on Twitter/X into a Hyperliquid perp. Natural-language intent in, one-click consensus trade with TP/SL out. Dry-run by default."
 author:
   name: "Otto AI"
@@ -14,6 +14,18 @@ tags:
   - trading-strategy
   - kol-sentiment
   - social-signals
+
+# Strategy plugin metadata — declares the trading plugin this strategy calls,
+# the risk tier, and the venues it operates on. Per FOR-DEVELOPERS.md
+# "Submitting Strategy Plugins" section.
+dependent_plugin:
+  - name: hyperliquid-plugin
+    version: "^0.3.0"
+
+risk_level: advanced
+
+supported_venues:
+  - hyperliquid
 
 components:
   skill:

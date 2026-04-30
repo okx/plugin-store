@@ -7,7 +7,7 @@ description: >
   Trigger when the user mentions KOL follow, crypto Twitter sentiment, follow the KOLs,
   consensus trade, crypto X signals, top-50 KOL conviction, who's bullish on {coin},
   mirror the KOLs, or wants to open a Hyperliquid position that tracks crypto-Twitter consensus.
-version: "0.1.0"
+version: "0.1.1"
 author: "Otto AI"
 updated: 2026-04-24
 tags:
