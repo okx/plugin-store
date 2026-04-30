@@ -15,6 +15,9 @@ DRY_RUN = True             # True = paper mode (no --confirm passed to hyperliqu
 PAUSED  = False            # True = refuse all new trades regardless of DRY_RUN
 
 # ── Sizing ───────────────────────────────────────────────────────────────────
+# DEFAULT_SIZE_USD is the position NOTIONAL value (size × mark), NOT margin.
+# Margin used = notional / leverage. With $25 notional at 5x leverage, the
+# trade locks ~$5 of margin.
 DEFAULT_SIZE_USD        = 25      # per-trade notional in USD; agent may override per call
 MIN_SIZE_USD            = 10
 MAX_SIZE_USD            = 500
@@ -33,6 +36,7 @@ SL_PCT                  = 0.02    # 2% stop-loss
 TP_PCT                  = 0.04    # 4% take-profit (2:1 RR)
 SESSION_MAX_DRAWDOWN_PCT = 0.15   # halt all new trades after cumulative -15%
 MAX_CONCURRENT_POSITIONS = 3
+COOLDOWN_HOURS           = 4      # min hours between fires on the SAME coin (per-mode)
 
 # ── Signal thresholds ────────────────────────────────────────────────────────
 # Calibrated against live signals.useotto.xyz data 2026-04-30:
@@ -54,6 +58,7 @@ ASSET_BLOCKLIST          = []            # coins to never trade
 SIGNAL_FEED_BASE = "https://signals.useotto.xyz"
 SIGNAL_FEED_TIMEOUT_SEC = 4
 SIGNAL_FEED_RETRIES = 1
+MAX_SIGNAL_AGE_SEC = 4500    # 75 min — covers full hourly producer cycle + buffer
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 LOG_TRADES_TO_FILE = True

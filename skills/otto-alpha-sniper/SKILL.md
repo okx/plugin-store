@@ -8,7 +8,7 @@ description: >
   Trigger when the user mentions Otto alpha, alpha sniper, data-driven perp, momentum trade,
   trending altcoin scalp, KOL follow, funding-rate fade, smart-money perp, Otto AI signals,
   or wants to automatically open a Hyperliquid position based on aggregated crypto intel.
-version: "0.1.1"
+version: "0.1.2"
 author: "Otto AI"
 updated: 2026-04-24
 tags:

@@ -35,6 +35,11 @@ except Exception:
     sys.path.insert(0, str(Path(__file__).parent))
     import config  # type: ignore[import-not-found]
 
+# Per-coin cooldown: last successful fire timestamp keyed by coin symbol.
+# In-memory only — resets on bot restart, acceptable for v0.1 since the
+# typical session is a single long-running daemon.
+_LAST_FIRE_TS: dict[str, datetime] = {}
+
 
 def log(record: dict) -> None:
     record["ts"] = datetime.now(timezone.utc).isoformat()
@@ -43,6 +48,28 @@ def log(record: dict) -> None:
     if config.LOG_TRADES_TO_FILE:
         with open(config.LOG_FILE, "a") as f:
             f.write(line + "\n")
+
+
+def fresh_enough(payload: dict) -> bool:
+    """True if `updated_at` is within MAX_SIGNAL_AGE_SEC (default 4500s = 75min)."""
+    max_age = getattr(config, "MAX_SIGNAL_AGE_SEC", 4500)
+    try:
+        ts_str = payload["updated_at"]
+        if ts_str.endswith("Z"):
+            ts_str = ts_str.replace("Z", "+00:00")
+        ts = datetime.fromisoformat(ts_str)
+        return (datetime.now(timezone.utc) - ts).total_seconds() <= max_age
+    except Exception:
+        return False
+
+
+def within_cooldown(coin: str) -> bool:
+    """True if this coin was fired within COOLDOWN_HOURS (default 4)."""
+    cooldown_h = getattr(config, "COOLDOWN_HOURS", 4)
+    last = _LAST_FIRE_TS.get(coin)
+    if last is None:
+        return False
+    return (datetime.now(timezone.utc) - last).total_seconds() < cooldown_h * 3600
 
 
 def fetch_signal(mode: str, coin: str | None = None) -> dict | None:
@@ -161,7 +188,9 @@ def fire_trade(trade: dict, mode: str, size_usd: float, live: bool) -> None:
     if mark is None:
         log({"event": "mark_price_unavailable", "coin": trade["coin"]})
         return
-    size_tokens = round((size_usd * lev) / mark, 6)
+    # size_usd is the position NOTIONAL (margin used = notional / leverage,
+    # enforced by hyperliquid-plugin via --leverage). Token count = notional / mark.
+    size_tokens = round(size_usd / mark, 6)
     sl, tp = compute_bracket(side, mark)
     log({"event": "preparing_trade", "mode": mode, "trade": trade, "side": side, "leverage": lev,
          "size_usd": size_usd, "size_tokens": size_tokens, "mark": mark, "sl": sl, "tp": tp,
@@ -180,6 +209,8 @@ def fire_trade(trade: dict, mode: str, size_usd: float, live: bool) -> None:
     except subprocess.CalledProcessError as e:
         log({"event": "order_failed", "err": str(e)})
         return
+    # Record fire timestamp for cooldown gating
+    _LAST_FIRE_TS[trade["coin"]] = datetime.now(timezone.utc)
     if live and not config.DRY_RUN:
         bracket_cmd = [
             "hyperliquid-plugin", "tpsl",
@@ -216,10 +247,14 @@ def main() -> None:
             payload = fetch_signal(args.mode, args.coin)
             if payload is None:
                 log({"event": "no_signal_feed"})
+            elif not fresh_enough(payload):
+                log({"event": "signal_stale", "updated_at": payload.get("updated_at")})
             else:
                 trade = pick_trade(args.mode, payload)
                 if trade is None:
                     log({"event": "no_trade_this_cycle", "mode": args.mode})
+                elif within_cooldown(trade["coin"]):
+                    log({"event": "cooldown_active", "coin": trade["coin"], "mode": args.mode})
                 else:
                     fire_trade(trade, args.mode, args.size_usd, args.live)
 

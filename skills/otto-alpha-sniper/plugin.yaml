@@ -1,6 +1,6 @@
 schema_version: 1
 name: otto-alpha-sniper
-version: "0.1.1"
+version: "0.1.2"
 description: "Otto Alpha Sniper — Hyperliquid perp execution driven by live crypto-alpha signals (trending altcoins, funding-rate skews, KOL-sentiment). Natural-language intent in, one-click perp with TP/SL out. Dry-run by default."
 author:
   name: "Otto AI"

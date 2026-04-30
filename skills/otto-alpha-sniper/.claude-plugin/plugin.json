@@ -1,7 +1,7 @@
 {
   "name": "otto-alpha-sniper",
   "description": "Otto Alpha Sniper \u2014 Hyperliquid perp execution driven by live crypto-alpha signals (trending altcoins, funding-rate skews, KOL-sentiment). Natural-language intent in, one-click perp with TP/SL out. Dry-run by default.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Otto AI"
   },
