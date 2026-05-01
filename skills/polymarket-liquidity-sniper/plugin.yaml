@@ -1,0 +1,39 @@
+schema_version: 1
+name: polymarket-liquidity-sniper
+version: "1.0.0"
+description: "AI-powered autonomous sniper that detects and trades mispriced thin-liquidity markets on Polymarket — multi-LLM (Groq → OpenRouter fallback), built for transaction-count dominance"
+author:
+  name: "mestarkris"
+  github: "mestarkris"
+license: MIT
+category: trading-strategy
+tags:
+  - polymarket
+  - prediction-markets
+  - trading
+  - ai
+  - groq
+  - openrouter
+  - okx
+  - autonomous
+
+components:
+  skill:
+    dir: "."
+
+dependencies:
+  - requests
+  - python-dotenv
+  - colorama
+  - groq
+  - openai
+
+api_calls:
+  - gamma-api.polymarket.com
+  - clob.polymarket.com
+  - api.groq.com
+  - openrouter.ai
+
+required_skills:
+  - okx/onchainos-skills/skills/okx-agentic-wallet
+  - okx/plugin-store/skills/polymarket-plugin

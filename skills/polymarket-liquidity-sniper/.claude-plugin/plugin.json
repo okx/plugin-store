@@ -1,0 +1,19 @@
+{
+  "name": "polymarket-liquidity-sniper",
+  "description": "AI-powered autonomous sniper that detects and trades mispriced thin-liquidity markets on Polymarket using a multi-LLM fallback chain",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mestarkris"
+  },
+  "license": "MIT",
+  "keywords": [
+    "polymarket",
+    "prediction-markets",
+    "liquidity-sniper",
+    "autonomous",
+    "groq",
+    "openrouter",
+    "multi-llm",
+    "defi"
+  ]
+}
