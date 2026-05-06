@@ -1,22 +1,29 @@
 ---
 name: birdeye-plugin
-description: Birdeye DeFi analytics with dual access architecture (apikey active, x402 scaffold). Use this skill for price, trending, token overview, and security queries.
+description: Birdeye DeFi analytics with dual live access mode (apikey and x402). Use this skill for price, trending, token overview, and security queries.
 ---
 
 # Birdeye Plugin Skill
 
 This skill routes user intent to the local runtime CLI.
 
-Current status:
-- `apikey` mode: active
-- `x402` mode: scaffolded in runtime contract, payment signer implementation pending
-- `auto` mode: currently resolves effectively to `apikey` path for live calls
+## Runtime Requirement Notes
+
+- `apikey` mode can run on lower Node versions.
+- `x402` mode requires Node.js 20+.
+- If `BIRDEYE_MODE=x402` (or `auto` resolves to x402), verify `node -v` first and ensure major version is `>= 20`.
+- If Node is below 20, switch/install Node 20 before running x402 requests.
+
+Supported live modes:
+- `apikey` mode: standard Birdeye REST (`X-API-KEY`)
+- `x402` mode: Birdeye pay-per-request (`/x402`) with Solana USDC payment signing
+- `auto` mode: prefer `apikey`, fallback to `x402`
 
 ## Environment
 
 - `BIRDEYE_MODE=auto|apikey|x402` (default: `auto`)
-- `BIRDEYE_API_KEY=...` (required for live API calls)
-- `SOLANA_PRIVATE_KEY='[1,2,3,...]'` (reserved for upcoming x402 signer integration)
+- `BIRDEYE_API_KEY=...` (required for apikey mode)
+- `SOLANA_PRIVATE_KEY=...` (base58 private key, required for x402 mode)
 
 ## Commands
 
@@ -32,8 +39,9 @@ Current status:
 - Token overview -> `overview`
 - Token risk/security -> `security`
 
-## Notes
+## Operational Notes
 
-- Standard path uses `https://public-api.birdeye.so`
-- x402 path target is `https://public-api.birdeye.so/x402` (not enabled for live signing yet)
-- Wallet endpoints should remain on API key mode
+- Standard mode target: `https://public-api.birdeye.so`
+- x402 mode target: `https://public-api.birdeye.so/x402`
+- x402 requests require wallet balance (USDC on Solana mainnet) and valid signing credentials.
+- If an endpoint is unavailable in x402, switch to `apikey` mode.
