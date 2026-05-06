@@ -20,8 +20,8 @@ components:
 
 build:
   lang: node
-  source_repo: "dangquocdat97/birdeye-plugin-runtime"
-  source_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  source_repo: "dangquocdat97/plugin-store"
+  source_commit: "a147b5c57503e8222d4f2f852d31c24f7f28fe54"
   binary_name: "birdeye-plugin-runtime"
   main: "dist/index.js"
 
