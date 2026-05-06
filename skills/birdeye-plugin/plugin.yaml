@@ -16,7 +16,7 @@ tags:
 
 components:
   skill:
-    dir: skills/birdeye-plugin/skills/birdeye-plugin
+    dir: skills/birdeye-plugin
 
 build:
   lang: node
