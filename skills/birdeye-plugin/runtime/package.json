@@ -8,11 +8,14 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.98.4",
-    "@x402/fetch": "latest"
+    "@scure/base": "latest",
+    "@solana/kit": "latest",
+    "@x402/fetch": "latest",
+    "@x402/svm": "latest"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
   }
 }
