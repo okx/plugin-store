@@ -21,3 +21,5 @@ Returns the JSON `data` payload from onchainos. Stderr-prints diagnostic message
 - Wraps a single onchainos command:
   `onchainos token price-info --address So11111111111111111111111111111111111111112 --chain solana`
 - Native SOL is represented by the wrapped-SOL mint address `So111…1112`, matching onchainos' convention for SOL price queries
+
+_Pipeline retrigger: validate Go path._
