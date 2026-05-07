@@ -1,0 +1,26 @@
+schema_version: 1
+name: livermore-perps
+version: "1.0.0"
+description: "Time-distributed exit for Hyperliquid perpetual positions — splits a close into N slices over a configurable duration to minimize market impact on thin liquidity pairs"
+author:
+  name: "Maxim Voshchansky"
+  github: "AstonRemy"
+license: MIT
+category: trading-strategy
+tags:
+  - hyperliquid
+  - perpetuals
+  - perps
+  - twap
+  - scaled-exit
+  - market-impact
+  - slippage-control
+  - exit-discipline
+  - livermore
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
+type: community-developer

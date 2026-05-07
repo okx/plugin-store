@@ -1,0 +1,20 @@
+{
+  "name": "livermore-perps",
+  "description": "Time-distributed exit for Hyperliquid perpetual positions — splits a close into N slices over a configurable duration to minimize market impact on thin liquidity pairs",
+  "version": "1.0.0",
+  "author": {
+    "name": "Maxim Voshchansky"
+  },
+  "license": "MIT",
+  "keywords": [
+    "hyperliquid",
+    "perpetuals",
+    "perps",
+    "twap",
+    "scaled-exit",
+    "market-impact",
+    "slippage-control",
+    "exit-discipline",
+    "livermore"
+  ]
+}
