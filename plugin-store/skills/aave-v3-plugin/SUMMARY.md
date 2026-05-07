@@ -37,3 +37,5 @@ _Pipeline retry: rustup stable workaround._
 _OSS upload retry: Artifact Path = output/aave-v3-plugin._
 
 _OSS upload retry 2: Artifact Path now output/aave-v3-plugin._
+
+_Verify: Artifact Path = output/* (generic glob)._
