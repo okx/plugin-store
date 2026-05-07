@@ -1,20 +1,19 @@
 ---
 name: clawvard-agent-eval
-description: Take the Clawvard entrance exam, save the agent identity token, and optionally enable ASVP long-term service-vitals check-ins.
+description: Take the Clawvard entrance exam, report the result, and optionally save the agent identity token with explicit user confirmation.
 version: "0.1.0"
 author: Clawvard
 tags:
   - ai-agent
   - evaluation
   - benchmark
-  - telemetry
 ---
 
 # Clawvard Agent Evaluation
 
 ## Overview
 
-Use this skill when the user asks you to evaluate this agent with Clawvard, take the Clawvard entrance exam, view the agent's capability report, or set up Clawvard ASVP long-term tracking.
+Use this skill when the user asks you to evaluate this agent with Clawvard, take the Clawvard entrance exam, or view the agent's capability report.
 
 Clawvard evaluates AI agents across eight dimensions:
 
@@ -31,12 +30,16 @@ The exam has 16 questions in 8 batches. Each batch contains 2 questions. Scores 
 
 ## Pre-flight Checks
 
-1. Confirm that the user wants to run a Clawvard exam or enable Clawvard ASVP.
+1. Confirm that the user wants to run a Clawvard exam.
 2. Confirm that network calls to `https://clawvard.school` are allowed.
 3. Check whether a Clawvard token is already saved in private host memory or private configuration.
-4. Choose a private persistent location for saving a new token if the exam returns one.
+4. If the exam returns a new token, ask for explicit user confirmation before saving it.
 
 ## Commands
+
+### Quickstart Onboarding
+
+Use quickstart as the onboarding entry point. Confirm that the user wants to take the Clawvard entrance exam, confirm that network calls to `https://clawvard.school` are allowed, then continue to Start or Resume Exam.
 
 ### Start or Resume Exam
 
@@ -121,7 +124,13 @@ Use the new `hash` from each response for the next batch. Continue until `nextBa
 
 When the exam completes, the response may include a `token`. Treat it as the agent's private Clawvard identity key.
 
-Save the token in a private persistent location available to future sessions. Good locations include host memory, a private config file, or an environment file controlled by the user.
+Do not save the token automatically. Before persisting it, ask for explicit user confirmation and state:
+
+- The private location where the token will be stored
+- That the token is used only for future Clawvard authenticated exams
+- How the user can revoke or delete it from that location
+
+If the user does not explicitly confirm, do not persist the token. Continue to report the exam result without saving the token.
 
 Record:
 
@@ -147,53 +156,8 @@ Clawvard exam complete.
 Grade: <grade>
 Percentile: <percentile>
 Report: https://clawvard.school<claimUrl>
-Token: saved privately for future authenticated retakes.
+Token: <saved privately after explicit user confirmation | not saved>.
 ```
-
-### Enable Optional ASVP Long-Term Tracking
-
-ASVP is optional. Enable it only if the user asks for long-term tracking, long-term optimization, service vitals, or ASVP.
-
-Read the canonical ASVP instruction:
-
-```text
-https://clawvard.school/asvp.md
-```
-
-ASVP check-ins use:
-
-```http
-GET https://clawvard.school/api/agent/heartbeat
-Authorization: Bearer <clawvard-token>
-```
-
-ASVP reports use:
-
-```http
-POST https://clawvard.school/api/agent/report
-Authorization: Bearer <clawvard-token>
-Content-Type: application/json
-
-{
-  "host": "<host id, for example claude-code, codex-cli, cursor>",
-  "skills_installed": [
-    {"id": "clawvard-agent-eval"}
-  ],
-  "reporting_window_hours": 24
-}
-```
-
-If richer service-vitals data is available, upload only structured aggregates such as counts, rates, buckets, medians, and p90 values. Do not upload raw user messages, agent responses, source code, file names, file paths, project names, credentials, or personal information.
-
-Useful ASVP fields include:
-
-- `session_count`
-- `aggregates_overall.abandonment_rate`
-- `aggregates_overall.gratitude_rate`
-- `aggregates_overall.frustration_rate`
-- `aggregates_operational.tokens_per_session`
-- `aggregates_operational.cost_per_session_usd`
-- `aggregates_operational.tool_calls_per_session`
 
 ## Error Handling
 
@@ -201,10 +165,9 @@ Useful ASVP fields include:
 |-------|--------------|------------|
 | `401 Unauthorized` | Missing, expired, or incorrect Clawvard token | Start a new unauthenticated exam or ask the user for the saved token location |
 | `404` for exam status | The provided `examId` does not exist | Start a new exam |
-| `429 Rate limit exceeded` | Too many exam or ASVP requests in the current window | Tell the user the retry window and wait before retrying |
+| `429 Rate limit exceeded` | Too many exam requests in the current window | Tell the user the retry window and wait before retrying |
 | Missing `hash` | The previous exam response was not preserved | Check exam status by `examId`; continue only with the returned hash |
 | No `token` in completion response | Legacy or incomplete completion payload | Use the returned `tokenUrl` if present, or tell the user the token was not available |
-| ASVP report rejected | The report has no signal fields or contains invalid shapes | Send only valid structured fields and include at least one signal field |
 
 ## Security Notices
 
@@ -212,7 +175,6 @@ Useful ASVP fields include:
 - Use saved Clawvard tokens only for Clawvard API calls.
 - Keep tokens and private data out of shared output.
 - Submit answers honestly.
-- Do not fabricate ASVP metrics. Omit fields that cannot be observed.
 - If an API call fails or rate limits, report the status and retry window to the user.
 - Risk level: starter. This skill does not transfer assets, sign transactions, access wallets, or execute trades.
 - External network calls are limited to `clawvard.school`.
