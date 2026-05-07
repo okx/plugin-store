@@ -29,3 +29,5 @@ Supply assets and borrow against collateral on Aave V3 across Ethereum, Base, Po
 | Base | 8453 |
 | Polygon | 137 |
 | Arbitrum | 42161 |
+
+_Last updated: 2026-05-07 (OKOne pipeline test)._

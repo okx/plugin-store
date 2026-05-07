@@ -24,14 +24,15 @@ YAML="${PLUGIN_DIR}/plugin.yaml"
 [ -f "${YAML}" ] || { echo "no plugin.yaml in ${PLUGIN_DIR}, skipping"; exit 0; }
 
 read_yaml() {
-  YAML_FILE="${YAML}" KEY="$1" python3 - <<'PYEOF'
-import os, yaml
-y = os.environ["YAML_FILE"]
-k = os.environ["KEY"]
-with open(y) as f:
-    d = yaml.safe_load(f) or {}
-print(((d.get("build") or {}).get(k, "")) or "")
-PYEOF
+  awk -v key="$1" '
+    /^build:[ \t]*$/ { in_build=1; next }
+    /^[^ \t#]/        { in_build=0 }
+    in_build && $0 ~ "^[ \t]+"key"[ \t]*:" {
+      sub(/^[^:]*:[ \t]*/, "")
+      sub(/^"/, ""); sub(/"$/, "")
+      print; exit
+    }
+  ' "${YAML}"
 }
 
 LANG="$(read_yaml lang)"
