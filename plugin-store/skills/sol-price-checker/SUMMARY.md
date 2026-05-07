@@ -25,3 +25,5 @@ Returns the JSON `data` payload from onchainos. Stderr-prints diagnostic message
 _Pipeline retrigger: validate Go path._
 
 _Pipeline retrigger 2: validate Go OSS upload after config fix._
+
+_Pipeline retrigger 3: validate Go OSS upload after repo binding fix._
