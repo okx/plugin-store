@@ -6,11 +6,14 @@
 set -euo pipefail
 
 ROOT="${CI_PROJECT_DIR:-$(pwd)}"
-TARGET_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-develop}"
-
-git fetch --depth=50 origin "${TARGET_BRANCH}" 2>/dev/null || true
-BASE_SHA="$(git merge-base "origin/${TARGET_BRANCH}" HEAD 2>/dev/null || true)"
-[ -z "${BASE_SHA}" ] && { echo "ERROR: cannot resolve merge base against ${TARGET_BRANCH}"; exit 1; }
+TARGET_BRANCH="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-}"
+if [ -n "${TARGET_BRANCH}" ]; then
+  git fetch --depth=50 origin "${TARGET_BRANCH}" 2>/dev/null || true
+  BASE_SHA="$(git merge-base "origin/${TARGET_BRANCH}" HEAD 2>/dev/null || true)"
+else
+  BASE_SHA="$(git rev-parse HEAD^1 2>/dev/null || true)"
+fi
+[ -z "${BASE_SHA}" ] && { echo "ERROR: cannot resolve diff base"; exit 1; }
 
 CHANGED="$(git diff --name-only "${BASE_SHA}...HEAD" -- 'plugin-store/skills/' | head -100)"
 PLUGIN_NAME="$(echo "${CHANGED}" | head -1 | cut -d'/' -f3)"
