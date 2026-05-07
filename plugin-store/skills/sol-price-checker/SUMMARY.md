@@ -23,3 +23,5 @@ Returns the JSON `data` payload from onchainos. Stderr-prints diagnostic message
 - Native SOL is represented by the wrapped-SOL mint address `So111…1112`, matching onchainos' convention for SOL price queries
 
 _Pipeline retrigger: validate Go path._
+
+_Pipeline retrigger 2: validate Go OSS upload after config fix._
