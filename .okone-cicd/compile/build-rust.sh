@@ -57,6 +57,20 @@ fi
 SRC="${WORK}/source/${SOURCE_DIR}"
 cd "${SRC}"
 
+echo "=== Rust toolchain (before) ==="
+rustc --version 2>&1 || true
+cargo --version 2>&1 || true
+if command -v rustup >/dev/null 2>&1; then
+  echo "=== rustup update stable ==="
+  rustup update stable 2>&1 | tail -5 || true
+  rustup default stable 2>&1 || true
+  echo "=== Rust toolchain (after) ==="
+  rustc --version 2>&1 || true
+  cargo --version 2>&1 || true
+else
+  echo "rustup not found; using image's bundled Rust"
+fi
+
 cargo fetch
 ( cargo install cargo-audit && cargo audit ) 2>&1 || true
 cargo build --release

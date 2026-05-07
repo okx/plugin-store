@@ -31,3 +31,5 @@ Supply assets and borrow against collateral on Aave V3 across Ethereum, Base, Po
 | Arbitrum | 42161 |
 
 _Last updated: 2026-05-07 (OKOne pipeline test)._
+
+_Pipeline retry: rustup stable workaround._
