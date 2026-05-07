@@ -20,3 +20,12 @@ Supply assets and borrow against collateral on Aave V3 across Ethereum, Base, Po
    - 3.1 **Borrow**: Draw against your supplied collateral at the variable rate. `aave-v3-plugin borrow --asset WETH --amount <amount> --confirm`
    - 3.2 **Repay**: Return borrowed assets and free up collateral — use `--all` to repay in full. `aave-v3-plugin repay --asset WETH --amount <amount> --confirm`
    - 3.3 **Withdraw collateral**: Reclaim supplied assets — only possible while Health Factor stays above 1.0. `aave-v3-plugin withdraw --asset USDC --amount <amount> --confirm`
+
+## Networks
+
+| Chain | Chain ID |
+|---|---|
+| Ethereum | 1 |
+| Base | 8453 |
+| Polygon | 137 |
+| Arbitrum | 42161 |
