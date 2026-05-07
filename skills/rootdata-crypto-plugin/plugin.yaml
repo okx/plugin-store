@@ -15,4 +15,5 @@ components:
   skill:
     dir: "."
 
-api_calls: []
+api_calls:
+  - "api.rootdata.com"

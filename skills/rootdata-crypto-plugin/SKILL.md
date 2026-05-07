@@ -17,6 +17,8 @@ tags:
 
 # RootData Crypto Intelligence (OKX Edition)
 
+## Overview
+
 RootData is a leading Web3 data platform covering crypto projects, investors, funding data, and personnel movements. This skill is the OKX-dedicated integration, isolated from the standard RootData skill with its own API key namespace and endpoints.
 
 ## Pre-flight Checks
