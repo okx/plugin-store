@@ -1,0 +1,29 @@
+schema_version: 1
+name: clanker-plugin
+version: "0.2.5"
+description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - token-launch
+  - meme
+  - erc20
+  - uniswap-v4
+  - base
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: clanker-plugin
+
+api_calls:
+  - "https://clanker.world/api"
+  - "https://base-rpc.publicnode.com"
+  - "https://arb1.arbitrum.io/rpc"
+  - "https://basescan.org"

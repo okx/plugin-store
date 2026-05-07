@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Smart Money Signal Copy Trade — Live Bot v1.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Courier New','SF Mono',monospace;background:#000;color:#e0e0e0;font-size:12px;display:flex;flex-direction:column}
+
+.stats-bar{display:flex;align-items:stretch;background:#060a0c;border-bottom:1px solid rgba(0,210,170,.18);flex-shrink:0;min-height:80px}
+.stat-cell{padding:10px 16px;border-right:1px solid rgba(0,210,170,.18);display:flex;flex-direction:column;justify-content:center;min-width:100px}
+.stat-cell.pnl-cell{min-width:160px}
+.stat-lbl{font-size:10px;color:#9a9aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.stat-big{font-size:24px;font-weight:800;line-height:1}
+.stat-sub{font-size:10px;color:#9a9aaa;margin-top:3px}
+.c-grn{color:#c8ff00;text-shadow:0 0 8px rgba(200,255,0,.5)}
+.c-red{color:#ff0033;text-shadow:0 0 8px rgba(255,0,51,.5)}
+.c-acc{color:#00d4aa;text-shadow:0 0 6px rgba(0,212,170,.5)}
+.c-yel{color:#ff9900}
+
+.status-bar{display:flex;align-items:center;gap:10px;padding:5px 14px;background:#060a0c;border-bottom:1px solid rgba(0,210,170,.18);font-size:11px;flex-shrink:0;height:28px}
+.s-mode{font-weight:700;padding:2px 8px;border-radius:3px;font-size:10px}
+.s-live{background:#1a0000;color:#ff0033;border:1px solid #ff0033}
+.s-paper{background:#0a1014;color:#00d4aa;border:1px solid #00d4aa}
+.s-paused{background:#1a1000;color:#ff9900;border:1px solid #ff9900}
+.s-info{color:#9a9aaa}
+
+.main{flex:1;display:grid;grid-template-columns:320px 1fr;overflow:hidden;min-height:0}
+.col{display:flex;flex-direction:column;border-right:1px solid rgba(0,210,170,.18);overflow:hidden;min-height:0}
+.col.no-border{border-right:none}
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+.scr::-webkit-scrollbar{width:3px}
+.scr::-webkit-scrollbar-thumb{background:#0a1014;border-radius:0}
+
+.col-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#0a1014;border-bottom:1px solid rgba(0,210,170,.18);font-size:11px;font-weight:700;color:#00d4aa;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+.cnt{background:#060a0c;color:#ff9900;border:1px solid rgba(0,210,170,.18);border-radius:3px;padding:1px 7px;font-size:10px;font-weight:600}
+
+.frow{display:flex;align-items:center;gap:6px;padding:3px 10px;border-bottom:1px solid #060a0c;min-height:22px}
+.frow:hover{background:#0a1014}
+.ftime{color:#9a9aaa;font-size:10px;flex-shrink:0;width:46px}
+.fmsg{color:#e0e0e0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+.rcol{display:flex;flex-direction:column;overflow:hidden;border-right:none}
+.pos-sec{flex:0 0 auto;max-height:50%;display:flex;flex-direction:column;overflow:hidden;border-bottom:1px solid rgba(0,210,170,.18)}
+.pos-sec .scr{flex:1}
+
+.pcard{padding:8px 12px;border-bottom:1px solid #060a0c;border-left:3px solid rgba(0,210,170,.18)}
+.pcard.in-profit{border-left-color:#c8ff00} .pcard.in-loss{border-left-color:#ff0033}
+.phead{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.pname{font-weight:700;font-size:13px;color:#e0e0e0}
+.label-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px}
+.lb-sm{background:#001a33;color:#00aaff;border:1px solid #00aaff}
+.lb-kol{background:#1a0033;color:#cc66ff;border:1px solid #cc66ff}
+.lb-whale{background:#001a1a;color:#00d4aa;border:1px solid #00d4aa}
+.tier-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:2px;background:#0a1014;color:#9a9aaa;border:1px solid rgba(0,210,170,.18)}
+.ppnl{font-size:12px;font-weight:700;margin-left:auto}
+.prow{display:flex;gap:10px;font-size:10px;color:#9a9aaa}
+
+.tcard{padding:6px 12px;border-bottom:1px solid #060a0c;display:flex;align-items:center;gap:8px}
+.tcard .sym{color:#e0e0e0;font-weight:700;font-size:12px;min-width:70px}
+.tcard .pnl{font-size:12px;font-weight:700;margin-left:auto;flex-shrink:0}
+.tcard .meta{font-size:10px;color:#9a9aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+.sidebar{background:#000;border-top:1px solid rgba(0,210,170,.18);padding:6px 12px;font-size:10px;color:#9a9aaa;flex-shrink:0}
+</style>
+</head><body>
+
+<div class="stats-bar">
+  <div class="stat-cell"><div class="stat-lbl">Cycle</div><div id="st-cyc" class="stat-big c-acc">0</div></div>
+  <div class="stat-cell"><div class="stat-lbl">Positions</div><div id="st-pos" class="stat-big c-acc">0</div></div>
+  <div class="stat-cell"><div class="stat-lbl">Trades</div><div id="st-trades" class="stat-big c-yel">0</div><div id="st-wr" class="stat-sub"></div></div>
+  <div class="stat-cell pnl-cell"><div class="stat-lbl">Session PnL</div><div id="st-pnl" class="stat-big">0</div><div id="st-pnl-sub" class="stat-sub"></div></div>
+</div>
+
+<div class="status-bar">
+  <span id="mode-badge" class="s-mode s-paused">PAUSED</span>
+  <span class="s-info" id="status-text">Starting...</span>
+</div>
+
+<div class="main">
+  <div class="col">
+    <div class="col-hdr">Activity Feed <span class="cnt" id="feed-cnt">0</span></div>
+    <div class="scr" id="feed-list"></div>
+  </div>
+  <div class="rcol col no-border">
+    <div class="pos-sec">
+      <div class="col-hdr">Open Positions <span class="cnt" id="pos-cnt">0</span></div>
+      <div class="scr" id="pos-list"></div>
+    </div>
+    <div class="col-hdr">Trade History <span class="cnt" id="trade-cnt">0</span></div>
+    <div class="scr" id="trade-list"></div>
+  </div>
+</div>
+
+<div class="sidebar">Smart Money Signal Copy Trade v1.0 — onchainos Agentic Wallet TEE | Positions are strategy-isolated</div>
+
+<script>
+function $(id){return document.getElementById(id)}
+
+function renderFeed(items){
+  var h='';
+  items.forEach(function(r){
+    h+='<div class="frow"><span class="ftime">'+(r.t||'')+'</span><span class="fmsg">'+r.msg+'</span></div>';
+  });
+  $('feed-list').innerHTML=h;
+  $('feed-cnt').textContent=items.length;
+}
+
+function labelClass(label){
+  if(!label)return 'lb-sm';
+  var l=label.toLowerCase();
+  if(l.indexOf('kol')>=0)return 'lb-kol';
+  if(l.indexOf('whale')>=0)return 'lb-whale';
+  return 'lb-sm';
+}
+
+function renderPositions(pos){
+  var keys=Object.keys(pos);$('pos-cnt').textContent=keys.length;
+  var h='';
+  keys.forEach(function(addr){
+    var p=pos[addr];var pct=p.net_pnl_pct||0;var cls=pct>=0?'in-profit':'in-loss';
+    var elapsed=p.age_min?p.age_min.toFixed(1):'0';
+    var sign=pct>=0?'+':'';
+    h+='<div class="pcard '+cls+'"><div class="phead">';
+    h+='<span class="pname">'+p.symbol+'</span>';
+    h+='<span class="label-badge '+labelClass(p.label)+'">'+(p.label||'SM')+'</span>';
+    h+='<span class="tier-badge">'+(p.tier||'low').toUpperCase()+'</span>';
+    h+='<span class="ppnl '+(pct>=0?'c-grn':'c-red')+'">'+sign+pct.toFixed(1)+'%</span>';
+    h+='</div>';
+    h+='<div class="prow">'+p.buy_sol+' SOL | T+'+elapsed+'m | TP'+p.tp_tier+'/3</div>';
+    h+='</div>';
+  });
+  $('pos-list').innerHTML=h;
+}
+
+function renderTrades(trades){
+  $('trade-cnt').textContent=trades.length;
+  var h='';
+  trades.forEach(function(t){
+    var cls=t.net_pnl_pct>=0?'c-grn':'c-red';
+    var sign=t.net_pnl_pct>=0?'+':'';
+    h+='<div class="tcard"><span class="sym">'+t.symbol+'</span>';
+    h+='<span class="meta">'+(t.label||'')+' | '+t.reason+' | '+(t.pnl_sol||0).toFixed(4)+' SOL</span>';
+    h+='<span class="pnl '+cls+'">'+sign+(t.net_pnl_pct||0).toFixed(1)+'%</span></div>';
+  });
+  $('trade-list').innerHTML=h;
+}
+
+async function poll(){
+  try{
+    var r=await fetch('/api/state');var d=await r.json();
+    var stats=d.stats||{};
+    $('st-cyc').textContent=stats.cycle||0;
+    var posKeys=Object.keys(d.positions||{});
+    $('st-pos').textContent=posKeys.length;
+    var wins=stats.wins||0;var losses=stats.losses||0;var total=wins+losses;
+    $('st-trades').textContent=total;
+    $('st-wr').textContent=total?'WR '+(wins/total*100).toFixed(0)+'% ('+wins+'W/'+losses+'L)':'';
+    var pnl=stats.net_sol||0;
+    $('st-pnl').textContent=(pnl>=0?'+':'')+pnl.toFixed(4);
+    $('st-pnl').className='stat-big '+(pnl>=0?'c-grn':'c-red');
+
+    var cfg=d.config||{};
+    var badge=$('mode-badge');
+    if(cfg.paused){badge.textContent='PAUSED';badge.className='s-mode s-paused';}
+    else if(cfg.dry_run){badge.textContent='PAPER';badge.className='s-mode s-paper';}
+    else{badge.textContent='LIVE';badge.className='s-mode s-live';}
+
+    var sr=d.session_risk||{};
+    var st='Cycle #'+(stats.cycle||0);
+    if(sr.stopped)st='SESSION STOPPED';
+    else if(sr.paused_until&&sr.paused_until>Date.now()/1000)st='Session paused';
+    $('status-text').textContent=st;
+
+    renderFeed(d.feed||[]);
+    renderPositions(d.positions||{});
+    renderTrades((d.trades||[]).slice(0,50));
+  }catch(e){}
+}
+setInterval(poll,2000);poll();
+</script>
+</body></html>

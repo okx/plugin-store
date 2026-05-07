@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mainstream Spot Order — System Diagram</title>
+<style>
+:root {
+  --bg: #0d1117; --card: #161b22; --border: #30363d;
+  --text: #c9d1d9; --dim: #8b949e; --green: #4fd2c1;
+  --red: #f85149; --blue: #58a6ff; --yellow: #d29922;
+  --purple: #bc8cff; --orange: #f0883e;
+  --font: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 12px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 18px; text-align: center; margin-bottom: 6px; }
+.subtitle { text-align: center; color: var(--dim); font-size: 11px; margin-bottom: 28px; }
+
+/* ── Section headers ── */
+.section-title {
+  font-size: 13px; font-weight: 700; color: var(--blue); text-transform: uppercase;
+  letter-spacing: 1px; margin: 32px 0 14px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Flow containers ── */
+.flow { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 16px 0; }
+.flow-v { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 16px auto; max-width: 700px; }
+
+/* ── Boxes ── */
+.box {
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 10px 16px; text-align: center; min-width: 120px; position: relative;
+}
+.box.file { border-color: var(--blue); }
+.box.process { border-color: var(--green); border-radius: 20px; }
+.box.decision { border-color: var(--yellow); transform: rotate(0deg); border-radius: 4px; background: #1c1f26; border-style: dashed; }
+.box.signal { border-color: var(--purple); min-width: 90px; padding: 8px 10px; }
+.box.action { border-color: var(--orange); border-radius: 20px; }
+.box.danger { border-color: var(--red); }
+
+.box .label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.box .value { font-size: 13px; font-weight: 600; margin-top: 2px; }
+.box .detail { font-size: 10px; color: var(--dim); margin-top: 3px; }
+
+/* ── Arrows ── */
+.arrow { color: var(--dim); font-size: 18px; padding: 0 6px; flex-shrink: 0; }
+.arrow-down { color: var(--dim); font-size: 16px; padding: 4px 0; }
+.arrow-label { font-size: 10px; color: var(--green); }
+.arrow-label.red { color: var(--red); }
+
+/* ── Grid layouts ── */
+.grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 12px 0; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+
+/* ── Pair table ── */
+.pair-row {
+  display: grid; grid-template-columns: 60px 80px 50px 1fr 60px;
+  gap: 8px; padding: 6px 12px; align-items: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  margin-bottom: 4px;
+}
+.pair-row.header { background: none; border: none; color: var(--dim); font-size: 10px; text-transform: uppercase; }
+
+/* ── State machine ── */
+.sm { display: flex; align-items: center; justify-content: center; gap: 0; margin: 20px 0; flex-wrap: wrap; }
+.sm-state {
+  width: 100px; height: 100px; border-radius: 50%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; border: 2px solid var(--border);
+  background: var(--card);
+}
+.sm-state.active { border-color: var(--green); }
+.sm-arrow { padding: 0 8px; text-align: center; }
+.sm-arrow .label { font-size: 9px; color: var(--dim); max-width: 100px; display: block; }
+
+/* ── Vote bar ── */
+.vote-bar { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.vote-fill { height: 8px; border-radius: 4px; background: var(--green); }
+.vote-track { height: 8px; border-radius: 4px; background: var(--border); flex: 1; position: relative; }
+.vote-track .vote-fill { position: absolute; top: 0; left: 0; height: 100%; }
+.threshold-mark { position: absolute; top: -4px; height: 16px; width: 1.5px; background: var(--yellow); }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 20px; justify-content: center; margin: 16px 0; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; border: 1.5px solid; }
+
+/* ── Connector lines ── */
+.connector { display: flex; flex-direction: column; align-items: center; }
+.vline { width: 1.5px; height: 20px; background: var(--border); }
+.vline.green { background: var(--green); }
+.vline.red { background: var(--red); }
+
+/* ── Branch ── */
+.branch { display: flex; gap: 24px; justify-content: center; margin: 8px 0; }
+.branch-arm { display: flex; flex-direction: column; align-items: center; gap: 0; }
+</style>
+</head>
+<body>
+
+<h1>Mainstream Spot Order</h1>
+<p class="subtitle">Multi-chain DEX spot trading system — 15m timeframe, 6 tokens, 4 chains</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--blue)"></div> File / Data</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--green); border-radius:50%"></div> Process</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--yellow); border-style:dashed"></div> Decision</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--purple)"></div> Signal</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--orange); border-radius:50%"></div> Action</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:var(--red)"></div> Risk / Stop</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">1 · System Architecture</div>
+
+<div class="flow">
+  <div class="box file">
+    <div class="label">Config</div>
+    <div class="value">config.py</div>
+    <div class="detail">PAIRS registry<br>+ pairs.json</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="box file">
+    <div class="label">Data Layer</div>
+    <div class="value">okx.py</div>
+    <div class="detail">onchainos CLI<br>+ OKX REST API</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="box file">
+    <div class="label">Collector</div>
+    <div class="value">collect.py</div>
+    <div class="detail">15m candles<br>→ CSV files</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="box file">
+    <div class="label">Backtest</div>
+    <div class="value">prepare.py</div>
+    <div class="detail">Align bars<br>simulate trades</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="box signal" style="border-color:var(--green)">
+    <div class="label">Brain</div>
+    <div class="value">strategy.py</div>
+    <div class="detail">6 signals<br>+ BTC overlay</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="box action">
+    <div class="label">Engine</div>
+    <div class="value">live.py</div>
+    <div class="detail">Paper / Live<br>swap execution</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">2 · Supported Pairs</div>
+
+<div class="pair-row header">
+  <span>Pair</span><span>Chain</span><span>Family</span><span>Swap Path</span><span>Gas Rsv</span>
+</div>
+<div class="pair-row"><span style="color:var(--green)">SOL</span><span>Solana 501</span><span>solana</span><span>2-step: swap → sign_and_broadcast</span><span>0.01</span></div>
+<div class="pair-row"><span style="color:var(--blue)">ETH</span><span>Ethereum 1</span><span>evm</span><span>1-step: approve + swap (native)</span><span>0.005</span></div>
+<div class="pair-row"><span style="color:var(--orange)">BTC</span><span>Ethereum 1</span><span>evm</span><span>1-step: approve + swap (WBTC ERC-20)</span><span>0.005</span></div>
+<div class="pair-row"><span style="color:var(--yellow)">BNB</span><span>BSC 56</span><span>evm</span><span>1-step: approve + swap (native)</span><span>0.005</span></div>
+<div class="pair-row"><span style="color:var(--red)">AVAX</span><span>Avalanche 43114</span><span>evm</span><span>1-step: approve + swap (native)</span><span>0.1</span></div>
+<div class="pair-row"><span style="color:var(--purple)">DOGE</span><span>Ethereum 1</span><span>evm</span><span>1-step: approve + swap (ERC-20)</span><span>0.005</span></div>
+<div class="pair-row" style="border-style:dashed;border-color:var(--dim)"><span style="color:var(--dim)">CUSTOM</span><span>Any chain</span><span>auto</span><span>python3 config.py --add-pair NAME --chain X --mint 0x... --decimals N</span><span>user</span></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">3 · Live Trading Loop (live.py)</div>
+
+<div class="flow-v">
+  <div class="box process" style="width:280px">
+    <div class="value">Wait for 15m bar + 30s</div>
+  </div>
+  <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box file" style="width:280px">
+    <div class="value">Fetch 299 bars</div>
+    <div class="detail">base token + BTC overlay via okx.kline()</div>
+  </div>
+  <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box signal" style="width:280px;border-color:var(--green)">
+    <div class="value">strategy.on_bar()</div>
+    <div class="detail">→ Signal(target_position, confidence, reason)</div>
+  </div>
+  <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box decision" style="width:280px">
+    <div class="value">Position changed?</div>
+  </div>
+
+  <div style="display:flex;gap:40px;margin-top:4px">
+    <div class="branch-arm">
+      <div class="connector"><div class="vline green"></div><div class="arrow-down" style="color:var(--green)">▼</div><div class="arrow-label">YES</div></div>
+      <div class="box action" style="min-width:200px">
+        <div class="label">Execute</div>
+        <div class="value">BUY or SELL</div>
+        <div class="detail">Solana: swap → sign → broadcast<br>EVM: approve + swap (1-step)</div>
+      </div>
+    </div>
+    <div class="branch-arm">
+      <div class="connector"><div class="vline red"></div><div class="arrow-down" style="color:var(--red)">▼</div><div class="arrow-label red">NO</div></div>
+      <div class="box process" style="min-width:120px">
+        <div class="value">Hold / Flat</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" style="margin-top:8px"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box danger" style="width:280px">
+    <div class="value">Daily loss check</div>
+    <div class="detail">P&L < -5% → force exit + stop engine</div>
+  </div>
+  <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box file" style="width:280px">
+    <div class="value">Save state</div>
+    <div class="detail">→ state/live_state_{symbol}.json</div>
+  </div>
+  <div class="connector"><div class="vline"></div><div style="font-size:10px;color:var(--dim)">↩ loop</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">4 · Strategy Signal Ensemble</div>
+
+<p style="color:var(--dim);margin-bottom:12px;text-align:center">Each signal votes 0 or 1 · BTC overlay votes 0 or 0.5 · Max total: 6.5</p>
+
+<div class="grid-6" style="max-width:800px;margin:12px auto">
+  <div class="box signal">
+    <div class="value" style="font-size:11px">Momentum</div>
+    <div class="detail">24-bar return<br>> 0%</div>
+  </div>
+  <div class="box signal">
+    <div class="value" style="font-size:11px">VShort Mom</div>
+    <div class="detail">10-bar return<br>> 0%</div>
+  </div>
+  <div class="box signal">
+    <div class="value" style="font-size:11px">EMA Cross</div>
+    <div class="detail">EMA(8)<br>> EMA(40)</div>
+  </div>
+  <div class="box signal">
+    <div class="value" style="font-size:11px">RSI Filter</div>
+    <div class="detail">RSI(8)<br>30 < x < 75</div>
+  </div>
+  <div class="box signal">
+    <div class="value" style="font-size:11px">MACD</div>
+    <div class="detail">MACD line<br>> signal line</div>
+  </div>
+  <div class="box signal">
+    <div class="value" style="font-size:11px">BB Squeeze</div>
+    <div class="detail">width < 3%<br>+ price > mid</div>
+  </div>
+</div>
+
+<div style="text-align:center;margin:8px 0">
+  <div class="box signal" style="display:inline-block;border-color:var(--yellow);min-width:200px">
+    <div class="value" style="font-size:11px">BTC Overlay (half vote: 0.5)</div>
+    <div class="detail">BTC 24-bar momentum > 0%</div>
+  </div>
+</div>
+
+<div style="text-align:center"><div class="arrow-down">▼ sum all votes ▼</div></div>
+
+<div style="max-width:500px;margin:12px auto">
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:2px">
+    <span>0</span><span>EXIT 2.5</span><span>ENTRY 5.0</span><span>6.5</span>
+  </div>
+  <div class="vote-track">
+    <div class="vote-fill" style="width:77%"></div>
+    <div class="threshold-mark" style="left:38.5%"></div>
+    <div class="threshold-mark" style="left:76.9%;background:var(--green)"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:4px">
+    <span style="color:var(--red)">← FLAT</span>
+    <span style="color:var(--yellow)">exit zone</span>
+    <span style="color:var(--green)">entry zone →</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">5 · Entry Decision Tree</div>
+
+<div class="flow-v">
+  <div class="box decision" style="width:320px">
+    <div class="value">Votes >= 5.0 AND momentum >= 4%<br>AND no BTC veto AND green candle?</div>
+  </div>
+
+  <div style="display:flex;gap:60px;margin-top:4px">
+    <div class="branch-arm">
+      <div class="connector"><div class="vline green"></div><div class="arrow-down" style="color:var(--green)">▼</div><div class="arrow-label">YES</div></div>
+      <div class="box action" style="min-width:180px">
+        <div class="label">Trend Entry</div>
+        <div class="value">GO LONG</div>
+        <div class="detail">Size: 60–100% of equity<br>Stop: price - 5.5×ATR</div>
+      </div>
+    </div>
+    <div class="branch-arm">
+      <div class="connector"><div class="vline red"></div><div class="arrow-down" style="color:var(--red)">▼</div><div class="arrow-label red">NO</div></div>
+      <div class="box decision" style="min-width:220px">
+        <div class="value">RSI <= 22 AND near lower BB<br>AND 4%+ drop in 8 bars?</div>
+      </div>
+      <div style="display:flex;gap:30px;margin-top:4px">
+        <div class="branch-arm">
+          <div class="connector"><div class="vline green"></div><div class="arrow-down" style="color:var(--green)">▼</div><div class="arrow-label">YES</div></div>
+          <div class="box action" style="min-width:140px">
+            <div class="label">Mean-Rev Entry</div>
+            <div class="value">GO LONG</div>
+            <div class="detail">Size: 25%<br>Stop: price - 3×ATR</div>
+          </div>
+        </div>
+        <div class="branch-arm">
+          <div class="connector"><div class="vline red"></div><div class="arrow-down" style="color:var(--red)">▼</div><div class="arrow-label red">NO</div></div>
+          <div class="box process" style="min-width:100px">
+            <div class="value">STAY FLAT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">6 · Exit Decision Tree</div>
+
+<div class="flow-v">
+  <div class="box process" style="width:240px;border-color:var(--green)">
+    <div class="value">IN POSITION (LONG)</div>
+    <div class="detail">Update trailing stop each bar</div>
+  </div>
+
+  <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div></div>
+
+  <div class="box decision" style="width:300px">
+    <div class="value">Price <= trailing stop?</div>
+    <div class="detail">highest - ATR_MULT × ATR(14)</div>
+  </div>
+
+  <div style="display:flex;gap:60px;margin-top:4px">
+    <div class="branch-arm">
+      <div class="connector"><div class="vline red"></div><div class="arrow-down" style="color:var(--red)">▼</div><div class="arrow-label red">YES</div></div>
+      <div class="box danger" style="min-width:120px">
+        <div class="value">EXIT</div>
+        <div class="detail">Sell 100%<br>→ cooldown 1 bar</div>
+      </div>
+    </div>
+    <div class="branch-arm">
+      <div class="connector"><div class="vline green"></div><div class="arrow-down" style="color:var(--green)">▼</div><div class="arrow-label">NO</div></div>
+      <div class="box decision" style="min-width:240px">
+        <div class="value">Held >= 8 bars (2h)?</div>
+      </div>
+      <div style="display:flex;gap:30px;margin-top:4px">
+        <div class="branch-arm">
+          <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div><div class="arrow-label">YES</div></div>
+          <div class="box decision" style="min-width:200px">
+            <div class="value">Votes < exit threshold?</div>
+            <div class="detail">2.5 (or 3.5 if profit >= 3%)</div>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:4px">
+            <div class="branch-arm">
+              <div class="connector"><div class="vline red"></div><div class="arrow-down" style="color:var(--red)">▼</div><div class="arrow-label red">YES</div></div>
+              <div class="box danger"><div class="value">EXIT</div></div>
+            </div>
+            <div class="branch-arm">
+              <div class="connector"><div class="vline green"></div><div class="arrow-down" style="color:var(--green)">▼</div><div class="arrow-label">NO</div></div>
+              <div class="box process"><div class="value">HOLD</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="branch-arm">
+          <div class="connector"><div class="vline"></div><div class="arrow-down">▼</div><div class="arrow-label red">NO</div></div>
+          <div class="box process"><div class="value">HOLD</div><div class="detail">min hold not met</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">7 · State Machine</div>
+
+<div class="sm">
+  <div class="sm-state active">
+    <div class="value">FLAT</div>
+    <div class="detail" style="font-size:9px">No position</div>
+  </div>
+  <div class="sm-arrow">
+    <div style="font-size:16px">→→→</div>
+    <div class="label">entry signal<br>(trend or MR)</div>
+  </div>
+  <div class="sm-state" style="border-color:var(--green)">
+    <div class="value" style="color:var(--green)">LONG</div>
+    <div class="detail" style="font-size:9px">60-100% equity</div>
+  </div>
+  <div class="sm-arrow">
+    <div style="font-size:16px">→→→</div>
+    <div class="label">trailing stop /<br>votes low /<br>daily loss</div>
+  </div>
+  <div class="sm-state" style="border-color:var(--yellow)">
+    <div class="value" style="color:var(--yellow)">COOL</div>
+    <div class="detail" style="font-size:9px">1 bar wait</div>
+  </div>
+  <div class="sm-arrow">
+    <div style="font-size:16px">→→→</div>
+    <div class="label">cooldown<br>expired</div>
+  </div>
+  <div class="sm-state active">
+    <div class="value">FLAT</div>
+    <div class="detail" style="font-size:9px">Ready again</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">8 · Risk Controls</div>
+
+<div class="grid-3">
+  <div class="box danger">
+    <div class="label">Daily Loss Limit</div>
+    <div class="value">-5%</div>
+    <div class="detail">Force exit all + stop engine</div>
+  </div>
+  <div class="box danger">
+    <div class="label">ATR Trailing Stop</div>
+    <div class="value">5.5× / 3.0×</div>
+    <div class="detail">Trend: 5.5×ATR wide<br>MeanRev: 3.0×ATR tight</div>
+  </div>
+  <div class="box danger">
+    <div class="label">BTC Veto</div>
+    <div class="value">BTC < -1%</div>
+    <div class="detail">Blocks new entries when<br>BTC is falling</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Min Hold</div>
+    <div class="value">8 bars (2h)</div>
+    <div class="detail">Prevents whipsaw exits</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Cooldown</div>
+    <div class="value">1 bar (15m)</div>
+    <div class="detail">No re-entry immediately<br>after exit</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Profit Tighten</div>
+    <div class="value">+3% unrealized</div>
+    <div class="detail">Raises exit threshold<br>2.5 → 3.5 to lock gains</div>
+  </div>
+</div>
+
+<div class="grid-4" style="margin-top:12px">
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Round-trip Cost</div>
+    <div class="value" style="color:var(--red)">~1.6%</div>
+    <div class="detail">0.3% fee + 0.5% slip × 2</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Min Momentum</div>
+    <div class="value">4%</div>
+    <div class="detail">Must exceed cost to enter</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Position Cap</div>
+    <div class="value">0–100%</div>
+    <div class="detail">Spot only, no leverage</div>
+  </div>
+  <div class="box" style="border-color:var(--dim)">
+    <div class="label">Signing</div>
+    <div class="value">TEE</div>
+    <div class="detail">No private keys in code</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">9 · Scoring Formula (Backtest)</div>
+
+<div class="flow" style="flex-wrap:wrap;gap:6px;justify-content:center">
+  <div class="box signal" style="border-color:var(--green)">
+    <div class="value" style="font-size:11px">Sharpe × √(trades/20)</div>
+    <div class="detail">reward</div>
+  </div>
+  <div class="arrow" style="font-size:22px;color:var(--red)">−</div>
+  <div class="box signal" style="border-color:var(--red)">
+    <div class="value" style="font-size:11px">MaxDD × 2.0</div>
+    <div class="detail">drawdown penalty</div>
+  </div>
+  <div class="arrow" style="font-size:22px;color:var(--red)">−</div>
+  <div class="box signal" style="border-color:var(--red)">
+    <div class="value" style="font-size:11px">trades/bars × 0.1</div>
+    <div class="detail">overtrading penalty</div>
+  </div>
+  <div class="arrow" style="font-size:22px;color:var(--red)">−</div>
+  <div class="box signal" style="border-color:var(--red)">
+    <div class="value" style="font-size:11px">BnH − return</div>
+    <div class="detail">underperform penalty</div>
+  </div>
+</div>
+<p style="text-align:center;color:var(--dim);margin-top:8px;font-size:11px">Score 3.0+ = excellent · < 0 = worse than buy-and-hold</p>
+
+</body>
+</html>

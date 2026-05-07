@@ -1,0 +1,31 @@
+schema_version: 1
+name: compound-v3-plugin
+version: "0.2.7"
+description: "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - defi
+  - compound
+  - comet
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: compound-v3-plugin
+
+api_calls:
+  - "https://ethereum.publicnode.com"
+  - "https://base-rpc.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://plugin-store-dun.vercel.app/install"
+  - "https://www.okx.com/priapi/v1/wallet/plugins/download/report"

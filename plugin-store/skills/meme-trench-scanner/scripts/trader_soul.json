@@ -1,0 +1,63 @@
+{
+  "name": "DiamondPaws",
+  "stage": "Novice",
+  "trades_seen": 0,
+  "wins": 0,
+  "losses": 0,
+  "total_pnl_sol": 0.0,
+  "tier_stats": {},
+  "hour_stats": {},
+  "personal_limits": {
+    "bundle_ath_pct_warn": 35,
+    "min_confidence_trust": 50
+  },
+  "win_philosophy": "I haven't found my edge yet. Every trade is a lesson.",
+  "risk_philosophy": "The market owes me nothing. Protect the bag first.",
+  "current_vibe": "neutral",
+  "reflections": [
+    {
+      "t": "20:24:58",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "20:24:48",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "20:24:37",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "20:24:27",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "20:24:17",
+      "msg": "ATLAS — MINIMUM signal. Confidence 45."
+    },
+    {
+      "t": "20:24:06",
+      "msg": "ATLAS — MINIMUM signal. Confidence 45."
+    },
+    {
+      "t": "20:23:56",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "20:21:11",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "19:59:38",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    },
+    {
+      "t": "19:59:27",
+      "msg": "ATLAS — MINIMUM signal. Confidence 30."
+    }
+  ],
+  "evolution_log": [],
+  "trade_outcomes": [],
+  "periodic_reviews": [],
+  "signals_seen": 14
+}

@@ -1,0 +1,28 @@
+schema_version: 1
+name: gmx-v2-plugin
+version: "0.2.6"
+description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity on Arbitrum and Avalanche"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - perpetuals
+  - trading
+  - leverage
+  - arbitrum
+  - avalanche
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: gmx-v2-plugin
+api_calls:
+  - "https://arbitrum-api.gmxinfra.io"
+  - "https://arbitrum-api.gmxinfra2.io"
+  - "https://avalanche-api.gmxinfra.io"
+  - "https://avalanche-api.gmxinfra2.io"
+  - "https://arbitrum.publicnode.com"
+  - "https://avalanche-c-chain-rpc.publicnode.com"

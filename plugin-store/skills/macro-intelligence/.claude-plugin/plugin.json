@@ -1,0 +1,19 @@
+{
+  "name": "macro-intelligence",
+  "description": "Unified macro intelligence feed — reads 7 sources, classifies events, scores sentiment, generates AI insights, exposes signals via HTTP API",
+  "version": "1.0.0",
+  "author": {
+    "name": "victorlee",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "macro",
+    "news-aggregator",
+    "sentiment",
+    "signals",
+    "fred",
+    "finnhub"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

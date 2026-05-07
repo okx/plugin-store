@@ -1,0 +1,27 @@
+schema_version: 1
+name: hyperliquid-plugin
+version: "0.4.3"
+description: "Trade perpetuals on Hyperliquid - check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - perpetuals
+  - trading
+  - hyperliquid
+  - derivatives
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: hyperliquid-plugin
+api_calls:
+  - "https://api.hyperliquid.xyz"
+  - "https://api.hyperliquid-testnet.xyz"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://app.hyperliquid.xyz"
+  - "https://rpc.hyperliquid.xyz"
+  - "https://api.relay.link"

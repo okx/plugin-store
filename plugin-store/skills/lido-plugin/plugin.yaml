@@ -1,0 +1,25 @@
+schema_version: 1
+name: lido-plugin
+version: "0.2.8"
+description: "Stake ETH with Lido liquid staking protocol — stake, manage withdrawals, and track staking rewards on Ethereum mainnet"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: defi-protocol
+tags:
+  - staking
+  - liquid-staking
+  - lido
+  - steth
+  - ethereum
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: lido-plugin
+api_calls:
+  - yields.llama.fi
+  - wq-api.lido.fi
+  - ethereum.publicnode.com

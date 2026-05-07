@@ -1,0 +1,20 @@
+{
+  "name": "rwa-alpha",
+  "description": "RWA Alpha — Real World Asset intelligence trading. Macro event detection + Polymarket confirmation + on-chain price action → auto-trade tokenized treasury/gold/yield/governance tokens via OKX DEX.",
+  "version": "1.1.0",
+  "author": {
+    "name": "VibeCodeDaddy",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "rwa",
+    "real-world-assets",
+    "treasury",
+    "gold",
+    "macro",
+    "yield",
+    "spot-trading"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

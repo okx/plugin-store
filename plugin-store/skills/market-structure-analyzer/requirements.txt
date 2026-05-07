@@ -1,0 +1,2 @@
+# Python stdlib only — no pip dependencies
+# All HTTP calls use urllib (stdlib)

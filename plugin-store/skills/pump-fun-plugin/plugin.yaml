@@ -1,0 +1,27 @@
+schema_version: 1
+name: pump-fun-plugin
+version: "0.1.9"
+description: "Buy and sell tokens on pump.fun bonding curves on Solana mainnet"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: defi-protocol
+tags:
+  - solana
+  - memecoins
+  - bonding-curve
+  - launchpad
+  - pump-fun
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: pump-fun-plugin
+
+api_calls:
+  - "https://api.mainnet-beta.solana.com"
+  - "https://frontend-api.pump.fun"

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet Tracker v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090a0f;
+  --p1: rgba(14,16,23,0.55);
+  --p2: rgba(14,16,23,0.70);
+  --p3: rgba(14,16,23,0.85);
+  --brd: rgba(255,255,255,0.06);
+  --g: #00dc82;
+  --r: #ff5f5f;
+  --amb: #ffb224;
+  --cy: #22d3ee;
+  --bl: #60a5fa;
+  --vi: #a78bfa;
+  --t1: #f0f0f5;
+  --t2: #a0a0b0;
+  --t3: #6a6a7a;
+  --t4: #3a3a4a;
+  --glass: blur(16px) saturate(1.3);
+  --radius: 14px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--t1); font-family: 'Manrope', system-ui, sans-serif; font-size: 13px; min-height: 100vh; }
+body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(167,139,250,0.06) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,220,130,0.04) 0%, transparent 50%); pointer-events:none; z-index:0; }
+
+.header {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--p2); backdrop-filter: var(--glass);
+  border-bottom: 1px solid var(--brd);
+  padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+}
+.header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.header h1 .vi { color: var(--vi); }
+.header .status { display: flex; gap: 10px; align-items: center; }
+
+.badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+}
+.badge-paper { background: rgba(96,165,250,0.12); color: var(--bl); border: 1px solid rgba(96,165,250,0.25); }
+.badge-live { background: rgba(255,95,95,0.12); color: var(--r); border: 1px solid rgba(255,95,95,0.3); box-shadow: 0 0 12px rgba(255,95,95,0.15); }
+.badge-instant { background: rgba(255,178,36,0.12); color: var(--amb); border: 1px solid rgba(255,178,36,0.25); }
+.badge-mc { background: rgba(0,220,130,0.12); color: var(--g); border: 1px solid rgba(0,220,130,0.25); }
+.badge-paused { background: rgba(255,178,36,0.10); color: var(--amb); border: 1px solid rgba(255,178,36,0.2); }
+
+.main { position: relative; z-index: 1; padding: 16px 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+
+.card {
+  background: var(--p1); backdrop-filter: var(--glass);
+  border: 1px solid var(--brd); border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.card h2 {
+  font-size: 10px; font-weight: 600; color: var(--t3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--brd);
+}
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.stats-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.stat { text-align: center; min-width: 80px; }
+.stat .val { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.stat .label { font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+.green { color: var(--g); }
+.red { color: var(--r); }
+.yellow { color: var(--amb); }
+.blue { color: var(--bl); }
+.cyan { color: var(--cy); }
+
+.wallets-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.wallet-tag {
+  background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.15);
+  padding: 3px 10px; border-radius: 8px;
+  font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--vi);
+}
+.wallets-label { color: var(--t3); font-size: 11px; margin-top: 10px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  text-align: left; color: var(--t3); font-weight: 600; padding: 6px 10px;
+  border-bottom: 1px solid var(--brd); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.02); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+tr:hover { background: rgba(255,255,255,0.02); }
+td strong { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 12px; }
+
+.feed { max-height: 300px; overflow-y: auto; }
+.feed::-webkit-scrollbar { width: 4px; }
+.feed::-webkit-scrollbar-thumb { background: var(--t4); border-radius: 2px; }
+.feed-item { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.02); display: flex; gap: 10px; font-size: 11px; }
+.feed-time { color: var(--t4); min-width: 55px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.feed-msg { word-break: break-all; color: var(--t2); }
+
+.empty { color: var(--t4); font-style: italic; padding: 24px; text-align: center; font-size: 12px; }
+
+.clock { color: var(--t4); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+@media (max-width: 768px) {
+  .row2 { grid-template-columns: 1fr; }
+  .stats-row { gap: 16px; }
+  .main { padding: 12px 12px 24px; }
+  .header { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="vi">钱包跟单</span> Wallet Tracker v1.0</h1>
+  <div class="status">
+    <span id="mode-badge" class="badge badge-paper">PAPER</span>
+    <span id="follow-badge" class="badge badge-mc">MC_TARGET</span>
+    <span id="paused-badge" class="badge badge-paused" style="display:none">PAUSED</span>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Stats -->
+  <div class="card">
+    <h2>Session</h2>
+    <div class="stats-row">
+      <div class="stat"><div class="val blue" id="s-buys">0</div><div class="label">Buys</div></div>
+      <div class="stat"><div class="val cyan" id="s-sells">0</div><div class="label">Sells</div></div>
+      <div class="stat"><div class="val green" id="s-wins">0</div><div class="label">Wins</div></div>
+      <div class="stat"><div class="val red" id="s-losses">0</div><div class="label">Losses</div></div>
+      <div class="stat"><div class="val" id="s-winrate">--</div><div class="label">Win Rate</div></div>
+      <div class="stat"><div class="val" id="s-net">0.0000</div><div class="label">Net SOL</div></div>
+      <div class="stat"><div class="val" id="s-positions">0</div><div class="label">Open Pos</div></div>
+      <div class="stat"><div class="val yellow" id="s-watching">0</div><div class="label">Watching</div></div>
+    </div>
+    <div class="wallets-label">Target wallets:</div>
+    <div class="wallets-list" id="wallets-list"></div>
+  </div>
+
+  <div class="row2">
+    <!-- Positions -->
+    <div class="card">
+      <h2>Open Positions</h2>
+      <div id="positions-table"></div>
+    </div>
+
+    <!-- Watch List -->
+    <div class="card">
+      <h2>Watch List (MC Target)</h2>
+      <div id="watch-table"></div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <!-- Trades -->
+    <div class="card">
+      <h2>Trade History</h2>
+      <div id="trades-table"></div>
+    </div>
+
+    <!-- Feed -->
+    <div class="card">
+      <h2>Live Feed</h2>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/state';
+let prevData = null;
+
+function fmt(n, d=2) { return Number(n||0).toFixed(d); }
+function fmtK(n) { n=Number(n||0); return n>=1e6?`$${(n/1e6).toFixed(1)}M`:n>=1e3?`$${(n/1e3).toFixed(0)}K`:`$${n.toFixed(0)}`; }
+function pnlClass(v) { return Number(v)>=0?'green':'red'; }
+function timeSince(ts) {
+  if(!ts) return '--';
+  let s = (Date.now()/1000) - ts;
+  if(s<60) return `${s.toFixed(0)}s`;
+  if(s<3600) return `${(s/60).toFixed(0)}m`;
+  return `${(s/3600).toFixed(1)}h`;
+}
+
+function update(data) {
+  // Badges
+  const mb = document.getElementById('mode-badge');
+  mb.textContent = data.mode.toUpperCase();
+  mb.className = 'badge ' + (data.mode==='paper'?'badge-paper':'badge-live');
+
+  const fb = document.getElementById('follow-badge');
+  fb.textContent = data.follow_mode.toUpperCase();
+  fb.className = 'badge ' + (data.follow_mode==='instant'?'badge-instant':'badge-mc');
+
+  const pb = document.getElementById('paused-badge');
+  pb.style.display = data.paused ? '' : 'none';
+
+  document.getElementById('clock').textContent = data.ts;
+
+  // Session stats
+  const s = data.session;
+  document.getElementById('s-buys').textContent = s.buys;
+  document.getElementById('s-sells').textContent = s.sells;
+  document.getElementById('s-wins').textContent = s.wins;
+  document.getElementById('s-losses').textContent = s.losses;
+  const total = s.wins + s.losses;
+  document.getElementById('s-winrate').textContent = total>0 ? `${(s.wins/total*100).toFixed(0)}%` : '--';
+  const netEl = document.getElementById('s-net');
+  netEl.textContent = `${s.net_sol>=0?'+':''}${fmt(s.net_sol,4)}`;
+  netEl.className = 'val ' + pnlClass(s.net_sol);
+
+  const posKeys = Object.keys(data.positions||{});
+  const watchKeys = Object.keys(data.watch_list||{});
+  document.getElementById('s-positions').textContent = posKeys.length;
+  document.getElementById('s-watching').textContent = watchKeys.length;
+
+  // Wallets
+  const wl = document.getElementById('wallets-list');
+  wl.innerHTML = (data.wallets||[]).map(w=>`<span class="wallet-tag">${w}</span>`).join('');
+
+  // Positions table
+  const posDiv = document.getElementById('positions-table');
+  if(posKeys.length === 0) {
+    posDiv.innerHTML = '<div class="empty">No open positions</div>';
+  } else {
+    let html = '<table><tr><th>Token</th><th>Entry</th><th>PnL</th><th>Age</th><th>Source</th></tr>';
+    for(const addr of posKeys) {
+      const p = data.positions[addr];
+      html += `<tr>
+        <td><strong>${p.symbol||addr.slice(0,6)}</strong></td>
+        <td>${fmt(p.sol_in,3)} SOL</td>
+        <td class="${pnlClass(p.pnl_pct)}">${fmt(p.pnl_pct,1)}%</td>
+        <td>${timeSince(p.entry_ts)}</td>
+        <td style="color:var(--t4)">${(p.source_wallet||'').slice(0,6)}…</td>
+      </tr>`;
+    }
+    html += '</table>';
+    posDiv.innerHTML = html;
+  }
+
+  // Watch list table
+  const watchDiv = document.getElementById('watch-table');
+  if(watchKeys.length === 0) {
+    watchDiv.innerHTML = '<div class="empty">No tokens being watched</div>';
+  } else {
+    let html = '<table><tr><th>Token</th><th>MC Now</th><th>Target</th><th>Age</th></tr>';
+    for(const addr of watchKeys) {
+      const w = data.watch_list[addr];
+      html += `<tr>
+        <td><strong>${w.symbol||addr.slice(0,6)}</strong></td>
+        <td>${fmtK(w.mc_at_detection)}</td>
+        <td class="yellow">${fmtK(w.target_mc)}</td>
+        <td>${timeSince(w.detected_ts)}</td>
+      </tr>`;
+    }
+    html += '</table>';
+    watchDiv.innerHTML = html;
+  }
+
+  // Trades table
+  const tradesDiv = document.getElementById('trades-table');
+  const trades = data.trades||[];
+  if(trades.length === 0) {
+    tradesDiv.innerHTML = '<div class="empty">No trades yet</div>';
+  } else {
+    let html = '<table><tr><th>Time</th><th>Token</th><th>PnL</th><th>SOL</th><th>Reason</th></tr>';
+    for(const t of trades.slice(0,30)) {
+      html += `<tr>
+        <td style="color:var(--t4)">${t.t}</td>
+        <td>${t.symbol}</td>
+        <td class="${pnlClass(t.pnl_pct)}">${fmt(t.pnl_pct,1)}%</td>
+        <td class="${pnlClass(t.pnl_sol)}">${fmt(t.pnl_sol,4)}</td>
+        <td style="color:var(--t3);max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.reason}</td>
+      </tr>`;
+    }
+    html += '</table>';
+    tradesDiv.innerHTML = html;
+  }
+
+  // Feed
+  const feedDiv = document.getElementById('feed');
+  const feed = data.feed||[];
+  feedDiv.innerHTML = feed.slice(0,80).map(f =>
+    `<div class="feed-item"><span class="feed-time">${f.t}</span><span class="feed-msg">${f.msg}</span></div>`
+  ).join('');
+}
+
+async function poll() {
+  try {
+    const r = await fetch(API);
+    if(r.ok) {
+      const data = await r.json();
+      update(data);
+    }
+  } catch(e) {}
+  setTimeout(poll, 3000);
+}
+
+poll();
+</script>
+</body>
+</html>

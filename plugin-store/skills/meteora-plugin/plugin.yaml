@@ -1,0 +1,29 @@
+schema_version: 1
+name: meteora-plugin
+version: "0.3.8"
+description: "Meteora DLMM plugin for searching pools, getting swap quotes, checking positions, executing swaps, and adding liquidity on Solana"
+author:
+  name: "skylavis-sky"
+  github: "skylavis-sky"
+license: MIT
+category: defi-protocol
+tags:
+  - solana
+  - dex
+  - liquidity
+  - dlmm
+  - swap
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: meteora-plugin
+
+api_calls:
+  - "https://dlmm.datapi.meteora.ag"
+  - "https://api.mainnet-beta.solana.com"
+  - "https://rpc.ankr.com"
+

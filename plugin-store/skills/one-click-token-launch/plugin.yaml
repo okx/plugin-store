@@ -1,0 +1,31 @@
+schema_version: 1
+name: one-click-token-launch
+version: "1.0.0"
+description: "One-click multi-launchpad token creation with bundled buy, IPFS metadata, MEV protection across 6 launchpads on Solana and BSC"
+author:
+  name: "victorlee"
+  github: "VibeCodeDaddy69"
+license: MIT
+category: trading-strategy
+tags:
+  - solana
+  - bsc
+  - onchainos
+  - one-click-token-launch
+  - meme-coin
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - pumpportal.fun
+  - pump.fun
+  - bags.fm
+  - moon.it
+  - mainnet.block-engine.jito.wtf
+  - api.pinata.cloud
+  - gateway.pinata.cloud
+  - solscan.io
+  - bscscan.com
+type: community-developer

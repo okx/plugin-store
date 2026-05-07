@@ -1,0 +1,26 @@
+schema_version: 1
+name: mainstream-spot-order
+version: "1.0.0"
+description: "Multi-chain DEX spot trading system with 6-signal ensemble, auto-research strategy optimization, and per-pair backtesting across SOL, ETH, BTC, BNB, AVAX, DOGE"
+author:
+  name: "victorlee"
+  github: "VibeCodeDaddy69"
+license: MIT
+category: trading-strategy
+tags:
+  - solana
+  - ethereum
+  - bsc
+  - avalanche
+  - onchainos
+  - spot-trading
+  - auto-research
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - https://www.okx.com
+  - http://localhost:3250
+type: community-developer

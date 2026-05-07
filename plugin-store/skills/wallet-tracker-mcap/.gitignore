@@ -1,0 +1,14 @@
+# State & data (generated at runtime)
+state/
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.tmp
+
+# System
+.DS_Store
+.env

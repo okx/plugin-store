@@ -1,0 +1,33 @@
+schema_version: 1
+name: market-structure-analyzer
+version: "3.0.0"
+description: "Crypto market-structure research agent — 24+ indicators across derivatives, options, on-chain, and macro sentiment with live K-line dashboard and composite scoring"
+author:
+  name: "VibeCodeDaddy"
+  github: "VibeCodeDaddy69"
+license: MIT
+category: analytics
+tags:
+  - bitcoin
+  - ethereum
+  - derivatives
+  - options
+  - on-chain
+  - market-structure
+  - gamma-wall
+  - mvrv
+  - smart-money
+  - live-dashboard
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "www.okx.com"
+  - "community-api.coinmetrics.io"
+  - "api.coingecko.com"
+  - "api.alternative.me"
+  - "stablecoins.llama.fi"
+
+type: community-developer

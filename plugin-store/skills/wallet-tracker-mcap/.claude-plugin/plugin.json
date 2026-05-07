@@ -1,0 +1,18 @@
+{
+  "name": "wallet-tracker-mcap",
+  "description": "Wallet copy-trade bot -- monitors target Solana wallets and auto-mirrors meme token buys/sells with MC target gating, tiered TP, trailing stop, and 4-tier risk grading",
+  "version": "1.0.0",
+  "author": {
+    "name": "victorlee",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "solana",
+    "onchainos",
+    "wallet-tracker-mcap",
+    "copy-trade",
+    "meme-coin"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

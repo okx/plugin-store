@@ -1,0 +1,28 @@
+name: Sync from upstream
+
+# ═══════════════════════════════════════════════════════════════════
+# TEMPORARILY DISABLED — pending CI code review.
+# Cron schedule is commented out; only manual dispatch remains.
+# To re-enable: uncomment the `schedule` block below.
+# ═══════════════════════════════════════════════════════════════════
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '*/15 * * * *'  # Every 15 minutes
+
+permissions: read-all   # B2.1: top-level read-only; per-job overrides for write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync fork with upstream
+        run: |
+          RESULT=$(gh api repos/${{ github.repository }}/merge-upstream -f branch=main 2>&1)
+          echo "$RESULT"
+          # Only log when there's actual changes (not "already up to date")
+          if echo "$RESULT" | grep -q "fast-forward\|merge"; then
+            echo "Synced successfully"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
