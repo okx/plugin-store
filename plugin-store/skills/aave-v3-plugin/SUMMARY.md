@@ -33,3 +33,5 @@ Supply assets and borrow against collateral on Aave V3 across Ethereum, Base, Po
 _Last updated: 2026-05-07 (OKOne pipeline test)._
 
 _Pipeline retry: rustup stable workaround._
+
+_OSS upload retry: Artifact Path = output/aave-v3-plugin._
