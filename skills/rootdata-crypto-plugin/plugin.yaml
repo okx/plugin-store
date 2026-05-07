@@ -1,0 +1,18 @@
+schema_version: 1
+name: rootdata-crypto-plugin
+version: "1.0.0"
+description: "RootData is a leading Web3 data platform covering crypto projects, investors, funding data, and personnel movements. This skill is the OKX-dedicated integration, isolated from the standard RootData skill with its own API key namespace and endpoints."
+author:
+  name: "rootdata"
+  github: "CJZZWW"
+license: MIT
+category: utility
+tags:
+  - web3
+  - crypto
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []
