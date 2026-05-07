@@ -35,3 +35,5 @@ _Last updated: 2026-05-07 (OKOne pipeline test)._
 _Pipeline retry: rustup stable workaround._
 
 _OSS upload retry: Artifact Path = output/aave-v3-plugin._
+
+_OSS upload retry 2: Artifact Path now output/aave-v3-plugin._
