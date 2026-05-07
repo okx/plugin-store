@@ -1,0 +1,25 @@
+schema_version: 1
+name: sol-price-checker
+version: "1.0.0"
+description: "Query Solana SOL token price via onchainos token price-info command. Trigger phrases: SOL price, Solana price, check SOL."
+author:
+  name: "mi.guang"
+  github: "mi.guang"
+license: MIT
+category: analytics
+tags:
+  - sol
+  - solana
+  - price
+  - onchainos
+  - go
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: go
+  binary_name: sol-price-checker
+
+api_calls: []

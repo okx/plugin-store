@@ -1,0 +1,10 @@
+{
+  "name": "sol-price-checker",
+  "description": "Query Solana SOL token price via onchainos token price-info command. Trigger phrases: SOL price, Solana price, check SOL.",
+  "version": "1.0.0",
+  "author": {
+    "name": "mi.guang"
+  },
+  "license": "MIT",
+  "keywords": ["sol", "solana", "price", "onchainos", "go"]
+}
