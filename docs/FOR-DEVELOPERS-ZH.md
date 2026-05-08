@@ -14,6 +14,8 @@
 4. [Plugin 结构](#4-plugin-结构)
 5. [编写 SKILL.md](#5-编写-skillmd)
 6. [编写 SUMMARY.md](#编写-summarymd)
+7. [提交策略类 Plugin](#提交策略类-pluginstrategy)
+8. [提交包含源代码的 Plugin(#编写-summarymd)
 7. [提交包含源代码的 Plugin（Binary）](#6-提交包含源代码的-pluginbinary)
 8. [三种提交模式](#7-三种提交模式)
 9. [Onchain OS 集成](#8-onchainos-集成)
@@ -21,7 +23,6 @@
 11. [风险等级](#10-风险等级)
 12. [规则与限制](#11-规则与限制)
 13. [常见问题](#12-常见问题)
-14. [获取帮助](#13-获取帮助)
 
 ---
 
@@ -103,30 +104,7 @@ Plugin **不限于 Web3**。你可以构建分析仪表板、开发者工具、�
 
 ## 3. 快速入门（7 步）
 
-本指南创建一个最小的仅 Skill 的 Plugin 并提交。
-
-### 第 1 步：Fork 并克隆
-
-首先，安装 GitHub CLI（如果尚未安装）：
-
-```
-# macOS
-brew install gh
-
-# Linux
-(type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) && sudo mkdir -p -m 755 /etc/apt/keyrings && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y
-
-# Windows
-winget install --id GitHub.cli
-```
-
-然后登录并 Fork：
-
-```
-gh auth login
-gh repo fork okx/plugin-store --clone
-cd plugin-store
-```
+本指南创建一个最小的仅 Skill 的 Plugin 并打包。
 
 ### 第 2 步：创建 Plugin 目录
 
@@ -243,23 +221,6 @@ Linting skills/my-plugin...
 
   Plugin 'my-plugin' passed all checks!
 ```
-
-### 第 7 步：提交 Pull Request
-
-```
-git checkout -b submit/my-plugin
-git add skills/my-plugin
-git commit -m "[new-plugin] my-plugin v1.0.0"
-git push origin submit/my-plugin
-```
-
-然后从你的 fork 向 `okx/plugin-store` 提交 Pull Request。使用以下标题：
-
-```
-[new-plugin] my-plugin v1.0.0
-```
-
-每个 PR 应只包含**一个 Plugin**，并且只应修改 `skills/my-plugin/` 目录内的文件。
 
 ---
 
@@ -447,16 +408,6 @@ api_calls:
 
 `build.source_dir` 字段告诉 CI 你的仓库中哪个子目录包含 `Cargo.toml`（或 `go.mod`）。这对 **monorepo** 很重要——CI 只会编译该子目录，而不是整个仓库。
 
-#### 模式 C：Marketplace 导入
-
-通过 CLI 从现有 Claude marketplace Plugin 自动生成：
-
-```
-plugin-store import <github-url>
-```
-
-这会自动创建 plugin.yaml——详见下方[模式 C 详情](#模式-c----marketplace-导入)。
-
 #### 逐字段参考
 
 | 字段 | 必需 | 说明 | 规则 |
@@ -469,7 +420,7 @@ plugin-store import <github-url>
 | `author.github` | 是 | GitHub 用户名 | 必须与 PR 作者一致 |
 | `author.email` | 否 | 联系邮箱 | 用于安全通知 |
 | `license` | 是 | 许可证标识符 | SPDX 格式：`MIT`、`Apache-2.0`、`GPL-3.0` 等 |
-| `category` | 是 | Plugin 类别 | 以下之一：`strategy`、`defi`、`game`、`prediction`、`data_tools`、`dev_tools`、`others`、`utility`、`trading` |
+| `category` | 是 | Plugin 类别 | 以下之一：`strategy`、`defi-protocol`、`analytics`、`utility`、`security`、`wallet`、`nft` |
 | `tags` | 否 | 搜索关键词 | 字符串数组 |
 | `type` | 否 | 作者类型 | `"official"`、`"dapp-official"`、`"community-developer"` |
 | `github_link` | 否 | 项目 GitHub 地址 | URL，在市场中展示 |
@@ -809,6 +760,8 @@ Tags: `prediction-market` `polygon` `trading` `polymarket`
 
 ---
 
+---
+
 ## 提交策略类 Plugin（Strategy）
 
 **策略类 plugin**（`category: strategy`）不直接连接链或钱包，而是调用已有的交易插件（如 polymarket-plugin、raydium-plugin）来执行订单。策略作者可被归因和激励。
@@ -832,13 +785,10 @@ tags:
 dependent_plugin:                # 必填 — 声明本策略调用的交易插件
   - name: raydium-plugin
     version: "^0.2.0"
-  - name: orca-plugin
-    version: "^0.6.0"
 
 risk_level: high                 # 信息性字段，展示给用户
 supported_venues:                # 信息性字段，用于搜索/筛选
   - raydium
-  - orca
 
 components:
   skill:
@@ -852,7 +802,7 @@ api_calls: []
 对依赖插件的所有**交易操作**（buy、sell、swap、order）**必须**包含 `--strategy-id <策略名>` 以实现归因追踪：
 
 ```python
-# ✅ 正确 — 交易操作带 --strategy-id
+# ✅ 正确 — 写操作带 --strategy-id
 subprocess.run(["raydium-plugin", "swap", "--from", "USDC", "--to", "SOL",
                 "--amount", "10", "--strategy-id", "my-arb-strategy", "--confirm"])
 
@@ -875,7 +825,6 @@ subprocess.run(["raydium-plugin", "swap", "--from", "USDC", "--to", "SOL",
 | Phase 3 | AI 扫描所有写操作是否带 `--strategy-id` | 标记为 Critical |
 | Phase 3 | 禁止硬编码私钥、RPC URL、API key | 标记为 Critical |
 
----
 
 ## 6. 提交包含源代码的 Plugin（Binary）
 
@@ -1254,20 +1203,6 @@ git rev-parse HEAD
 
 **适用场景**：你的 Plugin 有大量源代码，你想将其保留在自己的仓库中，或者你想要独立的版本管理。`meme-trench-scanner` 和 `smart-money-signal-copy-trade` 等 Plugin 就使用了这种方式。
 
-### 模式 C -- 市场导入
-
-如果你已经有一个兼容 Claude 市场的仓库，可以自动生成提交：
-
-```
-plugin-store import your-username/my-plugin
-```
-
-这将自动读取你的仓库结构，检测构建语言，生成 `plugin.yaml`，fork plugin-store 仓库，创建分支，并开启 PR。
-
-**前置条件**：已安装并认证 `gh` CLI（`gh auth login`）。
-
-**适用场景**：你已经有一个可用的 Claude 市场 Plugin，希望以最小的工作量将其上架到 Plugin Store。
-
 ---
 
 ## 8. Onchain OS 集成
@@ -1405,9 +1340,7 @@ AI 审查员阅读你的 Plugin 并生成涵盖安全性、合规性和质量的
 - [ ] 任何地方都没有硬编码的 API 密钥、令牌或凭据
 - [ ] 提交中没有预编译的二进制文件
 - [ ] LICENSE 文件已存在
-- [ ] PR 标题遵循格式：`[new-plugin] my-plugin v1.0.0`
-- [ ] PR 分支名遵循格式：`submit/my-plugin`
-- [ ] PR 仅修改 `skills/my-plugin/` 内的文件
+- [ ] 提交仅修改 `skills/my-plugin/` 内的文件
 - [ ] （如果是交易类 plugin）包含风险免责声明
 - [ ] （如果是交易类 plugin）支持 dry-run / 模拟交易模式
 - [ ] （如果是 binary plugin）源代码能用 CI 等效命令在本地编译
@@ -1479,7 +1412,7 @@ AI 审查员阅读你的 Plugin 并生成涵盖安全性、合规性和质量的
    自动化检查在 5 分钟内完成。人工审查通常需要 1-3 个工作日。
 
 2. **Plugin 发布后可以更新吗？**
-   可以。修改文件，在 `plugin.yaml` 和 `SKILL.md` 中升级 `version`，然后提交标题为 `[update] my-plugin v1.1.0` 的新 PR。
+   可以。修改文件，在 `plugin.yaml` 和 `SKILL.md` 中升级 `version`，然后提交标题为 `新版本` 的新 PR。
 
 3. **Plugin 的命名规则是什么？**
    仅允许小写字母、数字和连字符。2 到 40 个字符之间。不允许连续连字符和下划线。`okx-` 前缀仅保留给 OKX 组织成员。
@@ -1491,12 +1424,12 @@ AI 审查员阅读你的 Plugin 并生成涵盖安全性、合规性和质量的
    不是必须的。Onchain OS 是可选的，Plugin 可以自由使用任何链上技术。
 
 6. **用户如何安装我的 Plugin？**
-   PR 合并后：`npx skills add okx/plugin-store --skill my-plugin`。用户端无需安装 plugin-store CLI。
+   发布后：`npx skills add okx/plugin-store --skill my-plugin`。用户端无需安装 plugin-store CLI。
 
 7. **如果 AI 审查标记了某些内容怎么办？**
    AI 审查仅供参考，不会阻止 PR。但人工审查员会阅读 AI 报告。解决标记的问题可加速审批。
 
-8. **本地 lint 通过但 GitHub 检查失败？**
+8. **本地 lint 通过但 CI 检查失败？**
    确保运行最新版 plugin-store CLI，并确认 PR 只修改了 `skills/your-plugin-name/` 内的文件。
 
 9. **CI 构建失败但本地可编译？**
@@ -1518,10 +1451,3 @@ AI 审查员阅读你的 Plugin 并生成涵盖安全性、合规性和质量的
     声明了 Binary 组件但缺少 `build` 部分。添加 `build.lang`、`build.source_repo` 和 `build.source_commit`。
 
 ---
-
-## 13. 获取帮助
-
-- 在 GitHub 上提交 [issue](https://github.com/okx/plugin-store/issues)
-- 查看 `skills/` 中的现有 Plugin 作为示例
-- 提交前在本地运行 lint 命令 —— 它能捕获大多数问题
-- 如果你的 PR 检查失败，请查看 [GitHub Actions 日志](https://github.com/okx/plugin-store/actions)
