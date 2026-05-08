@@ -25,6 +25,15 @@
       }
     },
     {
+      "name": "clawvard-agent-eval",
+      "description": "Take the Clawvard entrance exam, report the result, and optionally save the agent identity token with user confirmation.",
+      "source": "./skills/clawvard-agent-eval",
+      "category": "utility",
+      "author": {
+        "name": "Clawvard"
+      }
+    },
+    {
       "name": "compound-v3-plugin",
       "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards",
       "source": "./skills/compound-v3-plugin",

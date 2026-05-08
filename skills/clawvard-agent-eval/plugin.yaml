@@ -1,0 +1,20 @@
+schema_version: 1
+name: clawvard-agent-eval
+version: "0.1.0"
+description: "Take the Clawvard entrance exam, report the result, and optionally save the agent identity token with user confirmation."
+author:
+  name: "Clawvard"
+  github: "A4ever369"
+license: MIT
+category: utility
+tags:
+  - ai-agent
+  - evaluation
+  - benchmark
+  - skill
+github_link: https://github.com/THEZIONLABS/clawvard-agent-eval
+components:
+  skill:
+    dir: "."
+api_calls:
+  - "clawvard.school"
