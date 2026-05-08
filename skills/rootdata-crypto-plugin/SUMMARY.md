@@ -1,5 +1,3 @@
-# rootdata-crypto-plugin
-
 ## Overview
 
 RootData OKX Edition — a read-only Web3 data lookup skill covering crypto projects,
