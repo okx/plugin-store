@@ -1,8 +1,8 @@
-import { createKeyPairSignerFromBytes } from '@solana/kit';
+import { randomBytes } from 'node:crypto';
 import { ExactSvmScheme, toClientSvmSigner } from '@x402/svm';
 import { wrapFetchWithPayment, x402Client } from '@x402/fetch';
-import { base58 } from '@scure/base';
-import { getApiKey, getMode, getSolanaPrivateKey } from './config.js';
+import { getApiKey, getMaxDailySpend, getMode, getSignerKeyFile } from './config.js';
+import { createIpcSigner } from './signer-client.js';
 
 const BASE = 'https://public-api.birdeye.so';
 
@@ -13,11 +13,8 @@ type Resolved = {
   headers: Record<string, string>;
 };
 
-function generatePaymentId() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let id = 'pay_';
-  for (let i = 0; i < 20; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
+function generatePaymentId(): string {
+  return 'pay_' + randomBytes(15).toString('base64url');
 }
 
 function withPaymentIdentifier(baseFetch: typeof fetch): typeof fetch {
@@ -29,45 +26,51 @@ function withPaymentIdentifier(baseFetch: typeof fetch): typeof fetch {
         const decoded = JSON.parse(Buffer.from(sig, 'base64').toString('utf-8'));
         decoded.extensions = {
           ...(decoded.extensions || {}),
-          'payment-identifier': {
-            info: { id: generatePaymentId() }
-          }
-
+          'payment-identifier': { info: { id: generatePaymentId() } },
         };
         req.headers.set('PAYMENT-SIGNATURE', Buffer.from(JSON.stringify(decoded)).toString('base64'));
-      } catch {}
+      } catch (e) {
+        console.warn(`[birdeye] payment-identifier injection failed: ${(e as Error).message}`);
+      }
     }
     return baseFetch(req);
   }) as typeof fetch;
 }
 
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+
+const DEFAULT_KEY_FILE = `${homedir()}/.birdeye/key`;
+
+function hasKeyFile(): boolean {
+  const p = getSignerKeyFile() || DEFAULT_KEY_FILE;
+  return existsSync(p);
+}
+
 export function resolveMode(): 'apikey' | 'x402' {
   const mode = getMode();
   const apiKey = getApiKey();
-  const solPk = getSolanaPrivateKey();
 
   if (mode === 'apikey') {
     if (!apiKey) throw new Error('BIRDEYE_API_KEY is required in apikey mode');
     return 'apikey';
   }
   if (mode === 'x402') {
-    if (!solPk) throw new Error('SOLANA_PRIVATE_KEY (base58) is required in x402 mode');
+    if (!hasKeyFile()) {
+      throw new Error(`x402 mode needs a signer key file. Default: ${DEFAULT_KEY_FILE}. Override via BIRDEYE_SIGNER_KEY_FILE.`);
+    }
     return 'x402';
   }
   if (apiKey) return 'apikey';
-  if (solPk) return 'x402';
-  throw new Error('auto mode failed: set BIRDEYE_API_KEY or SOLANA_PRIVATE_KEY');
+  if (hasKeyFile()) return 'x402';
+  throw new Error('No credentials. Set BIRDEYE_API_KEY (apikey mode) or place a base58 key at ~/.birdeye/key (x402 mode).');
 }
 
 async function createX402Fetch(): Promise<typeof fetch> {
-  const pk = getSolanaPrivateKey();
-  if (!pk) throw new Error('SOLANA_PRIVATE_KEY (base58) is required in x402 mode');
-
-  const keyBytes = base58.decode(pk);
-  const keypair = await createKeyPairSignerFromBytes(keyBytes);
-  const signer = toClientSvmSigner(keypair);
+  void getMaxDailySpend();
+  const ipcSigner = await createIpcSigner();
+  const signer = toClientSvmSigner(ipcSigner as never);
   const client = new x402Client().register('solana:*', new ExactSvmScheme(signer));
-
   return wrapFetchWithPayment(withPaymentIdentifier(fetch), client);
 }
 
@@ -79,7 +82,7 @@ export async function createClient(chain = 'solana'): Promise<Resolved> {
       mode,
       baseUrl: BASE,
       fetcher: fetch,
-      headers: { 'X-API-KEY': getApiKey() as string, 'x-chain': chain, accept: 'application/json' }
+      headers: { 'X-API-KEY': getApiKey() as string, 'x-chain': chain, accept: 'application/json' },
     };
   }
 
@@ -87,7 +90,7 @@ export async function createClient(chain = 'solana'): Promise<Resolved> {
     mode,
     baseUrl: `${BASE}/x402`,
     fetcher: await createX402Fetch(),
-    headers: { 'x-chain': chain, accept: 'application/json' }
+    headers: { 'x-chain': chain, accept: 'application/json' },
   };
 }
 

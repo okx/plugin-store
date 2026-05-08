@@ -10,6 +10,10 @@ export function getApiKey(): string | undefined {
   return process.env.BIRDEYE_API_KEY;
 }
 
-export function getSolanaPrivateKey(): string | undefined {
-  return process.env.SOLANA_PRIVATE_KEY;
+export function getSignerKeyFile(): string | undefined {
+  return process.env.BIRDEYE_SIGNER_KEY_FILE;
+}
+
+export function getMaxDailySpend(): string | undefined {
+  return process.env.MAX_DAILY_SPEND_USDC_BASE_UNITS;
 }
