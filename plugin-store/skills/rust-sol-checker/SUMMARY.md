@@ -23,3 +23,5 @@ Forwards stdout from onchainos. Exits non-zero with stderr diagnostics on failur
 - Native SOL is represented by the wrapped-SOL mint address `So111…1112`, matching onchainos' convention for SOL price queries
 
 _Retrigger: fixed SIGPIPE in TARGET_TRIPLE detection._
+
+_Retrigger 2: skip Tags API, use Releases API ref auto-tag._

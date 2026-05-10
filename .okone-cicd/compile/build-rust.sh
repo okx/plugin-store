@@ -111,41 +111,32 @@ TAG_ENC="$(printf '%s' "${TAG}" | sed 's|/|%2F|g; s|@|%40|g')"
 
 API="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}"
 echo "=== GitLab release: ${TAG} (project ${CI_PROJECT_ID}) ==="
+echo "    api: ${CI_API_V4_URL}"
 
-# 1. Tag — delete if exists then create at this commit (idempotent re-runs)
-curl --silent --output /dev/null --request DELETE \
-  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-  "${API}/repository/tags/${TAG_ENC}" || true
-HTTP="$(curl --silent --output /tmp/_tag.json --write-out '%{http_code}' \
-  --request POST \
-  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-  --form "tag_name=${TAG}" --form "ref=${CI_COMMIT_SHA}" \
-  "${API}/repository/tags")"
-if [ "${HTTP}" = "200" ] || [ "${HTTP}" = "201" ]; then
-  echo "OK: tag ${TAG} → ${CI_COMMIT_SHA:0:8}"
-else
-  echo "ERROR: tag create HTTP ${HTTP}"; head -20 /tmp/_tag.json; exit 1
-fi
-
-# 2. Upload binary to Generic Packages registry
+# 1. Upload binary to Generic Packages registry (JOB-TOKEN supported here).
 PKG_URL="${API}/packages/generic/${PLUGIN_NAME}/${PLUGIN_VERSION}/${ASSET}"
 HTTP="$(curl --silent --output /tmp/_pkg.json --write-out '%{http_code}' \
   --request PUT \
   --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
   --upload-file "${OUT}/${ASSET}" \
   "${PKG_URL}")"
-if [ "${HTTP}" = "200" ] || [ "${HTTP}" = "201" ]; then
-  echo "OK: binary → ${PKG_URL}"
-else
-  echo "ERROR: package PUT HTTP ${HTTP}"; head -20 /tmp/_pkg.json; exit 1
-fi
+case "${HTTP}" in
+  200|201) echo "OK: binary uploaded → ${PKG_URL}";;
+  409)     echo "OK: binary already present (409, idempotent skip) → ${PKG_URL}";;
+  *)       echo "ERROR: package PUT HTTP ${HTTP}"; head -20 /tmp/_pkg.json; exit 1;;
+esac
 
-# 3. Release — delete if exists then create with asset link
+# 2. Delete existing release if any (tag, if present, stays — JOB-TOKEN can't
+#    update tags via Tags API on this instance, so we accept tag pinned to
+#    first-release commit; bump plugin.yaml version for new commits).
 curl --silent --output /dev/null --request DELETE \
   --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
   "${API}/releases/${TAG_ENC}" || true
-REL_BODY="$(printf '{"name":"%s","tag_name":"%s","description":"Auto-released from %s.","assets":{"links":[{"name":"%s","url":"%s","link_type":"package"}]}}' \
-  "${PLUGIN_NAME} ${PLUGIN_VERSION}" "${TAG}" "${CI_COMMIT_SHA}" "${ASSET}" "${PKG_URL}")"
+
+# 3. Create release. The `ref` field tells GitLab to auto-create the tag at
+#    that commit if it doesn't exist yet (Releases API does accept JOB-TOKEN).
+REL_BODY="$(printf '{"name":"%s","tag_name":"%s","ref":"%s","description":"Auto-released from %s.","assets":{"links":[{"name":"%s","url":"%s","link_type":"package"}]}}' \
+  "${PLUGIN_NAME} ${PLUGIN_VERSION}" "${TAG}" "${CI_COMMIT_SHA}" "${CI_COMMIT_SHA}" "${ASSET}" "${PKG_URL}")"
 HTTP="$(curl --silent --output /tmp/_rel.json --write-out '%{http_code}' \
   --request POST \
   --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
