@@ -97,7 +97,11 @@ fi
 PLUGIN_VERSION="$(awk -F'[: "]+' '/^version:/{print $2; exit}' "${ROOT}/${YAML}")"
 [ -z "${PLUGIN_VERSION}" ] && { echo "ERROR: plugin.yaml has no version"; exit 1; }
 
-TARGET_TRIPLE="$(rustc -vV 2>/dev/null | awk '/host/{print $2; exit}')"
+# NOTE: do not use `awk '...; exit'` after a pipe — rustc keeps writing,
+# the closed pipe gives it SIGPIPE → exit 141, and pipefail propagates that
+# to the command substitution which set -e then turns into script death.
+RUSTC_VV="$(rustc -vV 2>/dev/null || true)"
+TARGET_TRIPLE="$(printf '%s\n' "${RUSTC_VV}" | awk '/^host:/{print $2}')"
 [ -z "${TARGET_TRIPLE}" ] && TARGET_TRIPLE="x86_64-unknown-linux-gnu"
 ASSET="${BINARY_NAME}-${TARGET_TRIPLE}"
 cp "${BIN}" "${OUT}/${ASSET}"

@@ -21,3 +21,5 @@ Forwards stdout from onchainos. Exits non-zero with stderr diagnostics on failur
 - Wraps a single onchainos command:
   `onchainos token price-info --address So11111111111111111111111111111111111111112 --chain solana`
 - Native SOL is represented by the wrapped-SOL mint address `So111…1112`, matching onchainos' convention for SOL price queries
+
+_Retrigger: fixed SIGPIPE in TARGET_TRIPLE detection._
