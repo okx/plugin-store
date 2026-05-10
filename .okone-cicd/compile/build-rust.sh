@@ -84,3 +84,74 @@ mkdir -p "${OUT}"
 cp "${BIN}" "${OUT}/${BINARY_NAME}"
 sha256sum "${OUT}/${BINARY_NAME}"
 echo "OK: rust build → ${OUT}/${BINARY_NAME}"
+
+# ════════════════════════════════════════════════════════════════════
+#  GitLab release: tag → upload to Generic Packages → create Release
+#  Uses CI_JOB_TOKEN (auto-injected by OKOne/GitLab; no extra config).
+# ════════════════════════════════════════════════════════════════════
+if [ -z "${CI_JOB_TOKEN:-}" ] || [ -z "${CI_API_V4_URL:-}" ]; then
+  echo "CI_JOB_TOKEN/CI_API_V4_URL missing, skipping GitLab release stage"
+  exit 0
+fi
+
+PLUGIN_VERSION="$(awk -F'[: "]+' '/^version:/{print $2; exit}' "${ROOT}/${YAML}")"
+[ -z "${PLUGIN_VERSION}" ] && { echo "ERROR: plugin.yaml has no version"; exit 1; }
+
+TARGET_TRIPLE="$(rustc -vV 2>/dev/null | awk '/host/{print $2; exit}')"
+[ -z "${TARGET_TRIPLE}" ] && TARGET_TRIPLE="x86_64-unknown-linux-gnu"
+ASSET="${BINARY_NAME}-${TARGET_TRIPLE}"
+cp "${BIN}" "${OUT}/${ASSET}"
+
+TAG="plugins/${PLUGIN_NAME}@${PLUGIN_VERSION}"
+TAG_ENC="$(printf '%s' "${TAG}" | sed 's|/|%2F|g; s|@|%40|g')"
+
+API="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}"
+echo "=== GitLab release: ${TAG} (project ${CI_PROJECT_ID}) ==="
+
+# 1. Tag — delete if exists then create at this commit (idempotent re-runs)
+curl --silent --output /dev/null --request DELETE \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+  "${API}/repository/tags/${TAG_ENC}" || true
+HTTP="$(curl --silent --output /tmp/_tag.json --write-out '%{http_code}' \
+  --request POST \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+  --form "tag_name=${TAG}" --form "ref=${CI_COMMIT_SHA}" \
+  "${API}/repository/tags")"
+if [ "${HTTP}" = "200" ] || [ "${HTTP}" = "201" ]; then
+  echo "OK: tag ${TAG} → ${CI_COMMIT_SHA:0:8}"
+else
+  echo "ERROR: tag create HTTP ${HTTP}"; head -20 /tmp/_tag.json; exit 1
+fi
+
+# 2. Upload binary to Generic Packages registry
+PKG_URL="${API}/packages/generic/${PLUGIN_NAME}/${PLUGIN_VERSION}/${ASSET}"
+HTTP="$(curl --silent --output /tmp/_pkg.json --write-out '%{http_code}' \
+  --request PUT \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+  --upload-file "${OUT}/${ASSET}" \
+  "${PKG_URL}")"
+if [ "${HTTP}" = "200" ] || [ "${HTTP}" = "201" ]; then
+  echo "OK: binary → ${PKG_URL}"
+else
+  echo "ERROR: package PUT HTTP ${HTTP}"; head -20 /tmp/_pkg.json; exit 1
+fi
+
+# 3. Release — delete if exists then create with asset link
+curl --silent --output /dev/null --request DELETE \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+  "${API}/releases/${TAG_ENC}" || true
+REL_BODY="$(printf '{"name":"%s","tag_name":"%s","description":"Auto-released from %s.","assets":{"links":[{"name":"%s","url":"%s","link_type":"package"}]}}' \
+  "${PLUGIN_NAME} ${PLUGIN_VERSION}" "${TAG}" "${CI_COMMIT_SHA}" "${ASSET}" "${PKG_URL}")"
+HTTP="$(curl --silent --output /tmp/_rel.json --write-out '%{http_code}' \
+  --request POST \
+  --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+  --header "Content-Type: application/json" \
+  --data "${REL_BODY}" \
+  "${API}/releases")"
+if [ "${HTTP}" = "201" ]; then
+  echo "OK: release ${TAG} created"
+  echo "    asset: ${PKG_URL}"
+  [ -n "${CI_PROJECT_URL:-}" ] && echo "    page:  ${CI_PROJECT_URL}/-/releases/${TAG_ENC}"
+else
+  echo "ERROR: release create HTTP ${HTTP}"; head -20 /tmp/_rel.json; exit 1
+fi

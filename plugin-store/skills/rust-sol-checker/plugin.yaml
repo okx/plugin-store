@@ -1,0 +1,25 @@
+schema_version: 1
+name: rust-sol-checker
+version: "1.0.0"
+description: "Query Solana SOL token price via onchainos token price-info command (Rust impl). Trigger phrases: SOL price, Solana price, check SOL."
+author:
+  name: "mi.guang"
+  github: "mi.guang"
+license: MIT
+category: analytics
+tags:
+  - sol
+  - solana
+  - price
+  - onchainos
+  - rust
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: rust
+  binary_name: rust-sol-checker
+
+api_calls: []

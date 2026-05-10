@@ -1,0 +1,13 @@
+[package]
+name = "rust-sol-checker"
+version = "1.0.0"
+edition = "2021"
+
+[[bin]]
+name = "rust-sol-checker"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
