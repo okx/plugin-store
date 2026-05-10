@@ -10,7 +10,9 @@ use crate::signing::{
 #[derive(Args)]
 pub struct SpotOrderArgs {
     /// Base token to trade (e.g. PURR, HYPE)
-    #[arg(long)]
+    /// Spot base token (e.g. USDH, HYPE, PURR). Accepts `--token` as an alias
+    /// for parity with `spot-prices` and `spot-balances` parameter naming.
+    #[arg(long, alias = "token")]
     pub coin: String,
 
     /// Side: buy or sell
@@ -79,25 +81,6 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Pre-flight: check notional value against HL's 10 USDC spot minimum
-    if let (Some(price_str), Ok(size_f)) = (args.price.as_deref(), args.size.parse::<f64>()) {
-        if let Ok(price_f) = price_str.parse::<f64>() {
-            let notional = size_f * price_f;
-            if notional < 10.0 {
-                println!("{}", super::error_response(
-                    &format!(
-                        "Order value {:.4} USDC is below Hyperliquid's 10 USDC minimum for spot orders. \
-                         Increase --size or --price (current: {} × {} = {:.4} USDC).",
-                        notional, args.size, price_str, notional
-                    ),
-                    "INVALID_ARGUMENT",
-                    "Increase --size or --price so the order value is at least 10 USDC."
-                ));
-                return Ok(());
-            }
-        }
-    }
-
     // Look up spot asset — returns (order_asset_idx, raw_market_idx, sz_decimals)
     let (asset_idx, market_idx, sz_decimals) = match get_spot_asset_meta(info, &coin).await {
         Ok(v) => v,
@@ -122,13 +105,57 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
         .unwrap_or("unknown");
 
     let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
+
+    // ─── Notional pre-flight + auto-bump for market orders ───────────────────
+    //
+    // HL enforces a $10 minimum spot notional. Earlier code only checked when
+    // user passed --price (limit orders), so market orders below $10 silently
+    // went on-chain and were rejected (`Order must have minimum value of 10
+    // USDC. asset=10230`). For market orders we know mid_f → bump size to the
+    // smallest grid-aligned size satisfying mid * size >= $10. For limit
+    // orders the user-provided price is authoritative; reject so they can adjust.
+    let mut size_str_owned: String = args.size.clone();
+    if let Ok(size_f) = args.size.parse::<f64>() {
+        let effective_px = match (args.r#type.as_str(), args.price.as_deref()) {
+            ("limit", Some(p)) => p.parse::<f64>().unwrap_or(mid_f),
+            _ => mid_f,
+        };
+        if effective_px > 0.0 {
+            let notional = size_f * effective_px;
+            if notional < 10.0 {
+                if args.r#type == "market" {
+                    let sz_factor = 10_f64.powi(sz_decimals as i32);
+                    let min_size = (10.0 / effective_px * sz_factor).ceil() / sz_factor;
+                    eprintln!(
+                        "[auto-adjust] size {} → {} to meet $10 minimum spot notional (${:.2} → ${:.2})",
+                        args.size, min_size, notional, min_size * effective_px,
+                    );
+                    // Format with sz_decimals to avoid trailing FP noise
+                    size_str_owned = format!("{:.*}", sz_decimals as usize, min_size);
+                } else {
+                    println!("{}", super::error_response(
+                        &format!(
+                            "Order value {:.4} USDC is below Hyperliquid's 10 USDC minimum for spot orders. \
+                             Increase --size or --price (current: {} × {} = {:.4} USDC).",
+                            notional, args.size, effective_px, notional
+                        ),
+                        "ORDER_BELOW_MIN_NOTIONAL",
+                        "Increase --size or --price so the order value is at least 10 USDC."
+                    ));
+                    return Ok(());
+                }
+            }
+        }
+    }
+    let size_str: &str = &size_str_owned;
+
     // Compute slippage price using configurable tolerance (default 5%)
     let multiplier = if is_buy { 1.0 + args.slippage / 100.0 } else { 1.0 - args.slippage / 100.0 };
     let slippage_px_str = round_px(mid_f * multiplier, sz_decimals);
 
     // Spot orders always have reduce_only = false (no position to reduce)
     let action = match args.r#type.as_str() {
-        "market" => build_market_order_action(asset_idx, is_buy, &args.size, false, &slippage_px_str),
+        "market" => build_market_order_action(asset_idx, is_buy, size_str, false, &slippage_px_str),
         "limit" => {
             let price_str = match args.price.as_deref() {
                 Some(p) => p,
@@ -142,7 +169,7 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
                 return Ok(());
             }
             let tif = if args.post_only { "Alo" } else { "Gtc" };
-            build_limit_order_action(asset_idx, is_buy, price_str, &args.size, false, tif)
+            build_limit_order_action(asset_idx, is_buy, price_str, size_str, false, tif)
         }
         _ => {
             println!("{}", super::error_response(&format!("Unknown order type '{}'", args.r#type), "INVALID_ARGUMENT", "Use --type market or --type limit."));
@@ -159,7 +186,7 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
                 "pair": format!("{}/USDC", coin),
                 "assetIndex": asset_idx,
                 "side": args.side,
-                "size": args.size,
+                "size": size_str,
                 "type": args.r#type,
                 "price": args.price,
                 "currentMidPrice": current_price,
@@ -212,7 +239,7 @@ pub async fn run(args: SpotOrderArgs) -> anyhow::Result<()> {
             "market": "spot",
             "coin": coin,
             "side": args.side,
-            "size": args.size,
+            "size": size_str,
             "type": args.r#type,
             "price": args.price,
             "result": result

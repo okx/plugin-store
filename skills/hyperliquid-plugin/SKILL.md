@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.4.3"
+version: "0.4.5"
 author: GeoGu360
 tags:
   - perps
@@ -26,7 +26,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.4.3"
+LOCAL_VER="0.4.5"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -138,12 +138,12 @@ mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.4.3"
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.4.5"
 curl -fsSL "${RELEASE_BASE}/hyperliquid-plugin-${TARGET}${EXT}" -o "$BIN_TMP/hyperliquid-plugin${EXT}" || {
   echo "ERROR: failed to download hyperliquid-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for hyperliquid-plugin@0.4.3" >&2
+  echo "ERROR: failed to download checksums.txt for hyperliquid-plugin@0.4.5" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="hyperliquid-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -167,7 +167,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/hyperliquid-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.4.3" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
+echo "0.4.5" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 ```
 
 ---
@@ -1653,6 +1653,21 @@ Found and patched during integration:
 ---
 
 ## Changelog
+
+### v0.4.5 (2026-05-10)
+
+Seven UX / safety / correctness fixes surfaced during a HIP-3 NVDA-perp end-to-end reproduction. Each fix is independent; combined diff is 12 files / +317 / -82.
+
+All write commands continue to require explicit `--confirm`; pre-flight checks added below run before any signing or submission, so risky inputs are caught before user authorization, never after.
+
+- **fix**: `markets --coin <bare> --type tradfi|hip3` was silently routed to spot lookup, ignoring `--type` entirely (`lookup_single` ignored mode). Now searches every builder DEX in parallel and returns the first match; bare-symbol queries against tradfi correctly resolve `NVDA → xyz:NVDA`. (Bug #1)
+- **fix**: `order` auto-bump for $10 minimum notional only bumped one tick (`if`, not `while`); for sz_decimals=3 markets like NVDA at $217.5 a `0.010 → 0.011` bump still left $2.39 < $10 and the order would link-revert post-sign. Replaced with `ceil(10 / mid * sz_factor) / sz_factor` — single-shot guaranteed convergence. (Bug #2)
+- **fix**: `order` insufficient-perp-balance tip pointed users at `deposit --amount <shortfall>` even on HIP-3 builder DEX coins; (a) deposit funds the **default DEX** clearinghouse, not the builder dex, so the user's next order would fail again with the same error; (b) the suggested amount could be < $5, the HL bridge minimum (smaller deposits are silently dropped). Now emits `error_code: BUILDER_DEX_UNFUNDED` with two actionable paths: `abstraction --set unified` (one-time, all DEXs share margin) OR explicit dex-transfer chain. Default-DEX path now caps deposit suggestions at $5. (Bug #3)
+- **fix**: `deposit` amounts < $5 used to print only an `eprintln!` warning then proceed to sign and broadcast; HL bridge silently drops these (funds lost on Arbitrum side). Now hard-rejected with `error_code: DEPOSIT_BELOW_MIN` — the rejection runs before user `--confirm` is honored, so no signing occurs. (Bug #3 sister bug)
+- **fix**: `spot-order --coin` and `spot-prices --token` accepted only those names respectively, despite both referring to the same concept; users typing the "wrong" flag got `unexpected argument`. Added bidirectional clap aliases — both names work in both commands. (Bug #4)
+- **fix**: `spot-order` only validated $10 minimum notional when both `--price` and `--size` were supplied (limit orders); market orders below $10 were signed and submitted, then rejected on-chain with `Order must have minimum value of 10 USDC`. Added mid-based notional pre-flight + auto-bump for market, hard-reject (`ORDER_BELOW_MIN_NOTIONAL`) for limit. Both run before sign/submit. (Bug #5)
+- **fix**: `round_px` used `sig_figs = sz_decimals.max(1)` per Python SDK comment, but HL spec is **5 sig figs AND ≤ (MAX_DECIMALS - sz_decimals) decimal places**. For sz_decimals=3 markets (NVDA at $217.495) that yielded 3 sig figs → integer round → "217", losing 2pp risk-management precision in TP/SL bracket prices. Fixed to use 5 sig figs with the decimal-place cap; NVDA inputs of `212.06` / `229.46` are now preserved verbatim. (Bug #6)
+- **fix**: `orders --coin xyz:NVDA` correctly extracted the dex prefix (per `--help` doc), but the post-fetch filter compared `coin.to_uppercase() != filter` — uppercasing the dex prefix too while the filter kept the prefix lowercase, so reduce-only TP/SL trigger orders on builder DEX coins were never returned. Switched to case-insensitive comparison. (Bug #7)
 
 ### v0.4.3 (2026-05-05)
 

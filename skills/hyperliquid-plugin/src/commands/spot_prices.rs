@@ -5,8 +5,9 @@ use crate::config::info_url;
 #[derive(Args)]
 pub struct SpotPricesArgs {
     /// Show price for a specific token (e.g. PURR, HYPE).
-    /// Omit to list all spot markets.
-    #[arg(long)]
+    /// Omit to list all spot markets. Accepts `--coin` as an alias for parity
+    /// with `spot-order` and `markets` parameter naming.
+    #[arg(long, alias = "coin")]
     pub token: Option<String>,
 
     /// Only show canonical markets (filters out non-canonical @N markets with no readable name)

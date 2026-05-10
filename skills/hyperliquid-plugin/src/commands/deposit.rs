@@ -79,8 +79,19 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         println!("{}", super::error_response("Amount must be greater than 0", "INVALID_ARGUMENT", "Provide a positive USDC amount with --amount."));
         return Ok(());
     }
+    // HL bridge has a hard minimum of $5 USDC. Smaller deposits are silently
+    // dropped (funds lost on the source chain). Reject up-front so we never
+    // sign-and-broadcast a transaction that loses user money.
     if args.amount < 5.0 {
-        eprintln!("WARNING: Minimum recommended deposit is $5 USDC. Amounts below $5 may not arrive.");
+        println!(
+            "{}",
+            super::error_response(
+                &format!("Deposit amount ${:.4} is below HL bridge minimum of $5 USDC", args.amount),
+                "DEPOSIT_BELOW_MIN",
+                "Hyperliquid's L1 bridge requires at least $5 USDC; smaller deposits are dropped (funds lost). Increase --amount to 5 or more.",
+            )
+        );
+        return Ok(());
     }
 
     // USDC has 6 decimals
