@@ -99,7 +99,7 @@ pub async fn run(args: MarketsArgs) -> anyhow::Result<()> {
 
     // Single-coin lookup short-circuits filters
     if let Some(coin) = args.coin.as_deref() {
-        return lookup_single(info, coin).await;
+        return lookup_single(info, coin, &mode).await;
     }
 
     match mode {
@@ -142,26 +142,122 @@ fn resolve_mode(ty: Option<&str>, dex: Option<&str>) -> Result<Mode, String> {
 
 // ---------- Single-coin lookup ----------
 
-async fn lookup_single(info: &str, coin: &str) -> anyhow::Result<()> {
-    // Spot first if no colon and not in any perp universe
+async fn lookup_single(info: &str, coin: &str, mode: &Mode) -> anyhow::Result<()> {
+    // Builder DEX market with explicit prefix ("xyz:CL") always wins over --type:
+    // user gave a fully-qualified coin, route directly.
     if coin.contains(':') {
-        // Builder DEX market: "xyz:CL"
         let (dex, _) = crate::api::parse_coin(coin);
         let dex = dex.unwrap_or_default();
         return lookup_perp(info, coin, Some(&dex)).await;
     }
 
-    // Try default perp first
-    let default_meta = get_meta_and_asset_ctxs_for_dex(info, None).await;
-    if let Ok(meta) = default_meta {
-        if let Some(entry) = find_perp_market(&meta, coin, None) {
-            print_perp_single("default", entry);
+    // No prefix → search where --type / --dex tells us to look. Previous behavior
+    // (always default-perp then spot) silently dropped builder-DEX matches when
+    // user passed `--type tradfi --coin NVDA`.
+    match mode {
+        Mode::Spot => lookup_spot(info, coin).await,
+        Mode::PerpDefault => {
+            // Default DEX → fallback to spot for backward compat
+            let default_meta = get_meta_and_asset_ctxs_for_dex(info, None).await;
+            if let Ok(meta) = default_meta {
+                if let Some(entry) = find_perp_market(&meta, coin, None) {
+                    print_perp_single("default", entry);
+                    return Ok(());
+                }
+            }
+            lookup_spot(info, coin).await
+        }
+        Mode::PerpDex(dex_name) => lookup_perp(info, coin, Some(dex_name)).await,
+        Mode::PerpBuilders { dedupe_crypto } => {
+            lookup_across_builders(info, coin, *dedupe_crypto).await
+        }
+        Mode::Outcome => {
+            // Outcome markets are looked up by their full outcome id, not by
+            // bare token names. Fall back to existing single-asset error path.
+            println!("{}", super::error_response(
+                &format!("Outcome lookup by --coin '{}' not supported; use `outcome-list` to discover markets", coin),
+                "MARKET_NOT_FOUND",
+                "Use `hyperliquid-plugin outcome-list` to enumerate outcomes, then trade with `outcome-buy --outcome <id>`.",
+            ));
+            Ok(())
+        }
+    }
+}
+
+/// Search across all HIP-3 builder DEXs in parallel for the first matching coin.
+/// `dedupe_crypto = true` (--type tradfi) skips a builder match if the bare
+/// symbol also exists on default DEX (e.g. xyz:BTC dedup'd because BTC is on
+/// default). When false (--type hip3) every builder match counts.
+async fn lookup_across_builders(
+    info: &str,
+    coin: &str,
+    dedupe_crypto: bool,
+) -> anyhow::Result<()> {
+    let registry = match fetch_perp_dexs(info).await {
+        Ok(r) => r,
+        Err(e) => return print_api_err(&e),
+    };
+
+    // crypto symbol set on default DEX, used only when dedupe_crypto is on.
+    let crypto_set: HashSet<String> = if dedupe_crypto {
+        get_meta_and_asset_ctxs_for_dex(info, None)
+            .await
+            .ok()
+            .as_ref()
+            .and_then(|m| m.as_array())
+            .and_then(|a| a.first())
+            .and_then(|m| m["universe"].as_array())
+            .map(|u| {
+                u.iter()
+                    .filter_map(|x| x["name"].as_str())
+                    .map(|s| s.to_uppercase())
+                    .collect()
+            })
+            .unwrap_or_default()
+    } else {
+        HashSet::new()
+    };
+
+    if dedupe_crypto && crypto_set.contains(&coin.to_uppercase()) {
+        // user said --type tradfi --coin BTC: BTC is a default-DEX crypto, not RWA
+        println!("{}", super::error_response(
+            &format!("'{}' is a crypto perp on default DEX, not a tradfi/RWA market. Use --type crypto (or no --type) to look up default-DEX coins.", coin),
+            "MARKET_NOT_FOUND",
+            "Run without --type for default DEX, or specify --coin <dex>:<symbol> to force a builder DEX lookup.",
+        ));
+        return Ok(());
+    }
+
+    // Parallel fetch every builder DEX's meta, take first match.
+    let futs: Vec<_> = registry
+        .iter()
+        .map(|d: &BuilderDex| {
+            let name = d.name.clone();
+            async move {
+                let meta = get_meta_and_asset_ctxs_for_dex(info, Some(&name))
+                    .await
+                    .ok();
+                (name, meta)
+            }
+        })
+        .collect();
+    let results = futures::future::join_all(futs).await;
+
+    for (dex_name, meta_opt) in results {
+        let Some(meta) = meta_opt else { continue };
+        if let Some(entry) = find_perp_market(&meta, coin, Some(dex_name.clone())) {
+            print_perp_single(&dex_name, entry);
             return Ok(());
         }
     }
 
-    // Fall back to spot
-    lookup_spot(info, coin).await
+    let preset = if dedupe_crypto { "tradfi" } else { "hip3" };
+    println!("{}", super::error_response(
+        &format!("Symbol '{}' not found on any builder DEX (--type {})", coin, preset),
+        "MARKET_NOT_FOUND",
+        "Run `hyperliquid-plugin markets --type tradfi` (no --coin) to list all RWA/equity markets, or use `--coin <dex>:<symbol>` if you know the DEX prefix.",
+    ));
+    Ok(())
 }
 
 async fn lookup_perp(info: &str, coin: &str, dex_opt: Option<&str>) -> anyhow::Result<()> {

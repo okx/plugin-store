@@ -191,21 +191,30 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     let mid_f = current_price.parse::<f64>().unwrap_or(0.0);
 
     // ─── Size: round to szDecimals, then auto-bump if notional < $10 ─────────
+    //
+    // HL enforces a $10 minimum notional on every perp/spot order; broadcasts
+    // below this revert with `Order must have minimum value of 10 USDC`.
+    // Previous logic bumped the size by exactly one tick which often still
+    // landed below $10 (e.g. NVDA @217.5 sz_decimals=3: 0.010→0.011 = $2.39).
+    // Compute the smallest size such that size*mid >= $10 directly.
     let sz_factor = 10_f64.powi(sz_decimals as i32);
     let mut size_rounded = (size_f * sz_factor).round() / sz_factor;
 
     if mid_f > 0.0 {
         let n = size_rounded * mid_f;
         if n > 0.0 && n < 10.0 {
-            let bumped = size_rounded + 1.0 / sz_factor;
+            // ceil(10 / mid * sz_factor) / sz_factor → smallest grid-aligned size with notional >= $10.
+            // Add small epsilon to mid for floating-point safety so we don't land
+            // exactly on $9.999999 due to rounding.
+            let min_size = (10.0 / mid_f * sz_factor).ceil() / sz_factor;
             eprintln!(
                 "[auto-adjust] size {} → {} to meet $10 minimum notional (${:.2} → ${:.2})",
                 fmt_size(size_rounded, sz_decimals),
-                fmt_size(bumped, sz_decimals),
+                fmt_size(min_size, sz_decimals),
                 n,
-                bumped * mid_f,
+                min_size * mid_f,
             );
-            size_rounded = bumped;
+            size_rounded = min_size;
         }
     }
     let size_str = fmt_size(size_rounded, sz_decimals);
@@ -295,25 +304,75 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         })
     });
 
-    // Gate: STOP if perp balance is clearly insufficient
+    // Gate: STOP if perp balance is clearly insufficient.
+    //
+    // Tip text differs sharply between default DEX and HIP-3 builder DEX. On a
+    // builder DEX, `b.perp` is the BUILDER DEX's clearinghouse balance (each is
+    // isolated by HIP-3 design); naively suggesting `deposit` would route funds
+    // into default DEX where they cannot back the order. Builder DEX users need
+    // either dex-transfer or `abstraction --set unified`.
+    //
+    // Also: HL bridge minimum is $5; deposit smaller amounts loses funds.
+    // Cap any `deposit` suggestion to `>= $5`.
+    const HL_BRIDGE_MIN_USD: f64 = 5.0;
     if let Some(ref b) = balances_opt {
         if b.perp < required_margin {
             let shortfall = required_margin - b.perp;
-            let tip = if b.spot >= shortfall {
-                format!(
-                    "Spot has enough USDC. Run: hyperliquid transfer --amount {:.2} --from spot",
-                    shortfall
+            let (error_code, tip) = if let Some(ref dex) = dex_opt {
+                let dex = dex.as_str();
+                let head = format!(
+                    "{} DEX has its own isolated clearinghouse (HIP-3) — funds on default DEX or other DEXs do NOT back orders here. Two options:",
+                    dex
+                );
+                let opt_a = "(A) Enable cross-DEX margin abstraction (one-time, then all DEXs share margin pool — this is HL Web UI's default behavior): `hyperliquid-plugin abstraction --set unified --confirm`".to_string();
+                let opt_b = if b.spot >= shortfall {
+                    format!(
+                        "(B) Move ${:.2} from spot via default DEX: `hyperliquid-plugin transfer --amount {:.2} --direction spot-to-perp --confirm` then `hyperliquid-plugin dex-transfer --to-dex {} --amount {:.2} --confirm`",
+                        shortfall, shortfall, dex, shortfall
+                    )
+                } else if b.arb >= shortfall.max(HL_BRIDGE_MIN_USD) {
+                    let bridge_amt = shortfall.max(HL_BRIDGE_MIN_USD);
+                    format!(
+                        "(B) Bridge ${:.2} from Arbitrum (HL bridge minimum is $5): `hyperliquid-plugin deposit --amount {:.2} --confirm` then `hyperliquid-plugin dex-transfer --to-dex {} --amount {:.2} --confirm`",
+                        bridge_amt, bridge_amt, dex, shortfall
+                    )
+                } else {
+                    format!(
+                        "(B) Liquid USDC across all wallets is ${:.2} — top up Arbitrum to ≥$5 first, then deposit + dex-transfer to {}. Spot USDH ${:.2} can be sold via `spot-order --coin USDH --side sell --type market --size <USDH amt>` (mind $10 min notional).",
+                        b.spot + b.arb,
+                        dex,
+                        0.0  // we don't have spot USDH in Balances struct; placeholder
+                    )
+                };
+                (
+                    "BUILDER_DEX_UNFUNDED",
+                    format!("{}\n{}\n{}", head, opt_a, opt_b),
                 )
-            } else if b.arb >= shortfall {
-                format!(
-                    "Arbitrum has enough USDC. Run: hyperliquid deposit --amount {:.2}",
-                    shortfall
+            } else if b.spot >= shortfall {
+                (
+                    "PERP_INSUFFICIENT_BALANCE",
+                    format!(
+                        "Spot has enough USDC. Run: `hyperliquid-plugin transfer --amount {:.2} --direction spot-to-perp --confirm`",
+                        shortfall
+                    ),
+                )
+            } else if b.arb >= shortfall.max(HL_BRIDGE_MIN_USD) {
+                let bridge_amt = shortfall.max(HL_BRIDGE_MIN_USD);
+                (
+                    "PERP_INSUFFICIENT_BALANCE",
+                    format!(
+                        "Arbitrum has enough USDC. Run: `hyperliquid-plugin deposit --amount {:.2} --confirm` (HL bridge minimum is $5; smaller deposits lose funds).",
+                        bridge_amt
+                    ),
                 )
             } else {
-                format!(
-                    "Total across all accounts: ${:.2}. Add ${:.2} more USDC (e.g. via `hyperliquid deposit`).",
-                    b.perp + b.spot + b.arb,
-                    shortfall
+                (
+                    "PERP_INSUFFICIENT_BALANCE",
+                    format!(
+                        "Total liquid USDC: ${:.2}. Need ${:.2} more. HL bridge minimum is $5 — smaller deposits lose funds.",
+                        b.perp + b.spot + b.arb,
+                        shortfall
+                    ),
                 )
             };
             println!(
@@ -321,6 +380,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 serde_json::to_string_pretty(&serde_json::json!({
                     "ok": false,
                     "error": "Insufficient perp balance",
+                    "error_code": error_code,
                     "notional_usd": format!("${:.2}", notional),
                     "estimated_leverage": format!("{}x", effective_leverage as u32),
                     "required_margin_est": format!("${:.4}", required_margin),

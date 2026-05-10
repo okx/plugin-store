@@ -68,7 +68,11 @@ pub async fn run(args: OrdersArgs) -> anyhow::Result<()> {
     for o in all_orders {
         let coin = o["coin"].as_str().unwrap_or("?");
         if let Some(ref filter) = coin_filter {
-            if coin.to_uppercase() != *filter {
+            // HL returns builder-DEX coins as "xyz:NVDA" (dex prefix lowercase,
+            // symbol uppercase). Filter was built the same way upstream, but
+            // earlier code did `coin.to_uppercase() != filter` which uppercases
+            // the dex prefix too → never matches. Use case-insensitive compare.
+            if !coin.eq_ignore_ascii_case(filter) {
                 continue;
             }
         }

@@ -154,10 +154,20 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         let approve_calldata = data["data"].as_str().unwrap_or("");
         let approve_value = parse_wei(data["value"].as_str().unwrap_or("0x0"));
 
-        // Skip if allowance is already sufficient
-        let existing = erc20_allowance(USDC_ARBITRUM, &wallet, approve_to, ARBITRUM_RPC)
-            .await
-            .unwrap_or(0);
+        // Skip if allowance is already sufficient.
+        // EVM-012: surface RPC errors instead of silent unwrap_or(0) — that turned
+        // a transient publicnode hiccup into an unnecessary re-approve.
+        let existing = match erc20_allowance(USDC_ARBITRUM, &wallet, approve_to, ARBITRUM_RPC).await {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", super::error_response(
+                    &format!("Failed to read USDC allowance for relay solver {}: {:#}", approve_to, e),
+                    "RPC_ERROR",
+                    "Public Arbitrum RPC may be limited; retry shortly.",
+                ));
+                return Ok(());
+            }
+        };
 
         if existing < usdc_units as u128 {
             eprintln!("Approving USDC to relay solver...");

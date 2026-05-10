@@ -2,6 +2,11 @@ use std::process::Command;
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Execute an EVM contract call via onchainos wallet contract-call.
 /// chain_id: the EVM chain (e.g. 42161 for Arbitrum).
 /// to: contract address.
@@ -29,6 +34,10 @@ pub fn wallet_contract_call(
     let mut args = vec![
         "wallet".to_string(),
         "contract-call".to_string(),
+        "--biz-type".to_string(),
+        BIZ_TYPE.to_string(),
+        "--strategy".to_string(),
+        STRATEGY.to_string(),
         "--chain".to_string(),
         chain_id.to_string(),
         "--to".to_string(),

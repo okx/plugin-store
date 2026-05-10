@@ -15,21 +15,41 @@ pub fn format_px(px: f64) -> String {
     s.to_string()
 }
 
-/// Round a price to the correct number of decimal places for a given coin,
-/// matching the Python SDK's round_to_sz_decimals(px, sz_decimals) logic.
-/// This rounds to `sz_decimals` significant figures.
+/// Round a price to HL's allowed precision.
 ///
-/// Example: ETH sz_decimals=4, price=2098.4 → 4 sig figs → round to 0 dp → "2098"
+/// HL spec: prices can have **up to 5 significant figures**, AND **no more
+/// than (MAX_DECIMALS - sz_decimals) decimal places** where MAX_DECIMALS is 6
+/// for perps. (Spot is 8, so passing perp-rounded prices through to spot is
+/// always safe.)
+///
+/// The previous implementation used `sig_figs = sz_decimals` which silently
+/// over-rounded high-priced HIP-3 markets — e.g. NVDA sz_decimals=3, mid
+/// 217.495 → 3 sig figs → "217" (an integer), losing 2pp of risk-management
+/// precision in TP/SL bracket prices. With 5 sig figs and the decimal-place
+/// cap, NVDA 217.495 keeps as "217.5", and user inputs like 212.06 stay as
+/// 212.06.
+///
+/// Examples (sig_figs=5, MAX=6):
+///   ETH  sz=4 px=2098.4   → 5sf,1dp → "2098.4"
+///   NVDA sz=3 px=217.495  → 5sf,2dp → "217.5"
+///   NVDA sz=3 px=212.06   → 5sf,2dp → "212.06"
+///   BTC  sz=5 px=93246.7  → 5sf,1dp → "93247"  (cap=1 wins over 5sf which→0dp)
+///   BIO  sz=0 px=0.032    → 5sf,6dp → "0.032"
 pub fn round_px(px: f64, sz_decimals: u32) -> String {
     if px == 0.0 {
         return "0".to_string();
     }
-    // Match Python SDK: f"{px:.{sz_decimals}g}" uses at minimum 1 significant figure.
-    // Without this, coins with sz_decimals=0 and price < 0.5 (e.g. BIO at $0.032)
-    // produce price="0" via px.round() → HL rejects with "Order has invalid price."
-    let sig_figs = sz_decimals.max(1);
+    const HL_PERP_MAX_DECIMALS: i32 = 6;
+    const SIG_FIGS: i32 = 5;
+
     let mag = px.abs().log10().floor() as i32;
-    let decimal_places = (sig_figs as i32) - mag - 1;
+    // 5 sig-figs decimal places: positive when |px| < 10^5, negative for big
+    // numbers that need rounding to higher integer multiples.
+    let sf_dp = SIG_FIGS - mag - 1;
+    // HL hard cap on decimal places.
+    let cap_dp = HL_PERP_MAX_DECIMALS - (sz_decimals as i32);
+    let decimal_places = sf_dp.min(cap_dp);
+
     let rounded = if decimal_places <= 0 {
         let factor = 10_f64.powi(-decimal_places);
         (px / factor).round() * factor
@@ -37,9 +57,6 @@ pub fn round_px(px: f64, sz_decimals: u32) -> String {
         let factor = 10_f64.powi(decimal_places);
         (px * factor).round() / factor
     };
-    // For integer results (decimal_places ≤ 0), return as-is — no trimming to avoid
-    // stripping significant zeros (e.g. "2100" → "21" if trimmed).
-    // For decimal results, trim trailing zeros after the decimal point.
     if decimal_places <= 0 {
         format!("{:.0}", rounded)
     } else {
