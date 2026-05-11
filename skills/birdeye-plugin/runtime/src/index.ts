@@ -2,6 +2,54 @@ import { birdeyeGet, resolveMode } from './client.js';
 import { APIKEY_ENDPOINTS, type EndpointDef } from './endpoints-apikey.js';
 import { filterX402 } from './endpoints-x402.js';
 
+const SAFE_FIELDS: Record<string, string[]> = {
+  price: ['address', 'value', 'updateUnixTime'],
+  token_overview: ['address', 'symbol', 'name', 'price', 'liquidity', 'marketCap'],
+  token_security: ['address', 'top10HolderPercent', 'totalSupply', 'isOnAllowList'],
+  token_trending: ['address', 'symbol', 'name', 'price', 'liquidity', 'marketCap', 'rank'],
+  price_volume_single: ['address', 'price', 'volume24h'],
+  historical_price_unix: ['address', 'value', 'updateUnixTime'],
+  history_price: ['items'],
+  search_v3: ['items'],
+  token_list_v3: ['items'],
+  token_meme_list_v3: ['items'],
+  token_meta_data_single_v3: ['address', 'symbol', 'name', 'decimals', 'logoURI'],
+  token_market_data_v3: ['address', 'price', 'liquidity', 'marketCap'],
+  token_holder_v3: ['items'],
+  token_txs_v3: ['items'],
+  ohlcv_v3: ['items'],
+  ohlcv_pair_v3: ['items'],
+  price_stats_single_v3: ['address', 'priceChangePercent', 'volumeChangePercent'],
+  new_listing_v2: ['items'],
+  top_traders_v2: ['items'],
+  markets_v2: ['items'],
+  trader_gainers_losers: ['items'],
+  smart_money_list: ['items'],
+  holder_distribution: ['items'],
+};
+
+function pickFields(value: unknown, fields: string[]): unknown {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  const obj = value as Record<string, unknown>;
+  for (const k of fields) if (k in obj) out[k] = obj[k];
+  return out;
+}
+
+function sanitizeResponse(endpointKey: string, data: unknown): unknown {
+  const safe = SAFE_FIELDS[endpointKey];
+  if (!safe) {
+    throw new Error(`No safe output whitelist for endpoint: ${endpointKey}`);
+  }
+  if (typeof data !== 'object' || data === null) return data;
+  const root = data as Record<string, unknown>;
+  if ('data' in root) {
+    return { success: root.success, data: pickFields(root.data, safe) };
+  }
+  return pickFields(root, safe);
+}
+
 function arg(name: string, fallback = ''): string {
   const i = process.argv.indexOf(`--${name}`);
   if (i === -1 || i + 1 >= process.argv.length) return fallback;
@@ -52,7 +100,8 @@ async function runCall(endpointKey: string, chain: string, params: Record<string
   if (!ep) throw new Error(`Endpoint not available in mode=${mode}: ${endpointKey}`);
   ensureRequired(ep, params);
   const data = await birdeyeGet(ep.path, params, chain);
-  console.log(JSON.stringify(data, null, 2));
+  const filtered = sanitizeResponse(endpointKey, data);
+  console.log(JSON.stringify(filtered, null, 2));
 }
 
 async function main() {

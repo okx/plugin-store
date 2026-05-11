@@ -64,14 +64,13 @@ async function main(): Promise<void> {
           ),
         }));
 
-        let state = loadState(stateFile);
+        let nextState = loadState(stateFile);
         for (const tx of txs) {
           const amount = parseUsdcAmountFromMessageBytes(tx.messageBytes);
-          state = checkAndRecord(state, amount, maxDaily);
+          nextState = checkAndRecord(nextState, amount, maxDaily);
         }
-        saveState(stateFile, state);
-
         const signed = await signer.signTransactions(txs as never);
+        saveState(stateFile, nextState);
         const out = signed.map((dict) =>
           Object.fromEntries(
             Object.entries(dict).map(([addr, sig]) => [addr, Buffer.from(sig as Uint8Array).toString('base64')]),
