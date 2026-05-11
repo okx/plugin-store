@@ -248,3 +248,87 @@ Every data point in Smart-TradeX comes from OnchainOS:
 - Leaderboard tracking: onchainos leaderboard
 
 No external APIs are used. OnchainOS is the single source of truth for all data and all transactions in this skill.
+
+## Command Output Examples
+
+### onchainos signal list --chain solana
+Example output:
+[
+{
+"tokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+"tokenSymbol": "BONK",
+"buyCount": 12,
+"totalBuyAmountUsd": "45000",
+"topWallets": ["0xabc...", "0xdef..."],
+"signalStrength": "strong"
+}
+]
+What to do: Pick tokens with buyCount above 5 and signalStrength of "strong".
+
+### onchainos security token-scan --address TOKEN --chain solana
+Example output:
+{
+"securityScore": 85,
+"isHoneypot": false,
+"liquidityLocked": true,
+"contractVerified": true,
+"rugRisk": "low"
+}
+What to do: Only proceed if securityScore is above 70 and isHoneypot is false.
+
+### onchainos market price --address TOKEN --chain solana
+Example output:
+{
+"price": "0.00245",
+"priceChange24h": "+12.5%",
+"volume24h": "2500000",
+"marketCap": "45000000"
+}
+What to do: Warn user if priceChange24h is above +50%. Present all data before asking for confirmation.
+
+### onchainos wallet balance --chain solana
+Example output:
+{
+"totalValueUsd": "150.00",
+"tokens": [
+{"symbol": "USDC", "balance": "100.00"},
+{"symbol": "SOL", "balance": "0.5"}
+]
+}
+What to do: Confirm user has enough USDC for the trade amount before proceeding.
+
+### onchainos swap quote --from USDC --to TOKEN --amount 20 --chain solana
+Example output:
+{
+"fromAmount": "20",
+"fromToken": "USDC",
+"toAmount": "8163.26",
+"toToken": "BONK",
+"priceImpact": "0.12%",
+"route": "USDC -> SOL -> BONK",
+"estimatedFee": "0.02 SOL"
+}
+What to do: Warn user if priceImpact is above 5%. Always show full quote before confirmation.
+
+### onchainos swap swap --from USDC --to TOKEN --amount 20 --chain solana --slippage 1
+Example output:
+{
+"txHash": "5KtRk...",
+"fromAmount": "20",
+"toAmount": "8100.00",
+"executedPrice": "0.00247",
+"status": "success"
+}
+What to do: Save executedPrice as entry price for stop-loss monitoring. Show txHash to user as confirmation.
+
+### onchainos leaderboard list --chain solana
+Example output:
+[
+{
+"walletAddress": "7xKX...",
+"pnl30d": "+245%",
+"winRate": "78%",
+"totalTrades": 156
+}
+]
+What to do: Use top wallets from leaderboard to cross-reference with signal list for stronger copy trade confidence.
