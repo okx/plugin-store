@@ -180,3 +180,71 @@ The following phrases should activate this skill:
 - Basic swaps without copy trading intent (use okx-dex-swap instead)
 - Portfolio checks only (use okx-wallet-portfolio instead)
 - Security scans only (use okx-security instead)
+
+## Concrete Examples
+
+### Example 1: Find and copy a whale trade on Solana
+
+Step 1 - Get signals:
+onchainos signal list --chain solana
+
+Step 2 - Pick the top token from results, then scan it:
+onchainos security token-scan --address EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v --chain solana
+
+Step 3 - Check market data:
+onchainos market price --address EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v --chain solana
+
+Step 4 - Check your balance:
+onchainos wallet balance --chain solana
+
+Step 5 - Get swap quote for 20 USDC:
+onchainos swap quote --from USDC --to EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v --amount 20 --chain solana
+
+Step 6 - Show summary and ask user to confirm
+Step 7 - Execute after confirmation:
+onchainos swap swap --from USDC --to EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v --amount 20 --chain solana --slippage 1
+
+### Example 2: Dry-run mode on X Layer
+
+Step 1 - Get signals:
+onchainos signal list --chain xlayer
+
+Step 2 - Security scan on top result:
+onchainos security token-scan --address 0x74b7f16337b8972027f6196a17a631ac6de26d22 --chain xlayer
+
+Step 3 - Market data:
+onchainos market price --address 0x74b7f16337b8972027f6196a17a631ac6de26d22 --chain xlayer
+
+Step 4 - Show [DRY-RUN] summary — no real trade executed
+Step 5 - Show what the trade would have returned
+
+### Example 3: Stop-loss monitoring after a trade
+
+After executing a swap, monitor the position every 5 minutes:
+onchainos market price --address TOKEN_ADDRESS --chain solana
+
+If price drops 15% below entry:
+- Alert the user immediately
+- Ask: "Price has dropped 15% below your entry. Do you want to exit this position? (yes/no)"
+- Only sell if user confirms:
+onchainos swap swap --from TOKEN_ADDRESS --to USDC --amount FULL_POSITION --chain solana --slippage 2
+
+### Example 4: Check leaderboard for top traders to follow
+
+onchainos leaderboard list --chain solana
+onchainos signal list --chain solana
+
+Use leaderboard to identify top performing wallets, then use signal list to see what those wallets are currently buying.
+
+## Why OnchainOS is the Core
+
+Every data point in Smart-TradeX comes from OnchainOS:
+- Signal detection: onchainos signal
+- Security verification: onchainos security
+- Price and chart data: onchainos market
+- Balance checks: onchainos wallet and onchainos portfolio
+- Trade execution: onchainos swap
+- Position monitoring: onchainos market
+- Leaderboard tracking: onchainos leaderboard
+
+No external APIs are used. OnchainOS is the single source of truth for all data and all transactions in this skill.
