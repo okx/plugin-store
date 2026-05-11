@@ -1,0 +1,22 @@
+schema_version: 1
+name: smart-tradex
+version: "1.0.0"
+description: "AI-powered smart money copy trader with safety checks, stop-loss, and dry-run mode for Solana and X Layer"
+author:
+  name: "Kane"
+  github: "comzzy-comzzy"
+license: MIT
+category: trading-strategy
+tags:
+  - trading
+  - copy-trade
+  - smart-money
+  - solana
+  - safety
+  - stop-loss
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []

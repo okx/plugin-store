@@ -1,0 +1,10 @@
+{
+  "name": "smart-tradex",
+  "description": "AI-powered smart money copy trader with safety checks, stop-loss, and dry-run mode for Solana and X Layer",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kane"
+  },
+  "license": "MIT",
+  "keywords": ["trading", "copy-trade", "smart-money", "solana", "safety"]
+}
