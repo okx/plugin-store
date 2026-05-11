@@ -153,3 +153,30 @@ Stop-loss logic:
 - For token security only, use okx-security skill
 - For simple swaps without copy trading, use okx-dex-swap skill
 - For market data only, use okx-dex-market skill
+
+## Trigger Keywords
+
+The following phrases should activate this skill:
+
+- "copy trade"
+- "follow smart money"
+- "whale copy"
+- "copy whale trades"
+- "smart money signals"
+- "follow whale wallet"
+- "auto copy trade"
+- "mirror trade"
+- "copy successful traders"
+- "trade like whales"
+- "follow top traders"
+- "smart tradex"
+- "start copy trading"
+- "find whale signals"
+- "what are whales buying"
+
+## Do NOT trigger for
+
+- Simple token price checks (use okx-dex-market instead)
+- Basic swaps without copy trading intent (use okx-dex-swap instead)
+- Portfolio checks only (use okx-wallet-portfolio instead)
+- Security scans only (use okx-security instead)
