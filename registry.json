@@ -72,7 +72,12 @@
         "name": "Clawvard"
       },
       "category": "utility",
-      "tags": [],
+      "tags": [
+        "ai-agent",
+        "evaluation",
+        "benchmark",
+        "skill"
+      ],
       "type": "official",
       "components": {
         "skill": {
@@ -916,8 +921,8 @@
       },
       "category": "utility",
       "tags": [
-        "defi",
-        "ranking"
+        "web3",
+        "crypto"
       ],
       "type": "official",
       "components": {
@@ -1015,8 +1020,11 @@
       },
       "category": "utility",
       "tags": [
-        "ethereum",
-        "defi"
+        "defi",
+        "crypto",
+        "analytics",
+        "tokens",
+        "yield"
       ],
       "type": "official",
       "components": {
