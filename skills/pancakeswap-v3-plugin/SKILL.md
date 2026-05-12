@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-v3-plugin
 description: "Swap tokens and manage liquidity on PancakeSwap V3 on Ethereum, BNB Chain, Base, Arbitrum, and Linea"
-version: "1.0.5"
+version: "1.0.6"
 author: "GeoGu360"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="1.0.5"
+LOCAL_VER="1.0.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -134,17 +134,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.5/pancakeswap-v3-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-v3-plugin@1.0.6"
+curl -fsSL "${RELEASE_BASE}/pancakeswap-v3-plugin-${TARGET}${EXT}" -o "$BIN_TMP/pancakeswap-v3-plugin${EXT}" || {
+  echo "ERROR: failed to download pancakeswap-v3-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for pancakeswap-v3-plugin@1.0.6" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="pancakeswap-v3-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/pancakeswap-v3-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/pancakeswap-v3-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: pancakeswap-v3-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/pancakeswap-v3-plugin${EXT}" ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-v3-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "1.0.5" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
+echo "1.0.6" > "$HOME/.plugin-store/managed/pancakeswap-v3-plugin"
 ```
-
 
 ---
 
@@ -514,6 +537,4 @@ This command is read-only — no transactions, no gas. Default chain is BNB Chai
 ### v0.2.1 (2026-04-11)
 
 - **fix**: Surface RPC errors in `pools` command instead of silently showing `tick: 0` when a node rate-limits the request.
-
-
 

@@ -1,5 +1,10 @@
 /// Wrapper for `onchainos wallet contract-call` CLI.
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 pub async fn wallet_contract_call(
     chain_id: u64,
     to: &str,
@@ -30,6 +35,10 @@ pub async fn wallet_contract_call(
     let mut args = vec![
         "wallet",
         "contract-call",
+        "--biz-type",
+        BIZ_TYPE,
+        "--strategy",
+        STRATEGY,
         "--chain",
         &chain_str,
         "--to",

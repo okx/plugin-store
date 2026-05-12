@@ -775,17 +775,22 @@
     },
     {
       "name": "pancakeswap-v3-plugin",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "description": "Swap tokens and manage liquidity on PancakeSwap V3 on BNB Chain, Base, and Arbitrum",
       "author": {
         "name": "GeoGu360"
       },
-      "category": "utility",
+      "category": "trading",
       "tags": [
-        "ethereum",
-        "defi"
+        "dex",
+        "swap",
+        "liquidity",
+        "pancakeswap",
+        "bnb-chain",
+        "base",
+        "arbitrum"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -795,7 +800,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/pancakeswap-v3-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pancakeswap-v3-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pancakeswap-v3-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778222547",
       "extra": {
         "chains": [
           "ethereum",
