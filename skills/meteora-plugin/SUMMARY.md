@@ -6,7 +6,7 @@ Add concentrated liquidity to Meteora DLMM pools on Solana — earning fees only
 - onchainos agentic wallet connected
 - Some SOL for transaction fees
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your balances and active positions. `meteora-plugin quickstart`
    - If `status: no_funds` — fund your Solana wallet with SOL and optionally USDC first
    - If `status: needs_gas` — send at least 0.01 SOL to your wallet for transaction fees

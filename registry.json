@@ -529,16 +529,20 @@
     },
     {
       "name": "meteora-plugin",
-      "version": "0.3.8",
+      "version": "0.3.9",
       "description": "Meteora DLMM plugin for Solana — search liquidity pools, get swap quotes, view user positions, execute token swaps, add and remove liquidity",
       "author": {
         "name": "OKX"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
-        "solana"
+        "solana",
+        "dex",
+        "liquidity",
+        "dlmm",
+        "swap"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -548,7 +552,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/meteora-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meteora-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/meteora-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778561323",
       "extra": {
         "chains": [
           "solana",
