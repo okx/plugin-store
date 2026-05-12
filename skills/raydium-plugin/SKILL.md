@@ -4,7 +4,7 @@ description: "Raydium AMM plugin for token swaps, price queries, and pool info o
 license: MIT
 metadata:
   author: skylavis-sky
-  version: "0.2.1"
+  version: "0.2.2"
 ---
 
 
@@ -20,7 +20,7 @@ metadata:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/raydium-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.1"
+LOCAL_VER="0.2.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -129,17 +129,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/raydium-plugin@0.2.1/raydium-plugin-${TARGET}${EXT}" -o ~/.local/bin/.raydium-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/raydium-plugin@0.2.2"
+curl -fsSL "${RELEASE_BASE}/raydium-plugin-${TARGET}${EXT}" -o "$BIN_TMP/raydium-plugin${EXT}" || {
+  echo "ERROR: failed to download raydium-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for raydium-plugin@0.2.2" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="raydium-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/raydium-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/raydium-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: raydium-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/raydium-plugin${EXT}" ~/.local/bin/.raydium-plugin-core${EXT}
 chmod +x ~/.local/bin/.raydium-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/raydium-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.0" > "$HOME/.plugin-store/managed/raydium-plugin"
+echo "0.2.2" > "$HOME/.plugin-store/managed/raydium-plugin"
 ```
-
 
 ---
 
@@ -162,7 +185,7 @@ When a user signals they are **new or just installed** this plugin — e.g. "I j
    - `needs_gas` → guide user to top up SOL; they have USDC but need SOL for gas
    - `ready_sol_only` → wallet has SOL; suggest swapping SOL → USDC or another token
    - `ready` → wallet is funded; proceed to swap
-2. **Find a token to swap** — ask what tokens the user wants to trade. Help them find mint addresses using `raydium-plugin get-token-price --symbol <TOKEN>` or `raydium-plugin get-price --input-mint <MINT> --output-mint <MINT>`.
+2. **Find a token to swap** — ask what tokens the user wants to trade. Help them confirm mint addresses using `raydium-plugin get-token-price --mints <MINT>` (USD price) or `raydium-plugin get-price --input-mint <MINT> --output-mint <MINT>` (token-to-token ratio).
 3. **Get a quote first** — always run `raydium-plugin get-swap-quote` (or `swap` without `--confirm`) before executing. Show the user the `outputAmount`, `priceImpactPct`, and fees. Ask for explicit confirmation before proceeding.
 4. **Execute the swap** — only after the user confirms the quote details, re-run the `swap` command with `--confirm`.
 
@@ -386,6 +409,4 @@ raydium-plugin swap \
 - The `swap` command requires `--confirm` to execute on-chain. Without it, a quote preview is shown and the command exits safely.
 - Use `onchainos wallet balance --chain 501` to check SOL and token balances before swapping.
 - `--amount` accepts human-readable decimal values: `0.1` for 0.1 SOL, `1.5` for 1.5 USDC. The plugin resolves token decimals automatically (SOL=9, USDC=6; other SPL tokens fetched from Raydium mint API).
-
-
 

@@ -29,6 +29,9 @@ pub async fn run() -> Result<()> {
         onchainos::get_spl_token_balance(&wallet, USDC_MINT, SOLANA_RPC_URL),
     );
 
+    // Tolerate RPC errors silently — quickstart is a best-effort status probe,
+    // not a trading command. An RPC blip surfaces as "no_funds" and the user
+    // re-runs; cheaper than failing the whole onboarding flow.
     let lamports = sol_res.unwrap_or(0);
     let usdc_raw = usdc_res.unwrap_or(0);
 

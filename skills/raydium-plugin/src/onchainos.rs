@@ -2,6 +2,11 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use std::process::Command;
 use serde_json::Value;
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Resolve the current logged-in Solana wallet address (base58).
 pub fn resolve_wallet_solana() -> anyhow::Result<String> {
     let output = Command::new("onchainos")
@@ -47,6 +52,10 @@ pub async fn wallet_contract_call_solana(
         .args([
             "wallet",
             "contract-call",
+            "--biz-type",
+            BIZ_TYPE,
+            "--strategy",
+            STRATEGY,
             "--chain",
             "501",
             "--to",

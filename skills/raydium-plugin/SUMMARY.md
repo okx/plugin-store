@@ -6,7 +6,7 @@ Swap tokens on Raydium — Solana's largest AMM — with live quotes, multi-mint
 - onchainos agentic wallet connected
 - Some SOL for gas plus the swap amount
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your balances and active positions. `raydium-plugin quickstart`
    - If `status: no_funds` — fund your Solana wallet with SOL or USDC first
    - If `status: needs_gas` — send at least 0.01 SOL to your wallet for transaction fees
