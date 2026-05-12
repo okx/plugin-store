@@ -6,7 +6,7 @@ Low-slippage swaps and liquidity provision on Curve Finance — optimized for pe
 - onchainos agentic wallet connected
 - Some tokens on a supported chain — Ethereum (default), Arbitrum, Base, Polygon, or BSC
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your balances on the active chain. `curve-plugin quickstart`
    - If `status: no_funds` or `needs_gas` — fund your wallet with the native gas token first
    - If `status: needs_funds` — you have gas but no stablecoins; transfer USDC or USDT to your wallet

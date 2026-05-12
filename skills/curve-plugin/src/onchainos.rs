@@ -12,6 +12,11 @@ pub fn resolve_wallet(_chain_id: u64) -> anyhow::Result<String> {
 }
 
 /// Call onchainos wallet contract-call.
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// dry_run=true returns a simulated response without calling onchainos.
 /// NOTE: onchainos wallet contract-call does NOT support --dry-run.
 pub async fn wallet_contract_call(
@@ -36,6 +41,10 @@ pub async fn wallet_contract_call(
     let mut args: Vec<String> = vec![
         "wallet".to_string(),
         "contract-call".to_string(),
+        "--biz-type".to_string(),
+        BIZ_TYPE.to_string(),
+        "--strategy".to_string(),
+        STRATEGY.to_string(),
         "--chain".to_string(),
         chain_str.clone(),
         "--to".to_string(),
