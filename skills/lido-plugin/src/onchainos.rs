@@ -20,6 +20,11 @@ pub async fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
 
 /// dry_run=true: early return simulated response. Never pass --dry-run to onchainos.
 /// force=true: pass --force to onchainos to bypass confirmation prompts and actually broadcast.
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 pub async fn wallet_contract_call(
     chain_id: u64,
     to: &str,
@@ -41,6 +46,10 @@ pub async fn wallet_contract_call(
     let mut args = vec![
         "wallet",
         "contract-call",
+        "--biz-type",
+        BIZ_TYPE,
+        "--strategy",
+        STRATEGY,
         "--chain",
         &chain_str,
         "--to",

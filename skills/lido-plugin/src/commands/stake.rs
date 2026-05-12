@@ -42,13 +42,17 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     }
 
     // Pre-flight: check isStakingPaused()
+    // EVM-012: this is a safety gate — silent unwrap_or(0) would treat decode
+    // failure as "not paused" and let the user stake into a paused contract.
+    // Bail explicitly so the caller sees the failure mode.
     let paused_calldata = format!("0x{}", config::SEL_IS_STAKING_PAUSED);
     let paused_result = onchainos::eth_call(chain_id, config::STETH_ADDRESS, &paused_calldata).await?;
-    if let Ok(return_data) = rpc::extract_return_data(&paused_result) {
-        let val = rpc::decode_uint256(&return_data).unwrap_or(0);
-        if val != 0 {
-            anyhow::bail!("Lido staking is currently paused. Please try again later.");
-        }
+    let return_data = rpc::extract_return_data(&paused_result)
+        .map_err(|e| anyhow::anyhow!("Failed to read isStakingPaused() return data: {:#}", e))?;
+    let val = rpc::decode_uint256(&return_data)
+        .map_err(|e| anyhow::anyhow!("Failed to decode isStakingPaused() result: {:#}", e))?;
+    if val != 0 {
+        anyhow::bail!("Lido staking is currently paused. Please try again later.");
     }
 
     // Referral address (zero address if not specified)

@@ -6,7 +6,7 @@ Stake ETH on Ethereum mainnet and receive stETH — a liquid staking token that 
 - onchainos agentic wallet connected
 - Some ETH on Ethereum mainnet
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your ETH and stETH balances. `lido-plugin quickstart`
    - If `status: no_funds` — fund your wallet with ETH on Ethereum mainnet first
    - If `status: needs_gas` — send at least 0.005 ETH to your wallet for gas
