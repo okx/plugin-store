@@ -1,6 +1,6 @@
 schema_version: 1
 name: pancakeswap-v2-plugin
-version: "0.2.5"
+version: "0.2.6"
 description: "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair."
 author:
   name: skylavis-sky

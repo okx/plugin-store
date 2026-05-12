@@ -2,6 +2,11 @@
 use std::process::Command;
 use serde_json::Value;
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Query current logged-in wallet address via wallet addresses.
 pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
     let chain_str = chain_id.to_string();
@@ -47,6 +52,8 @@ pub async fn wallet_contract_call(
     let chain_str = chain_id.to_string();
     let mut args = vec![
         "wallet", "contract-call",
+        "--biz-type", BIZ_TYPE,
+        "--strategy", STRATEGY,
         "--chain", &chain_str,
         "--to", to,
         "--input-data", input_data,

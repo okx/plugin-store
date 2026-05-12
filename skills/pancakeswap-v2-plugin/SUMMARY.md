@@ -6,7 +6,7 @@ Swap tokens and manage liquidity on PancakeSwap V2's constant-product AMM (0.25%
 - onchainos agentic wallet connected
 - Some tokens on a supported chain — BSC (default), Base, or Arbitrum
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your balances on the active chain. `pancakeswap-v2-plugin quickstart`
    - If `status: no_funds` or `needs_gas` — fund your wallet with the native gas token first
    - If `status: needs_funds` — you have gas but no tokens; transfer tokens to your wallet or swap the native token
