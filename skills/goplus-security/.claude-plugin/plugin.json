@@ -1,0 +1,19 @@
+{
+  "name": "goplus-security",
+  "description": "Run read-only Web3 security checks with GoPlus Security APIs",
+  "version": "1.0.0",
+  "author": {
+    "name": "GoPlus Security"
+  },
+  "homepage": "https://gopluslabs.io",
+  "repository": "https://github.com/GoPlusSecurity/goplus-okx-plugin",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "goplus",
+    "token-risk",
+    "phishing",
+    "approval-risk",
+    "web3"
+  ]
+}
