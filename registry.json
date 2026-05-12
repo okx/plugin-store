@@ -171,17 +171,22 @@
     },
     {
       "name": "etherfi-plugin",
-      "version": "0.2.10",
+      "version": "0.2.11",
       "description": "Liquid restaking on Ethereum — deposit ETH to receive eETH, wrap eETH to weETH (ERC-4626), and check positions with APY",
       "author": {
         "name": "GeoGu360"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
+        "liquid-staking",
+        "restaking",
+        "eigenlayer",
+        "eeth",
+        "weeth",
         "ethereum",
-        "defi"
+        "erc4626"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -191,7 +196,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/etherfi-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/etherfi-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/etherfi-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778222547",
       "extra": {
         "chains": [
           "ethereum",

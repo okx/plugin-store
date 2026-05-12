@@ -1,6 +1,11 @@
 use std::process::Command;
 use serde_json::Value;
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Poll onchainos wallet history until txStatus is SUCCESS or FAILED (or 90s timeout).
 /// Uses spawn_blocking so Command::output() doesn't block the Tokio runtime thread.
 pub async fn wait_for_tx(tx_hash: String, wallet_addr: String) -> anyhow::Result<()> {
@@ -116,6 +121,10 @@ pub async fn wallet_contract_call(
     let mut args = vec![
         "wallet",
         "contract-call",
+        "--biz-type",
+        BIZ_TYPE,
+        "--strategy",
+        STRATEGY,
         "--chain",
         &chain_str,
         "--to",

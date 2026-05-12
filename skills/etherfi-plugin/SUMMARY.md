@@ -6,7 +6,7 @@ Liquid restake ETH on Ethereum to receive eETH — earning staking rewards and E
 - onchainos agentic wallet connected
 - Some ETH on Ethereum mainnet
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your ETH and eETH/weETH balances. `etherfi-plugin quickstart`
    - If `status: no_funds` — fund your wallet with ETH on Ethereum mainnet first
    - If `status: needs_gas` — send at least 0.005 ETH to your wallet for gas
