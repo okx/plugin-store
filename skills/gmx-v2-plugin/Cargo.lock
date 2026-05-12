@@ -1027,7 +1027,7 @@ dependencies = [
 
 [[package]]
 name = "gmx-v2-plugin"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",

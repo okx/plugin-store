@@ -1,7 +1,7 @@
 ---
 name: gmx-v2-plugin
 description: "Trade perpetuals and spot on GMX V2 — open/close leveraged positions, place limit/stop orders, add/remove GM pool liquidity, query markets and positions. Trigger phrases: open position GMX, close position GMX, GMX trade, GMX leverage, GMX liquidity, deposit GM pool, withdraw GM pool, GMX stop loss, GMX take profit, cancel order GMX, claim funding fees GMX."
-version: "0.2.6"
+version: "0.2.7"
 author: "GeoGu360"
 tags:
   - perpetuals
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/gmx-v2-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.6"
+LOCAL_VER="0.2.7"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -134,17 +134,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2-plugin@0.2.6/gmx-v2-plugin-${TARGET}${EXT}" -o ~/.local/bin/.gmx-v2-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/gmx-v2-plugin@0.2.7"
+curl -fsSL "${RELEASE_BASE}/gmx-v2-plugin-${TARGET}${EXT}" -o "$BIN_TMP/gmx-v2-plugin${EXT}" || {
+  echo "ERROR: failed to download gmx-v2-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for gmx-v2-plugin@0.2.7" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="gmx-v2-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/gmx-v2-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/gmx-v2-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: gmx-v2-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/gmx-v2-plugin${EXT}" ~/.local/bin/.gmx-v2-plugin-core${EXT}
 chmod +x ~/.local/bin/.gmx-v2-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/gmx-v2-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.6" > "$HOME/.plugin-store/managed/gmx-v2-plugin"
+echo "0.2.7" > "$HOME/.plugin-store/managed/gmx-v2-plugin"
 ```
-
 
 ---
 
@@ -607,7 +630,6 @@ gmx-v2 --chain arbitrum open-position \
 # 5. Check position was created (wait ~30s for keeper)
 gmx-v2 --chain arbitrum get-positions
 ```
-
 
 ## Changelog
 
