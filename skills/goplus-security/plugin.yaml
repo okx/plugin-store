@@ -1,0 +1,25 @@
+schema_version: 1
+name: goplus-security
+version: "1.0.0"
+description: "Run read-only Web3 security checks with GoPlus Security APIs"
+author:
+  name: "GoPlus Security"
+  github: "0xbeekeeper"
+license: MIT
+category: security
+tags:
+  - security
+  - goplus
+  - token-risk
+  - phishing
+  - approval-risk
+  - web3
+type: "dapp-official"
+github_link: "https://github.com/GoPlusSecurity/goplus-okx-plugin"
+
+components:
+  skill:
+    dir: "."
+
+api_calls:
+  - "api.gopluslabs.io"
