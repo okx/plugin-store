@@ -15,7 +15,7 @@ Birdeye multi-chain DeFi analytics plugin with dual live access mode:
 ## Requirements
 
 - For `apikey` mode: `BIRDEYE_API_KEY`
-- For `x402` mode: `SOLANA_PRIVATE_KEY` (base58 private key), wallet funded with USDC on Solana mainnet
+- For `x402` mode: key file `~/.birdeye/key` (base58 private key, mode 0600), wallet funded with USDC on Solana mainnet
 
 ## Commands
 

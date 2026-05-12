@@ -1,11 +1,27 @@
 ---
 name: birdeye-plugin
+version: 0.1.0
+author: Dat Dang
+tags:
+  - birdeye
+  - defi
+  - analytics
+  - solana
+  - x402
+  - evm
 description: Birdeye DeFi analytics with dual live access mode (apikey full coverage, x402 supported subset).
 ---
 
 # Birdeye Plugin Skill
 
-Use this skill for Birdeye token/market/holder/smart-money/trader data.
+Use this skill for end-to-end Birdeye analytics across real-time and historical intelligence, including token, market, price/volume, OHLCV, transaction flows (txs), holder structure, smart-money signals, and trader behavior data.
+
+## Overview
+
+This skill provides Birdeye data access with dual runtime modes: `apikey` for
+full endpoint coverage and `x402` for pay-per-request access on supported
+routes. It is designed for operational safety by enforcing filtered output
+fields and using an isolated signer subprocess for x402 payments.
 
 ## Quick start (apikey mode — recommended for most users)
 
