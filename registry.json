@@ -101,18 +101,20 @@
     },
     {
       "name": "compound-v3-plugin",
-      "version": "0.2.7",
+      "version": "0.2.8",
       "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards",
       "author": {
         "name": "skylavis-sky"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
-        "ethereum",
-        "signal",
-        "defi"
+        "lending",
+        "borrowing",
+        "defi",
+        "compound",
+        "comet"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -122,7 +124,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/compound-v3-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/compound-v3-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/compound-v3-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778562044",
       "extra": {
         "chains": [
           "ethereum",

@@ -24,7 +24,7 @@ pub async fn run(
         anyhow::bail!("Cannot resolve wallet address. Pass --from or log in via onchainos.");
     }
 
-    // BUG-5 pre-check: verify wallet has sufficient token balance before spending gas on approve
+    // Pre-check: verify wallet has sufficient token balance before spending gas on approve
     let wallet_token_balance = rpc::get_erc20_balance(asset, &wallet, cfg.rpc_url).await.unwrap_or(u128::MAX);
     if wallet_token_balance < amount {
         let decimals_factor = 10u128.pow(asset_decimals as u32) as f64;
