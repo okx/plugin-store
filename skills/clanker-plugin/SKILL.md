@@ -1,7 +1,7 @@
 ---
 name: clanker-plugin
 description: "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum. Trigger phrases: deploy token, launch token on Clanker, create token on Base, search Clanker tokens, list latest tokens, claim LP rewards, claim Clanker fees."
-version: "0.2.5"
+version: "0.2.6"
 author: "GeoGu360"
 tags:
   - token-launch
@@ -24,7 +24,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/clanker-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.5"
+LOCAL_VER="0.2.6"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -133,17 +133,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/clanker-plugin@0.2.5/clanker-plugin-${TARGET}${EXT}" -o ~/.local/bin/.clanker-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/clanker-plugin@0.2.6"
+curl -fsSL "${RELEASE_BASE}/clanker-plugin-${TARGET}${EXT}" -o "$BIN_TMP/clanker-plugin${EXT}" || {
+  echo "ERROR: failed to download clanker-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for clanker-plugin@0.2.6" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="clanker-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/clanker-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/clanker-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: clanker-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/clanker-plugin${EXT}" ~/.local/bin/.clanker-plugin-core${EXT}
 chmod +x ~/.local/bin/.clanker-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/clanker-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.5" > "$HOME/.plugin-store/managed/clanker-plugin"
+echo "0.2.6" > "$HOME/.plugin-store/managed/clanker-plugin"
 ```
-
 
 ---
 

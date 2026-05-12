@@ -41,16 +41,20 @@
     },
     {
       "name": "clanker-plugin",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
       "author": {
         "name": "GeoGu360"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
-        "trading"
+        "token-launch",
+        "meme",
+        "erc20",
+        "uniswap-v4",
+        "base"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -60,7 +64,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/clanker-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/clanker-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/clanker-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778222547",
       "extra": {
         "chains": [
           "base"

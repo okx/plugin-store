@@ -6,7 +6,7 @@ Deploy ERC-20 tokens on Base via Clanker's AI-native launchpad — each token is
 - onchainos agentic wallet connected
 - Some ETH on Base for deployment gas
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your ETH balance on the active chain (Base by default). `clanker-plugin quickstart`
    - If `status: no_funds` or `needs_funds` — bridge or send ETH to your wallet on the active chain
    - If `status: ready` — proceed below
