@@ -700,17 +700,21 @@
     },
     {
       "name": "pancakeswap-clmm-plugin",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "description": "PancakeSwap V3 CLMM farming plugin — stake LP NFTs into MasterChefV3, harvest CAKE rewards, collect swap fees across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions.",
       "author": {
         "name": "OKX"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
-        "ethereum",
-        "signal"
+        "dex",
+        "liquidity",
+        "clmm",
+        "farming",
+        "v3",
+        "pancakeswap"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -720,7 +724,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/pancakeswap-clmm-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pancakeswap-clmm-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pancakeswap-clmm-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778561862",
       "extra": {
         "chains": [
           "ethereum",

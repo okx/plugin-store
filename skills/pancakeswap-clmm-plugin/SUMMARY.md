@@ -7,7 +7,7 @@ Stake PancakeSwap V3 LP NFTs into MasterChefV3 to earn CAKE rewards on top of sw
 - A PancakeSwap V3 LP NFT (create one with `pancakeswap-v3-plugin`)
 - Native gas token in your wallet (BNB on BSC, ETH on Ethereum / Base / Arbitrum)
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your gas balance and existing positions. `pancakeswap-clmm-plugin quickstart`
    - If `status: needs_gas` — the quickstart checks your BSC wallet; send at least 0.005 BNB first. For other chains, ensure you have the native gas token (ETH on Ethereum / Base / Arbitrum)
    - If `status: ready` — proceed to view positions below

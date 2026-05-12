@@ -1,7 +1,7 @@
 ---
 name: pancakeswap-clmm-plugin
 description: "PancakeSwap V3 CLMM farming plugin. Stake V3 LP NFTs into MasterChefV3 to earn CAKE rewards, harvest CAKE, collect swap fees, and view positions across BSC, Ethereum, Base, and Arbitrum. Trigger phrases: stake LP NFT, farm CAKE, harvest CAKE rewards, collect fees, unfarm position, PancakeSwap farming, view positions."
-version: "0.1.8"
+version: "0.1.9"
 author: "skylavis-sky"
 tags:
   - dex
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/pancakeswap-clmm-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.8"
+LOCAL_VER="0.1.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -134,19 +134,43 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.8/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/pancakeswap-clmm-plugin@0.1.9"
+curl -fsSL "${RELEASE_BASE}/pancakeswap-clmm-plugin-${TARGET}${EXT}" -o "$BIN_TMP/pancakeswap-clmm-plugin${EXT}" || {
+  echo "ERROR: failed to download pancakeswap-clmm-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for pancakeswap-clmm-plugin@0.1.9" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="pancakeswap-clmm-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/pancakeswap-clmm-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/pancakeswap-clmm-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: pancakeswap-clmm-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/pancakeswap-clmm-plugin${EXT}" ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
 chmod +x ~/.local/bin/.pancakeswap-clmm-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/pancakeswap-clmm-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.8" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
+echo "0.1.9" > "$HOME/.plugin-store/managed/pancakeswap-clmm-plugin"
 ```
 
-
 ---
+
 
 ## Quickstart
 
@@ -511,5 +535,4 @@ pancakeswap-clmm-plugin --chain 56 positions --include-staked 12345,67890
 | Ethereum (1) | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0x556B9306565093C855AEA9AE92A594704c2Cd59e` |
 | Base (8453) | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0xC6A2Db661D5a5690172d8eB0a7DEA2d3008665A3` |
 | Arbitrum (42161) | `0x46A15B0b27311cedF172AB29E4f4766fbE7F4364` | `0x5e09ACf80C0296740eC5d6F643005a4ef8DaA694` |
-
 
