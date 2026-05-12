@@ -4,15 +4,20 @@
   "plugins": [
     {
       "name": "aave-v3-plugin",
-      "version": "0.2.7",
+      "version": "0.2.8",
       "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
       "author": {
         "name": "OKX"
       },
-      "category": "defi-protocol",
+      "category": "defi",
       "tags": [
-        "ethereum",
-        "defi"
+        "lending",
+        "borrowing",
+        "defi",
+        "earn",
+        "aave",
+        "collateral",
+        "health-factor"
       ],
       "type": "community-developer",
       "components": {
@@ -24,7 +29,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/aave-v3-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/aave-v3-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/aave-v3-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778561981",
       "extra": {
         "chains": [
           "ethereum",

@@ -6,7 +6,7 @@ Supply assets and borrow against collateral on Aave V3 across Ethereum, Base, Po
 - onchainos agentic wallet connected
 - Some tokens on a supported chain — Ethereum, Base (default), Polygon, or Arbitrum
 
-## How it Works
+## Quick Start
 1. **Check your wallet**: Get a personalised next step based on your balances and active positions. `aave-v3-plugin quickstart`
    - If `status: no_funds` or `needs_gas` — fund your wallet first
    - If `status: needs_funds` — you have gas but no assets to supply; add USDC or WETH to your wallet

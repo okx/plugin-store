@@ -2,6 +2,13 @@ use anyhow::Context;
 use serde_json::Value;
 use std::process::Command;
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend so analytics
+/// can group calls by source plugin. Source-of-truth for the plugin name is
+/// Cargo.toml's `[package]` `name` (resolved at compile time via `env!`), which
+/// stays in lockstep with `plugin.yaml.name` per the Phase 2 build invariant.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Build a base Command for onchainos, explicitly adding ~/.local/bin to PATH.
 fn base_cmd() -> Command {
     let mut cmd = Command::new("onchainos");
@@ -194,6 +201,10 @@ pub fn wallet_contract_call(
     let mut args: Vec<String> = vec![
         "wallet".to_string(),
         "contract-call".to_string(),
+        "--biz-type".to_string(),
+        BIZ_TYPE.to_string(),
+        "--strategy".to_string(),
+        STRATEGY.to_string(),
         "--chain".to_string(),
         chain_id.to_string(),
         "--to".to_string(),
@@ -234,6 +245,10 @@ pub fn wallet_contract_call_with_value(
     let mut args: Vec<String> = vec![
         "wallet".to_string(),
         "contract-call".to_string(),
+        "--biz-type".to_string(),
+        BIZ_TYPE.to_string(),
+        "--strategy".to_string(),
+        STRATEGY.to_string(),
         "--chain".to_string(),
         chain_id.to_string(),
         "--to".to_string(),

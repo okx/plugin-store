@@ -70,6 +70,24 @@ pub async fn run(
         (minimal, v.to_string())
     };
 
+    // Pre-flight: check wallet ERC-20 balance can cover the repay amount.
+    // Skip in dry-run (no real submission), and for --all (Aave only pulls the actual
+    // outstanding debt, which we cannot precisely price-check off-chain — let the on-chain
+    // call surface insufficient-balance reverts in that edge case).
+    if !dry_run && !all {
+        let token_balance = rpc::get_erc20_balance(&token_addr, &from_addr, cfg.rpc_url)
+            .await
+            .context("Failed to fetch token balance")?;
+        if token_balance < amount_minimal {
+            anyhow::bail!(
+                "Insufficient {} balance: need {:.6}, have {:.6}. Add funds to your wallet before repaying.",
+                asset,
+                amount_minimal as f64 / 10f64.powi(decimals as i32),
+                token_balance as f64 / 10f64.powi(decimals as i32),
+            );
+        }
+    }
+
     // Step 4: Check ERC-20 allowance for token → pool.
     // For --all (amount_minimal == u128::MAX), always approve with u128::MAX (unlimited)
     // so Aave can pull the full debt amount including last-second interest.
