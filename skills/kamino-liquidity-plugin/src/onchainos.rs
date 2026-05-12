@@ -4,6 +4,11 @@ use serde_json::Value;
 /// Native SOL mint sentinel used by onchainos for native SOL.
 const NATIVE_SOL_MINT: &str = "11111111111111111111111111111111";
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Return native SOL balance in UI units (e.g. 1.5 = 1.5 SOL). Returns 0.0 on failure.
 pub fn get_sol_balance() -> f64 {
     let output = Command::new("onchainos")
@@ -124,6 +129,10 @@ pub async fn wallet_contract_call_solana(
         .args([
             "wallet",
             "contract-call",
+            "--biz-type",
+            BIZ_TYPE,
+            "--strategy",
+            STRATEGY,
             "--chain",
             "501",
             "--to",
