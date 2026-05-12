@@ -277,17 +277,20 @@
     },
     {
       "name": "kamino-lend-plugin",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "description": "Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol",
       "author": {
         "name": "GeoGu360"
       },
-      "category": "utility",
+      "category": "defi",
       "tags": [
+        "lending",
+        "borrowing",
         "solana",
+        "kamino",
         "defi"
       ],
-      "type": "official",
+      "type": "community-developer",
       "components": {
         "skill": {
           "repo": "okx/plugin-store",
@@ -297,7 +300,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/kamino-lend-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/kamino-lend-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/kamino-lend-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778222547",
       "extra": {
         "chains": [
           "solana",

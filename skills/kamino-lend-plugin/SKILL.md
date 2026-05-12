@@ -1,6 +1,6 @@
 ---
 name: kamino-lend-plugin
-version: "0.1.4"
+version: "0.1.5"
 description: Supply, borrow, and manage positions on Kamino Lend — the leading Solana lending protocol
 author: GeoGu360
 ---
@@ -18,7 +18,7 @@ author: GeoGu360
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/kamino-lend-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.1.4"
+LOCAL_VER="0.1.5"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -127,17 +127,40 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.4/kamino-lend-plugin-${TARGET}${EXT}" -o ~/.local/bin/.kamino-lend-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+BIN_TMP=$(mktemp -d)
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/kamino-lend-plugin@0.1.5"
+curl -fsSL "${RELEASE_BASE}/kamino-lend-plugin-${TARGET}${EXT}" -o "$BIN_TMP/kamino-lend-plugin${EXT}" || {
+  echo "ERROR: failed to download kamino-lend-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for kamino-lend-plugin@0.1.5" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="kamino-lend-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/kamino-lend-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/kamino-lend-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: kamino-lend-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/kamino-lend-plugin${EXT}" ~/.local/bin/.kamino-lend-plugin-core${EXT}
 chmod +x ~/.local/bin/.kamino-lend-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/kamino-lend-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.1.4" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
+echo "0.1.5" > "$HOME/.plugin-store/managed/kamino-lend-plugin"
 ```
-
 
 ---
 
