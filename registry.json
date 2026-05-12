@@ -812,15 +812,18 @@
     },
     {
       "name": "pendle-plugin",
-      "version": "0.2.8",
+      "version": "0.2.9",
       "description": "Pendle Finance yield tokenization plugin — buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
       "author": {
         "name": "OKX"
       },
-      "category": "defi-protocol",
+      "category": "defi",
       "tags": [
-        "ethereum",
-        "trading"
+        "yield-trading",
+        "fixed-yield",
+        "pt",
+        "yt",
+        "liquidity"
       ],
       "type": "community-developer",
       "components": {
@@ -832,7 +835,7 @@
       "github_link": "https://github.com/okx/plugin-store/tree/main/skills/pendle-plugin",
       "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pendle-plugin/SKILL.md",
       "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/pendle-plugin/SUMMARY.md",
-      "modify_date": "1777030999",
+      "modify_date": "1778561901",
       "extra": {
         "chains": [
           "ethereum",

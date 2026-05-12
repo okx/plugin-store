@@ -1,5 +1,10 @@
 use serde_json::Value;
 
+/// `--biz-type` / `--strategy`: attribution to the onchainos backend.
+/// Source-of-truth for the plugin name is Cargo.toml's `[package]` `name`.
+const BIZ_TYPE: &str = "dapp";
+const STRATEGY: &str = env!("CARGO_PKG_NAME");
+
 /// Public RPC endpoints for supported chains — used by wait_for_tx.
 pub fn default_rpc_url(chain_id: u64) -> &'static str {
     match chain_id {
@@ -98,6 +103,10 @@ pub async fn wallet_contract_call(
     let mut args = vec![
         "wallet".to_string(),
         "contract-call".to_string(),
+        "--biz-type".to_string(),
+        BIZ_TYPE.to_string(),
+        "--strategy".to_string(),
+        STRATEGY.to_string(),
         "--chain".to_string(),
         chain_str,
         "--to".to_string(),

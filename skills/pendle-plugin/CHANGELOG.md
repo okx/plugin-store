@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.2.9 — 2026-05-12
+
+### Added
+
+- **Backend attribution**: `src/onchainos.rs` now defines `BIZ_TYPE = "dapp"` and
+  `STRATEGY = env!("CARGO_PKG_NAME")`, and `onchainos wallet contract-call` invocations
+  now pass `--biz-type / --strategy` so all write-path transactions (approvals + Pendle
+  router calls) are reported to the backend with `biz_type=dapp` and
+  `strategy=pendle-plugin`. Matches the shape used by hyperliquid / etherfi / curve /
+  morpho.
+
+### Changed
+
+- **Release hosting retargeted to mig-pre**: SKILL.md update-checker, launcher download,
+  plugin-store install, and the binary release URL now point at
+  `okx/plugin-store` instead of `okx/plugin-store`. The install script downloads
+  `pendle-plugin@0.2.9` from `okx/plugin-store` releases.
+
 ## v0.2.8 — 2026-04-21
 
 ### Added
