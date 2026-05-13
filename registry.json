@@ -40,41 +40,6 @@
       }
     },
     {
-      "name": "birdeye-plugin",
-      "version": "0.1.0",
-      "description": "Birdeye multi-chain DeFi analytics plugin with dual mode access: API key and x402 pay-per-request.",
-      "author": {
-        "name": "Dat Dang"
-      },
-      "category": "utility",
-      "tags": [
-        "birdeye",
-        "defi",
-        "analytics",
-        "solana",
-        "x402"
-      ],
-      "type": "official",
-      "components": {
-        "skill": {
-          "repo": "okx/plugin-store",
-          "dir": "skills/birdeye-plugin"
-        }
-      },
-      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/birdeye-plugin",
-      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/birdeye-plugin/SKILL.md",
-      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/birdeye-plugin/SUMMARY.md",
-      "modify_date": "1778599745",
-      "extra": {
-        "chains": [
-          "solana",
-          "base"
-        ],
-        "protocols": [],
-        "risk_level": "high"
-      }
-    },
-    {
       "name": "clanker-plugin",
       "version": "0.2.6",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",

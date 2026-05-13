@@ -16,15 +16,6 @@
       }
     },
     {
-      "name": "birdeye-plugin",
-      "description": "Birdeye multi-chain DeFi analytics plugin with dual mode access: API key and x402 pay-per-request.",
-      "source": "./skills/birdeye-plugin",
-      "category": "utility",
-      "author": {
-        "name": "Dat Dang"
-      }
-    },
-    {
       "name": "clanker-plugin",
       "description": "Deploy and manage Clanker ERC-20 tokens on Base and Arbitrum — launch tokens, search by creator, and claim LP fee rewards",
       "source": "./skills/clanker-plugin",
