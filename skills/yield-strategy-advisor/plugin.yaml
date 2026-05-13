@@ -1,0 +1,16 @@
+schema_version: 1
+name: yield-strategy-advisor
+version: 0.1.0
+description: Stablecoin yield strategy recommendations by risk tolerance, capital size, and chain preference. Suggests diversified allocations across 500+ DeFi protocols and 20+ CEX.
+author:
+  name: Barker
+  github: YBSbarker
+  email: partner@barker.money
+license: MIT
+
+components:
+  skill:
+    dir: "."
+category: analytics
+api_calls:
+  - api.barker.money

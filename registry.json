@@ -1460,6 +1460,35 @@
         "protocols": [],
         "risk_level": "high"
       }
+    },
+    {
+      "name": "yield-strategy-advisor",
+      "version": "0.1.0",
+      "description": "Stablecoin yield strategy recommendations by risk tolerance, capital size, and chain preference. Suggests diversified allocations across 500+ DeFi protocols and 20+ CEX.",
+      "author": {
+        "name": "Barker"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/yield-strategy-advisor"
+        }
+      },
+      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/yield-strategy-advisor",
+      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/yield-strategy-advisor/SKILL.md",
+      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/yield-strategy-advisor/SUMMARY.md",
+      "modify_date": "1778600160",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
     }
   ]
 }

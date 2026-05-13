@@ -392,6 +392,15 @@
       "author": {
         "name": "victorlee"
       }
+    },
+    {
+      "name": "yield-strategy-advisor",
+      "description": "Stablecoin yield strategy recommendations by risk tolerance, capital size, and chain preference. Suggests diversified allocations across 500+ DeFi protocols and 20+ CEX.",
+      "source": "./skills/yield-strategy-advisor",
+      "category": "utility",
+      "author": {
+        "name": "Barker"
+      }
     }
   ]
 }
