@@ -5,7 +5,7 @@ Sorin Skill routes DeFi questions about tokens, pools, chains, protocols, and pr
 ## Prerequisites
 
 - `DEFI_TOOLS_API_KEY` set in the environment.
-- Network access to `https://defi-tools-proxy.saharaa.info`.
+- Network access to `https://tools.saharaai.com/api`.
 - Required user inputs such as token symbol, protocol name, project name, chain name, or pool filters.
 
 ## Quick Start

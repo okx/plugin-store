@@ -19,4 +19,4 @@ components:
     dir: "."
 
 api_calls:
-  - defi-tools-proxy.saharaa.info
+  - tools.saharaai.com/api
