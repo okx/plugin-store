@@ -1113,6 +1113,36 @@
       }
     },
     {
+      "name": "stablecoin-chain-explorer",
+      "version": "0.1.0",
+      "description": "Explore stablecoin TVL and yield opportunities by blockchain. Compare cross-chain yields on Ethereum, BSC, Arbitrum, Base, Polygon, Optimism, Solana, and more.",
+      "author": {
+        "name": "Barker"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/stablecoin-chain-explorer"
+        }
+      },
+      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/stablecoin-chain-explorer",
+      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-chain-explorer/SKILL.md",
+      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-chain-explorer/SUMMARY.md",
+      "modify_date": "1778600160",
+      "extra": {
+        "chains": [
+          "solana",
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "starter-coach",
       "version": "1.0.0",
       "description": "Starter Coach V2 — conversational 6-step skill that guides users to build their own automated DEX spot-trading bot on OKX DEX. Onboard → Profile → Build Strategy → Paper Trade → Go Live. Uses OnchainOS CLI for all on-chain data and execution. No freeform trading code — emits validated JSON strategy specs.",
