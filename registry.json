@@ -1228,6 +1228,35 @@
       }
     },
     {
+      "name": "stablecoin-yield-radar",
+      "version": "0.1.0",
+      "description": "Real-time stablecoin yield APY rankings across 500+ DeFi protocols and 20+ CEX. Returns ranked APY, TVL, protocol, chain, and asset for USDT, USDC, DAI, USDe, and more.",
+      "author": {
+        "name": "Barker"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/stablecoin-yield-radar"
+        }
+      },
+      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/stablecoin-yield-radar",
+      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-yield-radar/SKILL.md",
+      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-yield-radar/SUMMARY.md",
+      "modify_date": "1778600160",
+      "extra": {
+        "chains": [
+          "ethereum",
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "starter-coach",
       "version": "1.0.0",
       "description": "Starter Coach V2 — conversational 6-step skill that guides users to build their own automated DEX spot-trading bot on OKX DEX. Onboard → Profile → Build Strategy → Paper Trade → Go Live. Uses OnchainOS CLI for all on-chain data and execution. No freeform trading code — emits validated JSON strategy specs.",
