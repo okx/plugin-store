@@ -1,0 +1,10 @@
+{
+  "name": "birdeye-plugin",
+  "version": "0.1.0",
+  "description": "Birdeye multi-chain DeFi analytics plugin with dual mode access: API key and x402 pay-per-request.",
+  "author": {
+    "name": "Dat Dang",
+    "github": "dangquocdat97"
+  },
+  "license": "MIT"
+}

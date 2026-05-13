@@ -1,0 +1,28 @@
+schema_version: 1
+name: birdeye-plugin
+version: "0.1.0"
+description: "Birdeye multi-chain DeFi analytics plugin with dual mode access: API key and x402 pay-per-request."
+author:
+  name: "Dat Dang"
+  github: "dangquocdat97"
+license: MIT
+category: analytics
+tags:
+  - birdeye
+  - defi
+  - analytics
+  - solana
+  - x402
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: node
+  source_dir: "runtime"
+  binary_name: "birdeye-plugin-runtime"
+  main: "src/index.ts"
+
+api_calls:
+  - public-api.birdeye.so
