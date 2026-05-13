@@ -1257,6 +1257,34 @@
       }
     },
     {
+      "name": "stablecoin-yield-vs-tradfi",
+      "version": "0.1.0",
+      "description": "Compare stablecoin DeFi and CEX yields against TradFi benchmarks - bank savings, money market funds, and US Treasury bills. Real-time crypto yields plus TradFi rates.",
+      "author": {
+        "name": "Barker"
+      },
+      "category": "utility",
+      "tags": [],
+      "type": "official",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/stablecoin-yield-vs-tradfi"
+        }
+      },
+      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/stablecoin-yield-vs-tradfi",
+      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-yield-vs-tradfi/SKILL.md",
+      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/stablecoin-yield-vs-tradfi/SUMMARY.md",
+      "modify_date": "1778600160",
+      "extra": {
+        "chains": [
+          "base"
+        ],
+        "protocols": [],
+        "risk_level": "medium"
+      }
+    },
+    {
       "name": "starter-coach",
       "version": "1.0.0",
       "description": "Starter Coach V2 — conversational 6-step skill that guides users to build their own automated DEX spot-trading bot on OKX DEX. Onboard → Profile → Build Strategy → Paper Trade → Go Live. Uses OnchainOS CLI for all on-chain data and execution. No freeform trading code — emits validated JSON strategy specs.",
