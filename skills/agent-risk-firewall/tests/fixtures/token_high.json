@@ -1,0 +1,37 @@
+{
+  "tokenScan": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": [
+        {
+          "chainId": "196",
+          "tokenAddress": "0x0000000000000000000000000000000000000002",
+          "riskLevel": "HIGH",
+          "isHoneypot": false,
+          "isLowLiquidity": false
+        }
+      ]
+    }
+  },
+  "tokenReport": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": [
+        {
+          "liquidityUsd": "250000",
+          "protocolName": "FixtureDEX"
+        }
+      ]
+    }
+  },
+  "txScan": {
+    "status": "skipped",
+    "reason": "No transaction context."
+  },
+  "simulation": {
+    "status": "skipped",
+    "reason": "No transaction context."
+  }
+}

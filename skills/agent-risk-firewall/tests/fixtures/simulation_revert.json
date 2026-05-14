@@ -1,0 +1,52 @@
+{
+  "tokenScan": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": [
+        {
+          "chainId": "196",
+          "tokenAddress": "0x0000000000000000000000000000000000000002",
+          "riskLevel": "LOW"
+        }
+      ]
+    }
+  },
+  "tokenReport": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": [
+        {
+          "liquidityUsd": "250000"
+        }
+      ]
+    }
+  },
+  "txScan": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": {
+        "action": "",
+        "riskItemDetail": [],
+        "simulator": {
+          "gasLimit": 21000,
+          "revertReason": null
+        }
+      }
+    }
+  },
+  "simulation": {
+    "status": "ok",
+    "data": {
+      "ok": true,
+      "data": {
+        "simulator": {
+          "success": false,
+          "revertReason": "execution reverted: TRANSFER_FAILED"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-risk-firewall"
+version = "1.1.0"
+description = "Pre-trade risk firewall for Agentic Wallet swaps on X Layer and Solana"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "Agent Risk Firewall Contributors" }
+]
+keywords = ["security", "risk", "agentic-wallet", "xlayer", "solana", "trading"]
+dependencies = []
+
+[project.scripts]
+agent-risk-firewall = "agent_risk_firewall.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
