@@ -1,0 +1,29 @@
+schema_version: 1
+name: xlayer-alpha-hunter
+version: "4.0.0"
+description: "X Layer Alpha Hunter — 聪明钱监控 + 自动交易 + 每日复盘。基于 SM 行为分析优化：只跟 SM:4+ 高置信度信号 + 币种质量过滤。"
+author:
+  name: hermes-agent
+  github: hole2020lqy
+category: defi-protocol
+tags:
+  - x-layer
+  - smart-money
+  - auto-trade
+  - alpha
+  - token-quality-filter
+  - onchainos
+  - daily-report
+  - trading
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+api_calls:
+  - "api.onchainthink.com"
+  - "openapi.okx.com"
+  - "api.coingecko.com"
+  - "api.llama.fi"
