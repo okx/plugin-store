@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-workflow-composer"
+version = "1.1.0"
+description = "Compose safe multi-plugin Agentic Wallet workflows before execution"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "Agent Workflow Composer Contributors" }
+]
+keywords = ["workflow", "agentic-wallet", "composer", "security", "risk", "trading"]
+dependencies = []
+
+[project.scripts]
+agent-workflow-composer = "agent_workflow_composer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

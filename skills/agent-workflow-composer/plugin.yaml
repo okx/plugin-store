@@ -1,0 +1,30 @@
+schema_version: 1
+name: agent-workflow-composer
+version: "1.1.0"
+description: "Compose safe multi-plugin Agentic Wallet workflows before execution"
+author:
+  name: "Agent Workflow Composer Contributors"
+  github: "maixuancanh"
+license: MIT
+category: utility
+tags:
+  - workflow
+  - agentic-wallet
+  - composer
+  - security
+  - risk
+  - trading
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: python
+  source_repo: maixuancanh/agent-risk-firewall
+  source_commit: "eb678ff62eed0c170085758ea4b22bb902b19f10"
+  binary_name: agent-workflow-composer
+  main: "src/agent_workflow_composer/cli.py"
+
+api_calls:
+  - web3.okx.com
