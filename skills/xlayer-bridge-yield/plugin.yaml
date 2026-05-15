@@ -1,0 +1,21 @@
+schema_version: 1
+name: xlayer-bridge-yield
+version: "1.0.0"
+description: "Bridge assets to X Layer and auto-optimize stablecoin yield farming with risk management"
+author:
+  name: "oliva9595"
+  github: "oliva9595"
+license: MIT
+category: defi-protocol
+tags:
+  - xlayer
+  - bridge
+  - yield
+  - stablecoin
+  - defi
+
+components:
+  skill:
+    dir: "."
+
+api_calls: []

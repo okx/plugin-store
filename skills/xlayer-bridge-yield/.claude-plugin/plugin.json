@@ -1,0 +1,10 @@
+{
+  "name": "xlayer-bridge-yield",
+  "description": "Bridge assets to X Layer and auto-optimize stablecoin yield farming with risk management",
+  "version": "1.0.0",
+  "author": {
+    "name": "oliva9595"
+  },
+  "license": "MIT",
+  "keywords": ["xlayer", "bridge", "yield", "stablecoin", "defi"]
+}
