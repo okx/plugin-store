@@ -1,7 +1,7 @@
 {
   "name": "agent-risk-firewall",
   "description": "Pre-trade risk firewall for Agentic Wallet swaps on X Layer and Solana",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": {
     "name": "Agent Risk Firewall Contributors"
   },

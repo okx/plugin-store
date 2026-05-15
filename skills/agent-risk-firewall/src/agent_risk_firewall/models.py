@@ -122,6 +122,7 @@ def validate_check_input(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[
     tx = payload.get("tx") if isinstance(payload.get("tx"), dict) else {}
     approval = payload.get("approval") if isinstance(payload.get("approval"), dict) else {}
     external_evidence = payload.get("externalEvidence") if isinstance(payload.get("externalEvidence"), dict) else {}
+    competition = payload.get("competition") if isinstance(payload.get("competition"), dict) else {}
 
     context: Dict[str, Any] = {
         "chain": chain,
@@ -136,6 +137,7 @@ def validate_check_input(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[
         "tx": tx,
         "approval": approval,
         "externalEvidence": external_evidence,
+        "competition": competition,
         "policyProfile": str(payload.get("policyProfile") or "balanced").strip().lower(),
     }
 

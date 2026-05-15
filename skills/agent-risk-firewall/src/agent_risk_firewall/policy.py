@@ -7,7 +7,7 @@ from .models import target_token
 
 
 VERDICT_PRIORITY = {"allow": 0, "warn": 1, "block": 2}
-POLICY_VERSION = "1.1.0"
+POLICY_VERSION = "1.2.0"
 MAX_UINT256 = Decimal(2) ** 256 - Decimal(1)
 
 
@@ -70,6 +70,15 @@ COMPETITION_POLICY = dict(
     priceImpactBlockPct=6,
     lowLiquidityUsd=25000,
     disallowStableNativeOnlyPair=True,
+    requireCompetitionContext=True,
+    disallowedPairClasses=[
+        "stable-stable",
+        "stable-native",
+        "stable-wrapped-native",
+        "native-native",
+        "native-wrapped-native",
+        "wrapped-native-wrapped-native",
+    ],
 )
 
 DEGEN_SMALL_SIZE_POLICY = dict(
@@ -140,11 +149,15 @@ def evaluate(
 
 
 def _evaluate_profile_rules(context: Dict[str, Any], policy: Dict[str, Any], reasons: List[Dict[str, Any]]) -> None:
+    if policy.get("profile") == "competition":
+        _evaluate_competition_context(context, policy, reasons)
     if not policy.get("disallowStableNativeOnlyPair"):
         return
     token_in = context.get("tokenIn") or {}
     token_out = context.get("tokenOut") or {}
-    if _is_stable_or_native(token_in) and _is_stable_or_native(token_out):
+    pair_class = _pair_class(token_in, token_out)
+    disallowed = _disallowed_pair_classes(context, policy)
+    if pair_class in disallowed:
         _add_reason(
             reasons,
             {
@@ -152,6 +165,151 @@ def _evaluate_profile_rules(context: Dict[str, Any], policy: Dict[str, Any], rea
                 "severity": "block",
                 "score": 87,
                 "message": "Competition profile blocks stablecoin/native-only pairs; use a real token trade.",
+            },
+        )
+
+
+def _evaluate_competition_context(context: Dict[str, Any], policy: Dict[str, Any], reasons: List[Dict[str, Any]]) -> None:
+    competition = context.get("competition") or {}
+    if not competition:
+        if policy.get("requireCompetitionContext"):
+            _add_reason(
+                reasons,
+                {
+                    "code": "COMPETITION_CONTEXT_MISSING",
+                    "severity": "warn",
+                    "score": 56,
+                    "message": "Competition profile needs competition detail and user-status context before trading.",
+                },
+            )
+        return
+
+    active = _competition_active(competition)
+    if active is False:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_INACTIVE",
+                "severity": "block",
+                "score": 90,
+                "message": "The selected competition is not active.",
+            },
+        )
+    elif active is None:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_STATUS_UNKNOWN",
+                "severity": "warn",
+                "score": 57,
+                "message": "Competition active status is missing; fetch competition detail before trading.",
+            },
+        )
+
+    joined = _competition_joined(competition)
+    if joined is False:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_NOT_JOINED",
+                "severity": "warn",
+                "score": 59,
+                "message": "Wallet is not registered for the selected competition; trade may not count.",
+            },
+        )
+    elif joined is None:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_JOIN_STATUS_UNKNOWN",
+                "severity": "warn",
+                "score": 56,
+                "message": "Competition join status is missing; fetch user-status before trading.",
+            },
+        )
+
+    supported_chains = _competition_supported_chains(competition)
+    chain = str(context.get("chain") or "").strip().lower()
+    if not supported_chains:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_CHAIN_CONTEXT_UNKNOWN",
+                "severity": "warn",
+                "score": 56,
+                "message": "Competition supported-chain context is missing; fetch competition detail before trading.",
+            },
+        )
+    elif chain not in supported_chains:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_CHAIN_UNSUPPORTED",
+                "severity": "block",
+                "score": 89,
+                "message": "Requested chain is not listed as supported by the competition context.",
+            },
+        )
+
+    token_in = context.get("tokenIn") or {}
+    token_out = context.get("tokenOut") or {}
+    pair_class = _pair_class(token_in, token_out)
+    if (
+        _truthy(competition.get("eligibleTokenTradeRequired"))
+        and not _pair_has_real_token(token_in, token_out)
+        and pair_class not in _disallowed_pair_classes(context, policy)
+    ):
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_PAIR_NOT_ELIGIBLE",
+                "severity": "block",
+                "score": 87,
+                "message": "Competition requires a token trade; stablecoin/native-only pairs are not enough.",
+            },
+        )
+
+    amount_usd = context.get("amountInUsd")
+    if isinstance(amount_usd, Decimal):
+        participation_min = _competition_decimal(
+            competition,
+            ["minParticipationUsd", "minimumParticipationUsd", "qualifyingVolumeUsd", "minTradeUsd"],
+        )
+        leaderboard_min = _competition_decimal(
+            competition,
+            ["minLeaderboardUsd", "minimumLeaderboardUsd", "rankQualifyingVolumeUsd"],
+        )
+        if participation_min is not None and amount_usd < participation_min:
+            _add_reason(
+                reasons,
+                {
+                    "code": "COMPETITION_VOLUME_BELOW_PARTICIPATION_MIN",
+                    "severity": "warn",
+                    "score": 55,
+                    "message": "Trade amount is below the competition participation threshold.",
+                },
+            )
+        if leaderboard_min is not None and amount_usd < leaderboard_min:
+            _add_reason(
+                reasons,
+                {
+                    "code": "COMPETITION_VOLUME_BELOW_LEADERBOARD_MIN",
+                    "severity": "warn",
+                    "score": 54,
+                    "message": "Trade amount may be below the competition leaderboard threshold.",
+                },
+            )
+
+    min_wallet_balance = _competition_decimal(competition, ["minWalletBalanceUsd", "minimumWalletBalanceUsd"])
+    wallet_value_usd = context.get("walletValueUsd") or _competition_decimal(competition, ["walletBalanceUsd", "walletValueUsd"])
+    if min_wallet_balance is not None and isinstance(wallet_value_usd, Decimal) and wallet_value_usd < min_wallet_balance:
+        _add_reason(
+            reasons,
+            {
+                "code": "COMPETITION_BALANCE_BELOW_MIN",
+                "severity": "warn",
+                "score": 55,
+                "message": "Wallet value appears below the competition minimum balance threshold.",
             },
         )
 
@@ -739,6 +897,7 @@ def _audit_context(context: Dict[str, Any]) -> Dict[str, Any]:
         "tx": context.get("tx"),
         "approval": context.get("approval"),
         "externalEvidence": context.get("externalEvidence"),
+        "competition": context.get("competition"),
     }
 
 
@@ -768,6 +927,178 @@ def _contains_address(values: Any, target_lower: str) -> bool:
     if not isinstance(values, list):
         return False
     return any(str(value).lower() == target_lower for value in values)
+
+
+def _competition_active(competition: Dict[str, Any]) -> Optional[bool]:
+    if "active" in competition:
+        return _optional_bool(competition.get("active"))
+    status = competition.get("activityStatus", competition.get("status"))
+    if status is None:
+        return None
+    text = str(status).strip().lower()
+    if text in ("3", "active", "live", "running", "open"):
+        return True
+    if text in ("4", "ended", "closed", "inactive", "expired", "finished"):
+        return False
+    return None
+
+
+def _competition_joined(competition: Dict[str, Any]) -> Optional[bool]:
+    if "joined" in competition:
+        return _optional_bool(competition.get("joined"))
+    user_status = competition.get("userStatus") if isinstance(competition.get("userStatus"), dict) else competition
+    if "joinStatus" in user_status:
+        return str(user_status.get("joinStatus")).strip() == "1"
+    return None
+
+
+def _competition_supported_chains(competition: Dict[str, Any]) -> List[str]:
+    supported: List[str] = []
+    raw_supported = competition.get("supportedChains")
+    if isinstance(raw_supported, str):
+        raw_supported = [raw_supported]
+    if isinstance(raw_supported, list):
+        supported.extend(_normalize_chain_alias(value) for value in raw_supported)
+
+    primary = (
+        competition.get("primaryChain")
+        or competition.get("chain")
+        or competition.get("chainName")
+        or competition.get("chainId")
+        or competition.get("chainIndex")
+    )
+    normalized_primary = _normalize_chain_alias(primary)
+    if normalized_primary:
+        supported.append(normalized_primary)
+        # OKX Agentic Trading competitions currently count both Solana and the backend primary chain.
+        supported.append("solana")
+
+    return _unique_chains(supported)
+
+
+def _competition_decimal(competition: Dict[str, Any], keys: Iterable[str]) -> Optional[Decimal]:
+    for key in keys:
+        if key in competition:
+            value = _to_decimal(competition.get(key))
+            if value is not None:
+                return value
+    return None
+
+
+def _normalize_chain_alias(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("_", "-")
+    aliases = {
+        "x-layer": "xlayer",
+        "x layer": "xlayer",
+        "xlayer": "xlayer",
+        "x layer mainnet": "xlayer",
+        "196": "xlayer",
+        "sol": "solana",
+        "solana": "solana",
+        "501": "solana",
+    }
+    return aliases.get(text, text)
+
+
+def _unique_chains(values: Iterable[str]) -> List[str]:
+    seen = set()
+    output = []
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        output.append(value)
+    return output
+
+
+def _optional_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "y", "active", "joined"):
+        return True
+    if text in ("0", "false", "no", "n", "inactive", "ended", "closed"):
+        return False
+    return None
+
+
+def _disallowed_pair_classes(context: Dict[str, Any], policy: Dict[str, Any]) -> List[str]:
+    competition = context.get("competition") if isinstance(context.get("competition"), dict) else {}
+    raw = competition.get("disallowedPairClasses") or policy.get("disallowedPairClasses") or []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return []
+    return [str(value).strip().lower() for value in raw if str(value).strip()]
+
+
+def _pair_class(token_a: Dict[str, Any], token_b: Dict[str, Any]) -> str:
+    left = _token_class(token_a)
+    right = _token_class(token_b)
+    if left == "unknown" or right == "unknown":
+        return "unknown"
+    ordered = sorted([left, right], key=lambda value: _pair_sort_order().get(value, 99))
+    return ordered[0] + "-" + ordered[1]
+
+
+def _pair_sort_order() -> Dict[str, int]:
+    return {
+        "stable": 0,
+        "native": 1,
+        "wrapped-native": 2,
+        "token": 3,
+        "unknown": 4,
+    }
+
+
+def _pair_has_real_token(token_a: Dict[str, Any], token_b: Dict[str, Any]) -> bool:
+    return _token_class(token_a) == "token" or _token_class(token_b) == "token"
+
+
+def _token_class(token: Dict[str, Any]) -> str:
+    if not isinstance(token, dict):
+        return "unknown"
+    symbol = str(token.get("symbol") or "").strip().upper()
+    address = str(token.get("address") or "").strip()
+    address_lower = address.lower()
+    native_addresses = {
+        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "11111111111111111111111111111111",
+    }
+    wrapped_native_addresses = {
+        "So11111111111111111111111111111111111111112",
+    }
+    stable_symbols = {
+        "USDC",
+        "USDT",
+        "DAI",
+        "USDE",
+        "USDS",
+        "USDG",
+        "PYUSD",
+        "FDUSD",
+        "TUSD",
+        "FRAX",
+        "XLAYER_USDT",
+        "USD0",
+    }
+    native_symbols = {"OKB", "SOL", "ETH", "BNB", "MATIC"}
+    wrapped_native_symbols = {"WOKB", "WSOL", "WETH", "WBNB", "WMATIC"}
+    if address_lower in native_addresses:
+        return "native"
+    if address in wrapped_native_addresses:
+        return "wrapped-native"
+    if symbol in stable_symbols:
+        return "stable"
+    if symbol in native_symbols:
+        return "native"
+    if symbol in wrapped_native_symbols:
+        return "wrapped-native"
+    if symbol or address:
+        return "token"
+    return "unknown"
 
 
 def _is_stable_or_native(token: Dict[str, Any]) -> bool:

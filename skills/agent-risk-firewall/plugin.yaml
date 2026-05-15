@@ -1,6 +1,6 @@
 schema_version: 1
 name: agent-risk-firewall
-version: "1.1.0"
+version: "1.2.0"
 description: "Pre-trade risk firewall for Agentic Wallet swaps on X Layer and Solana"
 author:
   name: "Agent Risk Firewall Contributors"
@@ -22,7 +22,7 @@ components:
 build:
   lang: python
   source_repo: maixuancanh/agent-risk-firewall
-  source_commit: "ca79c7b0137f57ac79fb057340e882217de66b9a"
+  source_commit: "eb678ff62eed0c170085758ea4b22bb902b19f10"
   binary_name: agent-risk-firewall
   main: "src/agent_risk_firewall/cli.py"
 

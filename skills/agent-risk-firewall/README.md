@@ -27,6 +27,7 @@ If OKX OnchainOS scan or simulation data is unavailable, the plugin treats verif
 - Low liquidity when liquidity data is available
 - Optional external evidence from GoPlus, Birdeye, and RootData
 - Approval spender and unlimited allowance risk
+- Competition context: active status, join status, supported chains, participation thresholds, and token-pair eligibility
 - Audit trail fields: `decisionId`, `policyVersion`, `evidenceHash`
 
 ## Commands
@@ -84,7 +85,19 @@ Use `--input -` to read JSON from stdin.
     "birdeye": {},
     "rootdata": {}
   },
-  "policyProfile": "balanced"
+  "competition": {
+    "activityName": "Selected Agentic Trading competition",
+    "active": true,
+    "joined": true,
+    "supportedChains": ["xlayer", "solana"],
+    "primaryChain": "xlayer",
+    "minParticipationUsd": 25,
+    "minLeaderboardUsd": 100,
+    "minWalletBalanceUsd": 100,
+    "eligibleTokenTradeRequired": true,
+    "disallowedPairClasses": ["stable-stable", "stable-native", "native-native", "native-wrapped-native"]
+  },
+  "policyProfile": "competition"
 }
 ```
 
@@ -100,8 +113,26 @@ Supported values:
 | --- | --- | --- |
 | `balanced` | Default retail agentic trading guardrail | Blocks critical risk and warns on elevated risk. |
 | `strict` | High-safety mode | Blocks unavailable scans, token `HIGH`, EOA spenders, and tighter slippage/price-impact limits. |
-| `competition` | OKX Agentic Trading style workflows | Tighter caps and blocks stablecoin/native-only pairs. |
+| `competition` | OKX Agentic Trading style workflows | Requires competition preflight context, blocks inactive or unsupported-chain trades, warns if not joined or below thresholds, and blocks stablecoin/native-only pairs. |
 | `degen-small-size` | Small meme-token experiments | Higher slippage tolerance with a hard 25 USD trade cap. |
+
+## Competition Mode Enhancer
+
+Use `policyProfile: "competition"` when an agent is trading for an OKX Agentic Trading competition. The agent should fetch competition detail and user-status first, then pass the normalized result as `competition`.
+
+Competition-specific outcomes:
+
+| Signal | Result |
+| --- | --- |
+| Missing competition context | `warn` |
+| Competition inactive or ended | `block` |
+| Requested chain not supported by the competition context | `block` |
+| Wallet not joined or join status unknown | `warn` |
+| Trade below participation, leaderboard, or minimum balance thresholds | `warn` |
+| Stablecoin/native-only pair such as USDC-USDT, OKB-USDT, SOL-WSOL | `block` |
+| Real token trade with active, joined, supported competition context | may `allow` if all other checks pass |
+
+Internal competition IDs may be used in tool-to-tool context, but should not be rendered in user-facing messages.
 
 ## Balanced Policy
 
@@ -134,7 +165,7 @@ python -m pytest .\skills\agent-risk-firewall\tests -q -p no:cacheprovider
 Expected results:
 
 ```text
-28 passed
+tests passed
 Plugin 'agent-risk-firewall' passed all checks
 ```
 

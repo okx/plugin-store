@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-risk-firewall"
-version = "1.1.0"
+version = "1.2.0"
 description = "Pre-trade risk firewall for Agentic Wallet swaps on X Layer and Solana"
 requires-python = ">=3.8"
 license = { text = "MIT" }

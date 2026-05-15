@@ -1,7 +1,7 @@
 ---
 name: agent-risk-firewall
 description: "Pre-trade risk firewall for Agentic Wallet swaps on X Layer and Solana"
-version: "1.1.0"
+version: "1.2.0"
 author: "Agent Risk Firewall Contributors"
 tags:
   - security
@@ -94,7 +94,19 @@ Required input shape:
     "birdeye": {},
     "rootdata": {}
   },
-  "policyProfile": "balanced"
+  "competition": {
+    "activityName": "Selected Agentic Trading competition",
+    "active": true,
+    "joined": true,
+    "supportedChains": ["xlayer", "solana"],
+    "primaryChain": "xlayer",
+    "minParticipationUsd": 25,
+    "minLeaderboardUsd": 100,
+    "minWalletBalanceUsd": 100,
+    "eligibleTokenTradeRequired": true,
+    "disallowedPairClasses": ["stable-stable", "stable-native", "native-native", "native-wrapped-native"]
+  },
+  "policyProfile": "competition"
 }
 ```
 
@@ -116,7 +128,7 @@ Output:
   "audit": {
     "decisionId": "arf_0123456789abcdef",
     "policyProfile": "balanced",
-    "policyVersion": "1.1.0",
+    "policyVersion": "1.2.0",
     "evidenceHash": "64-character-sha256"
   },
   "safeNextStep": "Show the warning reasons and ask the user for explicit confirmation before signing."
@@ -137,8 +149,34 @@ Use `policyProfile` to tune the firewall for the agent workflow:
 |---|---|---|
 | `balanced` | Default retail agentic trading guardrail | Blocks critical signals, warns on elevated slippage/price impact, allows normal safe trades. |
 | `strict` | High-safety mode for larger or less trusted workflows | Blocks unavailable scans, token `HIGH`, EOA spenders, and tighter slippage/price impact thresholds. |
-| `competition` | OKX Agentic Trading style workflows | Uses tighter caps and blocks stablecoin/native-only pairs so agents focus on real token trades. |
+| `competition` | OKX Agentic Trading style workflows | Requires competition preflight context, warns when registration or thresholds are incomplete, blocks inactive or unsupported-chain trades, and blocks stablecoin/native-only pairs. |
 | `degen-small-size` | Small-size meme/token exploration | Allows higher slippage/price impact but caps trade size at 25 USD and 3% wallet exposure. |
+
+## Competition Mode Enhancer
+
+For OKX Agentic Trading competition workflows, run the firewall with `policyProfile: "competition"` after the agent has fetched competition detail and user-status.
+
+The agent should pass a `competition` object with:
+
+- `active`: whether the competition is active.
+- `joined`: whether the wallet has registered.
+- `supportedChains`: normalized chains that count for the competition. Until OKX exposes a backend multi-chain field, agents should treat Solana plus the competition primary chain as supported.
+- `minParticipationUsd`, `minLeaderboardUsd`, `minWalletBalanceUsd`: thresholds parsed from competition rules when available.
+- `eligibleTokenTradeRequired`: `true` when stablecoin/native-only trades should not count as eligible competition trades.
+- `disallowedPairClasses`: pair classes such as `stable-stable`, `stable-native`, `native-native`, and `native-wrapped-native`.
+
+Competition verdict behavior:
+
+| Signal | Result |
+|---|---|
+| Missing competition context | `warn` |
+| Competition inactive or ended | `block` |
+| Requested chain not in `supportedChains` | `block` |
+| Wallet not joined, or join status missing | `warn` |
+| Trade amount or wallet value below competition thresholds | `warn` |
+| Stablecoin/native-only pair | `block` |
+
+Internal competition IDs can exist in tool context, but do not show them in user-facing messages.
 
 ## External Evidence
 

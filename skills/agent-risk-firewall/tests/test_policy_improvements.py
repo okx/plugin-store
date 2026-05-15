@@ -13,6 +13,7 @@ def payload(
     tx=None,
     approval=None,
     external_evidence=None,
+    competition=None,
     profile="balanced",
 ):
     base = {
@@ -44,6 +45,8 @@ def payload(
         base["approval"] = approval
     if external_evidence is not None:
         base["externalEvidence"] = external_evidence
+    if competition is not None:
+        base["competition"] = competition
     return base
 
 
@@ -102,6 +105,78 @@ def test_competition_profile_blocks_stable_native_only_pair():
     )
     assert result["verdict"] == "block"
     assert any(reason["code"] == "COMPETITION_PAIR_NOT_ELIGIBLE" for reason in result["reasons"])
+
+
+def test_competition_profile_warns_without_competition_context():
+    result = run(payload(profile="competition"))
+
+    assert result["verdict"] == "warn"
+    assert any(reason["code"] == "COMPETITION_CONTEXT_MISSING" for reason in result["reasons"])
+
+
+def test_competition_profile_blocks_inactive_competition():
+    result = run(payload(profile="competition", competition={"active": False, "joined": True, "supportedChains": ["xlayer"]}))
+
+    assert result["verdict"] == "block"
+    assert any(reason["code"] == "COMPETITION_INACTIVE" for reason in result["reasons"])
+
+
+def test_competition_profile_blocks_unsupported_chain():
+    result = run(payload(profile="competition", competition={"active": True, "joined": True, "supportedChains": ["solana"]}))
+
+    assert result["verdict"] == "block"
+    assert any(reason["code"] == "COMPETITION_CHAIN_UNSUPPORTED" for reason in result["reasons"])
+
+
+def test_competition_profile_warns_when_not_joined():
+    result = run(payload(profile="competition", competition={"active": True, "joined": False, "supportedChains": ["xlayer", "solana"]}))
+
+    assert result["verdict"] == "warn"
+    assert any(reason["code"] == "COMPETITION_NOT_JOINED" for reason in result["reasons"])
+
+
+def test_competition_profile_warns_below_competition_thresholds():
+    result = run(
+        payload(
+            profile="competition",
+            amount_usd=10,
+            wallet_value_usd=150,
+            competition={
+                "active": True,
+                "joined": True,
+                "chainName": "X Layer",
+                "minParticipationUsd": 25,
+                "minLeaderboardUsd": 100,
+                "minWalletBalanceUsd": 200,
+                "eligibleTokenTradeRequired": True,
+            },
+        )
+    )
+
+    assert result["verdict"] == "warn"
+    codes = {reason["code"] for reason in result["reasons"]}
+    assert "COMPETITION_VOLUME_BELOW_PARTICIPATION_MIN" in codes
+    assert "COMPETITION_VOLUME_BELOW_LEADERBOARD_MIN" in codes
+    assert "COMPETITION_BALANCE_BELOW_MIN" in codes
+
+
+def test_competition_profile_allows_real_token_trade_with_context():
+    result = run(
+        payload(
+            profile="competition",
+            amount_usd=10,
+            competition={
+                "active": True,
+                "joined": True,
+                "chainName": "X Layer",
+                "minParticipationUsd": 5,
+                "eligibleTokenTradeRequired": True,
+            },
+        )
+    )
+
+    assert result["verdict"] == "allow"
+    assert not any(reason["code"].startswith("COMPETITION_") for reason in result["reasons"])
 
 
 def test_degen_small_size_allows_higher_slippage_but_blocks_large_trade():
@@ -186,5 +261,5 @@ def test_audit_trail_is_deterministic_and_contains_hashes():
     second = run(request)
     assert first["audit"] == second["audit"]
     assert first["audit"]["decisionId"].startswith("arf_")
-    assert first["audit"]["policyVersion"] == "1.1.0"
+    assert first["audit"]["policyVersion"] == "1.2.0"
     assert len(first["audit"]["evidenceHash"]) == 64
