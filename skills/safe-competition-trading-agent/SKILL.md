@@ -42,13 +42,10 @@ Use this skill for requests like:
 - "dry-run competition trade"
 - "run a safe competition swap"
 - "join competition and trade"
-- "giao dich cho cuoc thi"
-- "trade cho competition"
-- "tim token an toan de thi"
-- "toi uu thu hang cuoc thi"
-- "tang volume cuoc thi"
-- "giao dich 10 do cho competition"
-- "kiem tra trade nay co tinh diem khong"
+- "check whether this competition trade counts"
+- "find an eligible token trade"
+- "prepare a guarded competition swap"
+- "dry-run my Agentic Trading contest trade"
 
 Do not use this skill for generic wallet balance, normal token portfolio checks, exporting wallets, or unrelated DeFi positions. Use the corresponding wallet, portfolio, DeFi, or DEX skills for those.
 

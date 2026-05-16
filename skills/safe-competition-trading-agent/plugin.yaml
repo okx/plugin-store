@@ -23,7 +23,7 @@ components:
 build:
   lang: python
   source_repo: maixuancanh/agent-risk-firewall
-  source_commit: "dac401ca47dd1214965463b7b40551dada80ebaa"
+  source_commit: "21956e4cd1eb5f2a6c7b4b1b70b896f92deee93c"
   binary_name: safe-competition-trading-agent
   main: "src/safe_competition_trading_agent/cli.py"
 
