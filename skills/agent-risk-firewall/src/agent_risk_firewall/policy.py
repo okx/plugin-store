@@ -1121,7 +1121,7 @@ def _is_stable_or_native(token: Dict[str, Any]) -> bool:
         "TUSD",
         "FRAX",
         "XLAYER_USDT",
-        "USD₮0",
+        "USDT0",
     }
     native_symbols = {"OKB", "WOKB", "SOL", "WSOL", "ETH", "WETH"}
     return address in native_addresses or symbol in stable_symbols or symbol in native_symbols
