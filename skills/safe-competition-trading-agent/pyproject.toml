@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safe-competition-trading-agent"
+version = "1.0.0"
+description = "Competition-aware Agentic Wallet trading skill with risk-gated execution"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "Safe Competition Trading Agent Contributors" }
+]
+keywords = ["trading", "competition", "agentic-wallet", "xlayer", "solana", "security", "risk"]
+dependencies = []
+
+[project.scripts]
+safe-competition-trading-agent = "safe_competition_trading_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

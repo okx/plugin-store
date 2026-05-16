@@ -1,0 +1,31 @@
+schema_version: 1
+name: safe-competition-trading-agent
+version: "1.0.0"
+description: "Competition-aware Agentic Wallet trading skill with risk-gated execution"
+author:
+  name: "Safe Competition Trading Agent Contributors"
+  github: "maixuancanh"
+license: MIT
+category: trading-strategy
+tags:
+  - trading
+  - competition
+  - agentic-wallet
+  - xlayer
+  - solana
+  - security
+  - risk
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: python
+  source_repo: maixuancanh/agent-risk-firewall
+  source_commit: "dac401ca47dd1214965463b7b40551dada80ebaa"
+  binary_name: safe-competition-trading-agent
+  main: "src/safe_competition_trading_agent/cli.py"
+
+api_calls:
+  - web3.okx.com
