@@ -1,0 +1,42 @@
+schema_version: 1
+name: printr
+version: "0.16.0"
+description: "Token launchpad built for holders. Deploy, fund, sign, stake, and graduate tokens across EVM chains and Solana via the Printr MCP server."
+author:
+  name: "PrintrFi"
+  github: "PrintrFi"
+  email: "alan.s@printr.money"
+license: Apache-2.0
+category: defi-protocol
+type: dapp-official
+github_link: "https://github.com/PrintrFi/printr-mcp"
+tags:
+  - token-launch
+  - launchpad
+  - solana
+  - evm
+  - base
+  - cross-chain
+  - mcp
+
+components:
+  skill:
+    repo: "PrintrFi/printr-mcp"
+    commit: "123eaa993166efb1a8ab44082cf61090c10bbae0"
+
+api_calls:
+  - api.printr.money
+  - api-preview.printr.money
+  - cdn.printr.money
+  - openrouter.ai
+  - api.mainnet-beta.solana.com
+  - cloudflare-eth.com
+  - bsc-dataseed.binance.org
+  - mainnet.unichain.org
+  - monad-mainnet.drpc.org
+  - rpc.hyperliquid.xyz
+  - rpc.mantle.xyz
+  - mainnet.megaeth.com
+  - mainnet.base.org
+  - arb1.arbitrum.io
+  - avalanche-c-chain-rpc.publicnode.com

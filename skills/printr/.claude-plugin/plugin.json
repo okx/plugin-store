@@ -1,0 +1,21 @@
+{
+  "name": "printr",
+  "description": "Token launchpad built for holders. Deploy, fund, sign, stake, and graduate tokens across EVM chains and Solana via the Printr MCP server.",
+  "version": "0.16.0",
+  "author": {
+    "name": "PrintrFi",
+    "email": "alan.s@printr.money"
+  },
+  "homepage": "https://printr.money",
+  "repository": "https://github.com/PrintrFi/printr-mcp",
+  "license": "Apache-2.0",
+  "keywords": [
+    "token-launch",
+    "launchpad",
+    "solana",
+    "evm",
+    "base",
+    "cross-chain",
+    "mcp"
+  ]
+}
