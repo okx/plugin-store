@@ -23,6 +23,24 @@ This skill enables the AI agent to bridge stablecoins (USDC, USDT, DAI) from any
 - Execute the full bridge-to-farm pipeline with safety checks
 - Monitor active positions with depeg alerts and rebalance suggestions
 
+## Trigger Keywords
+
+### Activate this skill when the user mentions:
+- "bridge to X Layer", "bridge USDC", "bridge USDT", "cross-chain to X Layer", "move to X Layer", "transfer to X Layer", "send to X Layer"
+- "yield on X Layer", "farm on X Layer", "best APY X Layer", "stablecoin yield", "yield farming", "find yield pools"
+- "bridge and farm", "bridge and deposit", "bridge and earn", "move and farm"
+- "check positions", "my yield", "farming status", "how is my farming", "position monitor", "X Layer positions"
+- "cheapest bridge", "fastest bridge", "compare bridge routes", "bridge cost", "bridge fee"
+- "depeg alert", "stop loss", "rebalance"
+
+### DO NOT activate this skill when:
+- User asks about swapping tokens on the SAME chain without bridging → use `okx-dex-swap`
+- User asks about wallet balance only without yield context → use `okx-wallet-portfolio`
+- User asks about token security only → use `okx-security`
+- User mentions a destination chain OTHER than X Layer (chain 196)
+- User discusses NFT trading, meme coins, or prediction markets
+- User asks about lending/borrowing on Ethereum L1 protocols (Aave, Compound)
+
 ## Pre-flight Checks
 
 Before using this skill, ensure:
@@ -67,11 +85,11 @@ Compares cross-chain bridge routes to find the cheapest and fastest path to X La
 onchainos swap quote --from <TOKEN> --to <TOKEN> --amount <AMOUNT> --chain <SOURCE_CHAIN> --dest-chain 196 --format json
 ```
 
-**When to use**: When the user asks "find cheapest bridge to X Layer", "compare bridge routes", or "how much does it cost to bridge USDC to X Layer".
+**When to use**: When the user asks "find cheapest bridge to X Layer", "compare bridge routes", "how much does it cost to bridge USDC", "bridge fees to X Layer", "fastest way to move USDT to X Layer", "compare cross-chain options", or "which bridge should I use".
 
 **Workflow**:
 1. Identify the source chain and token from user's request
-2. Check user's balance on source chain:
+2. Check user's balance on source chain (to verify they have enough tokens before quoting):
    ```bash
    onchainos portfolio all-balances --address <WALLET> --chain <SOURCE_CHAIN> --format json
    ```
@@ -90,9 +108,9 @@ onchainos swap quote --from <TOKEN> --to <TOKEN> --amount <AMOUNT> --chain <SOUR
 | Route A | $0.50 | ~2 min | 0.01% | 9.5 |
 | Route B | $1.20 | ~1 min | 0.02% | 8.8 |
 
-**Output**: Ranked table of bridge routes with fees, estimated time, slippage, and composite score.
+**Output format**: Present results as a **markdown table** with columns: Route, Fee (USD), Est. Time, Slippage (%), Score. Always end with a one-sentence recommendation: "Recommended: [Route] — cheapest at $X with ~Y min arrival."
 
-**If no routes found**: Tell the user that the token/amount may not be supported for cross-chain to X Layer. Suggest trying a different amount or token.
+**If no routes found**: Tell the user that the token/amount may not be supported for cross-chain to X Layer. Suggest trying USDC or USDT, or a different source chain.
 
 ---
 
@@ -100,7 +118,7 @@ onchainos swap quote --from <TOKEN> --to <TOKEN> --amount <AMOUNT> --chain <SOUR
 
 Scans DeFi protocols on X Layer to find the best yield farming opportunities for stablecoins.
 
-**When to use**: When the user asks "show yield pools on X Layer", "best APY on X Layer", or "where to farm USDC on X Layer".
+**When to use**: When the user asks "show yield pools on X Layer", "best APY on X Layer", "where to farm USDC on X Layer", "stablecoin farming options", "highest yield pools", "safe yield X Layer", or "compare pools".
 
 **Workflow**:
 1. Search for stablecoin-related tokens and pools on X Layer:
@@ -112,7 +130,7 @@ Scans DeFi protocols on X Layer to find the best yield farming opportunities for
    ```bash
    onchainos market price --address <POOL_TOKEN> --chain 196 --format json
    ```
-3. Run security scan on each pool token:
+3. Run security scan on each pool token (required because X Layer is a newer L2 and pool contracts may not be audited):
    ```bash
    onchainos security token-scan --address <POOL_TOKEN> --chain 196 --format json
    ```
@@ -127,7 +145,7 @@ Scans DeFi protocols on X Layer to find the best yield farming opportunities for
 | USDC/USDT | DEX-A | 8.5% | $2.1M | LOW | 9.2 |
 | USDC/OKB | DEX-B | 12.3% | $850K | MEDIUM | 7.8 |
 
-**Output**: Ranked table of yield pools with APY, TVL, risk level, and composite score.
+**Output format**: Present results as a **markdown table** with columns: Pool, Protocol, APY (%), TVL ($), Risk (LOW/MEDIUM/HIGH), Score. Always end with: "Top pick: [Pool] — [APY]% APY with [Risk] risk."
 
 **Filtering rules**:
 - Skip pools with TVL < `min_pool_tvl` (default $50,000)
@@ -140,7 +158,7 @@ Scans DeFi protocols on X Layer to find the best yield farming opportunities for
 
 Executes the complete workflow: bridge assets from source chain to X Layer, then deposit into the best yield pool.
 
-**When to use**: When the user asks "bridge and farm", "bridge 100 USDC to X Layer and find yield", or "move my USDT to X Layer for farming".
+**When to use**: When the user asks "bridge and farm", "bridge 100 USDC to X Layer and find yield", "move my USDT to X Layer for farming", "bridge and earn", "one-click yield", "auto farm on X Layer", or any request combining bridging with yield/farming.
 
 **Workflow**:
 1. **Validate amount**: Ensure amount <= `max_amount`. If exceeded, warn user and ask for confirmation.
@@ -180,7 +198,7 @@ Executes the complete workflow: bridge assets from source chain to X Layer, then
 
 Checks the current status of yield farming positions on X Layer.
 
-**When to use**: When the user asks "check my positions", "how is my X Layer farming doing", or "show my yield status".
+**When to use**: When the user asks "check my positions", "how is my X Layer farming doing", "show my yield status", "am I making money", "any alerts", "depeg check", "position P/L", or "rebalance suggestions".
 
 **Workflow**:
 1. Get current balances on X Layer:
@@ -207,7 +225,7 @@ Checks the current status of yield farming positions on X Layer.
    - Loss alert: position value dropped > `stop_loss` threshold
    - APY change: significant APY decrease detected
 
-**Output**: Position table with alerts and actionable suggestions.
+**Output format**: Present as a **markdown table** with columns: Token, Amount, Value ($), Change (%), Status. Follow with any alerts as bold warnings. End with: "Overall: $X total value, [healthy/action needed]." If alerts exist, add: "⚠️ Suggested action: [specific recommendation]."
 
 ---
 
