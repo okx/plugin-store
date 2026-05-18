@@ -1,0 +1,21 @@
+schema_version: 1
+name: renzo-onchainos
+version: "0.1.0"
+description: "Renzo Protocol liquid restaking on Ethereum — deposit ETH to earn ezETH yield, preview withdrawals, and track withdrawal requests via Onchain OS"
+author:
+  name: Renzo-Protocol
+  github: Renzo-Protocol
+category: defi-protocol
+tags:
+  - restaking
+  - liquid-staking
+  - renzo
+  - ezeth
+  - ethereum
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - app.renzoprotocol.com
+  - ethereum.publicnode.com

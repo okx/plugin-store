@@ -1,0 +1,28 @@
+{
+  "name": "renzo-onchainos",
+  "version": "0.1.0",
+  "description": "OnchainOS-routed Renzo Protocol integration — liquid restaking ezETH on Ethereum mainnet.",
+  "type": "module",
+  "main": "cli.ts",
+  "bin": {
+    "renzo-onchainos": "./cli.ts"
+  },
+  "scripts": {
+    "start": "tsx cli.ts",
+    "tool": "tsx cli.ts",
+    "version-check": "tsx cli.ts --version",
+    "help": "tsx cli.ts --help",
+    "smoke": "tsx cli.ts --version && tsx cli.ts --help"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^20.10.0"
+  },
+  "dependencies": {
+    "viem": "^2.22.10"
+  }
+}
