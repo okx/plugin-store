@@ -1,0 +1,23 @@
+schema_version: 1
+name: lista-lending-onchainos
+version: "0.1.0"
+description: "Lista DAO lending and stablecoin protocol on BSC — supply, borrow, repay, deposit, withdraw, and simulate positions via Onchain OS signing"
+author:
+  name: lista-dao
+  github: lista-dao
+category: defi-protocol
+tags:
+  - lending
+  - borrowing
+  - lista
+  - lista-dao
+  - bsc
+  - stablecoin
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - bsc-rpc.publicnode.com
+  - bsc-dataseed.binance.org
+  - ethereum.publicnode.com
