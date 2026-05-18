@@ -1,0 +1,23 @@
+schema_version: 1
+name: maple-onchainos
+version: "0.1.0"
+description: "Maple Finance institutional fixed-income pools on Ethereum and Base — list pools, view positions, build deposits and queue withdrawals via Onchain OS"
+author:
+  name: maple-labs
+  github: maple-labs
+category: defi-protocol
+tags:
+  - lending
+  - yield
+  - maple
+  - syrup
+  - erc-4626
+  - ethereum
+  - base
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - ethereum.publicnode.com
+  - mainnet.base.org

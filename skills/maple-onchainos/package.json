@@ -1,0 +1,22 @@
+{
+  "name": "maple-onchainos",
+  "version": "0.1.0",
+  "description": "OnchainOS-routed Maple Finance / Syrup integration. ERC-4626 lending into Maple pools via viem + pending_sign.",
+  "type": "module",
+  "main": "cli.ts",
+  "bin": { "maple-onchainos": "./cli.ts" },
+  "scripts": {
+    "start": "tsx cli.ts",
+    "version-check": "tsx cli.ts --version",
+    "help": "tsx cli.ts --help"
+  },
+  "engines": { "node": ">=18.0.0" },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^20.10.0"
+  },
+  "dependencies": {
+    "viem": "^2.22.10"
+  }
+}
