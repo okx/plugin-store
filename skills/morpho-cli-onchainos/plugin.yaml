@@ -1,0 +1,24 @@
+schema_version: 1
+name: morpho-cli-onchainos
+version: "0.1.0"
+description: "Morpho Protocol vaults and markets across 10 EVM chains — query, simulate, and build deposit/withdraw/borrow/repay transactions via Onchain OS signing"
+author:
+  name: morpho-org
+  github: morpho-org
+category: defi-protocol
+tags:
+  - lending
+  - yield
+  - morpho
+  - vault
+  - ethereum
+  - base
+  - arbitrum
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - etherscan.io
+  - basescan.org
+  - arbiscan.io
