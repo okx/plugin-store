@@ -1,0 +1,22 @@
+schema_version: 1
+name: debridge-onchainos
+version: "0.1.0"
+description: "Cross-chain bridging and same-chain swaps via deBridge DLN API — get quotes, check order status, and build bridge/swap transactions via Onchain OS"
+author:
+  name: debridge-finance
+  github: debridge-finance
+category: defi-protocol
+tags:
+  - bridge
+  - crosschain
+  - debridge
+  - dln
+  - ethereum
+  - arbitrum
+  - solana
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - dln.debridge.finance
