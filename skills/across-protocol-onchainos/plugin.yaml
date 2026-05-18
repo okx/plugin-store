@@ -1,0 +1,23 @@
+schema_version: 1
+name: across-protocol-onchainos
+version: "0.1.0"
+description: "Cross-chain bridging and same-chain swaps via Across Protocol Swap API — build pending_sign transactions routed through Onchain OS signing"
+author:
+  name: across-protocol
+  github: across-protocol
+category: defi-protocol
+tags:
+  - bridge
+  - crosschain
+  - across
+  - ethereum
+  - arbitrum
+  - base
+  - optimism
+license: MIT
+components:
+  skill:
+    dir: .
+api_calls:
+  - app.across.to
+  - testnet.across.to
