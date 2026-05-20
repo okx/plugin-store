@@ -1,0 +1,3517 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "默认模块",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "资金费率"
+    }
+  ],
+  "paths": {
+    "/api/fundingRate/hist": {
+      "get": {
+        "summary": "历史结算资金费率 （API等级1)",
+        "deprecated": false,
+        "description": "返回历史结算资金费率时间，8小时结算一次，\n</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "baseCoin",
+            "in": "query",
+            "description": "币种",
+            "required": true,
+            "example": "BTC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exchangeType",
+            "in": "query",
+            "description": "USDT U本位 or COIN  币本位",
+            "required": true,
+            "example": "USDT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "毫秒时间戳",
+            "required": true,
+            "example": "1725972522356",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "example": "20",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ts": {
+                            "type": "integer"
+                          },
+                          "details": {
+                            "type": "object",
+                            "properties": {
+                              "Huobi": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number",
+                                    "description": "资金费率"
+                                  },
+                                  "realizedRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate",
+                                  "realizedRate"
+                                ]
+                              },
+                              "Bitget": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate"
+                                ]
+                              },
+                              "Binance": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate"
+                                ]
+                              },
+                              "dYdX": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate"
+                                ]
+                              },
+                              "Okex": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "realizedRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate",
+                                  "realizedRate"
+                                ]
+                              },
+                              "Gate": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate"
+                                ]
+                              },
+                              "Bybit": {
+                                "type": "object",
+                                "properties": {
+                                  "fundingRate": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "fundingRate"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "Huobi",
+                              "Bitget",
+                              "Binance",
+                              "dYdX",
+                              "Okex",
+                              "Gate",
+                              "Bybit"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "ts",
+                          "details"
+                        ]
+                      }
+                    },
+                    "ext": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "columns"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data",
+                    "ext"
+                  ]
+                },
+                "example": {
+                  "success": true,
+                  "code": "1",
+                  "data": [
+                    {
+                      "ts": 1725955200000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -2.0011867096626e-05,
+                          "realizedRate": -2.0011867096626e-05
+                        },
+                        "Bitget": {
+                          "fundingRate": -3.5e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -2.93e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -8.9119e-06
+                        },
+                        "Okex": {
+                          "fundingRate": 4.89371426509e-05,
+                          "realizedRate": 4.89371426509e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -2.8e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 1.276e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725926400000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -0.000108658781197818,
+                          "realizedRate": -0.000108658781197818
+                        },
+                        "Bitget": {
+                          "fundingRate": -8.1e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -6.028e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -4.7719e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -1.87673667331e-05,
+                          "realizedRate": -1.87673667331e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -0.000214
+                        },
+                        "Bybit": {
+                          "fundingRate": 0.0001
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725897600000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -0.00012282439531243,
+                          "realizedRate": -0.00012282439531243
+                        },
+                        "Bitget": {
+                          "fundingRate": -4.2e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -3.875e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -7.026e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -5.10268687967e-05,
+                          "realizedRate": -5.10268687967e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -0.000185
+                        },
+                        "Bybit": {
+                          "fundingRate": -3.54e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725868800000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -2.1864540694889e-05,
+                          "realizedRate": -2.1864540694889e-05
+                        },
+                        "Bitget": {
+                          "fundingRate": -8.5e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -7.108e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -3.9716e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -3.65987156893e-05,
+                          "realizedRate": -3.65987156893e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -0.000125
+                        },
+                        "Bybit": {
+                          "fundingRate": 9.123e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725840000000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -5.188994795854e-05,
+                          "realizedRate": -5.188994795854e-05
+                        },
+                        "Bitget": {
+                          "fundingRate": -9.7e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -7.585e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -3.4578e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -1.25359285241e-05,
+                          "realizedRate": -1.25359285241e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -7.1e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 9.883e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725811200000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 6.0565659231311e-05,
+                          "realizedRate": 6.0565659231311e-05
+                        },
+                        "Bitget": {
+                          "fundingRate": -6.6e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -5.245e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.67165e-05
+                        },
+                        "Okex": {
+                          "fundingRate": 1.432521242e-05,
+                          "realizedRate": 1.432521242e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -7.5e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 3.261e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725782400000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": -5.454672466033e-06,
+                          "realizedRate": -5.454672466033e-06
+                        },
+                        "Bitget": {
+                          "fundingRate": -7.3e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -5.999e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -2.62652e-05
+                        },
+                        "Okex": {
+                          "fundingRate": -2.5140654562e-06,
+                          "realizedRate": -2.5140654562e-06
+                        },
+                        "Gate": {
+                          "fundingRate": 4e-06
+                        },
+                        "Bybit": {
+                          "fundingRate": 1.751e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725753600000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 4.7e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 3.745e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -2.24898e-05
+                        },
+                        "Okex": {
+                          "fundingRate": 2.71600206979e-05,
+                          "realizedRate": 2.71600206979e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -4.1e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 4.68e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725724800000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 2.319397778285e-06,
+                          "realizedRate": 2.319397778285e-06
+                        },
+                        "Bitget": {
+                          "fundingRate": -7.9e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -7.236e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.66465e-05
+                        },
+                        "Okex": {
+                          "fundingRate": -7.83557296885e-05,
+                          "realizedRate": -7.83557296885e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -0.000131
+                        },
+                        "Bybit": {
+                          "fundingRate": 3.364e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725696000000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": -9e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -7.634e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -2.6075e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -8.23980825188e-05,
+                          "realizedRate": -8.23980825188e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -5.5e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 2.43e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725667200000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": -6e-06
+                        },
+                        "Binance": {
+                          "fundingRate": -5.57e-06
+                        },
+                        "dYdX": {
+                          "fundingRate": -6.2272e-06
+                        },
+                        "Okex": {
+                          "fundingRate": -8.97186034696e-05,
+                          "realizedRate": -8.97186034696e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -1.5e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 2.842e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725638400000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 1.9e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 1.428e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -2.5198e-06
+                        },
+                        "Okex": {
+                          "fundingRate": 1.63579425724e-05,
+                          "realizedRate": 1.63579425724e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -2.5e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 1.86e-06
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725609600000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 3e-06
+                        },
+                        "Binance": {
+                          "fundingRate": -1e-08
+                        },
+                        "dYdX": {
+                          "fundingRate": -7.4243e-06
+                        },
+                        "Okex": {
+                          "fundingRate": 4.24731822967e-05,
+                          "realizedRate": 4.24731822967e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -1.7e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": -1.66e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725580800000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 3.3e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 2.28e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.9736e-06
+                        },
+                        "Okex": {
+                          "fundingRate": 5.88361253654e-05,
+                          "realizedRate": 5.88361253654e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 5.3e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": -4.633e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725552000000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 3.1e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 2.49e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.85622e-05
+                        },
+                        "Okex": {
+                          "fundingRate": 1.56521410042e-05,
+                          "realizedRate": 1.56521410042e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 0.0001
+                        },
+                        "Bybit": {
+                          "fundingRate": 8.48e-06
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725523200000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 1.8e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 2.025e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.21113e-05
+                        },
+                        "Okex": {
+                          "fundingRate": 2.37244771928e-05,
+                          "realizedRate": 2.37244771928e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 0.0001
+                        },
+                        "Bybit": {
+                          "fundingRate": -2.39e-06
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725494400000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 0.000107
+                        },
+                        "Binance": {
+                          "fundingRate": 9.016e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.33991e-05
+                        },
+                        "Okex": {
+                          "fundingRate": 3.02405254579e-05,
+                          "realizedRate": 3.02405254579e-05
+                        },
+                        "Gate": {
+                          "fundingRate": -0.000127
+                        },
+                        "Bybit": {
+                          "fundingRate": -4.165e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725465600000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": -1.2e-05
+                        },
+                        "Binance": {
+                          "fundingRate": -1.47e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -2.21433e-05
+                        },
+                        "Okex": {
+                          "fundingRate": -5.29015323895e-05,
+                          "realizedRate": -5.29015323895e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 4e-06
+                        },
+                        "Bybit": {
+                          "fundingRate": -2.771e-05
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725436800000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 1.4e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 1.05e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -1.65698e-05
+                        },
+                        "Okex": {
+                          "fundingRate": -1.57991723037e-05,
+                          "realizedRate": -1.57991723037e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 2.5e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 3.58e-06
+                        }
+                      }
+                    },
+                    {
+                      "ts": 1725408000000,
+                      "details": {
+                        "Huobi": {
+                          "fundingRate": 0.0001,
+                          "realizedRate": 0.0001
+                        },
+                        "Bitget": {
+                          "fundingRate": 2e-05
+                        },
+                        "Binance": {
+                          "fundingRate": 2.209e-05
+                        },
+                        "dYdX": {
+                          "fundingRate": -8.1045e-06
+                        },
+                        "Okex": {
+                          "fundingRate": 5.66326862708e-05,
+                          "realizedRate": 5.66326862708e-05
+                        },
+                        "Gate": {
+                          "fundingRate": 1.8e-05
+                        },
+                        "Bybit": {
+                          "fundingRate": 4.569e-05
+                        }
+                      }
+                    }
+                  ],
+                  "ext": {
+                    "columns": [
+                      "Binance",
+                      "Okex",
+                      "Bybit",
+                      "Gate",
+                      "Bitget",
+                      "dYdX",
+                      "Huobi"
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/current": {
+      "get": {
+        "summary": "实时资金费率（API等级1)",
+        "deprecated": false,
+        "description": "返回实时资金费率</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "current：实时,day:1日,week：1周,month：1月,year ：1年",
+            "required": true,
+            "example": "current",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "symbol": {
+                            "type": "string",
+                            "description": "币"
+                          },
+                          "cmap": {
+                            "type": "object",
+                            "properties": {
+                              "Binance": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string",
+                                    "description": "交易所"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string",
+                                    "description": "交易对"
+                                  },
+                                  "symbol": {
+                                    "type": "string",
+                                    "description": "资金费率"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "estimatedRate": {
+                                    "type": "number",
+                                    "description": "资金费率时间"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fundingRateCap": {
+                                    "type": "number"
+                                  },
+                                  "fundingRateFloor": {
+                                    "type": "number"
+                                  },
+                                  "frCap": {
+                                    "type": "number"
+                                  },
+                                  "frFloor": {
+                                    "type": "number"
+                                  },
+                                  "interval": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "estimatedRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fundingRateCap",
+                                  "fundingRateFloor",
+                                  "frCap",
+                                  "frFloor",
+                                  "interval",
+                                  "fr"
+                                ],
+                                "description": "币"
+                              },
+                              "Bitget": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "integer"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Bitmex": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "estimatedRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "estimatedRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Bybit": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Deribit": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Gate": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "estimatedRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "estimatedRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Huobi": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Okex": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "Bitmex"
+                            ],
+                            "description": "币本位集合"
+                          },
+                          "umap": {
+                            "type": "object",
+                            "properties": {
+                              "Binance": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "estimatedRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fundingRateCap": {
+                                    "type": "number"
+                                  },
+                                  "fundingRateFloor": {
+                                    "type": "number"
+                                  },
+                                  "frCap": {
+                                    "type": "number"
+                                  },
+                                  "frFloor": {
+                                    "type": "number"
+                                  },
+                                  "interval": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "estimatedRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fundingRateCap",
+                                  "fundingRateFloor",
+                                  "frCap",
+                                  "frFloor",
+                                  "interval",
+                                  "fr"
+                                ]
+                              },
+                              "Bitget": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Bybit": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Gate": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "estimatedRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "estimatedRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Huobi": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "Okex": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "nextFundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "nextFundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              },
+                              "dYdX": {
+                                "type": "object",
+                                "properties": {
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "fundingTime": {
+                                    "type": "integer"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  },
+                                  "fr": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "baseCoin",
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "symbol",
+                                  "fundingRate",
+                                  "fundingTime",
+                                  "ts",
+                                  "fr"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "Bybit",
+                              "Gate"
+                            ],
+                            "description": "U本位集合"
+                          }
+                        },
+                        "required": [
+                          "symbol",
+                          "cmap",
+                          "umap"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "success": true,
+                  "code": "1",
+                  "data": [
+                    {
+                      "symbol": "BTC",
+                      "follow": false,
+                      "cmap": {
+                        "Binance": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Binance",
+                          "exchangeType": "COIN",
+                          "symbol": "BTCUSD_PERP",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.0075,
+                          "fundingRateFloor": -0.0075,
+                          "frCap": 0.0075,
+                          "frFloor": -0.0075,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "COIN",
+                          "symbol": "BTCUSD_DMCBL_250328",
+                          "fundingRate": 0,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0
+                        },
+                        "Bitmex": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Bitmex",
+                          "exchangeType": "COIN",
+                          "symbol": "XBTUSDT",
+                          "fundingRate": 2.2e-05,
+                          "estimatedRate": 2.3e-05,
+                          "fundingTime": 1727446680000,
+                          "nextFundingTime": 1727467200000,
+                          "ts": 1727446680000,
+                          "fr": 2.2e-05
+                        },
+                        "Bybit": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "COIN",
+                          "symbol": "BTCUSD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Deribit": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Deribit",
+                          "exchangeType": "COIN",
+                          "symbol": "BTC_USDC-PERPETUAL",
+                          "fundingRate": 1.041e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 1.041e-05
+                        },
+                        "Gate": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Gate",
+                          "exchangeType": "COIN",
+                          "symbol": "BTC_USD",
+                          "fundingRate": 9.5e-05,
+                          "estimatedRate": 9.5e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 9.5e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "COIN",
+                          "symbol": "BTC-USD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Okex",
+                          "exchangeType": "COIN",
+                          "symbol": "BTC-USD-SWAP",
+                          "fundingRate": 0.0001088077681009,
+                          "fundingTime": 1727446683103,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001088077681009
+                        }
+                      },
+                      "umap": {
+                        "Binance": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Binance",
+                          "exchangeType": "USDT",
+                          "symbol": "BTCUSDT",
+                          "fundingRate": 5.257e-05,
+                          "estimatedRate": 5.257e-05,
+                          "fundingTime": 1727446689000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.003,
+                          "fundingRateFloor": -0.003,
+                          "frCap": 0.003,
+                          "frFloor": -0.003,
+                          "interval": 8,
+                          "fr": 5.257e-05
+                        },
+                        "Bitget": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "USDT",
+                          "symbol": "BTCUSDT_UMCBL",
+                          "fundingRate": 7.1e-05,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 7.1e-05
+                        },
+                        "Bybit": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "USDT",
+                          "symbol": "BTCUSDT",
+                          "fundingRate": 5.036e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 5.036e-05
+                        },
+                        "Gate": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Gate",
+                          "exchangeType": "USDT",
+                          "symbol": "BTC_USDT",
+                          "fundingRate": 1.9e-05,
+                          "estimatedRate": 1.9e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 1.9e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "USDT",
+                          "symbol": "BTC-USDT",
+                          "fundingRate": 1.3377748355183e-05,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 1.3377748355183e-05
+                        },
+                        "Okex": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "Okex",
+                          "exchangeType": "USDT",
+                          "symbol": "BTC-USDT-SWAP",
+                          "fundingRate": 3.5190545657e-05,
+                          "fundingTime": 1727446683112,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 3.5190545657e-05
+                        },
+                        "dYdX": {
+                          "baseCoin": "BTC",
+                          "exchangeName": "dYdX",
+                          "exchangeType": "USDT",
+                          "symbol": "BTC-USD",
+                          "fundingRate": 1.54639e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 1.54639e-05
+                        }
+                      }
+                    },
+                    {
+                      "symbol": "ETH",
+                      "follow": false,
+                      "cmap": {
+                        "Binance": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Binance",
+                          "exchangeType": "COIN",
+                          "symbol": "ETHUSD_PERP",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.0075,
+                          "fundingRateFloor": -0.0075,
+                          "frCap": 0.0075,
+                          "frFloor": -0.0075,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "COIN",
+                          "symbol": "ETHUSD_DMCBL_250328",
+                          "fundingRate": 0,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0
+                        },
+                        "Bitmex": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Bitmex",
+                          "exchangeType": "COIN",
+                          "symbol": "ETHUSD",
+                          "fundingRate": 0.000135,
+                          "estimatedRate": 0.000298,
+                          "fundingTime": 1727446680000,
+                          "nextFundingTime": 1727467200000,
+                          "ts": 1727446680000,
+                          "fr": 0.000135
+                        },
+                        "Bybit": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "COIN",
+                          "symbol": "ETHUSD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Deribit": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Deribit",
+                          "exchangeType": "COIN",
+                          "symbol": "ETH_USDC-PERPETUAL",
+                          "fundingRate": 4.7e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 4.7e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "COIN",
+                          "symbol": "ETH-USD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Okex",
+                          "exchangeType": "COIN",
+                          "symbol": "ETH-USD-SWAP",
+                          "fundingRate": -4.23624674736e-05,
+                          "fundingTime": 1727446683126,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 4.23624674736e-05
+                        }
+                      },
+                      "umap": {
+                        "Binance": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Binance",
+                          "exchangeType": "USDT",
+                          "symbol": "ETHUSDT",
+                          "fundingRate": 4.455e-05,
+                          "estimatedRate": 4.455e-05,
+                          "fundingTime": 1727446689000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.003,
+                          "fundingRateFloor": -0.003,
+                          "frCap": 0.003,
+                          "frFloor": -0.003,
+                          "interval": 8,
+                          "fr": 4.455e-05
+                        },
+                        "Bitget": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "USDT",
+                          "symbol": "ETHUSDT_UMCBL",
+                          "fundingRate": 5e-05,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 5e-05
+                        },
+                        "Bybit": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "USDT",
+                          "symbol": "ETHUSDT",
+                          "fundingRate": 2.927e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 2.927e-05
+                        },
+                        "Gate": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Gate",
+                          "exchangeType": "USDT",
+                          "symbol": "ETH_USDT",
+                          "fundingRate": 2.4e-05,
+                          "estimatedRate": 2.4e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 2.4e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "USDT",
+                          "symbol": "ETH-USDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "Okex",
+                          "exchangeType": "USDT",
+                          "symbol": "ETH-USDT-SWAP",
+                          "fundingRate": 4.03600060463e-05,
+                          "fundingTime": 1727446683139,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 4.03600060463e-05
+                        },
+                        "dYdX": {
+                          "baseCoin": "ETH",
+                          "exchangeName": "dYdX",
+                          "exchangeType": "USDT",
+                          "symbol": "ETH-USD",
+                          "fundingRate": 1.15276e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 1.15276e-05
+                        }
+                      }
+                    },
+                    {
+                      "symbol": "SOL",
+                      "follow": false,
+                      "cmap": {
+                        "Binance": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Binance",
+                          "exchangeType": "COIN",
+                          "symbol": "SOLUSD_PERP",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.01875,
+                          "fundingRateFloor": -0.01875,
+                          "frCap": 0.01875,
+                          "frFloor": -0.01875,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "COIN",
+                          "symbol": "SOLUSD_DMCBL",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0.0001
+                        },
+                        "Bitmex": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Bitmex",
+                          "exchangeType": "COIN",
+                          "symbol": "SOLUSD",
+                          "fundingRate": 0.000225,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "nextFundingTime": 1727467200000,
+                          "ts": 1727446680000,
+                          "fr": 0.000225
+                        },
+                        "Bybit": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "COIN",
+                          "symbol": "SOLUSD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Deribit": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Deribit",
+                          "exchangeType": "COIN",
+                          "symbol": "SOL_USDC-PERPETUAL",
+                          "fundingRate": 0.00013365,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.00013365
+                        },
+                        "Okex": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Okex",
+                          "exchangeType": "COIN",
+                          "symbol": "SOL-USD-SWAP",
+                          "fundingRate": -0.0001450133077802,
+                          "fundingTime": 1727446683568,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001450133077802
+                        }
+                      },
+                      "umap": {
+                        "Binance": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Binance",
+                          "exchangeType": "USDT",
+                          "symbol": "SOLUSDT",
+                          "fundingRate": -1.129e-05,
+                          "estimatedRate": -1.129e-05,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.00375,
+                          "fundingRateFloor": -0.00375,
+                          "frCap": 0.00375,
+                          "frFloor": -0.00375,
+                          "interval": 8,
+                          "fr": 1.129e-05
+                        },
+                        "Bitget": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "USDT",
+                          "symbol": "SOLUSDT_UMCBL",
+                          "fundingRate": -2.4e-05,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 2.4e-05
+                        },
+                        "Bybit": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "USDT",
+                          "symbol": "SOLUSDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Gate": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Gate",
+                          "exchangeType": "USDT",
+                          "symbol": "SOL_USDT",
+                          "fundingRate": 7.6e-05,
+                          "estimatedRate": 7.6e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 7.6e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "USDT",
+                          "symbol": "SOL-USDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "Okex",
+                          "exchangeType": "USDT",
+                          "symbol": "SOL-USDT-SWAP",
+                          "fundingRate": -4.74148357541e-05,
+                          "fundingTime": 1727446683580,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 4.74148357541e-05
+                        },
+                        "dYdX": {
+                          "baseCoin": "SOL",
+                          "exchangeName": "dYdX",
+                          "exchangeType": "USDT",
+                          "symbol": "SOL-USD",
+                          "fundingRate": 2.12353e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 2.12353e-05
+                        }
+                      }
+                    },
+                    {
+                      "symbol": "XRP",
+                      "follow": false,
+                      "cmap": {
+                        "Binance": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Binance",
+                          "exchangeType": "COIN",
+                          "symbol": "XRPUSD_PERP",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.01875,
+                          "fundingRateFloor": -0.01875,
+                          "frCap": 0.01875,
+                          "frFloor": -0.01875,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "COIN",
+                          "symbol": "XRPUSD_DMCBL",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0.0001
+                        },
+                        "Bitmex": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Bitmex",
+                          "exchangeType": "COIN",
+                          "symbol": "XRPUSDT",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "nextFundingTime": 1727467200000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Bybit": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "COIN",
+                          "symbol": "XRPUSD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Deribit": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Deribit",
+                          "exchangeType": "COIN",
+                          "symbol": "XRP_USDC-PERPETUAL",
+                          "fundingRate": 2.003e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 2.003e-05
+                        },
+                        "Huobi": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "COIN",
+                          "symbol": "XRP-USD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Okex",
+                          "exchangeType": "COIN",
+                          "symbol": "XRP-USD-SWAP",
+                          "fundingRate": 0.0001506590161093,
+                          "fundingTime": 1727446683442,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001506590161093
+                        }
+                      },
+                      "umap": {
+                        "Binance": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Binance",
+                          "exchangeType": "USDT",
+                          "symbol": "XRPUSDT",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446689000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.00375,
+                          "fundingRateFloor": -0.00375,
+                          "frCap": 0.00375,
+                          "frFloor": -0.00375,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "USDT",
+                          "symbol": "XRPUSDT_UMCBL",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0.0001
+                        },
+                        "Bybit": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "USDT",
+                          "symbol": "XRPUSDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Gate": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Gate",
+                          "exchangeType": "USDT",
+                          "symbol": "XRP_USDT",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Huobi": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "USDT",
+                          "symbol": "XRP-USDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "XRP",
+                          "exchangeName": "Okex",
+                          "exchangeType": "USDT",
+                          "symbol": "XRP-USDT-SWAP",
+                          "fundingRate": 4.72211087488e-05,
+                          "fundingTime": 1727446683467,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 4.72211087488e-05
+                        }
+                      }
+                    },
+                    {
+                      "symbol": "DOGE",
+                      "follow": false,
+                      "cmap": {
+                        "Binance": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Binance",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGEUSD_PERP",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.009,
+                          "fundingRateFloor": -0.009,
+                          "frCap": 0.009,
+                          "frFloor": -0.009,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGEUSD_DMCBL",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0.0001
+                        },
+                        "Bitmex": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Bitmex",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGEUSD",
+                          "fundingRate": 0.000389,
+                          "estimatedRate": 0.000485,
+                          "fundingTime": 1727446680000,
+                          "nextFundingTime": 1727467200000,
+                          "ts": 1727446680000,
+                          "fr": 0.000389
+                        },
+                        "Deribit": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Deribit",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGE_USDC-PERPETUAL",
+                          "fundingRate": -8.28e-06,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 8.28e-06
+                        },
+                        "Huobi": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGE-USD",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Okex",
+                          "exchangeType": "COIN",
+                          "symbol": "DOGE-USD-SWAP",
+                          "fundingRate": 5.53372641803e-05,
+                          "fundingTime": 1727446683580,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 5.53372641803e-05
+                        }
+                      },
+                      "umap": {
+                        "Binance": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Binance",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGEUSDT",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446688000,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fundingRateCap": 0.00375,
+                          "fundingRateFloor": -0.00375,
+                          "frCap": 0.00375,
+                          "frFloor": -0.00375,
+                          "interval": 8,
+                          "fr": 0.0001
+                        },
+                        "Bitget": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Bitget",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGEUSDT_UMCBL",
+                          "fundingRate": 0.000193,
+                          "fundingTime": 1727446620000,
+                          "ts": 1727446620000,
+                          "fr": 0.000193
+                        },
+                        "Bybit": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Bybit",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGEUSDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Gate": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Gate",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGE_USDT",
+                          "fundingRate": 0.0001,
+                          "estimatedRate": 0.0001,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Huobi": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Huobi",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGE-USDT",
+                          "fundingRate": 0.0001,
+                          "fundingTime": 1727452800000,
+                          "nextFundingTime": 0,
+                          "ts": 1727446680000,
+                          "fr": 0.0001
+                        },
+                        "Okex": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "Okex",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGE-USDT-SWAP",
+                          "fundingRate": 0.0001075665367296,
+                          "fundingTime": 1727446683103,
+                          "nextFundingTime": 1727452800000,
+                          "ts": 1727446680000,
+                          "fr": 0.0001075665367296
+                        },
+                        "dYdX": {
+                          "baseCoin": "DOGE",
+                          "exchangeName": "dYdX",
+                          "exchangeType": "USDT",
+                          "symbol": "DOGE-USD",
+                          "fundingRate": 1.25e-05,
+                          "fundingTime": 1727446680000,
+                          "ts": 1727446680000,
+                          "fr": 1.25e-05
+                        }
+                      }
+                    }
+                  ],
+                  "note": "Example data truncated to 5 records for plugin-store package size. Use the live CoinAnk API for complete data."
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/accumulated": {
+      "get": {
+        "summary": "累计资金费率（API等级1)",
+        "deprecated": false,
+        "description": "返回累计的资金费率，由每次的结算资金费率求和而来, 有日，周，月，年等级别</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "day,week,month,year",
+            "required": true,
+            "example": "day",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "symbol": {
+                            "type": "string"
+                          },
+                          "ts": {
+                            "type": "integer"
+                          },
+                          "follow": {
+                            "type": "boolean"
+                          },
+                          "cmap": {
+                            "type": "object",
+                            "properties": {
+                              "Binance": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string",
+                                    "description": "交易所"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string",
+                                    "description": "交易对类型"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string",
+                                    "description": "币"
+                                  },
+                                  "symbol": {
+                                    "type": "string",
+                                    "description": "交易对"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number",
+                                    "description": "资金费率"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Bitget": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Bitmex": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Bybit": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Gate": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Huobi": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Okex": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "Bitmex"
+                            ],
+                            "description": "币本位集合"
+                          },
+                          "umap": {
+                            "type": "object",
+                            "properties": {
+                              "Binance": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Bitget": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Bybit": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Gate": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Huobi": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "Okex": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              },
+                              "dYdX": {
+                                "type": "object",
+                                "properties": {
+                                  "exchangeName": {
+                                    "type": "string"
+                                  },
+                                  "exchangeType": {
+                                    "type": "string"
+                                  },
+                                  "baseCoin": {
+                                    "type": "string"
+                                  },
+                                  "symbol": {
+                                    "type": "string"
+                                  },
+                                  "fundingRate": {
+                                    "type": "number"
+                                  },
+                                  "ts": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "exchangeName",
+                                  "exchangeType",
+                                  "baseCoin",
+                                  "symbol",
+                                  "fundingRate",
+                                  "ts"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "Bybit",
+                              "Gate"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "symbol",
+                          "ts",
+                          "follow",
+                          "cmap",
+                          "umap"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/indicator": {
+      "get": {
+        "summary": "交易对资金费率历史（API等级1)",
+        "deprecated": false,
+        "description": "根绝不同时间周期返回交易对历史资金费率数据\n</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "exchange",
+            "in": "query",
+            "description": "Binance,OKX,Bybit,Huobi,Gate,Bitget",
+            "required": true,
+            "example": "Binance",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "交易对",
+            "required": true,
+            "example": "BTCUSDT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "1m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d",
+            "required": true,
+            "example": "1h",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "返回此毫秒级时间戳之前的数据",
+            "required": true,
+            "example": "1725972522356",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "最大500",
+            "required": true,
+            "example": "10",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "fundingRate": {
+                            "type": "number",
+                            "description": "资金费率"
+                          },
+                          "ts": {
+                            "type": "integer",
+                            "description": "时间戳"
+                          }
+                        },
+                        "required": [
+                          "fundingRate",
+                          "ts"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/kline": {
+      "get": {
+        "summary": "交易对资金费率k线（API等级1)",
+        "deprecated": false,
+        "description": "返回指定周期内的交易对的资金费率k线\n</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "exchange",
+            "in": "query",
+            "description": "Binance,OKX,Bybit,Huobi,Gate,Bitget",
+            "required": true,
+            "example": "Binance",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "交易对",
+            "required": true,
+            "example": "BTCUSDT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "5m,15m,30m,1h,2h,4h,6h,8h,12h,1d",
+            "required": true,
+            "example": "1h",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "返回此时间戳之前的数据",
+            "required": true,
+            "example": "1725972522356",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "最大500",
+            "required": true,
+            "example": "10",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "begin": {
+                            "type": "integer",
+                            "description": "time"
+                          },
+                          "open": {
+                            "type": "number",
+                            "description": "open"
+                          },
+                          "close": {
+                            "type": "number",
+                            "description": "close"
+                          },
+                          "low": {
+                            "type": "number",
+                            "description": "low"
+                          },
+                          "high": {
+                            "type": "number",
+                            "description": "high"
+                          }
+                        },
+                        "required": [
+                          "begin",
+                          "open",
+                          "close",
+                          "low",
+                          "high"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                },
+                "example": {
+                  "success": true,
+                  "code": "1",
+                  "data": [
+                    {
+                      "begin": 1725937200000,
+                      "open": -0.002614,
+                      "close": -0.002159,
+                      "low": -0.002614,
+                      "high": -0.002087
+                    },
+                    {
+                      "begin": 1725940800000,
+                      "open": -0.002159,
+                      "close": -0.001998,
+                      "low": -0.00216,
+                      "high": -0.001863
+                    },
+                    {
+                      "begin": 1725944400000,
+                      "open": -0.001998,
+                      "close": -0.002578,
+                      "low": -0.002578,
+                      "high": -0.001758
+                    },
+                    {
+                      "begin": 1725948000000,
+                      "open": -0.002578,
+                      "close": -0.002932,
+                      "low": -0.003047,
+                      "high": -0.002578
+                    },
+                    {
+                      "begin": 1725951600000,
+                      "open": -0.002932,
+                      "close": -0.002854,
+                      "low": -0.002957,
+                      "high": -0.002293
+                    },
+                    {
+                      "begin": 1725955200000,
+                      "open": -0.002854,
+                      "close": -0.004287,
+                      "low": -0.004359,
+                      "high": -0.002854
+                    },
+                    {
+                      "begin": 1725958800000,
+                      "open": -0.004287,
+                      "close": -0.002442,
+                      "low": -0.004287,
+                      "high": -0.002395
+                    },
+                    {
+                      "begin": 1725962400000,
+                      "open": -0.002442,
+                      "close": -0.001121,
+                      "low": -0.002599,
+                      "high": -0.001086
+                    },
+                    {
+                      "begin": 1725966000000,
+                      "open": -0.001121,
+                      "close": -0.000223,
+                      "low": -0.001157,
+                      "high": -0.000223
+                    },
+                    {
+                      "begin": 1725969600000,
+                      "open": -0.000223,
+                      "close": -0.000565,
+                      "low": -0.000565,
+                      "high": -0.000223
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/getWeiFr": {
+      "get": {
+        "summary": "加权资金费率（API等级1)",
+        "deprecated": false,
+        "description": "返回时间周期内的加权资金费率.\n</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "baseCoin",
+            "in": "query",
+            "description": "币种",
+            "required": true,
+            "example": "BTC",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "1m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d",
+            "required": true,
+            "example": "1h",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endTime",
+            "in": "query",
+            "description": "返回此时间戳之前的数据",
+            "required": true,
+            "example": "1725972522356",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "最大500",
+            "required": true,
+            "example": "10",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "openFundingRate": {
+                            "type": "number",
+                            "description": "持仓加权资金费率"
+                          },
+                          "turnoverFundingRate": {
+                            "type": "number",
+                            "description": "成交量加权资金费率"
+                          },
+                          "ts": {
+                            "type": "integer",
+                            "description": "时间戳"
+                          }
+                        },
+                        "required": [
+                          "openFundingRate",
+                          "turnoverFundingRate",
+                          "ts"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/fundingRate/frHeatmap": {
+      "get": {
+        "summary": "资金费率热力图  （API等级3)",
+        "deprecated": false,
+        "description": "根据持仓和市值返回资金费率热力图\n</br><font color = 'red'> # Required API Level: API1 and Above</font>",
+        "tags": [
+          "资金费率"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "openInterest 持仓 marketCap 市值",
+            "required": true,
+            "example": "marketCap",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "1D,1W,1M  6M  ",
+            "required": true,
+            "example": "1M",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apikey",
+            "in": "header",
+            "description": "Register and activate to obtain apikey",
+            "required": true,
+            "example": "{{apikey}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apikey}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "dateList": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          },
+                          "description": "时间列表"
+                        },
+                        "coinList": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "币种列表"
+                        },
+                        "dataResult": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "description": "对应数据列表"
+                        }
+                      },
+                      "required": [
+                        "dateList",
+                        "coinList",
+                        "dataResult"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "code",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "responses": {},
+    "securitySchemes": {}
+  },
+  "servers": [
+    {
+      "url": "https://open-api.coinank.com",
+      "description": "Prod Env"
+    }
+  ],
+  "security": []
+}
