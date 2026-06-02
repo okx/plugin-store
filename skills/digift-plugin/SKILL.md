@@ -42,6 +42,171 @@ valid authorization.
 
 ---
 
+
+## Pre-flight Dependencies (auto-injected by Plugin Store CI)
+
+> Run once per session before first use. These checks ensure required tools are installed.
+
+### Version check (auto-injected)
+
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only fetch from `raw.githubusercontent.com` — it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add …` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
+
+```bash
+# Check for skill updates (1-hour cache).
+# Network scope: this block calls raw.githubusercontent.com for the version probe only.
+# It does NOT install anything; install requires user-confirmed `npx skills add` below.
+UPDATE_CACHE="$HOME/.plugin-store/update-cache/digift-plugin"
+CACHE_MAX=3600
+LOCAL_VER="1.0.0"
+DO_CHECK=true
+
+if [ -f "$UPDATE_CACHE" ]; then
+  CACHE_MOD=$(stat -f %m "$UPDATE_CACHE" 2>/dev/null || stat -c %Y "$UPDATE_CACHE" 2>/dev/null || echo 0)
+  NOW=$(date +%s)
+  AGE=$(( NOW - CACHE_MOD ))
+  [ "$AGE" -lt "$CACHE_MAX" ] && DO_CHECK=false
+fi
+
+if [ "$DO_CHECK" = true ]; then
+  REMOTE_VER=$(curl -sf --max-time 3 "https://raw.githubusercontent.com/okx/plugin-store/main/skills/digift-plugin/plugin.yaml" | grep '^version' | head -1 | tr -d '"' | awk '{print $2}')
+  if [ -n "$REMOTE_VER" ]; then
+    mkdir -p "$HOME/.plugin-store/update-cache"
+    echo "$REMOTE_VER" > "$UPDATE_CACHE"
+  fi
+fi
+
+REMOTE_VER=$(cat "$UPDATE_CACHE" 2>/dev/null || echo "$LOCAL_VER")
+if [ "$REMOTE_VER" != "$LOCAL_VER" ]; then
+  echo "Update available: digift-plugin v$LOCAL_VER -> v$REMOTE_VER."
+  echo "ACTION REQUIRED: ask the user to confirm before running:"
+  echo "  npx skills add okx/plugin-store --skill digift-plugin --global"
+  echo "(This contacts the npm registry and github.com/okx/plugin-store and overwrites this skill. Do NOT auto-run.)"
+fi
+```
+
+### Install onchainos CLI + Skills (auto-injected)
+
+```bash
+# 1. Install onchainos CLI — pin to latest release tag, verify SHA256
+#    of the installer before executing (no curl|sh from main).
+if ! command -v onchainos >/dev/null 2>&1; then
+  set -e
+  LATEST_TAG=$(curl -sSL --max-time 5 \
+    "https://api.github.com/repos/okx/onchainos-skills/releases/latest" \
+    | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+  if [ -z "$LATEST_TAG" ]; then
+    echo "ERROR: failed to resolve latest onchainos release tag (network or rate limit)." >&2
+    echo "       Manual install: https://github.com/okx/onchainos-skills" >&2
+    exit 1
+  fi
+
+  ONCHAINOS_TMP=$(mktemp -d)
+  curl -sSL --max-time 30 \
+    "https://raw.githubusercontent.com/okx/onchainos-skills/${LATEST_TAG}/install.sh" \
+    -o "$ONCHAINOS_TMP/install.sh"
+  curl -sSL --max-time 30 \
+    "https://github.com/okx/onchainos-skills/releases/download/${LATEST_TAG}/installer-checksums.txt" \
+    -o "$ONCHAINOS_TMP/installer-checksums.txt"
+
+  EXPECTED=$(awk '$2 ~ /install\.sh$/ {print $1; exit}' "$ONCHAINOS_TMP/installer-checksums.txt")
+  if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum "$ONCHAINOS_TMP/install.sh" | awk '{print $1}')
+  else
+    ACTUAL=$(shasum -a 256 "$ONCHAINOS_TMP/install.sh" | awk '{print $1}')
+  fi
+  if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "ERROR: onchainos installer SHA256 mismatch — refusing to execute." >&2
+    echo "       expected=$EXPECTED  actual=$ACTUAL  tag=$LATEST_TAG" >&2
+    rm -rf "$ONCHAINOS_TMP"
+    exit 1
+  fi
+
+  sh "$ONCHAINOS_TMP/install.sh"
+  rm -rf "$ONCHAINOS_TMP"
+  set +e
+fi
+
+# 2. Install onchainos skills (enables AI agent to use onchainos commands)
+npx skills add okx/onchainos-skills --yes --global
+
+# 3. Install plugin-store skills (enables plugin discovery and management)
+npx skills add okx/plugin-store --skill plugin-store --yes --global
+```
+
+### Install digift npm package (auto-injected)
+
+```bash
+# Verify Node.js >= 18 + npm
+command -v node >/dev/null 2>&1 || {
+  echo "ERROR: Node.js >= 18 is required (install from https://nodejs.org)" >&2
+  exit 1; }
+NODE_MAJOR=$(node -e 'console.log(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  echo "ERROR: Node.js >= 18 required (found: $(node --version 2>/dev/null))" >&2
+  exit 1
+fi
+command -v npm >/dev/null 2>&1 || {
+  echo "ERROR: npm is required (usually ships with Node.js)" >&2
+  exit 1; }
+
+# Download .tgz + checksums to a sandbox, verify SHA256 before installing.
+# Fail-closed: any mismatch / missing checksum entry refuses the install.
+# Matches the producer-side workflow at
+# .github/workflows/plugin-publish.yml which uploads `digift.tgz`
+# alongside `checksums.txt` under each release tag.
+PKG_TMP=$(mktemp -d)
+TAG="plugins/digift-plugin@1.0.0"
+
+# Robust asset download. Prefer `gh release download` — see rust/go
+# install block above for rationale. Falls back to raw curl on the
+# `releases/download/<tag>/<file>` path if gh is not installed.
+_pluginstore_dl() {
+  local fname="$1" dest="$2"
+  if command -v gh >/dev/null 2>&1; then
+    local stage; stage=$(mktemp -d)
+    if gh release download "$TAG" --repo okx/plugin-store \
+         --pattern "$fname" --dir "$stage" --clobber >/dev/null 2>&1 \
+       && [ -f "$stage/$fname" ]; then
+      mv "$stage/$fname" "$dest" && rm -rf "$stage" && return 0
+    fi
+    rm -rf "$stage"
+  fi
+  curl -fsSL \
+    "https://github.com/okx/plugin-store/releases/download/$TAG/$fname" \
+    -o "$dest"
+}
+
+_pluginstore_dl "digift.tgz" "$PKG_TMP/digift.tgz" || {
+  echo "ERROR: failed to download digift.tgz for digift-plugin@1.0.0" >&2
+  rm -rf "$PKG_TMP"; exit 1; }
+_pluginstore_dl "checksums.txt" "$PKG_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for digift-plugin@1.0.0" >&2
+  rm -rf "$PKG_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="digift.tgz" '$2 == b {print $1; exit}' "$PKG_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$PKG_TMP/digift.tgz" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$PKG_TMP/digift.tgz" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: digift.tgz SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL" >&2
+  rm -rf "$PKG_TMP"; exit 1
+fi
+
+# Install globally (npm wires up CLI commands from package.json's `bin` field) + clean up
+npm install -g "$PKG_TMP/digift.tgz"
+rm -rf "$PKG_TMP"
+
+# Register version
+mkdir -p "$HOME/.plugin-store/managed"
+echo "1.0.0" > "$HOME/.plugin-store/managed/digift-plugin"
+```
+
+---
+
+
 ## Overview
 
 The `digift` CLI is the unified interface to the DigiFT RWA platform. It covers two domains:
