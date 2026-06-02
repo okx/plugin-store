@@ -676,6 +676,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err.message);
+  // `err` is unknown — may not be an Error instance (e.g. thrown strings,
+  // plain objects). Accessing `.message` unguarded can itself throw and
+  // hide the original failure.
+  console.error(err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

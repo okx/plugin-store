@@ -311,9 +311,13 @@ export function calculateTransactionFee(
   const rateParts = fee.rate.split(".");
   const rateInt = rateParts[0];
   const rateDec = (rateParts[1] || "").padEnd(decimals, "0").slice(0, decimals);
-  const rateRaw = BigInt(rateInt) * BigInt(10 ** decimals) + BigInt(rateDec || "0");
+  // Scale must stay in BigInt domain. `10 ** decimals` routes through JS Number
+  // and silently loses precision once decimals > 15, which would corrupt fee
+  // math for any token using >15 decimals.
+  const scale = 10n ** BigInt(decimals);
+  const rateRaw = BigInt(rateInt) * scale + BigInt(rateDec || "0");
 
-  const feeRaw = (amountRaw * rateRaw) / BigInt(10 ** decimals);
+  const feeRaw = (amountRaw * rateRaw) / scale;
   const fixedFeeRaw = ethers.parseUnits(fee.fixedFee || "0", decimals);
   const minFeeRaw = ethers.parseUnits(fee.minFee || "0", decimals);
 
@@ -347,9 +351,33 @@ export interface TradingCalendar {
   settlementRule: SettlementSchedule["settlementRule"];
 }
 
-/** Check whether today is a trading day based on the settlement schedule's non-business-day list. */
-export function buildTradingCalendar(schedule: SettlementSchedule): TradingCalendar {
-  const today = new Date().toISOString().slice(0, 10);
+/**
+ * Format a Date as YYYY-MM-DD in a specific IANA timezone.
+ * DigiFT is dual-licensed by MAS (Singapore) and SFC (Hong Kong); both regulators
+ * use UTC+8 business hours. Comparing against `nonBusinessDays` strings via UTC
+ * (`toISOString().slice(0,10)`) would be off-by-one for ~8 hours each day.
+ */
+function ymdInTz(date: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const y = parts.find(p => p.type === "year")!.value;
+  const m = parts.find(p => p.type === "month")!.value;
+  const d = parts.find(p => p.type === "day")!.value;
+  return `${y}-${m}-${d}`;
+}
+
+/** Check whether today is a trading day based on the settlement schedule's non-business-day list.
+ *  `tz` defaults to Asia/Singapore (DigiFT business timezone). Pass a different IANA tz if the
+ *  product's `nonBusinessDays` are quoted in a different timezone. */
+export function buildTradingCalendar(
+  schedule: SettlementSchedule,
+  tz: string = "Asia/Singapore",
+): TradingCalendar {
+  const today = ymdInTz(new Date(), tz);
   const isHoliday = schedule.nonBusinessDays.includes(today);
   return {
     isOpen: !isHoliday,
@@ -358,15 +386,18 @@ export function buildTradingCalendar(schedule: SettlementSchedule): TradingCalen
   };
 }
 
-export function getNextBusinessDay(schedule: SettlementSchedule): string {
+export function getNextBusinessDay(
+  schedule: SettlementSchedule,
+  tz: string = "Asia/Singapore",
+): string {
   const holidays = new Set(schedule.nonBusinessDays);
   const d = new Date();
   for (let i = 1; i <= 14; i++) {
     d.setDate(d.getDate() + 1);
-    const s = d.toISOString().slice(0, 10);
+    const s = ymdInTz(d, tz);
     if (!holidays.has(s)) return s;
   }
-  return d.toISOString().slice(0, 10);
+  return ymdInTz(d, tz);
 }
 
 // ─── API Client ───
@@ -377,9 +408,27 @@ export class DigiFTApiClient {
   private authHeader: string;
 
   constructor(baseUrl?: string, apiKey?: string) {
-    this.baseUrl = baseUrl || process.env.DIGIFT_API_URL || "https://digift.io/api/openplatform";
+    const raw = baseUrl || process.env.DIGIFT_API_URL || "https://digift.io/api/openplatform";
+    // Validate scheme + host. baseUrl is configurable via env (DIGIFT_API_URL),
+    // so without an allowlist a malicious env value could exfiltrate the API
+    // key on every request.
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      throw new Error(`DIGIFT_API_URL must be a valid URL, got: ${raw}`);
+    }
+    if (parsed.protocol !== "https:") {
+      throw new Error(`DIGIFT_API_URL must use https: scheme, got: ${parsed.protocol}`);
+    }
+    if (parsed.hostname !== "digift.io" && !parsed.hostname.endsWith(".digift.io")) {
+      throw new Error(
+        `DIGIFT_API_URL host must be digift.io or a *.digift.io subdomain, got: ${parsed.hostname}`,
+      );
+    }
+    this.baseUrl = raw;
     this.apiKey = apiKey || process.env.DIGIFT_API_KEY || "";
-    this.authHeader ="X-DG-Access-Key";
+    this.authHeader = "X-DG-Access-Key";
     if (!this.apiKey) throw new Error("DIGIFT_API_KEY not set");
   }
 
@@ -411,7 +460,8 @@ export class DigiFTApiClient {
 
   /** Check wallet whitelist status on a given chain */
   async getWhitelistStatus(address: string, chainId: string): Promise<WhitelistStatus> {
-    return this.request(`/wallets/whitelist-status?address=${address}&chainId=${chainId}`);
+    const qs = new URLSearchParams({ address, chainId });
+    return this.request(`/wallets/whitelist-status?${qs.toString()}`);
   }
 
   /** Get product on-chain info (token address, precision per chain) */
@@ -473,7 +523,8 @@ export class DigiFTApiClient {
 
   /** Look up a single subscription order by tx hash */
   async getSubscriptionOrder(txHash: string): Promise<SubscriptionOrder> {
-    return this.request(`/subscription/order?txHash=${txHash}`);
+    const qs = new URLSearchParams({ txHash });
+    return this.request(`/subscription/order?${qs.toString()}`);
   }
 
   /** List redemption orders (paginated) */
@@ -497,7 +548,8 @@ export class DigiFTApiClient {
 
   /** Look up a single redemption order by tx hash */
   async getRedemptionOrder(txHash: string): Promise<RedemptionOrder> {
-    return this.request(`/redemption/order?txHash=${txHash}`);
+    const qs = new URLSearchParams({ txHash });
+    return this.request(`/redemption/order?${qs.toString()}`);
   }
 
   /**
