@@ -194,6 +194,7 @@ jobs:
             REPO=$(yq -r '.build.source_repo // ""' "$YAML")
             COMMIT=$(yq -r '.build.source_commit // ""' "$YAML")
             SUBDIR=$(yq -r '.build.source_dir // "."' "$YAML")
+            CAT=$(yq -r '.category // ""' "$YAML")
 
             # Validate every field we will later interpolate into shell
             echo "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([-+][a-zA-Z0-9.-]+)?$' \
@@ -203,6 +204,16 @@ jobs:
             case "$LANG" in
               rust|go|typescript|node) : ;;
               *) echo "::warning::$p lang '$LANG' not in {rust,go,typescript,node}, skip"; continue ;;
+            esac
+            # Category gate (defense in depth — GitLab's `plugin-store lint`
+            # enforces VALID_CATEGORIES = {dapp, strategy} per
+            # cli/src/submission/plugin_yaml.rs, but this is the last hop
+            # before assets land in a public release. ::error:: annotation
+            # surfaces in the workflow run UI; the offending plugin is
+            # skipped while well-formed siblings keep publishing.
+            case "$CAT" in
+              dapp|strategy) : ;;
+              *) echo "::error::$p category '$CAT' must be 'dapp' or 'strategy' (see docs/FOR-DEVELOPERS.md §4); skipping publish"; continue ;;
             esac
             if [ -n "$REPO" ] && [ "$REPO" != "null" ]; then
               echo "$REPO" | grep -qE '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' \
