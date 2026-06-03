@@ -544,6 +544,16 @@ jobs:
         with:
           node-version: '22'
 
+      # Bun is required by plugins whose package.json `build` script uses
+      # `bun build` (e.g. digift-plugin v1.0.0 → run 26864242843 failed with
+      # "sh: 1: bun: not found"). Installing via npm keeps us on the already
+      # pinned setup-node toolchain — no extra SHA-pinned action to audit —
+      # and the `bun` npm package is the official publisher (oven-sh/bun-npm).
+      # Plugins that don't use bun pay only the install cost (~few seconds);
+      # cheaper than branching this step per-plugin.
+      - name: Install bun (some plugins build with bun)
+        run: npm install -g bun
+
       - name: npm install + build + pack
         env:
           NAME: ${{ matrix.plugin.name }}
