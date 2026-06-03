@@ -415,7 +415,7 @@
         "winddown",
         "defi"
       ],
-      "modify_date": "1780022825",
+      "modify_date": "1780025440",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -568,6 +568,53 @@
         "protocols": [],
         "risk_level": "medium"
       }
+    },
+    {
+      "name": "digift-plugin",
+      "version": "1.0.0",
+      "description": "DigiFT RWA platform CLI — query products, prices, fees, calendar, whitelist, orders; build subscribe/redeem/approve transactions (outputs TxBody, does NOT sign)",
+      "author": {
+        "name": "digift-tech",
+        "github": "digift-tech"
+      },
+      "license": "MIT",
+      "category": "defi-protocol",
+      "tags": [
+        "rwa",
+        "tokenization",
+        "stablecoin",
+        "defi",
+        "subscription",
+        "redemption"
+      ],
+      "modify_date": "1780391028",
+      "type": "community-developer",
+      "components": {
+        "skill": {
+          "repo": "okx/plugin-store",
+          "dir": "skills/digift-plugin"
+        }
+      },
+      "build": {
+        "lang": "typescript",
+        "source_repo": "",
+        "source_commit": "",
+        "binary_name": "digift"
+      },
+      "github_link": "https://github.com/okx/plugin-store/tree/main/skills/digift-plugin",
+      "skill_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/digift-plugin/SKILL.md",
+      "summary_md_link": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/digift-plugin/SUMMARY.md",
+      "readme_url": "https://raw.githubusercontent.com/okx/plugin-store/main/skills/digift-plugin/README.md",
+      "api_calls": [
+        "digift.io",
+        "ethereum-rpc.publicnode.com",
+        "bsc-rpc.publicnode.com",
+        "polygon-bor-rpc.publicnode.com",
+        "rpc.monad.xyz",
+        "rpc.mantle.xyz",
+        "mainnet-rpc.plumenetwork.xyz",
+        "arbitrum-one-rpc.publicnode.com"
+      ]
     },
     {
       "name": "dolomite-plugin",

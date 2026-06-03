@@ -1,0 +1,37 @@
+schema_version: 1
+name: digift-plugin
+version: "1.0.0"
+description: "DigiFT RWA platform CLI — query products, prices, fees, calendar, whitelist, orders; build subscribe/redeem/approve transactions (outputs TxBody, does NOT sign)"
+author:
+  name: digift-tech
+  github: digift-tech
+license: MIT
+category: defi-protocol
+tags:
+  - rwa
+  - tokenization
+  - stablecoin
+  - defi
+  - subscription
+  - redemption
+type: community-developer
+
+components:
+  skill:
+    dir: "."
+
+build:
+  lang: typescript
+  source_dir: runtime
+  binary_name: digift
+  main: "dist/cli.js"
+
+api_calls:
+  - digift.io
+  - ethereum-rpc.publicnode.com
+  - bsc-rpc.publicnode.com
+  - polygon-bor-rpc.publicnode.com
+  - rpc.monad.xyz
+  - rpc.mantle.xyz
+  - mainnet-rpc.plumenetwork.xyz
+  - arbitrum-one-rpc.publicnode.com

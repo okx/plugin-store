@@ -1,0 +1,27 @@
+{
+  "name": "digift-plugin-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/cli.ts --outdir ./dist --target node",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.0",
+    "typescript": "5.9.3"
+  },
+  "bin": {
+    "digift": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ]
+}
