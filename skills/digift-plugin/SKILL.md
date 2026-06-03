@@ -1,6 +1,6 @@
 ---
 name: digift-plugin
-version: "1.0.0"
+version: "1.0.1"
 author: digift-tech
 description: "DigiFT RWA platform CLI — query products, prices, fees, calendar, whitelist, orders; build subscribe/redeem/approve transactions (outputs TxBody, does NOT sign)"
 requiredTools:
