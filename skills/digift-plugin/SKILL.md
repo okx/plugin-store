@@ -57,7 +57,7 @@ valid authorization.
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/digift-plugin"
 CACHE_MAX=3600
-LOCAL_VER="1.0.0"
+LOCAL_VER="1.0.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -155,7 +155,7 @@ command -v npm >/dev/null 2>&1 || {
 # .github/workflows/plugin-publish.yml which uploads `digift.tgz`
 # alongside `checksums.txt` under each release tag.
 PKG_TMP=$(mktemp -d)
-TAG="plugins/digift-plugin@1.0.0"
+TAG="plugins/digift-plugin@1.0.1"
 
 # Robust asset download. Prefer `gh release download` — see rust/go
 # install block above for rationale. Falls back to raw curl on the
@@ -177,10 +177,10 @@ _pluginstore_dl() {
 }
 
 _pluginstore_dl "digift.tgz" "$PKG_TMP/digift.tgz" || {
-  echo "ERROR: failed to download digift.tgz for digift-plugin@1.0.0" >&2
+  echo "ERROR: failed to download digift.tgz for digift-plugin@1.0.1" >&2
   rm -rf "$PKG_TMP"; exit 1; }
 _pluginstore_dl "checksums.txt" "$PKG_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for digift-plugin@1.0.0" >&2
+  echo "ERROR: failed to download checksums.txt for digift-plugin@1.0.1" >&2
   rm -rf "$PKG_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="digift.tgz" '$2 == b {print $1; exit}' "$PKG_TMP/checksums.txt")
@@ -201,7 +201,7 @@ rm -rf "$PKG_TMP"
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "1.0.0" > "$HOME/.plugin-store/managed/digift-plugin"
+echo "1.0.1" > "$HOME/.plugin-store/managed/digift-plugin"
 ```
 
 ---
