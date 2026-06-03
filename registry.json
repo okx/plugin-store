@@ -578,7 +578,7 @@
         "github": "digift-tech"
       },
       "license": "MIT",
-      "category": "defi-protocol",
+      "category": "dapp",
       "tags": [
         "rwa",
         "tokenization",
@@ -587,7 +587,7 @@
         "subscription",
         "redemption"
       ],
-      "modify_date": "1780462422",
+      "modify_date": "1780468370",
       "type": "community-developer",
       "components": {
         "skill": {

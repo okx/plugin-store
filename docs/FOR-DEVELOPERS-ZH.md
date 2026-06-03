@@ -123,7 +123,7 @@ author:
   name: "Your Name"
   github: "your-github-username"
 license: MIT
-category: utility
+category: dapp
 tags:
   - keyword1
   - keyword2
@@ -298,7 +298,7 @@ author:
   name: "Your Name"
   github: "your-github-username"
 license: MIT
-category: analytics
+category: dapp
 tags:
   - price
   - solana
@@ -323,7 +323,7 @@ author:
   name: "Your Name"
   github: "your-username"
 license: MIT
-category: utility
+category: dapp
 tags:
   - rust
   - onchainos
@@ -385,7 +385,7 @@ author:
   name: "DeFi Builder"
   github: "defi-builder"
 license: MIT
-category: defi-protocol
+category: strategy
 tags:
   - defi
   - yield
@@ -419,7 +419,7 @@ api_calls:
 | `author.github` | 是 | GitHub 用户名 | 必须与 PR 作者一致 |
 | `author.email` | 否 | 联系邮箱 | 用于安全通知 |
 | `license` | 是 | 许可证标识符 | SPDX 格式：`MIT`、`Apache-2.0`、`GPL-3.0` 等 |
-| `category` | 是 | Plugin 类别 | 以下之一：`strategy`、`defi-protocol`、`analytics`、`utility`、`security`、`wallet`、`nft` |
+| `category` | 是 | Plugin 类别 | **必须二选一**：`dapp`（对接单一协议 / 平台的插件）或 `strategy`（编排其他插件执行交易或组合策略）。更细粒度的分类放到 `tags`，不要放在这里。 |
 | `tags` | 否 | 搜索关键词 | 字符串数组 |
 | `type` | 否 | 作者类型 | `"official"`、`"dapp-official"`、`"community-developer"` |
 | `github_link` | 否 | 项目 GitHub 地址 | URL，在市场中展示 |

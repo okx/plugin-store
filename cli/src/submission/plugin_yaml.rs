@@ -161,16 +161,13 @@ impl PluginYaml {
     }
 }
 
-/// Valid categories for plugins.
+/// Valid categories for plugins. Marketplace-wide policy: every plugin is
+/// either a `strategy` (orchestrates other plugins to execute a trading or
+/// portfolio strategy) or a `dapp` (talks to a single protocol / venue).
+/// Finer-grained classification belongs in `tags`, not `category`.
 pub const VALID_CATEGORIES: &[&str] = &[
-    "trading-strategy",
+    "dapp",
     "strategy",
-    "defi-protocol",
-    "analytics",
-    "utility",
-    "security",
-    "wallet",
-    "nft",
 ];
 
 /// Valid build languages (all compile to binary via our CI).

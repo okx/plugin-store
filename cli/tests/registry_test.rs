@@ -22,7 +22,7 @@ fn test_deserialize_registry() {
                 "version": "1.0.0",
                 "description": "A test plugin",
                 "author": { "name": "Test", "github": "https://github.com/test" },
-                "category": "trading-strategy",
+                "category": "strategy",
                 "tags": ["test"],
                 "type": "official",
                 "components": {
@@ -53,7 +53,7 @@ fn test_deserialize_full_components() {
                 "version": "1.2.0",
                 "description": "Full plugin",
                 "author": { "name": "OKX", "github": "https://github.com/okx" },
-                "category": "trading-strategy",
+                "category": "strategy",
                 "tags": ["grid"],
                 "type": "community",
                 "components": {

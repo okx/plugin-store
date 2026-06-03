@@ -45,7 +45,7 @@ author:
   github: "TODO: your-github-username"
   # email: "you@example.com"
 license: MIT
-category: utility    # trading-strategy | defi-protocol | analytics | utility | security | wallet | nft
+category: dapp       # dapp | strategy  (see docs/FOR-DEVELOPERS.md §4 for which to pick)
 tags:
   - TODO
 
