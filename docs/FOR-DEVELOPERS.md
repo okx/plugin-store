@@ -132,7 +132,7 @@ author:
   name: "Your Name"
   github: "your-github-username"
 license: MIT
-category: utility
+category: dapp
 tags:
   - keyword1
   - keyword2
@@ -307,7 +307,7 @@ author:
   name: "Your Name"
   github: "your-github-username"
 license: MIT
-category: analytics
+category: dapp
 tags:
   - price
   - solana
@@ -332,7 +332,7 @@ author:
   name: "Your Name"
   github: "your-username"
 license: MIT
-category: utility
+category: dapp
 tags:
   - rust
   - onchainos
@@ -396,7 +396,7 @@ author:
   name: "DeFi Builder"
   github: "defi-builder"
 license: MIT
-category: defi-protocol
+category: strategy
 tags:
   - defi
   - yield
@@ -430,7 +430,7 @@ The `build.source_dir` field tells CI which subdirectory in your repo contains t
 | `author.github` | Yes | GitHub username | Must match PR author |
 | `author.email` | No | Contact email | Used for security notifications |
 | `license` | Yes | License identifier | SPDX format: `MIT`, `Apache-2.0`, `GPL-3.0`, etc. |
-| `category` | Yes | Plugin category | One of: `trading-strategy`, `strategy`, `defi-protocol`, `analytics`, `utility`, `security`, `wallet`, `nft` |
+| `category` | Yes | Plugin category | **Exactly one of**: `dapp` (single-protocol / single-venue plugin) or `strategy` (orchestrates other plugins for a trading or portfolio strategy). Finer-grained classification goes in `tags`, not here. |
 | `tags` | No | Search keywords | Array of strings |
 | `type` | No | Author type | `"official"`, `"dapp-official"`, `"community-developer"` |
 | `github_link` | No | Project GitHub URL | URL, displayed in the marketplace |

@@ -44,13 +44,13 @@ impl App {
 
         let strategies: Vec<Plugin> = all_sorted
             .iter()
-            .filter(|p| p.category == "trading-strategy")
+            .filter(|p| p.category == "strategy")
             .cloned()
             .collect();
 
         let dapps: Vec<Plugin> = all_sorted
             .iter()
-            .filter(|p| p.category == "defi-protocol")
+            .filter(|p| p.category == "dapp")
             .cloned()
             .collect();
 
