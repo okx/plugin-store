@@ -571,7 +571,7 @@
     },
     {
       "name": "digift-plugin",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "DigiFT RWA platform CLI — query products, prices, fees, calendar, whitelist, orders; build subscribe/redeem/approve transactions (outputs TxBody, does NOT sign)",
       "author": {
         "name": "digift-tech",
@@ -587,7 +587,7 @@
         "subscription",
         "redemption"
       ],
-      "modify_date": "1780391028",
+      "modify_date": "1780462422",
       "type": "community-developer",
       "components": {
         "skill": {
