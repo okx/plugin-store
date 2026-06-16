@@ -1,8 +1,8 @@
 use clap::Args;
-use serde_json::{json, Value};
+use serde_json::json;
 
 use crate::api::{
-    fetch_perp_dexs, find_dex, get_clearinghouse_state_for_dex, get_meta_for_dex, BuilderDex,
+    fetch_perp_dexs, find_dex, get_clearinghouse_state_for_dex, BuilderDex,
 };
 use crate::config::{exchange_url, info_url, now_ms, ARBITRUM_CHAIN_ID, CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign_send_asset, resolve_wallet};

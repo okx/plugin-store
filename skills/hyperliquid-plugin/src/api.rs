@@ -30,6 +30,7 @@ pub fn parse_coin(coin: &str) -> (Option<String>, String) {
 
 /// Information about one builder DEX (HIP-3 perpDexs entry).
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct BuilderDex {
     pub name: String,
     pub full_name: String,
@@ -322,7 +323,9 @@ pub async fn get_spot_asset_meta(info_url: &str, coin: &str) -> anyhow::Result<(
         })
         .ok_or_else(|| anyhow::anyhow!("No spot market for '{}'", coin))?;
 
-    let mkt_idx = market["index"].as_u64().unwrap_or(0) as usize;
+    let mkt_idx = market["index"].as_u64()
+        .ok_or_else(|| anyhow::anyhow!("Spot market for '{}' is missing required 'index' field", coin))?
+        as usize;
     let sz_decimals = tokens
         .iter()
         .find(|t| t["index"].as_u64().map(|i| i as usize) == Some(tok_idx))
@@ -357,8 +360,10 @@ pub async fn get_spot_asset_meta(info_url: &str, coin: &str) -> anyhow::Result<(
 /// Asset id offset for HIP-4 outcomes.
 pub const OUTCOME_ASSET_ID_BASE: u64 = 100_000_000;
 /// YES side index per HIP-4 spec.
+#[allow(dead_code)]
 pub const OUTCOME_SIDE_YES: u8 = 0;
 /// NO side index per HIP-4 spec.
+#[allow(dead_code)]
 pub const OUTCOME_SIDE_NO: u8 = 1;
 
 /// Compute the HIP-4 global asset id for one side of an outcome.
@@ -477,4 +482,92 @@ pub async fn fetch_outcome_meta(info_url: &str) -> anyhow::Result<Vec<OutcomeSpe
         });
     }
     Ok(out)
+}
+
+// ─── HYPE Staking API ─────────────────────────────────────────────────────────
+
+/// HYPE token precision: 1 HYPE = 1e8 atomic units (8 decimal places).
+pub const HYPE_ATOMIC: u64 = 100_000_000;
+
+/// Parse a human-readable HYPE amount to atomic units (u64).
+/// "100" -> 10_000_000_000; "0.5" -> 50_000_000; "100.5" -> 10_050_000_000
+pub fn parse_hype_amount(amount: &str) -> anyhow::Result<u64> {
+    let trimmed = amount.trim();
+    if let Some((int_part, frac_part)) = trimmed.split_once('.') {
+        let int_val: u64 = if int_part.is_empty() {
+            0
+        } else {
+            int_part.parse().map_err(|_| anyhow::anyhow!("Invalid HYPE amount: {}", amount))?
+        };
+        let frac_padded = format!("{:0<8}", frac_part);
+        let frac_str = &frac_padded[..8.min(frac_padded.len())];
+        let frac_val: u64 = frac_str.parse().map_err(|_| anyhow::anyhow!("Invalid HYPE amount fraction: {}", amount))?;
+        Ok(int_val * HYPE_ATOMIC + frac_val)
+    } else {
+        let int_val: u64 = trimmed.parse().map_err(|_| anyhow::anyhow!("Invalid HYPE amount: {}", amount))?;
+        Ok(int_val * HYPE_ATOMIC)
+    }
+}
+
+/// Format HYPE atomic units to a human-readable display string (8 decimal places).
+pub fn format_hype_amount(raw: u64) -> String {
+    let int_part = raw / HYPE_ATOMIC;
+    let frac_part = raw % HYPE_ATOMIC;
+    format!("{}.{:08}", int_part, frac_part)
+}
+
+/// Fetch all validator summaries.
+/// POST /info {"type":"validatorSummaries"}
+pub async fn get_validator_summaries(info_url: &str) -> anyhow::Result<Value> {
+    info_post(info_url, json!({"type": "validatorSummaries"})).await
+}
+
+/// Fetch current delegations for a user.
+/// POST /info {"type":"delegations","user":"0x..."}
+pub async fn get_delegations(info_url: &str, user: &str) -> anyhow::Result<Value> {
+    info_post(info_url, json!({"type": "delegations", "user": user})).await
+}
+
+/// Fetch pending delegator rewards for a user.
+/// POST /info {"type":"delegatorRewards","user":"0x..."}
+pub async fn get_delegator_rewards(info_url: &str, user: &str) -> anyhow::Result<Value> {
+    info_post(info_url, json!({"type": "delegatorRewards", "user": user})).await
+}
+
+/// Fetch the delegator summary for a user — this is where HL exposes the unbonding /
+/// pending-withdrawal state (NOT the `delegations` endpoint, which lists active stake only).
+/// Returns fields `delegated`, `undelegated`, `totalPendingWithdrawal`, `nPendingWithdrawals`.
+/// POST /info {"type":"delegatorSummary","user":"0x..."}
+pub async fn get_delegator_summary(info_url: &str, user: &str) -> anyhow::Result<Value> {
+    info_post(info_url, json!({"type": "delegatorSummary", "user": user})).await
+}
+
+/// Fetch delegation history for a user (newest first).
+/// POST /info {"type":"delegatorHistory","user":"0x..."}
+pub async fn get_delegation_history(info_url: &str, user: &str, limit: Option<usize>) -> anyhow::Result<Value> {
+    let mut body = json!({"type": "delegatorHistory", "user": user});
+    if let Some(n) = limit {
+        body["limit"] = json!(n);
+    }
+    info_post(info_url, body).await
+}
+
+/// Get HYPE spot balance for a user in atomic units (u64).
+/// Reads spotClearinghouseState and parses the "HYPE" coin balance.
+/// Returns 0 if no HYPE spot balance found (not an error — user has 0 HYPE).
+pub async fn get_spot_hype_balance(info_url: &str, user: &str) -> anyhow::Result<u64> {
+    let state = get_spot_clearinghouse_state(info_url, user)
+        .await
+        .map_err(|e| anyhow::anyhow!("HYPE spot balance query failed: {}", e))?;
+    let empty = vec![];
+    let balances = state["balances"].as_array().unwrap_or(&empty);
+    for b in balances {
+        if b["coin"].as_str() == Some("HYPE") {
+            let total_str = b["total"].as_str().unwrap_or("0");
+            let total: f64 = total_str.parse().unwrap_or(0.0);
+            let raw = (total * HYPE_ATOMIC as f64).round() as u64;
+            return Ok(raw);
+        }
+    }
+    Ok(0)
 }

@@ -1,11 +1,17 @@
 use clap::Args;
 use crate::config::{ARBITRUM_CHAIN_ID, CHAIN_ID, HYPER_EVM_RPC, USDC_ARBITRUM};
 use crate::onchainos::{resolve_wallet, wallet_contract_call};
-use crate::rpc::{ARBITRUM_RPC, erc20_balance, erc20_allowance, parse_wei, wait_tx_mined};
+use crate::rpc::{ARBITRUM_RPC, erc20_balance, erc20_allowance, parse_wei, eth_native_balance, wait_tx_mined};
 
 const RELAY_API: &str = "https://api.relay.link";
 /// native HYPE on HyperEVM (address zero = native gas token)
 const HYPE_HYPER_EVM: &str = "0x0000000000000000000000000000000000000000";
+/// Gas limit for ERC-20 approve call.
+const APPROVE_GAS_LIMIT: u64 = 100_000;
+/// Gas limit for relay.link deposit call (cross-chain swap).
+const DEPOSIT_GAS_LIMIT: u64 = 350_000;
+/// Conservative Arbitrum L2 gas price estimate (0.1 gwei) for pre-flight balance check.
+const ARBITRUM_GAS_PRICE_WEI: u128 = 100_000_000;
 
 #[derive(Args)]
 pub struct GetGasArgs {
@@ -49,31 +55,17 @@ async fn fetch_quote(wallet: &str, usdc_units: u64) -> anyhow::Result<serde_json
     Ok(resp)
 }
 
-/// Native ETH/HYPE balance on HyperEVM via eth_getBalance
-async fn hype_balance(address: &str) -> anyhow::Result<f64> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()?;
-    let resp: serde_json::Value = client
-        .post(HYPER_EVM_RPC)
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "eth_getBalance",
-            "params": [address, "latest"]
-        }))
-        .send()
-        .await?
-        .json()
-        .await?;
-    if let Some(err) = resp.get("error") {
-        anyhow::bail!("HyperEVM eth_getBalance error: {}", err);
-    }
-    let hex = resp["result"].as_str()
-        .ok_or_else(|| anyhow::anyhow!("HyperEVM eth_getBalance: missing 'result' field in response"))?;
-    let wei = u128::from_str_radix(hex.trim_start_matches("0x"), 16)
-        .map_err(|e| anyhow::anyhow!("HyperEVM eth_getBalance: malformed hex '{}': {}", hex, e))?;
-    Ok(wei as f64 / 1e18)
+/// Native ETH/HYPE balance on HyperEVM via eth_getBalance — display helper, returns f64 HYPE.
+async fn hype_balance_display(address: &str) -> f64 {
+    use crate::rpc::eth_native_balance;
+    eth_native_balance(address, HYPER_EVM_RPC).await
+        .map(|w| w as f64 / 1e18)
+        .unwrap_or(0.0)  // 0.0 is legitimate: display-only field, 0 shown if RPC unreachable
+}
+
+fn is_allowance_error(e: &anyhow::Error) -> bool {
+    let msg = format!("{:#}", e).to_lowercase();
+    msg.contains("allowance")
 }
 
 pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
@@ -126,6 +118,25 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Check native ETH balance on Arbitrum for gas before executing (approve ~100k + deposit ~350k).
+    let eth_balance = match eth_native_balance(&wallet, ARBITRUM_RPC).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", super::error_response(&format!("Failed to query ETH balance for gas check: {:#}", e), "RPC_ERROR", "Check your connection and retry."));
+            return Ok(());
+        }
+    };
+    let gas_needed = (APPROVE_GAS_LIMIT + DEPOSIT_GAS_LIMIT) as u128 * ARBITRUM_GAS_PRICE_WEI;
+    if eth_balance < gas_needed {
+        println!("{}", super::error_response(
+            &format!("Insufficient ETH for gas on Arbitrum: have {} wei, need ~{} wei (~{:.6} ETH for approve+deposit at 0.1 gwei)",
+                eth_balance, gas_needed, gas_needed as f64 / 1e18),
+            "INSUFFICIENT_GAS_BALANCE",
+            "Add ETH to your Arbitrum wallet to cover transaction gas fees."
+        ));
+        return Ok(());
+    }
+
     // ── Separate approve vs deposit steps by id ───────────────────────────
     let mut approve_step: Option<&serde_json::Value> = None;
     let mut deposit_step: Option<&serde_json::Value> = None;
@@ -152,7 +163,7 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         let data = &approve["items"][0]["data"];
         let approve_to = data["to"].as_str().unwrap_or("");
         let approve_calldata = data["data"].as_str().unwrap_or("");
-        let approve_value = parse_wei(data["value"].as_str().unwrap_or("0x0"));
+        let approve_value = parse_wei(data["value"].as_str().unwrap_or("0x0"))?;
 
         // Skip if allowance is already sufficient.
         // EVM-012: surface RPC errors instead of silent unwrap_or(0) — that turned
@@ -173,7 +184,7 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
             eprintln!("Approving USDC to relay solver...");
             let approve_value_opt = if approve_value > 0 { Some(approve_value) } else { None };
             let result = wallet_contract_call(
-                ARBITRUM_CHAIN_ID, approve_to, approve_calldata, approve_value_opt, false
+                ARBITRUM_CHAIN_ID, approve_to, approve_calldata, approve_value_opt, Some(APPROVE_GAS_LIMIT), false
             )?;
 
             // Wait for the approve tx to be mined so deposit simulation succeeds
@@ -202,14 +213,35 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
     let dep_data = &fresh_deposit["items"][0]["data"];
     let deposit_to = dep_data["to"].as_str().unwrap_or("");
     let deposit_calldata = dep_data["data"].as_str().unwrap_or("");
-    let deposit_value = parse_wei(dep_data["value"].as_str().unwrap_or("0x0"));
+    let deposit_value = parse_wei(dep_data["value"].as_str().unwrap_or("0x0"))?;
     let fresh_request_id = fresh_deposit["requestId"]
         .as_str()
         .unwrap_or(request_id);
 
     eprintln!("Depositing {} USDC to relay solver...", args.amount);
     let deposit_value_opt = if deposit_value > 0 { Some(deposit_value) } else { None };
-    wallet_contract_call(ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, false)?;
+    let deposit_result = {
+        let first = wallet_contract_call(
+            ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, Some(DEPOSIT_GAS_LIMIT), false
+        );
+        match first {
+            Ok(v) => v,
+            Err(e) if is_allowance_error(&e) => {
+                eprintln!("  Allowance error detected, retrying after 5s...");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                wallet_contract_call(
+                    ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, Some(DEPOSIT_GAS_LIMIT), false
+                )?
+            }
+            Err(e) => return Err(e),
+        }
+    };
+    let relay_tx_hash = deposit_result["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    if !relay_tx_hash.is_empty() {
+        eprint!("  Waiting for relay deposit tx {} to confirm on Arbitrum...", relay_tx_hash);
+        let relay_confirmed = wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await;
+        eprintln!(" {}", if relay_confirmed { "confirmed" } else { "timed out (proceeding)" });
+    }
 
     // Poll relay.link status until HYPE arrives (max ~40s)
     eprintln!("Waiting for HYPE to arrive on HyperEVM (~{} seconds)...", time_est);
@@ -233,7 +265,7 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         }
     }
 
-    let hype_now = hype_balance(&wallet).await.unwrap_or(0.0);
+    let hype_now = hype_balance_display(&wallet).await;
 
     println!("{}", serde_json::json!({
         "ok": true,
@@ -242,6 +274,8 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         "spent_usdc": args.amount,
         "hype_received": hype_out,
         "hype_balance_now": format!("{:.6}", hype_now),
+        "relay_tx_hash": relay_tx_hash,
+        "on_chain_status": "0x1",
         "confirmed": arrived,
         "note": if arrived {
             "HYPE arrived. You can now use CoreWriter operations on HyperEVM."

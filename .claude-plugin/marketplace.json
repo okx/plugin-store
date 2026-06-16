@@ -198,7 +198,7 @@
     },
     {
       "name": "hyperliquid-plugin",
-      "description": "Trade perpetuals on Hyperliquid - check positions, get prices, place market/limit orders with TP/SL brackets, close positions, deposit USDC",
+      "description": "Trade perpetuals and spot on Hyperliquid, stake HYPE tokens for rewards (v0.5.0)",
       "source": "./skills/hyperliquid-plugin",
       "category": "dapp",
       "author": {

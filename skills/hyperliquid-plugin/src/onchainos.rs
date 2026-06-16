@@ -12,12 +12,14 @@ const STRATEGY: &str = env!("CARGO_PKG_NAME");
 /// to: contract address.
 /// calldata: hex-encoded calldata (0x-prefixed).
 /// value_wei: optional ETH value to send.
+/// gas_limit: optional gas limit override to prevent OOG; passed as --gas-limit to onchainos.
 /// confirm: if false, preview only; if true, broadcast.
 pub fn wallet_contract_call(
     chain_id: u64,
     to: &str,
     calldata: &str,
     value_wei: Option<u128>,
+    gas_limit: Option<u64>,
     dry_run: bool,
 ) -> anyhow::Result<Value> {
     if dry_run {
@@ -48,6 +50,10 @@ pub fn wallet_contract_call(
     if let Some(v) = value_wei {
         args.push("--amt".to_string());
         args.push(v.to_string());
+    }
+    if let Some(gl) = gas_limit {
+        args.push("--gas-limit".to_string());
+        args.push(gl.to_string());
     }
     // Note: --force is intentionally omitted — onchainos handles its own confirmation.
     // The plugin's --confirm flag already gates whether this call is made at all.
@@ -380,6 +386,170 @@ pub fn onchainos_hl_sign_withdraw(
         "signature":    { "r": r, "s": s, "v": v },
         "vaultAddress": null
     }))
+}
+
+/// Shared helper for user-signed HL actions (EIP-712 domain `HyperliquidSignTransaction`,
+/// chainId 421614 / 0x66eee). Signs `eip712_message` via `onchainos wallet sign-message`,
+/// splits the 65-byte signature into r/s/v, and wraps the already-built `action` into the
+/// Hyperliquid exchange request body. This is the user-signed path — NOT the L1 phantom-agent
+/// signer (`onchainos_hl_sign`).
+fn onchainos_user_sign_and_wrap(
+    eip712_message: &Value,
+    action: Value,
+    nonce: u64,
+    wallet: &str,
+    wallet_chain_id: u64,
+) -> anyhow::Result<Value> {
+    let eip712_str = serde_json::to_string(eip712_message)?;
+    let wallet_chain_str = wallet_chain_id.to_string();
+
+    let output = Command::new("onchainos")
+        .args([
+            "wallet", "sign-message",
+            "--type", "eip712",
+            "--message", &eip712_str,
+            "--chain", &wallet_chain_str,
+            "--from", wallet,
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let detail = if stdout.trim().is_empty() { stderr.to_string() } else { stdout.to_string() };
+        anyhow::bail!("onchainos sign-message failed: {}", detail.trim());
+    }
+
+    let sign_result: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| anyhow::anyhow!("Failed to parse sign-message output: {}", e))?;
+
+    let signature = sign_result["data"]["signature"]
+        .as_str()
+        .or_else(|| sign_result["signature"].as_str())
+        .ok_or_else(|| anyhow::anyhow!("No signature in sign-message response: {}", serde_json::to_string(&sign_result).unwrap_or_default()))?;
+
+    let sig_hex = signature.trim_start_matches("0x");
+    if sig_hex.len() != 130 {
+        anyhow::bail!("Expected 130-char hex signature, got {} chars", sig_hex.len());
+    }
+    let r = format!("0x{}", &sig_hex[0..64]);
+    let s = format!("0x{}", &sig_hex[64..128]);
+    let v: u64 = u64::from_str_radix(&sig_hex[128..130], 16)
+        .map_err(|e| anyhow::anyhow!("Failed to parse v byte: {}", e))?;
+
+    Ok(serde_json::json!({
+        "action":       action,
+        "nonce":        nonce,
+        "signature":    { "r": r, "s": s, "v": v },
+        "vaultAddress": null
+    }))
+}
+
+/// Sign a Hyperliquid `cDeposit` action via onchainos (user-signed EIP-712).
+/// Moves HYPE from the spot balance into the staking balance.
+/// `wei` is atomic HYPE units (1 HYPE = 1e8) — HL's wei here is the atomic unit, no conversion.
+/// domain: HyperliquidSignTransaction, chainId 421614 (0x66eee).
+pub fn onchainos_hl_sign_c_deposit(
+    wei: u64,
+    nonce: u64,
+    wallet: &str,
+    wallet_chain_id: u64,
+) -> anyhow::Result<Value> {
+    let eip712_message = serde_json::json!({
+        "domain": {
+            "chainId": 421614,  // 0x66eee — matches action.signatureChainId
+            "name": "HyperliquidSignTransaction",
+            "verifyingContract": "0x0000000000000000000000000000000000000000",
+            "version": "1"
+        },
+        "types": {
+            "HyperliquidTransaction:CDeposit": [
+                { "name": "hyperliquidChain", "type": "string"  },
+                { "name": "wei",              "type": "uint64"  },
+                { "name": "nonce",            "type": "uint64"  }
+            ],
+            "EIP712Domain": [
+                { "name": "name",              "type": "string"  },
+                { "name": "version",           "type": "string"  },
+                { "name": "chainId",           "type": "uint256" },
+                { "name": "verifyingContract", "type": "address" }
+            ]
+        },
+        "primaryType": "HyperliquidTransaction:CDeposit",
+        "message": {
+            "hyperliquidChain": "Mainnet",
+            "wei": wei,
+            "nonce": nonce
+        }
+    });
+
+    let action = serde_json::json!({
+        "type": "cDeposit",
+        "hyperliquidChain": "Mainnet",
+        "signatureChainId": "0x66eee",
+        "wei": wei,
+        "nonce": nonce
+    });
+
+    onchainos_user_sign_and_wrap(&eip712_message, action, nonce, wallet, wallet_chain_id)
+}
+
+/// Sign a Hyperliquid `tokenDelegate` action via onchainos (user-signed EIP-712).
+/// Delegates (or, with `is_undelegate=true`, undelegates) staked HYPE to/from a validator.
+/// `wei` is atomic HYPE units (1 HYPE = 1e8) — HL's wei here is the atomic unit, no conversion.
+/// Field order matches the official HL Python SDK exactly.
+/// domain: HyperliquidSignTransaction, chainId 421614 (0x66eee).
+pub fn onchainos_hl_sign_token_delegate(
+    validator: &str,
+    wei: u64,
+    is_undelegate: bool,
+    nonce: u64,
+    wallet: &str,
+    wallet_chain_id: u64,
+) -> anyhow::Result<Value> {
+    let eip712_message = serde_json::json!({
+        "domain": {
+            "chainId": 421614,  // 0x66eee — matches action.signatureChainId
+            "name": "HyperliquidSignTransaction",
+            "verifyingContract": "0x0000000000000000000000000000000000000000",
+            "version": "1"
+        },
+        "types": {
+            "HyperliquidTransaction:TokenDelegate": [
+                { "name": "hyperliquidChain", "type": "string"  },
+                { "name": "validator",        "type": "address" },
+                { "name": "wei",              "type": "uint64"  },
+                { "name": "isUndelegate",     "type": "bool"    },
+                { "name": "nonce",            "type": "uint64"  }
+            ],
+            "EIP712Domain": [
+                { "name": "name",              "type": "string"  },
+                { "name": "version",           "type": "string"  },
+                { "name": "chainId",           "type": "uint256" },
+                { "name": "verifyingContract", "type": "address" }
+            ]
+        },
+        "primaryType": "HyperliquidTransaction:TokenDelegate",
+        "message": {
+            "hyperliquidChain": "Mainnet",
+            "validator": validator,
+            "wei": wei,
+            "isUndelegate": is_undelegate,
+            "nonce": nonce
+        }
+    });
+
+    let action = serde_json::json!({
+        "type": "tokenDelegate",
+        "hyperliquidChain": "Mainnet",
+        "signatureChainId": "0x66eee",
+        "validator": validator,
+        "wei": wei,
+        "isUndelegate": is_undelegate,
+        "nonce": nonce
+    });
+
+    onchainos_user_sign_and_wrap(&eip712_message, action, nonce, wallet, wallet_chain_id)
 }
 
 /// Sign a Hyperliquid usdClassTransfer action (perp ↔ spot) via onchainos (user-signed EIP-712).

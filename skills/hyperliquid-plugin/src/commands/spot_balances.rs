@@ -69,7 +69,10 @@ pub async fn run(args: SpotBalancesArgs) -> anyhow::Result<()> {
             continue;
         }
 
-        let tok_idx = bal["token"].as_u64().unwrap_or(0) as usize;
+        let tok_idx = match bal["token"].as_u64() {
+            Some(v) => v as usize,
+            None => continue,  // skip malformed entry: missing token index
+        };
         let coin = bal["coin"].as_str().unwrap_or(
             tok_name.get(&tok_idx).copied().unwrap_or("?"),
         );

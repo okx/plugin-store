@@ -305,8 +305,8 @@ pub async fn run(args: OutcomeBuyArgs) -> anyhow::Result<()> {
     if let Some(oid_val) = oid {
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .map_err(|e| anyhow::anyhow!("system clock error for attribution: {}", e))?
+            .as_secs();
         let sid = args.strategy_id.as_deref().unwrap_or("");
         let report_payload = serde_json::json!({
             "wallet": wallet,

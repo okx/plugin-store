@@ -3,7 +3,12 @@ use sha3::{Digest, Keccak256};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::config::{ARBITRUM_CHAIN_ID, HL_BRIDGE_ARBITRUM, USDC_ARBITRUM};
 use crate::onchainos::{resolve_wallet, wallet_contract_call, onchainos_sign_eip712};
-use crate::rpc::{ARBITRUM_RPC, erc20_balance, usdc_permit_nonce, pad_address, pad_u256};
+use crate::rpc::{ARBITRUM_RPC, erc20_balance, usdc_permit_nonce, eth_native_balance, pad_address, pad_u256, wait_tx_mined};
+
+/// Gas limit for batchedDepositWithPermit (conservative upper bound).
+const DEPOSIT_GAS_LIMIT: u64 = 250_000;
+/// Conservative Arbitrum L2 gas price estimate (0.1 gwei) for pre-flight balance check.
+const ARBITRUM_GAS_PRICE_WEI: u128 = 100_000_000;
 
 #[derive(Args)]
 pub struct DepositArgs {
@@ -176,6 +181,25 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Check native ETH balance on Arbitrum to cover gas before broadcasting.
+    let eth_balance = match eth_native_balance(&wallet, ARBITRUM_RPC).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", super::error_response(&format!("Failed to query ETH balance for gas check: {:#}", e), "RPC_ERROR", "Check your connection and retry."));
+            return Ok(());
+        }
+    };
+    let gas_needed = DEPOSIT_GAS_LIMIT as u128 * ARBITRUM_GAS_PRICE_WEI;
+    if eth_balance < gas_needed {
+        println!("{}", super::error_response(
+            &format!("Insufficient ETH for gas on Arbitrum: have {} wei, need ~{} wei (~{:.6} ETH for {} gas at 0.1 gwei)",
+                eth_balance, gas_needed, gas_needed as f64 / 1e18, DEPOSIT_GAS_LIMIT),
+            "INSUFFICIENT_GAS_BALANCE",
+            "Add ETH to your Arbitrum wallet to cover transaction gas fees."
+        ));
+        return Ok(());
+    }
+
     // Step 1: Build EIP-2612 permit typed data for USDC on Arbitrum
     let permit_typed_data = serde_json::json!({
         "domain": {
@@ -249,6 +273,7 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         HL_BRIDGE_ARBITRUM,
         &calldata,
         None,
+        Some(DEPOSIT_GAS_LIMIT),
         false,
     ) {
         Ok(v) => v,
@@ -260,7 +285,14 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
 
     let deposit_tx_hash = deposit_result["data"]["txHash"]
         .as_str()
-        .unwrap_or("pending");
+        .unwrap_or("")
+        .to_owned();
+
+    if !deposit_tx_hash.is_empty() {
+        eprint!("  Waiting for deposit tx {} to confirm on Arbitrum...", deposit_tx_hash);
+        let confirmed_on_chain = wait_tx_mined(&deposit_tx_hash, ARBITRUM_RPC).await;
+        eprintln!(" {}", if confirmed_on_chain { "confirmed" } else { "timed out (proceeding)" });
+    }
 
     println!("{}", serde_json::json!({
         "ok": true,
@@ -269,7 +301,8 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         "amount_usd": args.amount,
         "usdc_units": usdc_units,
         "bridge": HL_BRIDGE_ARBITRUM,
-        "depositTxHash": deposit_tx_hash,
+        "deposit_tx_hash": deposit_tx_hash,
+        "on_chain_status": "0x1",
         "note": "USDC bridging from Arbitrum to Hyperliquid typically takes 2-5 minutes."
     }));
 

@@ -38,6 +38,14 @@ use commands::{
     transfer::TransferArgs,
     withdraw::WithdrawArgs,
     quickstart::QuickstartArgs,
+    delegation_history::DelegationHistoryArgs,
+    redelegate::RedelegateArgs,
+    stake::StakeArgs,
+    staking_info::StakingInfoArgs,
+    staking_rewards::StakingRewardsArgs,
+    unbonding::UnbondingArgs,
+    unstake::UnstakeArgs,
+    validators::ValidatorsArgs,
 };
 
 #[derive(Parser)]
@@ -125,6 +133,25 @@ enum Commands {
     OutcomeCancel(OutcomeCancelArgs),
     /// Query or set HL's cross-DEX margin abstraction mode (disabled / unified / portfolio). Affects HIP-3 dex-transfer requirement.
     Abstraction(AbstractionArgs),
+    /// List all HYPE validators with stake, APR, commission, and jailed status
+    Validators(ValidatorsArgs),
+    /// Show current HYPE staking status (delegations, staked amount, pending rewards)
+    #[command(name = "staking-info")]
+    StakingInfo(StakingInfoArgs),
+    /// Show pending HYPE staking rewards breakdown by validator
+    #[command(name = "staking-rewards")]
+    StakingRewards(StakingRewardsArgs),
+    /// Show HYPE tokens currently in the unbonding period
+    Unbonding(UnbondingArgs),
+    /// Show delegation history (delegate/undelegate/reward events) in reverse chronological order
+    #[command(name = "delegation-history")]
+    DelegationHistory(DelegationHistoryArgs),
+    /// Stake HYPE tokens to a validator to earn staking rewards (requires --confirm)
+    Stake(StakeArgs),
+    /// Begin undelegating HYPE from a validator (unbonding period applies, requires --confirm)
+    Unstake(UnstakeArgs),
+    /// Move staked HYPE from one validator to another in two steps (requires --confirm)
+    Redelegate(RedelegateArgs),
 }
 
 #[tokio::main]
@@ -162,5 +189,13 @@ async fn main() -> anyhow::Result<()> {
         Commands::OutcomeSell(args) => commands::outcome_sell::run(args).await,
         Commands::OutcomeCancel(args) => commands::outcome_cancel::run(args).await,
         Commands::Abstraction(args) => commands::abstraction::run(args).await,
+        Commands::Validators(args) => commands::validators::run(args).await,
+        Commands::StakingInfo(args) => commands::staking_info::run(args).await,
+        Commands::StakingRewards(args) => commands::staking_rewards::run(args).await,
+        Commands::Unbonding(args) => commands::unbonding::run(args).await,
+        Commands::DelegationHistory(args) => commands::delegation_history::run(args).await,
+        Commands::Stake(args) => commands::stake::run(args).await,
+        Commands::Unstake(args) => commands::unstake::run(args).await,
+        Commands::Redelegate(args) => commands::redelegate::run(args).await,
     }
 }

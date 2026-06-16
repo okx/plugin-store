@@ -1,5 +1,5 @@
 use clap::Args;
-use serde_json::{json, Value};
+use serde_json::json;
 
 use crate::api::{
     get_open_orders, outcome_asset_id, outcome_trade_coin, parse_outcome_coin,

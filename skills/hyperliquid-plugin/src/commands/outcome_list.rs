@@ -90,6 +90,7 @@ pub async fn run(args: OutcomeListArgs) -> anyhow::Result<()> {
                 .cmp(b["expiry"].as_str().unwrap_or(""))
         }),
         _ => entries.sort_by(|a, b| {
+            // 0 is legitimate: outcome_id 0 is a valid sort key (first outcome in listing)
             a["outcome_id"]
                 .as_u64()
                 .unwrap_or(0)
@@ -167,10 +168,8 @@ fn build_entry(o: &OutcomeSpec, recurring: &Option<RecurringSpec>, mids: &Value)
             );
             obj.insert("semantic_id".into(), json!(semantic_id));
         }
-    } else {
-        if let Some(obj) = entry.as_object_mut() {
+    } else if let Some(obj) = entry.as_object_mut() {
             obj.insert("recurring".into(), json!(false));
-        }
     }
 
     entry

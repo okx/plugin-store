@@ -311,7 +311,16 @@ async fn lookup_spot(info: &str, token: &str) -> anyhow::Result<()> {
         ));
         return Ok(());
     };
-    let tok_idx = t["index"].as_u64().unwrap_or(0) as usize;
+    let tok_idx = match t["index"].as_u64() {
+        Some(v) => v as usize,
+        None => {
+            println!("{}", super::error_response(
+                &format!("Spot token '{}' is missing required 'index' field in API response", token),
+                "API_ERROR", "",
+            ));
+            return Ok(());
+        }
+    };
     let market = universe.iter().find(|m|
         m["tokens"].as_array().and_then(|a| a.first()).and_then(|v| v.as_u64())
             .map(|i| i as usize == tok_idx).unwrap_or(false));
@@ -322,7 +331,16 @@ async fn lookup_spot(info: &str, token: &str) -> anyhow::Result<()> {
         ));
         return Ok(());
     };
-    let mkt_idx = m["index"].as_u64().unwrap_or(0) as usize;
+    let mkt_idx = match m["index"].as_u64() {
+        Some(v) => v as usize,
+        None => {
+            println!("{}", super::error_response(
+                &format!("Spot market for '{}' is missing required 'index' field in API response", token),
+                "API_ERROR", "",
+            ));
+            return Ok(());
+        }
+    };
     let market_name = m["name"].as_str().unwrap_or("");
     // Canonical markets keyed by `name` (e.g. "PURR/USDC"); non-canonical by `@<index>`.
     let fallback_key = format!("@{}", mkt_idx);
@@ -467,7 +485,7 @@ async fn list_perp_builders(info: &str, args: &MarketsArgs, dedupe_crypto: bool)
         for e in entries {
             if dedupe_crypto {
                 let bare = e["symbol"].as_str().unwrap_or("")
-                    .splitn(2, ':').nth(1).unwrap_or("").to_uppercase();
+                    .split_once(':').map(|x| x.1).unwrap_or("").to_uppercase();
                 if crypto_set.contains(&bare) { continue; }
             }
             all_entries.push(e);
@@ -492,7 +510,10 @@ async fn list_spot(info: &str, args: &MarketsArgs) -> anyhow::Result<()> {
 
     let mut markets: Vec<Value> = Vec::new();
     for m in universe {
-        let mkt_idx = m["index"].as_u64().unwrap_or(0) as usize;
+        let mkt_idx = match m["index"].as_u64() {
+            Some(v) => v as usize,
+            None => continue,  // skip malformed market entry: missing index
+        };
         let market_name = m["name"].as_str().unwrap_or("");
         let fallback_key = format!("@{}", mkt_idx);
         let price = mids
@@ -500,11 +521,14 @@ async fn list_spot(info: &str, args: &MarketsArgs) -> anyhow::Result<()> {
             .or_else(|| mids.get(&fallback_key))
             .and_then(|v| v.as_str())
             .unwrap_or("0");
-        let base_idx = m["tokens"].as_array().and_then(|a| a.first()).and_then(|v| v.as_u64())
-            .unwrap_or(0) as usize;
+        let base_idx = match m["tokens"].as_array().and_then(|a| a.first()).and_then(|v| v.as_u64()) {
+            Some(v) => v as usize,
+            None => continue,  // skip malformed market entry: missing base token index
+        };
         let base = tok_by_idx.get(&base_idx);
         let symbol = base.and_then(|t| t["name"].as_str()).unwrap_or("?");
         let sz_decimals = base.and_then(|t| t["szDecimals"].as_u64()).unwrap_or(0);
+        // 0 is legitimate: some tokens have 0 size decimals (not divisible)
         markets.push(json!({
             "symbol": symbol,
             "market_name": market_name,
@@ -559,9 +583,12 @@ fn build_perp_entry(u: &Value, ctx: &Value) -> Value {
     let mid_px = ctx["midPx"].as_str().map(|s| s.to_string());
     let day_vol = ctx["dayNtlVlm"].as_str()
         .and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+    // 0.0 is legitimate: market with no volume today
     let max_lev = u["maxLeverage"].as_u64().unwrap_or(0) as u32;
+    // 0 is legitimate: some markets may have no fixed max leverage listed
     let only_iso = u["onlyIsolated"].as_bool().unwrap_or(false);
     let sz_dec = u["szDecimals"].as_u64().unwrap_or(0) as u32;
+    // 0 is legitimate: some tokens are not divisible (integer position sizes)
     let is_delisted = u["isDelisted"].as_bool().unwrap_or(false);
     let is_halted = mark_px.is_none();
 
@@ -584,9 +611,11 @@ fn emit_perp_list(args: &MarketsArgs, preset: &str, dex_label: &str, mut entries
 
     // Apply filters
     if let Some(min_vol) = args.min_vol {
+        // 0.0 is legitimate: market with no daily volume is excluded by the filter
         entries.retain(|e| e["day_volume_usd_num"].as_f64().unwrap_or(0.0) >= min_vol);
     }
     if let Some(min_lev) = args.max_leverage {
+        // 0 is legitimate: markets without leverage data are excluded by the filter
         entries.retain(|e| e["max_leverage"].as_u64().unwrap_or(0) >= min_lev as u64);
     }
     if args.only_isolated {
@@ -601,6 +630,7 @@ fn emit_perp_list(args: &MarketsArgs, preset: &str, dex_label: &str, mut entries
     // Sort
     match args.sort.as_str() {
         "leverage" => entries.sort_by(|a, b| {
+            // 0 is legitimate: markets without leverage data sort to the end
             b["max_leverage"].as_u64().unwrap_or(0)
                 .cmp(&a["max_leverage"].as_u64().unwrap_or(0))
         }),
@@ -608,6 +638,7 @@ fn emit_perp_list(args: &MarketsArgs, preset: &str, dex_label: &str, mut entries
             a["symbol"].as_str().unwrap_or("").cmp(b["symbol"].as_str().unwrap_or(""))
         }),
         _ => entries.sort_by(|a, b| {
+            // 0.0 is legitimate: markets with no daily volume sort to the end
             b["day_volume_usd_num"].as_f64().unwrap_or(0.0)
                 .partial_cmp(&a["day_volume_usd_num"].as_f64().unwrap_or(0.0))
                 .unwrap_or(std::cmp::Ordering::Equal)

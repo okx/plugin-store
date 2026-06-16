@@ -5,7 +5,7 @@ use crate::api::{
 };
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID};
 use crate::onchainos::{onchainos_hl_sign, resolve_wallet};
-use crate::signing::{build_standalone_tpsl_action, format_px, round_px, submit_exchange_request};
+use crate::signing::{build_standalone_tpsl_action, round_px, submit_exchange_request};
 
 #[derive(Args)]
 pub struct TpslArgs {

@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 
 /// Format a float price for submission to Hyperliquid.
 /// Trims trailing zeros; represents integers without decimal point.
+#[allow(dead_code)]
 pub fn format_px(px: f64) -> String {
     if px == 0.0 {
         return "0".to_string();
@@ -183,6 +184,7 @@ pub fn build_close_action(asset: usize, position_is_long: bool, size_str: &str, 
 /// limit_px_str:
 ///   - if is_market=true  → pass None to auto-compute 10% slippage tolerance
 ///   - if is_market=false → pass Some("<strict limit price>")
+#[allow(clippy::too_many_arguments)]
 pub fn build_trigger_order_element(
     asset: usize,
     position_is_long: bool,
@@ -256,6 +258,7 @@ pub fn build_standalone_tpsl_action(
 /// Bracketed entry order: entry + TP/SL children linked via normalTpsl grouping.
 /// The first element is the entry order; subsequent elements are TP/SL children.
 /// Either sl_px or tp_px may be None (but not both).
+#[allow(clippy::too_many_arguments)]
 pub fn build_bracketed_order_action(
     entry_order: Value,     // a pre-built order element JSON object
     asset: usize,
@@ -371,3 +374,11 @@ pub async fn submit_exchange_request(
     serde_json::from_str(&text)
         .map_err(|e| anyhow::anyhow!("Failed to parse exchange response: {} — body: {}", e, text))
 }
+
+// ─── Staking Actions (HYPE tokenDelegate / tokenUndelegate) ───────────────────
+//
+// The L1 phantom-agent action builders for staking have been removed: cDeposit,
+// tokenDelegate, and tokenUndelegate are USER-SIGNED actions (EIP-712 domain
+// `HyperliquidSignTransaction`, chainId 421614). They are now built and signed by
+// `onchainos_hl_sign_c_deposit` / `onchainos_hl_sign_token_delegate` in onchainos.rs.
+// (claimReward was removed entirely — HL rewards auto-compound; there is no claim action.)

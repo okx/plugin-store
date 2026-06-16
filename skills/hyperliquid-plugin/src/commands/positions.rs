@@ -69,6 +69,7 @@ pub async fn run(args: PositionsArgs) -> anyhow::Result<()> {
 
         let leverage_type = pos["leverage"]["type"].as_str().unwrap_or("cross");
         let leverage_value = pos["leverage"]["value"].as_u64().unwrap_or(0);
+        // 0 is legitimate: cross-leverage positions have no fixed multiplier (value absent in API)
 
         let cum_funding_all_time = pos["cumFunding"]["allTime"].as_str().unwrap_or("0");
 
