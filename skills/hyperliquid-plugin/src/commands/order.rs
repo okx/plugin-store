@@ -1,7 +1,7 @@
 use clap::Args;
 use crate::api::{
-    fetch_perp_dexs, get_all_mids, get_all_mids_for_dex, get_asset_meta_with_flags,
-    get_clearinghouse_state, get_clearinghouse_state_for_dex, get_spot_clearinghouse_state,
+    fetch_perp_dexs, get_all_mids_for_dex, get_asset_meta_with_flags,
+    get_clearinghouse_state_for_dex, get_spot_clearinghouse_state,
     parse_coin,
 };
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID, USDC_ARBITRUM};
@@ -10,7 +10,7 @@ use crate::rpc::{ARBITRUM_RPC, erc20_balance};
 use crate::signing::{
     build_bracketed_order_action, build_limit_order_action, build_market_order_action,
     build_update_leverage_action,
-    format_px, round_px, submit_exchange_request,
+    round_px, submit_exchange_request,
 };
 
 #[derive(Args)]
@@ -135,7 +135,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
 
     // TP/SL bracket validation
     if let Some(sl) = args.sl_px {
-        if is_buy && args.tp_px.map_or(false, |tp| tp <= sl) {
+        if is_buy && args.tp_px.is_some_and(|tp| tp <= sl) {
             println!("{}", super::error_response(
                 "Take-profit must be above stop-loss for a long position",
                 "INVALID_ARGUMENT",
@@ -143,7 +143,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             ));
             return Ok(());
         }
-        if !is_buy && args.tp_px.map_or(false, |tp| tp >= sl) {
+        if !is_buy && args.tp_px.is_some_and(|tp| tp >= sl) {
             println!("{}", super::error_response(
                 "Take-profit must be below stop-loss for a short position",
                 "INVALID_ARGUMENT",
@@ -245,18 +245,28 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         // clearinghouse — funds are NOT shared with the default DEX. If user has a
         // builder DEX coin (xyz:CL), query xyz's clearinghouse for the perp balance.
         let dex_clone = dex_opt.clone();
-        let (perp_res, spot_res, arb_raw) = tokio::join!(
+        let (perp_res, spot_res, arb_res) = tokio::join!(
             get_clearinghouse_state_for_dex(info, w, dex_clone.as_deref()),
             get_spot_clearinghouse_state(info, w),
             async move {
                 match aw_clone.as_deref() {
-                    Some(aw) => erc20_balance(USDC_ARBITRUM, aw, ARBITRUM_RPC)
-                        .await
-                        .unwrap_or(0),
-                    None => 0u128,
+                    Some(aw) => erc20_balance(USDC_ARBITRUM, aw, ARBITRUM_RPC).await,
+                    None => Ok(0u128),
                 }
             }
         );
+
+        let arb_raw = match arb_res {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", super::error_response(
+                    &format!("Failed to query Arbitrum USDC balance: {:#}", e),
+                    "RPC_ERROR",
+                    "Check your Arbitrum connection and retry."
+                ));
+                return Ok(());
+            }
+        };
 
         let perp = perp_res
             .ok()
@@ -591,8 +601,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     if let Some(oid_val) = oid {
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .map_err(|e| anyhow::anyhow!("system clock error for attribution: {}", e))?
+            .as_secs();
         let sid = args.strategy_id.as_deref().unwrap_or("");
         let report_payload = serde_json::json!({
             "wallet": wallet,

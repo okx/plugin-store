@@ -12,12 +12,14 @@ const STRATEGY: &str = env!("CARGO_PKG_NAME");
 /// to: contract address.
 /// calldata: hex-encoded calldata (0x-prefixed).
 /// value_wei: optional ETH value to send.
+/// gas_limit: optional gas limit override to prevent OOG; passed as --gas-limit to onchainos.
 /// confirm: if false, preview only; if true, broadcast.
 pub fn wallet_contract_call(
     chain_id: u64,
     to: &str,
     calldata: &str,
     value_wei: Option<u128>,
+    gas_limit: Option<u64>,
     dry_run: bool,
 ) -> anyhow::Result<Value> {
     if dry_run {
@@ -48,6 +50,10 @@ pub fn wallet_contract_call(
     if let Some(v) = value_wei {
         args.push("--amt".to_string());
         args.push(v.to_string());
+    }
+    if let Some(gl) = gas_limit {
+        args.push("--gas-limit".to_string());
+        args.push(gl.to_string());
     }
     // Note: --force is intentionally omitted — onchainos handles its own confirmation.
     // The plugin's --confirm flag already gates whether this call is made at all.

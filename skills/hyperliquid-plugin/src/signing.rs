@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 
 /// Format a float price for submission to Hyperliquid.
 /// Trims trailing zeros; represents integers without decimal point.
+#[allow(dead_code)]
 pub fn format_px(px: f64) -> String {
     if px == 0.0 {
         return "0".to_string();
@@ -183,6 +184,7 @@ pub fn build_close_action(asset: usize, position_is_long: bool, size_str: &str, 
 /// limit_px_str:
 ///   - if is_market=true  → pass None to auto-compute 10% slippage tolerance
 ///   - if is_market=false → pass Some("<strict limit price>")
+#[allow(clippy::too_many_arguments)]
 pub fn build_trigger_order_element(
     asset: usize,
     position_is_long: bool,
@@ -256,6 +258,7 @@ pub fn build_standalone_tpsl_action(
 /// Bracketed entry order: entry + TP/SL children linked via normalTpsl grouping.
 /// The first element is the entry order; subsequent elements are TP/SL children.
 /// Either sl_px or tp_px may be None (but not both).
+#[allow(clippy::too_many_arguments)]
 pub fn build_bracketed_order_action(
     entry_order: Value,     // a pre-built order element JSON object
     asset: usize,
@@ -370,4 +373,56 @@ pub async fn submit_exchange_request(
 
     serde_json::from_str(&text)
         .map_err(|e| anyhow::anyhow!("Failed to parse exchange response: {} — body: {}", e, text))
+}
+
+// ─── Staking Actions (HYPE tokenDelegate / tokenUndelegate / claimReward) ─────
+
+/// Build a tokenDelegate L1 action for HYPE staking.
+/// validator: validator address (0x-prefixed hex)
+/// amount: atomic HYPE units as u64 — stored as string to avoid JSON precision loss (F-2 numeric-encoding)
+/// nonce: millisecond timestamp used as nonce
+pub fn build_token_delegate_action(validator: &str, amount: u64, nonce: u64) -> Value {
+    json!({
+        "type": "tokenDelegate",
+        "validator": validator,
+        "amount": amount.to_string(),
+        "nonce": nonce
+    })
+}
+
+/// Build a tokenUndelegate L1 action to begin HYPE undelegation (unbonding period starts).
+/// validator: validator address to undelegate from
+/// amount: atomic HYPE units as u64
+/// nonce: millisecond timestamp
+pub fn build_token_undelegate_action(validator: &str, amount: u64, nonce: u64) -> Value {
+    json!({
+        "type": "tokenUndelegate",
+        "validator": validator,
+        "amount": amount.to_string(),
+        "nonce": nonce
+    })
+}
+
+/// Build a claimReward L1 action to claim all pending HYPE staking rewards.
+/// nonce: millisecond timestamp
+pub fn build_claim_reward_action(nonce: u64) -> Value {
+    json!({
+        "type": "claimReward",
+        "nonce": nonce
+    })
+}
+
+/// Build redelegate actions: two-step tokenUndelegate from + tokenDelegate to.
+/// Returns (undelegate_action, delegate_action) — caller submits sequentially.
+/// nonce: base nonce; delegate uses nonce + 1 to ensure ordering.
+pub fn build_redelegate_actions(
+    from_validator: &str,
+    to_validator: &str,
+    amount: u64,
+    nonce: u64,
+) -> (Value, Value) {
+    (
+        build_token_undelegate_action(from_validator, amount, nonce),
+        build_token_delegate_action(to_validator, amount, nonce + 1),
+    )
 }

@@ -1,4 +1,4 @@
-/// Minimal JSON-RPC eth_call helpers for Arbitrum (read-only EVM queries).
+//! Minimal JSON-RPC eth_call helpers for Arbitrum (read-only EVM queries).
 
 pub const ARBITRUM_RPC: &str = "https://arbitrum-one-rpc.publicnode.com";
 
@@ -48,7 +48,7 @@ pub async fn erc20_balance(token: &str, owner: &str, rpc: &str) -> anyhow::Resul
         return Ok(0);
     }
     let val = u128::from_str_radix(&trimmed[trimmed.len().saturating_sub(32)..], 16)
-        .unwrap_or(0);
+        .map_err(|e| anyhow::anyhow!("erc20_balance: malformed hex response '{}': {}", trimmed, e))?;
     Ok(val)
 }
 
@@ -62,7 +62,7 @@ pub async fn usdc_permit_nonce(token: &str, owner: &str, rpc: &str) -> anyhow::R
         return Ok(0);
     }
     let val = u64::from_str_radix(&trimmed[trimmed.len().saturating_sub(16)..], 16)
-        .unwrap_or(0);
+        .map_err(|e| anyhow::anyhow!("usdc_permit_nonce: malformed hex response '{}': {}", trimmed, e))?;
     Ok(val)
 }
 
@@ -81,21 +81,55 @@ pub async fn erc20_allowance(
         return Ok(0);
     }
     let val = u128::from_str_radix(&trimmed[trimmed.len().saturating_sub(32)..], 16)
-        .unwrap_or(0);
+        .map_err(|e| anyhow::anyhow!("erc20_allowance: malformed hex response '{}': {}", trimmed, e))?;
     Ok(val)
 }
 
 /// Parse a hex or decimal wei string into u128.
-pub fn parse_wei(raw: &str) -> u128 {
+///
+/// Returns an error if the string is non-empty but cannot be decoded —
+/// a malformed value would silently set ETH value to 0, skipping required msg.value.
+pub fn parse_wei(raw: &str) -> anyhow::Result<u128> {
     let s = raw.trim();
     if s.is_empty() || s == "0x0" || s == "0" {
-        return 0;
+        // 0 is legitimate: no ETH value attached to the call
+        return Ok(0);
     }
     if let Some(hex) = s.strip_prefix("0x") {
-        u128::from_str_radix(hex, 16).unwrap_or(0)
+        u128::from_str_radix(hex, 16)
+            .map_err(|e| anyhow::anyhow!("parse_wei: malformed hex '{}': {}", s, e))
     } else {
-        s.parse::<u128>().unwrap_or(0)
+        s.parse::<u128>()
+            .map_err(|e| anyhow::anyhow!("parse_wei: malformed decimal '{}': {}", s, e))
     }
+}
+
+/// Query native ETH/HYPE balance via eth_getBalance.
+pub async fn eth_native_balance(address: &str, rpc: &str) -> anyhow::Result<u128> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()?;
+    let resp: serde_json::Value = client
+        .post(rpc)
+        .json(&serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_getBalance",
+            "params": [address, "latest"]
+        }))
+        .send()
+        .await?
+        .json()
+        .await?;
+    if let Some(err) = resp.get("error") {
+        anyhow::bail!("eth_getBalance error: {}", err);
+    }
+    let hex = resp["result"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("eth_getBalance: missing 'result' field in response"))?;
+    let wei = u128::from_str_radix(hex.trim_start_matches("0x"), 16)
+        .map_err(|e| anyhow::anyhow!("eth_getBalance: malformed hex '{}': {}", hex, e))?;
+    Ok(wei)
 }
 
 /// Poll for transaction receipt until mined or timeout.

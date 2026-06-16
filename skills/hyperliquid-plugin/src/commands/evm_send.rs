@@ -3,12 +3,16 @@ use sha3::{Digest, Keccak256};
 use crate::config::{CHAIN_ID, HYPER_EVM_RPC, info_url};
 use crate::onchainos::{resolve_wallet, wallet_contract_call};
 use crate::api::get_clearinghouse_state;
-use crate::rpc::wait_tx_mined;
+use crate::rpc::{wait_tx_mined, eth_native_balance};
 
 /// CoreWriter precompile on HyperEVM — executes HyperCore actions via msg.sender
 const CORE_WRITER: &str = "0x3333333333333333333333333333333333333333";
 /// USDC token index in HyperCore spot system (index 0)
 const USDC_SPOT_TOKEN: u64 = 0;
+/// Gas limit per CoreWriter sendRawAction call.
+const EVM_SEND_GAS_LIMIT: u64 = 100_000;
+/// Conservative HyperEVM gas price estimate (1 gwei) for pre-flight balance check.
+const HYPER_EVM_GAS_PRICE_WEI: u128 = 1_000_000_000;
 
 #[derive(Args)]
 pub struct EvmSendArgs {
@@ -78,7 +82,7 @@ fn core_writer_calldata(action_id: u32, abi_params: &[u8]) -> String {
 
     // ABI-encode: selector[4] + offset(32) + length(32) + data(padded to 32n)
     let data_len = action_bytes.len();
-    let padded_len = ((data_len + 31) / 32) * 32;
+    let padded_len = data_len.div_ceil(32) * 32;
 
     let mut out = Vec::with_capacity(4 + 32 + 32 + padded_len);
     out.extend_from_slice(&selector[..4]);
@@ -95,7 +99,7 @@ fn core_writer_calldata(action_id: u32, abi_params: &[u8]) -> String {
 
     // data + right-padding
     out.extend_from_slice(&action_bytes);
-    out.extend(std::iter::repeat(0u8).take(padded_len - data_len));
+    out.extend(std::iter::repeat_n(0u8, padded_len - data_len));
 
     format!("0x{}", hex::encode(out))
 }
@@ -183,11 +187,30 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Check native HYPE balance on HyperEVM for gas (two CoreWriter calls).
+    let hype_balance = match eth_native_balance(&wallet, HYPER_EVM_RPC).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", super::error_response(&format!("Failed to query HYPE balance for gas check: {:#}", e), "RPC_ERROR", "Check your connection and retry."));
+            return Ok(());
+        }
+    };
+    let gas_needed = 2 * EVM_SEND_GAS_LIMIT as u128 * HYPER_EVM_GAS_PRICE_WEI;
+    if hype_balance < gas_needed {
+        println!("{}", super::error_response(
+            &format!("Insufficient HYPE for gas on HyperEVM: have {} wei, need ~{} wei (~{:.6} HYPE for 2×{} gas at 1 gwei). Run 'hyperliquid get-gas' to acquire HYPE.",
+                hype_balance, gas_needed, gas_needed as f64 / 1e18, EVM_SEND_GAS_LIMIT),
+            "INSUFFICIENT_GAS_BALANCE",
+            "Run 'hyperliquid get-gas' to swap USDC for HYPE gas on HyperEVM."
+        ));
+        return Ok(());
+    }
+
     // ── Execute ───────────────────────────────────────────────────────────
 
     // Step 1: Move perp → spot
     eprintln!("Step 1/2  Transferring {} USDC from perp → spot via CoreWriter...", args.amount);
-    let result1 = match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_perp_to_spot, None, false) {
+    let result1 = match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_perp_to_spot, None, Some(EVM_SEND_GAS_LIMIT), false) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status."));
@@ -207,7 +230,7 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
 
     // Step 2: Spot → HyperEVM address
     eprintln!("Step 2/2  Sending {} USDC from spot → HyperEVM {}...", args.amount, &destination[..10]);
-    match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_spot_to_evm, None, false) {
+    match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_spot_to_evm, None, Some(EVM_SEND_GAS_LIMIT), false) {
         Ok(_) => {}
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status."));

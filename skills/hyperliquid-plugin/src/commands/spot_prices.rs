@@ -43,7 +43,9 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
                 )
             })?;
 
-        let tok_idx = token["index"].as_u64().unwrap_or(0) as usize;
+        let tok_idx = token["index"].as_u64()
+            .ok_or_else(|| anyhow::anyhow!("Spot token '{}' is missing required 'index' field", token_name))?
+            as usize;
 
         let market = universe
             .iter()
@@ -57,7 +59,9 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
             })
             .ok_or_else(|| anyhow::anyhow!("No spot market found for '{}'", token_name))?;
 
-        let mkt_idx = market["index"].as_u64().unwrap_or(0) as usize;
+        let mkt_idx = market["index"].as_u64()
+            .ok_or_else(|| anyhow::anyhow!("Spot market for '{}' is missing required 'index' field", token_name))?
+            as usize;
         // Canonical markets are keyed in allMids by `name` (e.g. "PURR/USDC"); non-canonical
         // markets are keyed by `@<index>`. Prefer the explicit name to handle both cases.
         let market_name = market["name"].as_str().unwrap_or("");
@@ -93,7 +97,10 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
             continue;
         }
 
-        let mkt_idx = market["index"].as_u64().unwrap_or(0) as usize;
+        let mkt_idx = match market["index"].as_u64() {
+            Some(v) => v as usize,
+            None => continue,  // skip malformed market entry: missing index
+        };
         let market_name = market["name"].as_str().unwrap_or("");
         let fallback_key = format!("@{}", mkt_idx);
         let price = mids
@@ -103,11 +110,14 @@ pub async fn run(args: SpotPricesArgs) -> anyhow::Result<()> {
             .unwrap_or("0");
 
         // Resolve base token name
-        let base_tok_idx = market["tokens"]
+        let base_tok_idx = match market["tokens"]
             .as_array()
             .and_then(|t| t.first())
             .and_then(|v| v.as_u64())
-            .unwrap_or(0) as usize;
+        {
+            Some(v) => v as usize,
+            None => continue,  // skip malformed market entry: missing base token index
+        };
         let base_name = tok_by_idx
             .get(&base_tok_idx)
             .and_then(|t| t["name"].as_str())

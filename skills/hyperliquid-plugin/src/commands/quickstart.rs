@@ -29,19 +29,31 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
 
     // 2. Phase A: parallel-fetch Arbitrum balance + default DEX state + builder DEX
     //    registry + spot clearinghouse (which contains USDH balance and HIP-4 outcome legs).
-    let (arb_result, hl_default_result, registry_result, spot_result) = tokio::join!(
+    let (arb_result, hl_default_result, registry_result, spot_result, staking_result, hype_bal_result) = tokio::join!(
         erc20_balance(USDC_ARBITRUM, &wallet, ARBITRUM_RPC),
         get_clearinghouse_state(url, &wallet),
         fetch_perp_dexs(url),
         get_spot_clearinghouse_state(url, &wallet),
+        crate::api::get_delegations(url, &wallet),
+        crate::api::get_spot_hype_balance(url, &wallet),
     );
 
     let arb_usdc_units = arb_result.unwrap_or(0);
+    // 0 is legitimate: Arbitrum USDC balance shown as 0 when offline or wallet has no USDC
     let arb_usdc = arb_usdc_units as f64 / 1_000_000.0;
 
     // Parse spot state for USDH balance + HIP-4 outcome positions (`+N` coins)
     let (usdh_balance, outcome_positions_count, outcome_positions_detail) =
         parse_spot_for_outcomes(spot_result.as_ref().ok());
+
+    // Parse staking state
+    let has_staking = staking_result.as_ref()
+        .ok()
+        .and_then(|v| v.as_array())
+        .map(|a| !a.is_empty())
+        .unwrap_or(false);
+    let hype_spot_bal = hype_bal_result.unwrap_or(0);
+    // 0 is legitimate: HYPE spot balance shown as 0 when offline or wallet has no HYPE
 
     // Parse default DEX state
     let (hl_account_value, hl_withdrawable, default_positions, default_positions_detail) =
@@ -69,11 +81,9 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
         let (value, _wd, positions, _detail) = parse_clearinghouse(state.as_ref());
         builder_total_value += value;
         builder_total_positions += positions.len();
-        if value > 0.0 {
-            if richest_builder_dex.as_ref().map(|(_, v)| value > *v).unwrap_or(true) {
+        if value > 0.0 && richest_builder_dex.as_ref().map(|(_, v)| value > *v).unwrap_or(true) {
                 richest_builder_dex = Some((name.clone(), value));
             }
-        }
         builder_summary.push(serde_json::json!({
             "dex":             name,
             "account_value":   value,
@@ -89,6 +99,7 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
         &default_positions, builder_total_positions,
         builder_total_value, &richest_builder_dex,
         outcome_positions_count, usdh_balance,
+        has_staking, hype_spot_bal,
     );
 
     let mut out = serde_json::json!({
@@ -104,6 +115,8 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
             "hl_builder_total_positions": builder_total_positions,
             "spot_usdh_balance":        usdh_balance,
             "hip4_outcome_positions":   outcome_positions_count,
+            "hype_spot_balance_raw": hype_spot_bal.to_string(),
+            "has_staking_position": has_staking,
         },
         "default_dex_positions":  default_positions_detail,
         "builder_dexs":           builder_summary,
@@ -187,6 +200,7 @@ fn parse_clearinghouse(state: Option<&serde_json::Value>)
 }
 
 /// Returns (status, human-readable suggestion, onboarding_steps, ready-to-run command).
+#[allow(clippy::too_many_arguments)]
 fn build_suggestion(
     wallet: &str,
     arb_usdc: f64,
@@ -197,6 +211,8 @@ fn build_suggestion(
     richest_builder: &Option<(String, f64)>,
     outcome_positions_count: usize,
     usdh_balance: f64,
+    has_staking: bool,
+    hype_spot_bal: u64,
 ) -> (&'static str, String, Vec<String>, String) {
     // Case 0 (HIP-4): user has open outcome positions — review/manage them first
     if outcome_positions_count > 0 {
@@ -220,6 +236,16 @@ fn build_suggestion(
                 builder_total_positions),
             vec![],
             format!("hyperliquid-plugin positions --dex {}", dex),
+        );
+    }
+
+    // has_staking_position
+    if has_staking {
+        return (
+            "has_staking_position",
+            "You have HYPE staked with validators. Check your rewards and manage your stake.".to_string(),
+            vec![],
+            "hyperliquid-plugin staking-info".to_string(),
         );
     }
 
@@ -249,6 +275,21 @@ fn build_suggestion(
             "You have open positions on the default Hyperliquid perp DEX. Review them below.".to_string(),
             vec![],
             "hyperliquid-plugin positions".to_string(),
+        );
+    }
+
+    // can_stake
+    if !has_staking && hype_spot_bal > 0 {
+        use crate::api::format_hype_amount;
+        let hype_display = format_hype_amount(hype_spot_bal);
+        return (
+            "can_stake",
+            format!("You have {} HYPE in your spot account. Stake it to earn staking rewards.", hype_display),
+            vec![
+                "1. List validators: hyperliquid-plugin validators".to_string(),
+                "2. Stake HYPE: hyperliquid-plugin stake --amount <N> --validator <ADDR> --confirm".to_string(),
+            ],
+            format!("hyperliquid-plugin stake --amount {} --validator <VALIDATOR_ADDR> --confirm", hype_display),
         );
     }
 

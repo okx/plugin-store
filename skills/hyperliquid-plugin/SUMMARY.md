@@ -1,6 +1,6 @@
 ## Overview
 
-Hyperliquid is a high-performance on-chain perpetuals DEX on its own L1, settling in USDC (perps) and USDH (HIP-4 outcomes). This skill lets you trade perps & spot on the default DEX (BTC / ETH / SOL / 230+ crypto perps), HIP-3 builder DEXs (xyz / flx / vntl / cash / km / etc. - RWAs like WTI Crude, GOLD, NVDA, TSLA, SP500, EUR/JPY, each with its OWN clearinghouse), AND HIP-4 outcome markets (binary YES/NO prediction contracts on real-world events, fully collateralized in USDH, no leverage / no liquidation, automatic settlement).
+Hyperliquid is a high-performance on-chain perpetuals DEX on its own L1, settling in USDC (perps) and USDH (HIP-4 outcomes). This skill lets you trade perps & spot on the default DEX (BTC / ETH / SOL / 230+ crypto perps), HIP-3 builder DEXs (xyz / flx / vntl / cash / km / etc. - RWAs like WTI Crude, GOLD, NVDA, TSLA, SP500, EUR/JPY, each with its OWN clearinghouse), AND HIP-4 outcome markets (binary YES/NO prediction contracts on real-world events, fully collateralized in USDH, no leverage / no liquidation, automatic settlement) AND stake HYPE tokens for staking rewards (v0.5.0: delegate to validators, claim rewards, track unbonding).
 
 ## Prerequisites
 - onchainos CLI installed and logged in
@@ -17,5 +17,7 @@ Hyperliquid is a high-performance on-chain perpetuals DEX on its own L1, settlin
 5. If you see `status: ready` - place a perp order on the default DEX, fund a HIP-3 builder DEX for RWAs, OR fund USDH for HIP-4 outcomes: `hyperliquid-plugin order --coin BTC --side buy --size 0.001 --leverage 5 --confirm` OR `hyperliquid-plugin dex-transfer --to-dex xyz --amount 5 --confirm` (then trade `xyz:CL` / `xyz:NVDA` / etc.) OR `hyperliquid-plugin transfer --amount 12 --direction perp-to-spot --confirm` -> `hyperliquid-plugin usdh-fund --amount 11 --confirm` (then `outcome-list` to see what to bet on)
 6. If you see `status: active` or `status: has_builder_dex_position` - review positions (pass `--dex xyz` for builder DEX positions) and attach stop-loss / take-profit: `hyperliquid-plugin positions --dex xyz` -> `hyperliquid-plugin tpsl --coin xyz:CL --sl-px 95 --tp-px 130 --confirm`
 7. If you see `status: has_outcome_position` - review HIP-4 outcome holdings; settlement is AUTOMATIC at expiry (no claim/redeem needed), but you can sell early to lock in P&L: `hyperliquid-plugin outcome-positions` -> `hyperliquid-plugin outcome-sell --outcome <id> --side <yes|no> --shares N --price 0.001 --tif Ioc --confirm` (closes at touch)
-8. Close a perp position: `hyperliquid-plugin close --coin xyz:CL --confirm` (works for both default and builder DEX coins via the `dex:symbol` prefix)
-9. Withdraw USDC: `hyperliquid-plugin dex-transfer --from-dex xyz --amount 5 --confirm` (back to default DEX) -> `hyperliquid-plugin withdraw --amount 50 --confirm` (default DEX -> Arbitrum)
+8. If you see `status: has_staking_position` — review your HYPE stake and rewards: `hyperliquid-plugin staking-info` -> `hyperliquid-plugin claim-rewards --confirm`
+9. If you see `status: can_stake` — stake your HYPE: `hyperliquid-plugin validators` -> `hyperliquid-plugin stake --amount <N> --validator <ADDR> --confirm`
+10. Close a perp position: `hyperliquid-plugin close --coin xyz:CL --confirm` (works for both default and builder DEX coins via the `dex:symbol` prefix)
+11. Withdraw USDC: `hyperliquid-plugin dex-transfer --from-dex xyz --amount 5 --confirm` (back to default DEX) -> `hyperliquid-plugin withdraw --amount 50 --confirm` (default DEX -> Arbitrum)

@@ -29,6 +29,15 @@ pub mod tpsl;
 pub mod transfer;
 pub mod withdraw;
 pub mod quickstart;
+pub mod claim_rewards;
+pub mod delegation_history;
+pub mod redelegate;
+pub mod stake;
+pub mod staking_info;
+pub mod staking_rewards;
+pub mod unbonding;
+pub mod unstake;
+pub mod validators;
 
 /// Render a structured error JSON string for stdout output.
 /// All command failures must use this instead of anyhow::bail! or ?.
