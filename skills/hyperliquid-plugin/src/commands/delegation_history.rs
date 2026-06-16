@@ -49,26 +49,34 @@ pub async fn run(args: DelegationHistoryArgs) -> anyhow::Result<()> {
     let history = raw.as_array().unwrap_or(&empty);
 
     let events: Vec<serde_json::Value> = history.iter().map(|e| {
-        let event_type = e["type"].as_str()
-            .or_else(|| e["action"].as_str())
-            .unwrap_or("unknown")
-            .to_string();
-        let amount_raw_str = e["amount"].as_str()
-            .or_else(|| e["delta"].as_str())
-            .unwrap_or("0")
-            .to_string();
-        let amount_raw: u64 = amount_raw_str.parse().unwrap_or_default();
+        // HL shape: {time, hash, delta: { <eventType>: {validator, amount, isUndelegate?} }}
+        // The `delta` object has a single key naming the event type; its value carries the fields.
         let timestamp = e["time"].as_u64()
             .or_else(|| e["timestamp"].as_u64())
             .unwrap_or_default();
-        let validator = e["validator"].as_str().unwrap_or("").to_string();
-        serde_json::json!({
+
+        let (event_type, inner) = e["delta"].as_object()
+            .and_then(|m| m.iter().next())
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .unwrap_or_else(|| ("unknown".to_string(), serde_json::Value::Null));
+
+        // amount is a DECIMAL HYPE STRING (e.g. "0.17")
+        let amount_str = inner["amount"].as_str().unwrap_or("0").to_string();
+        let amount_raw: u64 = api::parse_hype_amount(&amount_str).unwrap_or_default();
+        let validator = inner["validator"].as_str().unwrap_or("").to_string();
+        let is_undelegate = inner["isUndelegate"].as_bool();
+
+        let mut event = serde_json::json!({
             "event_type": event_type,
             "amount": api::format_hype_amount(amount_raw),
-            "amount_raw": amount_raw_str,
+            "amount_raw": amount_raw.to_string(),
             "validator": validator,
             "timestamp": timestamp,
-        })
+        });
+        if let Some(u) = is_undelegate {
+            event["is_undelegate"] = serde_json::json!(u);
+        }
+        event
     }).collect();
 
     println!("{}", serde_json::to_string_pretty(&serde_json::json!({

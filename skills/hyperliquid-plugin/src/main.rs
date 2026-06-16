@@ -38,7 +38,6 @@ use commands::{
     transfer::TransferArgs,
     withdraw::WithdrawArgs,
     quickstart::QuickstartArgs,
-    claim_rewards::ClaimRewardsArgs,
     delegation_history::DelegationHistoryArgs,
     redelegate::RedelegateArgs,
     stake::StakeArgs,
@@ -151,9 +150,6 @@ enum Commands {
     Stake(StakeArgs),
     /// Begin undelegating HYPE from a validator (unbonding period applies, requires --confirm)
     Unstake(UnstakeArgs),
-    /// Claim all pending HYPE staking rewards (requires --confirm)
-    #[command(name = "claim-rewards")]
-    ClaimRewards(ClaimRewardsArgs),
     /// Move staked HYPE from one validator to another in two steps (requires --confirm)
     Redelegate(RedelegateArgs),
 }
@@ -200,7 +196,6 @@ async fn main() -> anyhow::Result<()> {
         Commands::DelegationHistory(args) => commands::delegation_history::run(args).await,
         Commands::Stake(args) => commands::stake::run(args).await,
         Commands::Unstake(args) => commands::unstake::run(args).await,
-        Commands::ClaimRewards(args) => commands::claim_rewards::run(args).await,
         Commands::Redelegate(args) => commands::redelegate::run(args).await,
     }
 }

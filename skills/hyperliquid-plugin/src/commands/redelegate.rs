@@ -1,8 +1,8 @@
 use clap::Args;
 use crate::api;
 use crate::config::{info_url, exchange_url, now_ms, ARBITRUM_CHAIN_ID};
-use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign};
-use crate::signing::{build_redelegate_actions, submit_exchange_request};
+use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign_token_delegate};
+use crate::signing::submit_exchange_request;
 use super::error_response;
 
 #[derive(Args)]
@@ -95,7 +95,7 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
     let from_lower = args.from_validator.to_lowercase();
     let staked_raw: u64 = delegations_arr.iter()
         .filter(|d| d["validator"].as_str().map(|s| s.to_lowercase()) == Some(from_lower.clone()))
-        .filter_map(|d| d["amount"].as_str().and_then(|s| s.parse::<u64>().ok()))
+        .filter_map(|d| d["amount"].as_str().and_then(|s| api::parse_hype_amount(s).ok()))
         .sum();
 
     if staked_raw == 0 {
@@ -120,13 +120,6 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let (undelegate_action, delegate_action) = build_redelegate_actions(
-        &args.from_validator,
-        &args.to_validator,
-        amount_raw,
-        nonce,
-    );
-
     if !args.confirm {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": true,
@@ -137,8 +130,10 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
             "to_validator": args.to_validator,
             "amount": api::format_hype_amount(amount_raw),
             "amount_raw": amount_raw.to_string(),
-            "step_1_undelegate": undelegate_action,
-            "step_2_delegate": delegate_action,
+            "steps": [
+                "1. tokenDelegate (isUndelegate=true): undelegate from from-validator",
+                "2. tokenDelegate (isUndelegate=false): delegate to to-validator",
+            ],
             "note": "Dry-run preview — add --confirm to sign and submit both steps.",
         }))?);
         return Ok(());
@@ -146,8 +141,8 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
 
     let exchange = exchange_url();
 
-    // Step 1: Undelegate from source
-    let signed1 = match onchainos_hl_sign(&undelegate_action, nonce, &wallet, chain_id, true, false) {
+    // Step 1: Undelegate from source (user-signed tokenDelegate with isUndelegate=true)
+    let signed1 = match onchainos_hl_sign_token_delegate(&args.from_validator, amount_raw, true, nonce, &wallet, chain_id) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(
@@ -178,9 +173,9 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Step 2: Delegate to destination (nonce + 1)
+    // Step 2: Delegate to destination (nonce + 1, user-signed tokenDelegate with isUndelegate=false)
     let nonce2 = nonce + 1;
-    let signed2 = match onchainos_hl_sign(&delegate_action, nonce2, &wallet, chain_id, true, false) {
+    let signed2 = match onchainos_hl_sign_token_delegate(&args.to_validator, amount_raw, false, nonce2, &wallet, chain_id) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(

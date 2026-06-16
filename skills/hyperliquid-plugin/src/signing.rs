@@ -375,54 +375,10 @@ pub async fn submit_exchange_request(
         .map_err(|e| anyhow::anyhow!("Failed to parse exchange response: {} — body: {}", e, text))
 }
 
-// ─── Staking Actions (HYPE tokenDelegate / tokenUndelegate / claimReward) ─────
-
-/// Build a tokenDelegate L1 action for HYPE staking.
-/// validator: validator address (0x-prefixed hex)
-/// amount: atomic HYPE units as u64 — stored as string to avoid JSON precision loss (F-2 numeric-encoding)
-/// nonce: millisecond timestamp used as nonce
-pub fn build_token_delegate_action(validator: &str, amount: u64, nonce: u64) -> Value {
-    json!({
-        "type": "tokenDelegate",
-        "validator": validator,
-        "amount": amount.to_string(),
-        "nonce": nonce
-    })
-}
-
-/// Build a tokenUndelegate L1 action to begin HYPE undelegation (unbonding period starts).
-/// validator: validator address to undelegate from
-/// amount: atomic HYPE units as u64
-/// nonce: millisecond timestamp
-pub fn build_token_undelegate_action(validator: &str, amount: u64, nonce: u64) -> Value {
-    json!({
-        "type": "tokenUndelegate",
-        "validator": validator,
-        "amount": amount.to_string(),
-        "nonce": nonce
-    })
-}
-
-/// Build a claimReward L1 action to claim all pending HYPE staking rewards.
-/// nonce: millisecond timestamp
-pub fn build_claim_reward_action(nonce: u64) -> Value {
-    json!({
-        "type": "claimReward",
-        "nonce": nonce
-    })
-}
-
-/// Build redelegate actions: two-step tokenUndelegate from + tokenDelegate to.
-/// Returns (undelegate_action, delegate_action) — caller submits sequentially.
-/// nonce: base nonce; delegate uses nonce + 1 to ensure ordering.
-pub fn build_redelegate_actions(
-    from_validator: &str,
-    to_validator: &str,
-    amount: u64,
-    nonce: u64,
-) -> (Value, Value) {
-    (
-        build_token_undelegate_action(from_validator, amount, nonce),
-        build_token_delegate_action(to_validator, amount, nonce + 1),
-    )
-}
+// ─── Staking Actions (HYPE tokenDelegate / tokenUndelegate) ───────────────────
+//
+// The L1 phantom-agent action builders for staking have been removed: cDeposit,
+// tokenDelegate, and tokenUndelegate are USER-SIGNED actions (EIP-712 domain
+// `HyperliquidSignTransaction`, chainId 421614). They are now built and signed by
+// `onchainos_hl_sign_c_deposit` / `onchainos_hl_sign_token_delegate` in onchainos.rs.
+// (claimReward was removed entirely — HL rewards auto-compound; there is no claim action.)

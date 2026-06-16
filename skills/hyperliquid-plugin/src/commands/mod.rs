@@ -29,7 +29,6 @@ pub mod tpsl;
 pub mod transfer;
 pub mod withdraw;
 pub mod quickstart;
-pub mod claim_rewards;
 pub mod delegation_history;
 pub mod redelegate;
 pub mod stake;

@@ -62,14 +62,20 @@ pub async fn run(args: StakingInfoArgs) -> anyhow::Result<()> {
     let mut total_staked_raw: u64 = 0;
     let formatted_delegations: Vec<serde_json::Value> = delegation_arr.iter().map(|d| {
         let validator = d["validator"].as_str().unwrap_or("").to_string();
-        let amount_raw_str = d["amount"].as_str().unwrap_or("0").to_string();
-        let amount_raw: u64 = amount_raw_str.parse().unwrap_or_default();
+        // amount is a DECIMAL HYPE STRING (e.g. "0.17")
+        let amount_str = d["amount"].as_str().unwrap_or("0").to_string();
+        let amount_raw: u64 = api::parse_hype_amount(&amount_str).unwrap_or_default();
         total_staked_raw += amount_raw;
-        serde_json::json!({
+        let mut entry = serde_json::json!({
             "validator": validator,
             "staked_amount": api::format_hype_amount(amount_raw),
-            "staked_amount_raw": amount_raw_str,
-        })
+            "staked_amount_raw": amount_raw.to_string(),
+        });
+        // lockedUntil: present on HL delegation entries when funds are lock-protected
+        if let Some(locked_until) = d["lockedUntilTimestamp"].as_u64().or_else(|| d["lockedUntil"].as_u64()) {
+            entry["locked_until"] = serde_json::json!(locked_until);
+        }
+        entry
     }).collect();
 
     // Fetch pending rewards
@@ -77,11 +83,12 @@ pub async fn run(args: StakingInfoArgs) -> anyhow::Result<()> {
     let rewards_raw_str: String;
     match api::get_delegator_rewards(url, &wallet).await {
         Ok(r) => {
+            // rewards amounts are DECIMAL HYPE STRINGS (e.g. "0.17")
             let reward_str = r["pendingRewards"].as_str()
                 .or_else(|| r["totalRewards"].as_str())
                 .unwrap_or("0");
-            rewards_raw = reward_str.parse().unwrap_or_default();
-            rewards_raw_str = reward_str.to_string();
+            rewards_raw = api::parse_hype_amount(reward_str).unwrap_or_default();
+            rewards_raw_str = rewards_raw.to_string();
         }
         Err(_) => {
             rewards_raw = 0;

@@ -1,8 +1,8 @@
 use clap::Args;
 use crate::api;
 use crate::config::{info_url, exchange_url, now_ms, ARBITRUM_CHAIN_ID};
-use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign};
-use crate::signing::{build_token_undelegate_action, submit_exchange_request};
+use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign_token_delegate};
+use crate::signing::submit_exchange_request;
 use super::error_response;
 
 #[derive(Args)]
@@ -81,7 +81,7 @@ pub async fn run(args: UnstakeArgs) -> anyhow::Result<()> {
     let validator_lower = args.validator.to_lowercase();
     let staked_raw: u64 = delegations_arr.iter()
         .filter(|d| d["validator"].as_str().map(|s| s.to_lowercase()) == Some(validator_lower.clone()))
-        .filter_map(|d| d["amount"].as_str().and_then(|s| s.parse::<u64>().ok()))
+        .filter_map(|d| d["amount"].as_str().and_then(|s| api::parse_hype_amount(s).ok()))
         .sum();
 
     if staked_raw == 0 {
@@ -106,8 +106,6 @@ pub async fn run(args: UnstakeArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let action = build_token_undelegate_action(&args.validator, amount_raw, nonce);
-
     if !args.confirm {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": true,
@@ -119,14 +117,13 @@ pub async fn run(args: UnstakeArgs) -> anyhow::Result<()> {
             "amount_raw": amount_raw.to_string(),
             "current_stake": api::format_hype_amount(staked_raw),
             "current_stake_raw": staked_raw.to_string(),
-            "action_payload": action,
             "note": "Dry-run preview — add --confirm to sign and submit. Unbonding period applies.",
         }))?);
         return Ok(());
     }
 
-    // Sign + submit
-    let signed = match onchainos_hl_sign(&action, nonce, &wallet, chain_id, true, false) {
+    // Sign + submit (user-signed tokenDelegate with isUndelegate=true)
+    let signed = match onchainos_hl_sign_token_delegate(&args.validator, amount_raw, true, nonce, &wallet, chain_id) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(

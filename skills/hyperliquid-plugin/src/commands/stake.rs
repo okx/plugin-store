@@ -1,8 +1,8 @@
 use clap::Args;
 use crate::api;
 use crate::config::{info_url, exchange_url, now_ms, ARBITRUM_CHAIN_ID};
-use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign};
-use crate::signing::{build_token_delegate_action, submit_exchange_request};
+use crate::onchainos::{resolve_wallet_with_chain, onchainos_hl_sign_c_deposit, onchainos_hl_sign_token_delegate};
+use crate::signing::submit_exchange_request;
 use super::error_response;
 
 #[derive(Args)]
@@ -95,7 +95,6 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
     }
 
     let effective_amount = amount_raw.min(hype_bal);
-    let action = build_token_delegate_action(&args.validator, effective_amount, nonce);
 
     if !args.confirm {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
@@ -108,14 +107,19 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
             "amount_raw": effective_amount.to_string(),
             "hype_spot_balance": api::format_hype_amount(hype_bal),
             "hype_spot_balance_raw": hype_bal.to_string(),
-            "action_payload": action,
-            "note": "Dry-run preview — add --confirm to sign and submit.",
+            "steps": [
+                "1. cDeposit: move HYPE from spot balance into staking balance",
+                "2. tokenDelegate: delegate staking balance to the validator",
+            ],
+            "note": "Dry-run preview — add --confirm to sign and submit both steps.",
         }))?);
         return Ok(());
     }
 
-    // Sign + submit
-    let signed = match onchainos_hl_sign(&action, nonce, &wallet, chain_id, true, false) {
+    let exchange = exchange_url();
+
+    // Step 1: cDeposit (spot → staking balance)
+    let signed_deposit = match onchainos_hl_sign_c_deposit(effective_amount, nonce, &wallet, chain_id) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(
@@ -126,26 +130,81 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
             return Ok(());
         }
     };
-
-    let exchange = exchange_url();
-    let result = match submit_exchange_request(exchange, signed).await {
+    let deposit_result = match submit_exchange_request(exchange, signed_deposit).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(
                 &format!("{:#}", e),
                 "TX_SUBMIT_FAILED",
-                "Retry the command. If the issue persists, check onchainos status.",
+                "cDeposit step failed before any funds moved. Safe to retry the stake command.",
             ));
             return Ok(());
         }
     };
-
-    if result["status"].as_str() == Some("err") {
+    if deposit_result["status"].as_str() == Some("err") {
         println!("{}", error_response(
-            &format!("Stake failed: {}", result["response"].as_str().unwrap_or("unknown error")),
-            "STAKE_FAILED",
-            "Check validator address and HYPE balance, then retry.",
+            &format!("Stake step 1 (cDeposit) failed: {}", deposit_result["response"].as_str().unwrap_or("unknown error")),
+            "STAKE_DEPOSIT_FAILED",
+            "No funds moved. Check HYPE balance and retry the stake command.",
         ));
+        return Ok(());
+    }
+
+    // Step 2: tokenDelegate (staking balance → validator), nonce + 1 to ensure ordering
+    let nonce2 = nonce + 1;
+    let signed_delegate = match onchainos_hl_sign_token_delegate(&args.validator, effective_amount, false, nonce2, &wallet, chain_id) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "status": "partial",
+                "action": "stake",
+                "wallet": wallet,
+                "validator": args.validator,
+                "amount": api::format_hype_amount(effective_amount),
+                "amount_raw": effective_amount.to_string(),
+                "step_1_cDeposit_result": deposit_result,
+                "error": format!("{:#}", e),
+                "error_code": "STAKE_DELEGATE_SIGN_FAILED",
+                "note": "PARTIAL: cDeposit SUCCEEDED — HYPE is already in your staking balance. The tokenDelegate step failed to sign. DO NOT re-run `stake` (that would double-deposit). Run `stake` is NOT safe to retry; instead delegate the already-deposited funds manually, or contact support.",
+            }))?);
+            return Ok(());
+        }
+    };
+    let delegate_result = match submit_exchange_request(exchange, signed_delegate).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                "ok": false,
+                "status": "partial",
+                "action": "stake",
+                "wallet": wallet,
+                "validator": args.validator,
+                "amount": api::format_hype_amount(effective_amount),
+                "amount_raw": effective_amount.to_string(),
+                "step_1_cDeposit_result": deposit_result,
+                "error": format!("{:#}", e),
+                "error_code": "STAKE_DELEGATE_SUBMIT_FAILED",
+                "note": "PARTIAL: cDeposit SUCCEEDED — HYPE is already in your staking balance. The tokenDelegate submission failed. DO NOT re-run `stake` (that would double-deposit). Delegate the already-deposited funds manually, or contact support.",
+            }))?);
+            return Ok(());
+        }
+    };
+    if delegate_result["status"].as_str() == Some("err") {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "status": "partial",
+            "action": "stake",
+            "wallet": wallet,
+            "validator": args.validator,
+            "amount": api::format_hype_amount(effective_amount),
+            "amount_raw": effective_amount.to_string(),
+            "step_1_cDeposit_result": deposit_result,
+            "step_2_tokenDelegate_result": delegate_result,
+            "error": format!("tokenDelegate failed: {}", delegate_result["response"].as_str().unwrap_or("unknown error")),
+            "error_code": "STAKE_DELEGATE_FAILED",
+            "note": "PARTIAL: cDeposit SUCCEEDED — HYPE is already in your staking balance. The tokenDelegate step returned an error. DO NOT re-run `stake` (that would double-deposit). Verify the validator address and delegate the already-deposited funds manually, or contact support.",
+        }))?);
         return Ok(());
     }
 
@@ -156,8 +215,9 @@ pub async fn run(args: StakeArgs) -> anyhow::Result<()> {
         "validator": args.validator,
         "staked_amount": api::format_hype_amount(effective_amount),
         "staked_amount_raw": effective_amount.to_string(),
-        "result": result,
-        "note": "HYPE delegated to validator. Use staking-info to see your updated stake.",
+        "step_1_cDeposit_result": deposit_result,
+        "step_2_tokenDelegate_result": delegate_result,
+        "note": "HYPE deposited to staking balance and delegated to validator. Use staking-info to see your updated stake.",
     }))?);
     Ok(())
 }

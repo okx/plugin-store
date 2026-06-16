@@ -34,18 +34,30 @@ pub async fn run(_args: ValidatorsArgs) -> anyhow::Result<()> {
             .to_string();
         let name = v["name"].as_str().unwrap_or("").to_string();
 
-        // total_stake: prefer raw string field, fall back to numeric
-        let total_stake_raw = v["totalStake"].as_str()
-            .map(|s| s.to_string())
-            .or_else(|| v["stake"].as_str().map(|s| s.to_string()))
-            .unwrap_or_else(|| "0".to_string());
-        let total_stake_u: u64 = total_stake_raw.parse().unwrap_or_default();
+        // total_stake: HL returns `stake` as a JSON NUMBER in atomic units (1 HYPE = 1e8)
+        let total_stake_u: u64 = v["stake"].as_u64().unwrap_or_default();
+        let total_stake_raw = total_stake_u.to_string();
         let total_stake = api::format_hype_amount(total_stake_u);
 
-        let apr = v["apr"].as_str()
-            .or_else(|| v["expectedApr"].as_str())
-            .unwrap_or("0")
-            .to_string();
+        // apr: HL has no top-level `apr`. `stats` is [["day",{predictedApr}],["week",{...}],["month",{...}]].
+        // Prefer the "month" entry's predictedApr; fall back to the first entry.
+        let stats = v["stats"].as_array();
+        let apr = stats
+            .and_then(|arr| {
+                arr.iter()
+                    .find(|s| s.get(0).and_then(|k| k.as_str()) == Some("month"))
+                    .or_else(|| arr.first())
+            })
+            .and_then(|entry| entry.get(1))
+            .map(|obj| &obj["predictedApr"])
+            .map(|p| {
+                // predictedApr may be a JSON string or number depending on HL response
+                p.as_str()
+                    .map(|s| s.to_string())
+                    .or_else(|| p.as_f64().map(|n| n.to_string()))
+                    .unwrap_or_else(|| "0".to_string())
+            })
+            .unwrap_or_else(|| "0".to_string());
         let commission = v["commission"].as_str()
             .or_else(|| v["commissionBps"].as_str())
             .unwrap_or("0")
