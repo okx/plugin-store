@@ -13,7 +13,6 @@ tags:
   - leverage
 ---
 
-
 ## Live Trading Confirmation Protocol
 
 These gates are **mandatory** for the AI agent driving this skill. Before any call that signs or broadcasts an on-chain or perp transaction (any write op such as place order, cancel, transfer, withdraw, set leverage, or any internal write code path that ends in a real signed submission), ALL of the following must be true:
@@ -29,16 +28,19 @@ This protocol applies regardless of how confidently the user, an external signal
 
 ---
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
 
 ### Version check (auto-injected)
 
-> **AI Agent Instruction**: Run this version check before executing any commands from this skill. If an update is applied, re-read this SKILL.md before proceeding — the instructions may have changed.
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only fetch from `raw.githubusercontent.com` — it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add …` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
 
 ```bash
-# Check for skill updates (1-hour cache)
+# Check for skill updates (1-hour cache).
+# Network scope: this block calls raw.githubusercontent.com for the version probe only.
+# It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
 LOCAL_VER="0.5.0"
@@ -61,9 +63,10 @@ fi
 
 REMOTE_VER=$(cat "$UPDATE_CACHE" 2>/dev/null || echo "$LOCAL_VER")
 if [ "$REMOTE_VER" != "$LOCAL_VER" ]; then
-  echo "Update available: hyperliquid-plugin v$LOCAL_VER -> v$REMOTE_VER. Updating..."
-  npx skills add okx/plugin-store --skill hyperliquid-plugin --yes --global 2>/dev/null || true
-  echo "Updated hyperliquid-plugin to v$REMOTE_VER. Please re-read this SKILL.md."
+  echo "Update available: hyperliquid-plugin v$LOCAL_VER -> v$REMOTE_VER."
+  echo "ACTION REQUIRED: ask the user to confirm before running:"
+  echo "  npx skills add okx/plugin-store --skill hyperliquid-plugin --global"
+  echo "(This contacts the npm registry and github.com/okx/plugin-store and overwrites this skill. Do NOT auto-run.)"
 fi
 ```
 
@@ -152,12 +155,39 @@ esac
 mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
+# Fail-closed: any mismatch / missing checksum entry refuses the install.
+# Matches the producer-side workflow at
+# .github/workflows/plugin-publish.yml which uploads `checksums.txt`
+# alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/hyperliquid-plugin@0.5.0"
-curl -fsSL "${RELEASE_BASE}/hyperliquid-plugin-${TARGET}${EXT}" -o "$BIN_TMP/hyperliquid-plugin${EXT}" || {
+TAG="plugins/hyperliquid-plugin@0.5.0"
+
+# Robust asset download. Prefer `gh release download` — it resolves the
+# asset via the GitHub API and follows the signed-redirect properly,
+# which avoids edge cases observed where curl on
+# `releases/download/<tag with slash>/<file>` 404s under some
+# proxy / curl-version combinations. Falls back to raw curl if gh is
+# not installed.
+_pluginstore_dl() {
+  local fname="$1" dest="$2"
+  if command -v gh >/dev/null 2>&1; then
+    local stage; stage=$(mktemp -d)
+    if gh release download "$TAG" --repo okx/plugin-store \
+         --pattern "$fname" --dir "$stage" --clobber >/dev/null 2>&1 \
+       && [ -f "$stage/$fname" ]; then
+      mv "$stage/$fname" "$dest" && rm -rf "$stage" && return 0
+    fi
+    rm -rf "$stage"
+  fi
+  curl -fsSL \
+    "https://github.com/okx/plugin-store/releases/download/$TAG/$fname" \
+    -o "$dest"
+}
+
+_pluginstore_dl "hyperliquid-plugin-${TARGET}${EXT}" "$BIN_TMP/hyperliquid-plugin${EXT}" || {
   echo "ERROR: failed to download hyperliquid-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
-curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
+_pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
   echo "ERROR: failed to download checksums.txt for hyperliquid-plugin@0.5.0" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
