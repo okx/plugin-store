@@ -38,8 +38,8 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
         crate::api::get_spot_hype_balance(url, &wallet),
     );
 
-    let arb_usdc_units = arb_result.unwrap_or(0);
-    // 0 is legitimate: Arbitrum USDC balance shown as 0 when offline or wallet has no USDC
+    let arb_usdc_units = arb_result
+        .map_err(|e| anyhow::anyhow!("ARB USDC balance RPC failed: {}", e))?;
     let arb_usdc = arb_usdc_units as f64 / 1_000_000.0;
 
     // Parse spot state for USDH balance + HIP-4 outcome positions (`+N` coins)
@@ -52,8 +52,8 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
         .and_then(|v| v.as_array())
         .map(|a| !a.is_empty())
         .unwrap_or(false);
-    let hype_spot_bal = hype_bal_result.unwrap_or(0);
-    // 0 is legitimate: HYPE spot balance shown as 0 when offline or wallet has no HYPE
+    let hype_spot_bal = hype_bal_result
+        .map_err(|e| anyhow::anyhow!("HYPE spot balance API failed: {}", e))?;
 
     // Parse default DEX state
     let (hl_account_value, hl_withdrawable, default_positions, default_positions_detail) =
@@ -108,6 +108,7 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
         "wallet": wallet,
         "assets": {
             "arb_usdc_balance":         arb_usdc,
+            "arb_usdc_balance_raw":     arb_usdc_units.to_string(),
             "hl_default_account_value": hl_account_value,
             "hl_default_withdrawable":  hl_withdrawable,
             "hl_default_positions":     default_positions.len(),
@@ -115,6 +116,7 @@ pub async fn run(args: QuickstartArgs) -> anyhow::Result<()> {
             "hl_builder_total_positions": builder_total_positions,
             "spot_usdh_balance":        usdh_balance,
             "hip4_outcome_positions":   outcome_positions_count,
+            "hype_spot_balance":     crate::api::format_hype_amount(hype_spot_bal),
             "hype_spot_balance_raw": hype_spot_bal.to_string(),
             "has_staking_position": has_staking,
         },

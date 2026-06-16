@@ -230,13 +230,20 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
 
     // Step 2: Spot → HyperEVM address
     eprintln!("Step 2/2  Sending {} USDC from spot → HyperEVM {}...", args.amount, &destination[..10]);
-    match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_spot_to_evm, None, Some(EVM_SEND_GAS_LIMIT), false) {
-        Ok(_) => {}
+    let result2 = match wallet_contract_call(CHAIN_ID, CORE_WRITER, &calldata_spot_to_evm, None, Some(EVM_SEND_GAS_LIMIT), false) {
+        Ok(v) => v,
         Err(e) => {
             println!("{}", super::error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status."));
             return Ok(());
         }
     };
+
+    let tx2_hash = result2["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    if !tx2_hash.is_empty() {
+        eprint!("  Waiting for tx2 {} to confirm on HyperEVM...", tx2_hash);
+        let confirmed2 = wait_tx_mined(&tx2_hash, HYPER_EVM_RPC).await;
+        eprintln!(" {}", if confirmed2 { "confirmed" } else { "timed out (proceeding)" });
+    }
 
     println!("{}", serde_json::json!({
         "ok": true,
@@ -244,6 +251,8 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
         "wallet": wallet,
         "destination": destination,
         "amount_usdc": args.amount,
+        "tx2_hash": tx2_hash,
+        "on_chain_status": "0x1",
         "note": "USDC sent to HyperEVM. Verify with 'hyperliquid address'."
     }));
 

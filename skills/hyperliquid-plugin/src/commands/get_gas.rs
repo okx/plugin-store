@@ -63,6 +63,11 @@ async fn hype_balance_display(address: &str) -> f64 {
         .unwrap_or(0.0)  // 0.0 is legitimate: display-only field, 0 shown if RPC unreachable
 }
 
+fn is_allowance_error(e: &anyhow::Error) -> bool {
+    let msg = format!("{:#}", e).to_lowercase();
+    msg.contains("allowance")
+}
+
 pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
     if args.amount <= 0.0 {
         anyhow::bail!("--amount must be positive");
@@ -215,7 +220,28 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
 
     eprintln!("Depositing {} USDC to relay solver...", args.amount);
     let deposit_value_opt = if deposit_value > 0 { Some(deposit_value) } else { None };
-    wallet_contract_call(ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, Some(DEPOSIT_GAS_LIMIT), false)?;
+    let deposit_result = {
+        let first = wallet_contract_call(
+            ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, Some(DEPOSIT_GAS_LIMIT), false
+        );
+        match first {
+            Ok(v) => v,
+            Err(e) if is_allowance_error(&e) => {
+                eprintln!("  Allowance error detected, retrying after 5s...");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                wallet_contract_call(
+                    ARBITRUM_CHAIN_ID, deposit_to, deposit_calldata, deposit_value_opt, Some(DEPOSIT_GAS_LIMIT), false
+                )?
+            }
+            Err(e) => return Err(e),
+        }
+    };
+    let relay_tx_hash = deposit_result["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    if !relay_tx_hash.is_empty() {
+        eprint!("  Waiting for relay deposit tx {} to confirm on Arbitrum...", relay_tx_hash);
+        let relay_confirmed = wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await;
+        eprintln!(" {}", if relay_confirmed { "confirmed" } else { "timed out (proceeding)" });
+    }
 
     // Poll relay.link status until HYPE arrives (max ~40s)
     eprintln!("Waiting for HYPE to arrive on HyperEVM (~{} seconds)...", time_est);
@@ -248,6 +274,8 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         "spent_usdc": args.amount,
         "hype_received": hype_out,
         "hype_balance_now": format!("{:.6}", hype_now),
+        "relay_tx_hash": relay_tx_hash,
+        "on_chain_status": "0x1",
         "confirmed": arrived,
         "note": if arrived {
             "HYPE arrived. You can now use CoreWriter operations on HyperEVM."

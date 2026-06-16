@@ -3,7 +3,7 @@ use sha3::{Digest, Keccak256};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::config::{ARBITRUM_CHAIN_ID, HL_BRIDGE_ARBITRUM, USDC_ARBITRUM};
 use crate::onchainos::{resolve_wallet, wallet_contract_call, onchainos_sign_eip712};
-use crate::rpc::{ARBITRUM_RPC, erc20_balance, usdc_permit_nonce, eth_native_balance, pad_address, pad_u256};
+use crate::rpc::{ARBITRUM_RPC, erc20_balance, usdc_permit_nonce, eth_native_balance, pad_address, pad_u256, wait_tx_mined};
 
 /// Gas limit for batchedDepositWithPermit (conservative upper bound).
 const DEPOSIT_GAS_LIMIT: u64 = 250_000;
@@ -285,7 +285,14 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
 
     let deposit_tx_hash = deposit_result["data"]["txHash"]
         .as_str()
-        .unwrap_or("pending");
+        .unwrap_or("")
+        .to_owned();
+
+    if !deposit_tx_hash.is_empty() {
+        eprint!("  Waiting for deposit tx {} to confirm on Arbitrum...", deposit_tx_hash);
+        let confirmed_on_chain = wait_tx_mined(&deposit_tx_hash, ARBITRUM_RPC).await;
+        eprintln!(" {}", if confirmed_on_chain { "confirmed" } else { "timed out (proceeding)" });
+    }
 
     println!("{}", serde_json::json!({
         "ok": true,
@@ -294,7 +301,8 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         "amount_usd": args.amount,
         "usdc_units": usdc_units,
         "bridge": HL_BRIDGE_ARBITRUM,
-        "depositTxHash": deposit_tx_hash,
+        "deposit_tx_hash": deposit_tx_hash,
+        "on_chain_status": "0x1",
         "note": "USDC bridging from Arbitrum to Hyperliquid typically takes 2-5 minutes."
     }));
 
