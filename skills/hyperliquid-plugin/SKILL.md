@@ -1850,33 +1850,6 @@ hyperliquid-plugin unstake --amount 5 --validator 0xValidatorAddr --confirm
 
 ---
 
-### `claim-rewards` — Claim All Pending Staking Rewards
-
-Claims all pending HYPE staking rewards from all validators in one transaction. **Requires `--confirm` to execute.**
-
-```bash
-# Preview claim
-hyperliquid-plugin claim-rewards
-
-# Execute claim
-hyperliquid-plugin claim-rewards --confirm
-```
-
-**Parameters:**
-
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--confirm` | No | Sign and broadcast (omit for preview) |
-
-**Output fields:** `ok`, `action`, `claimed_amount`, `validators_claimed`, `result`
-
-**Flow:**
-1. Query all validators with pending rewards via `staking-rewards`
-2. Preview total claimable amount (without `--confirm`)
-3. With `--confirm`: sign and submit claim transaction for all validators
-
----
-
 ### `redelegate` — Move Stake Between Validators
 
 Moves staked HYPE from one validator to another in two steps (unstake + restake). **Requires `--confirm` to execute.**
