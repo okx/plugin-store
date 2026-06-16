@@ -79,8 +79,9 @@ pub async fn run(args: StakingInfoArgs) -> anyhow::Result<()> {
     }).collect();
 
     // Fetch pending rewards
+    let rewards_available: bool;
     let rewards_raw: u64;
-    let rewards_raw_str: String;
+    let mut rewards_error: Option<String> = None;
     match api::get_delegator_rewards(url, &wallet).await {
         Ok(r) => {
             // rewards amounts are DECIMAL HYPE STRINGS (e.g. "0.17")
@@ -88,23 +89,38 @@ pub async fn run(args: StakingInfoArgs) -> anyhow::Result<()> {
                 .or_else(|| r["totalRewards"].as_str())
                 .unwrap_or("0");
             rewards_raw = api::parse_hype_amount(reward_str).unwrap_or_default();
-            rewards_raw_str = rewards_raw.to_string();
+            rewards_available = true;
         }
-        Err(_) => {
+        Err(e) => {
+            // Do NOT mask a lookup failure as zero — surface it so the user isn't told
+            // they have no pending rewards when the rewards API is actually down.
             rewards_raw = 0;
-            rewards_raw_str = "0".to_string();
+            rewards_available = false;
+            rewards_error = Some(format!("{:#}", e));
         }
     }
 
-    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+    let mut out = serde_json::json!({
         "ok": true,
         "has_stake": true,
         "staked_amount": api::format_hype_amount(total_staked_raw),
         "staked_amount_raw": total_staked_raw.to_string(),
-        "pending_rewards": api::format_hype_amount(rewards_raw),
-        "pending_rewards_raw": rewards_raw_str,
         "delegations": formatted_delegations,
         "wallet": wallet,
-    }))?);
+    });
+    if rewards_available {
+        out["pending_rewards"] = serde_json::json!(api::format_hype_amount(rewards_raw));
+        out["pending_rewards_raw"] = serde_json::json!(rewards_raw.to_string());
+    } else {
+        // Null + explicit flag, not "0", so an outage is never mistaken for "no rewards".
+        out["pending_rewards"] = serde_json::Value::Null;
+        out["pending_rewards_raw"] = serde_json::Value::Null;
+        out["rewards_lookup_failed"] = serde_json::json!(true);
+        if let Some(e) = rewards_error {
+            out["rewards_lookup_error"] = serde_json::json!(e);
+        }
+        out["note"] = serde_json::json!("Pending rewards could not be fetched (rewards API error). This does NOT mean rewards are zero — retry later.");
+    }
+    println!("{}", serde_json::to_string_pretty(&out)?);
     Ok(())
 }

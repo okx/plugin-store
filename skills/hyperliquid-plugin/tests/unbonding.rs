@@ -24,7 +24,7 @@ fn unbonding_zero_address_returns_valid_json() {
             .expect("unbonding output must be valid JSON");
         assert!(v["ok"].is_boolean());
         if v["ok"].as_bool() == Some(true) {
-            assert!(v["active_unbonds"].is_array(), "active_unbonds must be array");
+            assert!(v["pending_withdrawals_count"].is_u64(), "pending_withdrawals_count must be a number");
         }
     }
 }

@@ -534,6 +534,14 @@ pub async fn get_delegator_rewards(info_url: &str, user: &str) -> anyhow::Result
     info_post(info_url, json!({"type": "delegatorRewards", "user": user})).await
 }
 
+/// Fetch the delegator summary for a user — this is where HL exposes the unbonding /
+/// pending-withdrawal state (NOT the `delegations` endpoint, which lists active stake only).
+/// Returns fields `delegated`, `undelegated`, `totalPendingWithdrawal`, `nPendingWithdrawals`.
+/// POST /info {"type":"delegatorSummary","user":"0x..."}
+pub async fn get_delegator_summary(info_url: &str, user: &str) -> anyhow::Result<Value> {
+    info_post(info_url, json!({"type": "delegatorSummary", "user": user})).await
+}
+
 /// Fetch delegation history for a user (newest first).
 /// POST /info {"type":"delegatorHistory","user":"0x..."}
 pub async fn get_delegation_history(info_url: &str, user: &str, limit: Option<usize>) -> anyhow::Result<Value> {

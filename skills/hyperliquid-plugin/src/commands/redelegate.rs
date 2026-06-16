@@ -197,6 +197,27 @@ pub async fn run(args: RedelegateArgs) -> anyhow::Result<()> {
             return Ok(());
         }
     };
+    // Step 2 may be rejected by the exchange with status == "err" even though the HTTP
+    // request succeeded. Step 1 (undelegate) already went through, so this is a PARTIAL
+    // state — never report overall success here.
+    if result2["status"].as_str() == Some("err") {
+        println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+            "ok": false,
+            "status": "partial",
+            "action": "redelegate",
+            "wallet": wallet,
+            "from_validator": args.from_validator,
+            "to_validator": args.to_validator,
+            "amount": api::format_hype_amount(amount_raw),
+            "amount_raw": amount_raw.to_string(),
+            "step_1_undelegate_result": result1,
+            "step_2_delegate_result": result2,
+            "error": format!("Redelegate step 2 (delegate) rejected by exchange: {}", result2["response"].as_str().unwrap_or("unknown")),
+            "error_code": "REDELEGATE_DELEGATE_FAILED",
+            "note": "PARTIAL: undelegate from the source validator SUCCEEDED — your HYPE is no longer delegated there. The delegate to the destination validator was REJECTED. DO NOT re-run `redelegate` (the source is already undelegated). Once the undelegated HYPE is back in your staking balance, delegate it to the destination validator with `stake`. Check `staking-info` for current state.",
+        }))?);
+        return Ok(());
+    }
 
     println!("{}", serde_json::to_string_pretty(&serde_json::json!({
         "ok": true,

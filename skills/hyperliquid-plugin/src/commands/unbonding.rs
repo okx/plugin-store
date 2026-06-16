@@ -29,9 +29,12 @@ pub async fn run(args: UnbondingArgs) -> anyhow::Result<()> {
     };
 
     let url = info_url();
-    // Unbonding state lives in the delegations response — entries with "lockedUntil" or similar
-    // HL may return unbonding info via a separate type; we check delegations for unbonding entries
-    let raw = match api::get_delegations(url, &wallet).await {
+    // Unbonding / pending-withdrawal state is exposed by HL via `delegatorSummary`, NOT the
+    // `delegations` endpoint (which only lists active delegations, so unbonding entries would
+    // never appear). Field names per HL docs: `undelegated` (HYPE undelegated, in the lock
+    // before it returns to the staking balance), `totalPendingWithdrawal` + `nPendingWithdrawals`
+    // (the staking -> spot withdrawal queue).
+    let summary = match api::get_delegator_summary(url, &wallet).await {
         Ok(v) => v,
         Err(e) => {
             println!("{}", error_response(
@@ -43,31 +46,24 @@ pub async fn run(args: UnbondingArgs) -> anyhow::Result<()> {
         }
     };
 
-    let empty = vec![];
-    let all = raw.as_array().unwrap_or(&empty);
-
-    // Filter entries that are in unbonding state (have a lockedUntil / completionTime field)
-    let active_unbonds: Vec<serde_json::Value> = all.iter().filter_map(|d| {
-        let locked_until = d["lockedUntil"].as_u64()
-            .or_else(|| d["completionTime"].as_u64());
-        locked_until.map(|ts| {
-            let validator = d["validator"].as_str().unwrap_or("").to_string();
-            let amount_raw_str = d["amount"].as_str().unwrap_or("0").to_string();
-            let amount_raw: u64 = amount_raw_str.parse().unwrap_or_default();
-            serde_json::json!({
-                "validator": validator,
-                "amount": api::format_hype_amount(amount_raw),
-                "amount_raw": amount_raw_str,
-                "estimated_completion_ts": ts,
-            })
-        })
-    }).collect();
+    // Amounts are decimal HYPE strings (e.g. "0.17").
+    let undelegated_raw = summary["undelegated"].as_str()
+        .and_then(|s| api::parse_hype_amount(s).ok())
+        .unwrap_or(0);
+    let pending_withdrawal_raw = summary["totalPendingWithdrawal"].as_str()
+        .and_then(|s| api::parse_hype_amount(s).ok())
+        .unwrap_or(0);
+    let pending_withdrawals_count = summary["nPendingWithdrawals"].as_u64().unwrap_or(0);
 
     println!("{}", serde_json::to_string_pretty(&serde_json::json!({
         "ok": true,
-        "active_unbonds_count": active_unbonds.len(),
-        "active_unbonds": active_unbonds,
         "wallet": wallet,
+        "undelegated": api::format_hype_amount(undelegated_raw),
+        "undelegated_raw": undelegated_raw.to_string(),
+        "pending_withdrawal": api::format_hype_amount(pending_withdrawal_raw),
+        "pending_withdrawal_raw": pending_withdrawal_raw.to_string(),
+        "pending_withdrawals_count": pending_withdrawals_count,
+        "source": "delegatorSummary",
     }))?);
     Ok(())
 }

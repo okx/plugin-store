@@ -58,10 +58,15 @@ pub async fn run(_args: ValidatorsArgs) -> anyhow::Result<()> {
                     .unwrap_or_else(|| "0".to_string())
             })
             .unwrap_or_else(|| "0".to_string());
-        let commission = v["commission"].as_str()
-            .or_else(|| v["commissionBps"].as_str())
-            .unwrap_or("0")
-            .to_string();
+        // commission may be a JSON string or a number depending on HL response — handle both
+        let commission = v.get("commission")
+            .filter(|p| !p.is_null())
+            .or_else(|| v.get("commissionBps").filter(|p| !p.is_null()))
+            .map(|p| p.as_str()
+                .map(|s| s.to_string())
+                .or_else(|| p.as_f64().map(|n| n.to_string()))
+                .unwrap_or_else(|| "0".to_string()))
+            .unwrap_or_else(|| "0".to_string());
         let jailed = v["jailed"].as_bool().unwrap_or(false);
 
         serde_json::json!({
