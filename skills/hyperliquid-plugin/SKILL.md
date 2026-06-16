@@ -222,7 +222,7 @@ echo "0.5.0" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 
 Hyperliquid is a high-performance on-chain perpetuals exchange built on its own L1 blockchain. It offers CEX-like speed with full on-chain settlement. All trades are executed on Hyperliquid L1 (HyperEVM chain ID: 999) and settled in USDC.
 
-**Architecture:** Read-only operations (`positions`, `prices`, `orders`, `spot-balances`, `spot-prices`, `address`) query the Hyperliquid REST API at `https://api.hyperliquid.xyz/info`. Write operations use two signing schemes: perp trading actions (`order`, `close`, `tpsl`, `cancel`, `spot-order`, `spot-cancel`) use L1 phantom-agent EIP-712; fund operations (`withdraw`, `transfer`) use user-signed EIP-712 (domain: HyperliquidSignTransaction, chainId 0x66eee). All write ops require `--confirm`.
+**Architecture:** Read-only operations (`positions`, `prices`, `orders`, `spot-balances`, `spot-prices`, `address`) query the Hyperliquid REST API at `api.hyperliquid.xyz/info`. Write operations use two signing schemes: perp trading actions (`order`, `close`, `tpsl`, `cancel`, `spot-order`, `spot-cancel`) use L1 phantom-agent EIP-712; fund operations (`withdraw`, `transfer`) use user-signed EIP-712 (domain: HyperliquidSignTransaction, chainId 0x66eee). All write ops require `--confirm`.
 
 **Margin token:** USDC (all positions are settled in USDC)
 **Native token:** HYPE
@@ -755,9 +755,9 @@ hyperliquid register --dry-run
     },
     "option_2_existing_account": {
       "description": "If you already have funds at your onchainos wallet on Hyperliquid, register the signing address as an API wallet via the Hyperliquid web UI.",
-      "url": "https://app.hyperliquid.xyz/settings/api-wallets",
+      "url": "app.hyperliquid.xyz/settings/api-wallets",
       "steps": [
-        "1. Go to https://app.hyperliquid.xyz/settings/api-wallets",
+        "1. Go to app.hyperliquid.xyz/settings/api-wallets",
         "2. Click 'Add API Wallet'",
         "3. Enter your signing address",
         "4. Sign with your connected wallet"
@@ -1415,10 +1415,10 @@ Net: 0 dust, account back to starting state.
 | HyperEVM chain_id | 999 |
 | Margin token | USDC |
 | Native token | HYPE |
-| Info endpoint | `https://api.hyperliquid.xyz/info` |
-| Exchange endpoint | `https://api.hyperliquid.xyz/exchange` |
-| Testnet info | `https://api.hyperliquid-testnet.xyz/info` |
-| Testnet exchange | `https://api.hyperliquid-testnet.xyz/exchange` |
+| Info endpoint | `api.hyperliquid.xyz/info` |
+| Exchange endpoint | `api.hyperliquid.xyz/exchange` |
+| Testnet info | `api.hyperliquid-testnet.xyz/info` |
+| Testnet exchange | `api.hyperliquid-testnet.xyz/exchange` |
 
 ---
 
