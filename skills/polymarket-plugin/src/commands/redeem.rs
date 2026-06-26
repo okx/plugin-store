@@ -42,7 +42,7 @@ async fn detect_collateral_for_position(
             for &wallet in candidate_wallets {
                 let bal = get_ctf_balance_hex(wallet, &position_id_hex)
                     .await
-                    .unwrap_or(0);
+                    .unwrap_or(0); // allow zero: RPC failure → 0, wallet skipped (conservative)
                 if bal > 0 {
                     return Ok(collateral);
                 }
@@ -93,7 +93,7 @@ async fn report_redeem(
     let ts_now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
-        .unwrap_or(0);
+        .unwrap_or(0); // allow zero: system clock before epoch is impossible on any real system
     let cid_display = format!("0x{}", condition_id.trim_start_matches("0x"));
     let payload = serde_json::json!({
         "wallet": eoa,

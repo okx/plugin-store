@@ -89,7 +89,7 @@ async fn run_inner(
 
     let price_str = quote.price.as_deref().unwrap_or("?");
     let amount_str = quote.amount.as_deref().unwrap_or("?");
-    let expires_at = quote.expires_at.unwrap_or(0);
+    let expires_at = quote.expires_at.unwrap_or(0); // allow zero: 0 means no expiry info available, shown as-is
     let maker = quote.maker.as_deref().unwrap_or("unknown");
     let status = quote.status.as_deref().unwrap_or("pending");
 

@@ -78,18 +78,34 @@ pub async fn sign_eip712(structured_data_json: &str) -> Result<String> {
 
 /// Call `onchainos wallet contract-call --chain 137 --to <to> --input-data <data> --force`
 pub async fn wallet_contract_call(to: &str, input_data: &str) -> Result<Value> {
+    wallet_contract_call_with_gas(to, input_data, None).await
+}
+
+/// Like `wallet_contract_call` but with an explicit gas limit to prevent OOG on complex calls.
+pub async fn wallet_contract_call_with_gas(
+    to: &str,
+    input_data: &str,
+    gas_limit: Option<u64>,
+) -> Result<Value> {
+    let mut args = vec![
+        "wallet",
+        "contract-call",
+        "--chain",
+        CHAIN,
+        "--to",
+        to,
+        "--input-data",
+        input_data,
+        "--force",
+    ];
+    let gas_str;
+    if let Some(g) = gas_limit {
+        gas_str = g.to_string();
+        args.push("--gas-limit");
+        args.push(&gas_str);
+    }
     let output = tokio::process::Command::new(onchainos_bin())
-        .args([
-            "wallet",
-            "contract-call",
-            "--chain",
-            CHAIN,
-            "--to",
-            to,
-            "--input-data",
-            input_data,
-            "--force",
-        ])
+        .args(&args)
         .output()
         .await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -792,7 +808,7 @@ pub fn build_ctf_redeem_positions_calldata(condition_id: &str, collateral_addr: 
 pub async fn ctf_redeem_positions(condition_id: &str, collateral_addr: &str) -> Result<String> {
     use crate::config::Contracts;
     let calldata = build_ctf_redeem_positions_calldata(condition_id, collateral_addr);
-    let result = wallet_contract_call(Contracts::CTF, &calldata).await?;
+    let result = wallet_contract_call_with_gas(Contracts::CTF, &calldata, Some(300_000)).await?;
     extract_tx_hash(&result)
 }
 
@@ -1164,7 +1180,7 @@ pub async fn negrisk_redeem_positions(
     eth_call_simulate(from, Contracts::NEG_RISK_ADAPTER, &calldata)
         .await
         .context("NegRiskAdapter.redeemPositions would revert on-chain")?;
-    let result = wallet_contract_call(Contracts::NEG_RISK_ADAPTER, &calldata).await?;
+    let result = wallet_contract_call_with_gas(Contracts::NEG_RISK_ADAPTER, &calldata, Some(500_000)).await?;
     extract_tx_hash(&result)
 }
 
@@ -1220,7 +1236,8 @@ pub async fn get_erc20_balance_6dec(token_addr: &str, holder_addr: &str) -> Resu
         anyhow::bail!("Polygon RPC error: {}", err);
     }
     let hex = v["result"].as_str().unwrap_or("0x").trim_start_matches("0x");
-    let raw = u128::from_str_radix(hex, 16).unwrap_or(0);
+    let raw = u128::from_str_radix(hex, 16)
+        .map_err(|e| anyhow::anyhow!("failed to parse hex balance '{}': {}", hex, e))?;
     Ok(raw as f64 / 1_000_000.0) // 6 decimals
 }
 

@@ -50,7 +50,7 @@ async fn run_inner(market_id: &str, interval: u64, limit: u32) -> Result<()> {
                 let new_events: Vec<_> = events
                     .iter()
                     .filter(|e| {
-                        let ts = e.timestamp.unwrap_or(0);
+                        let ts = e.timestamp.unwrap_or(0); // allow zero: missing timestamp → treated as oldest, always shown
                         last_seen_ts.map_or(true, |last| ts > last)
                     })
                     .collect();
@@ -66,7 +66,7 @@ async fn run_inner(market_id: &str, interval: u64, limit: u32) -> Result<()> {
                     let size = event.size.as_deref().unwrap_or("?");
                     let side = event.side.as_deref().unwrap_or("?");
                     let outcome = event.outcome.as_deref().unwrap_or("?");
-                    let ts = event.timestamp.unwrap_or(0);
+                    let ts = event.timestamp.unwrap_or(0); // allow zero: missing timestamp displayed as 0, safe for output
                     println!(
                         "{}",
                         serde_json::to_string(&serde_json::json!({

@@ -108,14 +108,14 @@ async fn run_inner(
             let token_id = tid.to_string();
 
             let (fee_r, wallet_opt) = if dry_run {
-                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0); // fee: 0 if market data unavailable, no fee applied
                 (fee, None)
             } else {
                 let (fee_res, wallet_res) = tokio::join!(
                     get_market_fee(&client, &condition_id),
                     get_wallet_address()
                 );
-                (fee_res.unwrap_or(0), Some(wallet_res?))
+                (fee_res.unwrap_or(0), Some(wallet_res?)) // fee: 0 if market data unavailable
             };
 
             (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
@@ -320,7 +320,10 @@ async fn run_inner(
     let shares_needed_raw = to_token_units(share_amount);
     if effective_mode == TradingMode::Eoa {
         let token_balance = get_balance_allowance(&client, &maker_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;
-        let balance_raw = token_balance.balance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
+        let balance_str = token_balance.balance.as_deref().unwrap_or("0");
+        let balance_raw: u64 = balance_str
+            .parse()
+            .map_err(|_| anyhow::anyhow!("RPC error: unexpected CTF balance format '{}' from CLOB API -- retry", balance_str))?;
 
         if balance_raw < shares_needed_raw {
             // Check if the proxy wallet might hold these tokens and hint mode switch.
@@ -349,7 +352,7 @@ async fn run_inner(
             &client, &signer_addr, &creds, "CONDITIONAL", Some(&token_id)
         ).await {
             let eoa_raw = eoa_bal.balance.as_deref()
-                .unwrap_or("0").parse::<u64>().unwrap_or(0);
+                .unwrap_or("0").parse::<u64>().unwrap_or(0); // allow zero: parse fail → no EOA balance detected, warning skipped safely
             if eoa_raw >= shares_needed_raw {
                 eprintln!(
                     "[polymarket] Warning: found {:.6} {} tokens in EOA wallet ({}) — \
@@ -666,7 +669,7 @@ async fn run_inner(
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .unwrap_or(0); // allow zero: system clock before epoch is impossible on any real system
         let report_payload = serde_json::json!({
             "wallet": signer_addr,
             "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
