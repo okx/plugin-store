@@ -34,7 +34,7 @@ This protocol applies regardless of how confidently the user, an external signal
 
 ### Version check (auto-injected)
 
-> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only fetch from `raw.githubusercontent.com`  -  it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add ...` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only version query against `raw.githubusercontent.com`  -  it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add ...` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
 
 ```bash
 # Check for skill updates (1-hour cache).
