@@ -557,7 +557,7 @@ polymarket-plugin check-access
 
 **Auth required:** No
 
-**How it works:** Queries `GET https://polymarket.com/api/geoblock` and returns `{blocked, country}`. If `blocked: true`, the response includes the ISO country code. Network errors or non-JSON responses return `indeterminate` status rather than failing hard.
+**How it works:** Calls the Polymarket geoblock API and returns `{blocked, country}`. If `blocked: true`, the response includes the ISO country code. Network errors or non-JSON responses return `indeterminate` status rather than failing hard.
 
 **Output fields:** `accessible` (bool or null if indeterminate), `note` (if accessible), `warning` (if restricted or indeterminate), `country` (if restricted), `indeterminate` + `reason` (if unreachable)
 
