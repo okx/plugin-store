@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, top up, fund, transfer in, add funds, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit, BTC 5-minute, ETH 5-minute, 5-minute market, 5min market, short-term market, list 5-minute, BTC up or down, find 5-minute, view 5-minute, 5m updown, crypto 5m, 5-minute up-down, updown market, BTC 5min, ETH 5min, SOL 5min, 5-minute prediction."
-version: "0.6.3"
+version: "0.6.2"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -42,7 +42,7 @@ This protocol applies regardless of how confidently the user, an external signal
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.6.3"
+LOCAL_VER="0.6.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -152,7 +152,7 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.6.3/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.6.2/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
 
 # Symlink CLI name to universal launcher
@@ -160,7 +160,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.6.3" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.6.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 
@@ -386,7 +386,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.6.3`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.6.2`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2  -  Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -1560,10 +1560,4 @@ If a command exits with `ok: false` and no actionable suggestion, run the same c
 
 ## Changelog
 
-### v0.6.3 (2026-06-27)
-- F1: Region detection now uses `GET /api/geoblock` (returns `{blocked, country}`) instead of the previous heuristic CLOB probe — authoritative country-code data, no false positives from auth errors.
-- F2: New `readiness` module as the single source of truth for region status — all commands share the same logic.
-- F3: Structured error contract: `REGION_RESTRICTED` and `REGION_UNVERIFIED` responses now include `category`, `retriable`, `remediation[]`, and `do_not[]` fields for agent-parseable guidance.
-- F4: Mandatory pre-flight gate added to `buy`, `sell`, `deposit`, and `setup-proxy` — region is checked before any auth or signing; restricted regions get a clean error without burning a retry attempt.
-
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.6.3** (2026-06-27).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.6.2** (2026-05-05).

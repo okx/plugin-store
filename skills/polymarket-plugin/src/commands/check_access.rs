@@ -1,13 +1,13 @@
 use anyhow::Result;
 use reqwest::Client;
 
-use crate::readiness::{assess_readiness, RegionStatus};
+use crate::readiness::{assess_readiness_fresh, RegionStatus};
 
 /// Check whether Polymarket is accessible from the current IP.
 /// Run this before topping up USDC to confirm your region is not restricted.
 pub async fn run() -> Result<()> {
     let client = Client::new();
-    let region = assess_readiness(&client).await;
+    let region = assess_readiness_fresh(&client).await;
 
     let result = match &region {
         RegionStatus::Accessible => serde_json::json!({
