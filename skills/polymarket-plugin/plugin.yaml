@@ -29,6 +29,7 @@ api_calls:
   - "https://data-api.polymarket.com"
   - "https://bridge.polymarket.com"
   - "https://relayer-v2.polymarket.com"
+  - "https://relayer.polymarket.com"
   - "https://polymarket.com"
   - "https://docs.polymarket.com"
   - "coins.llama.fi"

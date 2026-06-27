@@ -1444,7 +1444,7 @@ export POLYMARKET_PASSPHRASE=<passphrase>
 | Collateral Onramp | `0x93070a847efEf7F70739046A929D47a521F5B8ee` | `wrap(USDC_E, to, amount)` wraps USDC.e -> pUSD; auto-used by `buy` |
 | Polymarket Proxy Factory | `0xaB45c5A4B0c941a2F231C04C3f49182e1A254052` | Proxy wallet factory (POLY_PROXY mode) |
 | Deposit Wallet Factory | `0x00000000000Fb5C9ADea0298D729A0CB3823Cc07` | ERC-1967 deposit wallet factory (DEPOSIT_WALLET mode) |
-| Polymarket Relayer | `https://relayer.polymarket.com` | Handles wallet-create and wallet-batch calls (relayer-paid gas) |
+| Polymarket Relayer | `relayer.polymarket.com` | Handles wallet-create and wallet-batch calls (relayer-paid gas) |
 | Gnosis Safe Factory | `0xaacfeea03eb1561c4e67d661e40682bd20e3541b` | Gnosis Safe factory |
 | UMA Adapter | `0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74` | Oracle resolution adapter |
 
