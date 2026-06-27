@@ -96,34 +96,32 @@ impl ApprovalReport {
 }
 
 pub async fn run(dry_run: bool) -> Result<()> {
-    // F4: mandatory region pre-flight before any auth or signing
-    let indeterminate = if !dry_run {
+    // Region check — WARNING only, do not abort. Proxy wallet setup is a wallet management
+    // operation and must remain usable even from restricted regions so users can configure
+    // their wallet infrastructure. Trading commands (buy/sell/deposit) enforce the hard gate.
+    if !dry_run {
         let probe = reqwest::Client::new();
         match crate::readiness::assess_readiness(&probe).await {
             crate::readiness::RegionStatus::Restricted { country } => {
-                println!("{}", super::region_restricted_response(&country));
-                return Ok(());
+                eprintln!(
+                    "[polymarket] WARNING: Polymarket reports this IP as restricted ({}). \
+                     Proxy wallet setup will proceed — trading commands will be blocked.",
+                    country
+                );
             }
             crate::readiness::RegionStatus::Indeterminate { reason } => {
                 eprintln!(
-                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding. \
                      Run `check-access` to verify.",
                     reason
                 );
-                true
             }
-            crate::readiness::RegionStatus::Accessible => false,
+            crate::readiness::RegionStatus::Accessible => {}
         }
-    } else {
-        false
-    };
+    }
 
     match run_inner(dry_run).await {
         Ok(()) => Ok(()),
-        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
-            println!("{}", super::region_unverified_response());
-            Ok(())
-        }
         Err(e) => {
             println!("{}", super::error_response(&e, Some("setup-proxy"), None));
             Ok(())
