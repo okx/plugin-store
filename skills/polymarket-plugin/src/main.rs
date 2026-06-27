@@ -3,6 +3,7 @@ mod auth;
 mod commands;
 mod config;
 mod onchainos;
+mod readiness;
 mod sanitize;
 mod series;
 mod signing;

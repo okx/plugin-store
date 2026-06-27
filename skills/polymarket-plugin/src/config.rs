@@ -297,6 +297,7 @@ impl Urls {
     pub const DATA: &'static str = "https://data-api.polymarket.com";
     pub const BRIDGE: &'static str = "https://bridge.polymarket.com";
     pub const RELAYER: &'static str = "https://relayer-v2.polymarket.com";
+    pub const WEB: &'static str = "https://polymarket.com";
     pub const POLYGON_RPC:  &'static str = "https://polygon.drpc.org";
     /// Dedicated Polygon RPC for eth_getLogs event scanning.
     /// publicnode supports ≤7,998 block range per request (drpc free tier rejects eth_getLogs above ~7,500).
@@ -341,5 +342,10 @@ impl Urls {
     pub fn data() -> String {
         std::env::var("POLYMARKET_TEST_DATA_URL")
             .unwrap_or_else(|_| Self::DATA.to_string())
+    }
+
+    pub fn web() -> String {
+        std::env::var("POLYMARKET_TEST_WEB_URL")
+            .unwrap_or_else(|_| Self::WEB.to_string())
     }
 }

@@ -1,26 +1,41 @@
 use anyhow::Result;
 use reqwest::Client;
 
-use crate::api::check_clob_access;
+use crate::readiness::{assess_readiness, RegionStatus};
 
 /// Check whether Polymarket is accessible from the current IP.
-/// Run this before topping up USDC.e to confirm your region is not restricted.
+/// Run this before topping up USDC to confirm your region is not restricted.
 pub async fn run() -> Result<()> {
     let client = Client::new();
+    let region = assess_readiness(&client).await;
 
-    let result = match check_clob_access(&client).await {
-        Some(warning) => serde_json::json!({
-            "ok": true,
-            "data": {
-                "accessible": false,
-                "warning": warning
-            }
-        }),
-        None => serde_json::json!({
+    let result = match &region {
+        RegionStatus::Accessible => serde_json::json!({
             "ok": true,
             "data": {
                 "accessible": true,
-                "note": "Polymarket is accessible from your current IP. You may proceed to top up USDC.e and trade."
+                "note": "Polymarket is accessible from your current IP. You may proceed to top up USDC and trade."
+            }
+        }),
+        RegionStatus::Restricted { country } => serde_json::json!({
+            "ok": true,
+            "data": {
+                "accessible": false,
+                "country": country,
+                "warning": format!(
+                    "Polymarket is not available from your region ({}) — trading is restricted.",
+                    country
+                )
+            }
+        }),
+        RegionStatus::Indeterminate { reason } => serde_json::json!({
+            "ok": true,
+            "data": {
+                "accessible": null,
+                "indeterminate": true,
+                "reason": reason,
+                "warning": "Could not determine region status via the Polymarket geoblock endpoint. \
+                            Check your connection and run check-access again, or proceed with caution."
             }
         }),
     };

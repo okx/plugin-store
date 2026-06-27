@@ -35,11 +35,37 @@ pub async fn run(
     token_id_fast: Option<&str>,
     strategy_id: Option<&str>,
 ) -> Result<()> {
+    // F4: mandatory region pre-flight before any auth or signing
+    let indeterminate = if !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(
         market_id, outcome, shares, price, order_type, auto_approve, dry_run,
         post_only, expires, mode_override, token_id_fast, strategy_id,
     ).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => { println!("{}", super::error_response(&e, Some("sell"), None)); Ok(()) }
     }
 }
@@ -84,14 +110,6 @@ async fn run_inner(
     };
 
     let client = Client::new();
-
-    // Geo check — hard fail before any live trading attempt.
-    // Skipped for dry-run so users can preview orders regardless of region.
-    if !dry_run {
-        if let Some(geo_msg) = crate::api::check_clob_access(&client).await {
-            bail!("{}", geo_msg);
-        }
-    }
 
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 

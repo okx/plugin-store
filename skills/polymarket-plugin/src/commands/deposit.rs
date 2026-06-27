@@ -72,8 +72,34 @@ pub async fn run(
     list: bool,
     dry_run: bool,
 ) -> Result<()> {
+    // F4: mandatory region pre-flight (skip for --list and dry-run — no funds at risk)
+    let indeterminate = if !list && !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(amount, chain, token, list, dry_run).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => { println!("{}", super::error_response(&e, Some("deposit"), None)); Ok(()) }
     }
 }

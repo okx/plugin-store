@@ -96,10 +96,35 @@ impl ApprovalReport {
 }
 
 pub async fn run(dry_run: bool) -> Result<()> {
+    // F4: mandatory region pre-flight before any auth or signing
+    let indeterminate = if !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(dry_run).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => {
-            // GEN-001: emit structured error to stdout so external Agents can parse.
             println!("{}", super::error_response(&e, Some("setup-proxy"), None));
             Ok(())
         }
@@ -108,13 +133,6 @@ pub async fn run(dry_run: bool) -> Result<()> {
 
 async fn run_inner(dry_run: bool) -> Result<()> {
     let client = Client::new();
-
-    // Geo check — WARNING only, do not abort. Users in restricted regions can still
-    // set up a proxy wallet; trading commands (buy/sell) will hard-fail separately.
-    if let Some(geo_msg) = crate::api::check_clob_access(&client).await {
-        eprintln!("[polymarket] WARNING: {}", geo_msg);
-        eprintln!("[polymarket] Continuing setup — proxy wallet creation does not require trading access.");
-    }
 
     let signer_addr = crate::onchainos::get_wallet_address().await?;
     let mut creds = crate::auth::ensure_credentials(&client, &signer_addr).await?;
