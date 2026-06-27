@@ -71,7 +71,7 @@ fn format_event(e: &serde_json::Value) -> serde_json::Value {
         "volume_24hr": e["volume24hr"],
         "start_date": e["startDate"],
         "end_date": e["endDate"],
-        "market_count": e["markets"].as_array().map(|a| a.len()).unwrap_or(0),
+        "market_count": e["markets"].as_array().map(|a| a.len()).unwrap_or(0), // allow zero: missing or non-array field → 0 markets
     })
 }
 

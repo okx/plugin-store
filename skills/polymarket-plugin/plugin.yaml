@@ -1,7 +1,7 @@
 schema_version: 1
 name: polymarket-plugin
-version: "0.6.1"
-description: "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon"
+version: "0.6.2"
+description: "Trade prediction markets on Polymarket - buy and sell YES/NO outcome tokens on Polygon"
 author:
   name: skylavis-sky
   github: skylavis-sky
@@ -29,6 +29,9 @@ api_calls:
   - "https://data-api.polymarket.com"
   - "https://bridge.polymarket.com"
   - "https://relayer-v2.polymarket.com"
+  - "https://relayer.polymarket.com"
+  - "https://polymarket.com"
+  - "https://docs.polymarket.com"
   - "coins.llama.fi"
   - "polygon.drpc.org"
   - "polygon-bor-rpc.publicnode.com"

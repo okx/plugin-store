@@ -72,8 +72,34 @@ pub async fn run(
     list: bool,
     dry_run: bool,
 ) -> Result<()> {
+    // F4: mandatory region pre-flight (skip for --list and dry-run — no funds at risk)
+    let indeterminate = if !list && !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(amount, chain, token, list, dry_run).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => { println!("{}", super::error_response(&e, Some("deposit"), None)); Ok(()) }
     }
 }
@@ -379,6 +405,7 @@ async fn run_inner(
                     "amount_usd": amount_f,
                     "token_qty": token_qty,
                     "token_price_usd": if is_stablecoin { serde_json::Value::Null } else { serde_json::json!(token_price_usd) },
+                    "amount": token_qty,
                     "amount_raw": amount_raw,
                     "bridge_deposit_address": bridge_deposit_addr,
                     "from": signer_addr,
@@ -418,6 +445,29 @@ async fn run_inner(
         }
 
         // onchainos can sign on this chain — send automatically
+        // Token balance pre-flight: verify sufficient ERC-20 balance before submitting tx.
+        let chain_balances = crate::onchainos::get_chain_balances(oc_chain).await;
+        let token_bal_raw: u128 = chain_balances
+            .iter()
+            .find(|b| b.token_address == asset.token.address.to_lowercase())
+            .and_then(|b| {
+                let bal_f: f64 = b.balance.parse().ok()?;
+                Some((bal_f * 10f64.powi(b.decimal as i32)).floor() as u128)
+            })
+            .unwrap_or(0); // allow zero: parse failure → 0 conservatively fails the balance pre-check below
+        if token_bal_raw < amount_raw {
+            bail!(
+                "Insufficient {} balance on {}. Have {:.6} {} but need {:.6} {} for this deposit. \
+                 Add funds to your wallet on {} and retry.",
+                asset.token.symbol, asset.chain_name,
+                token_bal_raw as f64 / 10f64.powi(asset.token.decimals as i32),
+                asset.token.symbol,
+                token_qty,
+                asset.token.symbol,
+                asset.chain_name,
+            );
+        }
+
         eprintln!(
             "[polymarket] Sending {} {} on {} → bridge deposit address {}...",
             amount_f, asset.token.symbol, asset.chain_name, bridge_deposit_addr

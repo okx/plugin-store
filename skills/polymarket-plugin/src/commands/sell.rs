@@ -35,11 +35,37 @@ pub async fn run(
     token_id_fast: Option<&str>,
     strategy_id: Option<&str>,
 ) -> Result<()> {
+    // F4: mandatory region pre-flight before any auth or signing
+    let indeterminate = if !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(
         market_id, outcome, shares, price, order_type, auto_approve, dry_run,
         post_only, expires, mode_override, token_id_fast, strategy_id,
     ).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => { println!("{}", super::error_response(&e, Some("sell"), None)); Ok(()) }
     }
 }
@@ -85,14 +111,6 @@ async fn run_inner(
 
     let client = Client::new();
 
-    // Geo check — hard fail before any live trading attempt.
-    // Skipped for dry-run so users can preview orders regardless of region.
-    if !dry_run {
-        if let Some(geo_msg) = crate::api::check_clob_access(&client).await {
-            bail!("{}", geo_msg);
-        }
-    }
-
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
     let (condition_id, token_id, neg_risk, fee_rate_bps, book, signer_addr_opt) =
@@ -108,14 +126,14 @@ async fn run_inner(
             let token_id = tid.to_string();
 
             let (fee_r, wallet_opt) = if dry_run {
-                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0); // fee: 0 if market data unavailable, no fee applied
                 (fee, None)
             } else {
                 let (fee_res, wallet_res) = tokio::join!(
                     get_market_fee(&client, &condition_id),
                     get_wallet_address()
                 );
-                (fee_res.unwrap_or(0), Some(wallet_res?))
+                (fee_res.unwrap_or(0), Some(wallet_res?)) // fee: 0 if market data unavailable
             };
 
             (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
@@ -320,7 +338,10 @@ async fn run_inner(
     let shares_needed_raw = to_token_units(share_amount);
     if effective_mode == TradingMode::Eoa {
         let token_balance = get_balance_allowance(&client, &maker_addr, &creds, "CONDITIONAL", Some(&token_id)).await?;
-        let balance_raw = token_balance.balance.as_deref().unwrap_or("0").parse::<u64>().unwrap_or(0);
+        let balance_str = token_balance.balance.as_deref().unwrap_or("0");
+        let balance_raw: u64 = balance_str
+            .parse()
+            .map_err(|_| anyhow::anyhow!("RPC error: unexpected CTF balance format '{}' from CLOB API -- retry", balance_str))?;
 
         if balance_raw < shares_needed_raw {
             // Check if the proxy wallet might hold these tokens and hint mode switch.
@@ -349,7 +370,7 @@ async fn run_inner(
             &client, &signer_addr, &creds, "CONDITIONAL", Some(&token_id)
         ).await {
             let eoa_raw = eoa_bal.balance.as_deref()
-                .unwrap_or("0").parse::<u64>().unwrap_or(0);
+                .unwrap_or("0").parse::<u64>().unwrap_or(0); // allow zero: parse fail → no EOA balance detected, warning skipped safely
             if eoa_raw >= shares_needed_raw {
                 eprintln!(
                     "[polymarket] Warning: found {:.6} {} tokens in EOA wallet ({}) — \
@@ -666,7 +687,7 @@ async fn run_inner(
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .unwrap_or(0); // allow zero: system clock before epoch is impossible on any real system
         let report_payload = serde_json::json!({
             "wallet": signer_addr,
             "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),

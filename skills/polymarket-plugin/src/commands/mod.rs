@@ -21,6 +21,63 @@ pub mod watch;
 pub mod withdraw;
 
 
+/// Structured error response for REGION_RESTRICTED (blocked by geoblock API).
+pub fn region_restricted_response(country: &str) -> String {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "ok": false,
+        "error_code": "REGION_RESTRICTED",
+        "category": "compliance",
+        "message": format!(
+            "Trading is not available from your current location ({}). \
+             Polymarket restricts access from certain regions.",
+            country
+        ),
+        "retriable": false,
+        "remediation": [
+            "Switch to a network or VPN in an unrestricted region, then run `check-access` to verify.",
+            "Review Polymarket Terms of Use for a list of restricted jurisdictions."
+        ],
+        "do_not": [
+            "Delete creds.json — this is a region/IP restriction, not a credentials issue.",
+            "Retry blindly — the block is geographic and will persist on the same IP.",
+            "Call the CLOB API directly — the same IP restriction applies there too."
+        ]
+    }))
+    .unwrap_or_else(|_| r#"{"ok":false,"error_code":"REGION_RESTRICTED"}"#.to_string())
+}
+
+/// Structured error response for REGION_UNVERIFIED (geoblock endpoint unreachable + auth failure).
+pub fn region_unverified_response() -> String {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "ok": false,
+        "error_code": "REGION_UNVERIFIED",
+        "category": "compliance",
+        "message": "Could not verify region access — the Polymarket geoblock endpoint was unreachable, \
+                    and a subsequent auth failure suggests this IP may be in a restricted region.",
+        "retriable": false,
+        "remediation": [
+            "Run `check-access` to manually verify your region status.",
+            "If check-access shows accessible, retry the command."
+        ],
+        "do_not": [
+            "Delete creds.json — this may be a region issue, not stale credentials.",
+            "Retry blindly — repeated attempts will not resolve a regional block.",
+            "Call the CLOB API directly — the same restriction likely applies."
+        ]
+    }))
+    .unwrap_or_else(|_| r#"{"ok":false,"error_code":"REGION_UNVERIFIED"}"#.to_string())
+}
+
+/// Returns true when an error message looks like a Polymarket auth failure.
+/// Used to reclassify STALE_CREDENTIALS as REGION_UNVERIFIED when the prior
+/// region check was Indeterminate.
+pub fn is_auth_error(msg: &str) -> bool {
+    let m = msg.to_lowercase();
+    m.contains("/auth/api-key") || m.contains("api-key failed")
+        || m.contains("credentials are stale") || m.contains("invalid credential")
+        || m.contains("could not create api key")
+}
+
 /// Build a structured error JSON string for stdout output (per GEN-001).
 ///
 /// Use when a command hits a business-logic failure (insufficient gas, tx never

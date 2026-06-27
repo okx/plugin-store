@@ -367,11 +367,11 @@ impl BalanceAllowance {
         let addr_lower = exchange_addr.to_lowercase();
         for (k, v) in &self.allowances {
             if k.to_lowercase() == addr_lower {
-                return v.parse().unwrap_or(0);
+                return v.parse().unwrap_or(0); // allow zero: 0 = unapproved → triggers approve tx
             }
         }
         // Fall back to singular allowance field (older format)
-        self.allowance.as_deref().unwrap_or("0").parse().unwrap_or(0)
+        self.allowance.as_deref().unwrap_or("0").parse().unwrap_or(0) // allow zero: 0 = unapproved → triggers approve tx
     }
 }
 
@@ -456,7 +456,7 @@ pub async fn get_market_fee(client: &Client, condition_id: &str) -> Result<u64> 
     let fee = v["maker_base_fee"]
         .as_u64()
         .or_else(|| v["maker_base_fee"].as_str().and_then(|s| s.parse().ok()))
-        .unwrap_or(0);
+        .unwrap_or(0); // fee: 0 if field absent or unparseable (market has no maker fee)
     Ok(fee)
 }
 
@@ -480,7 +480,7 @@ pub async fn get_price(client: &Client, token_id: &str, side: &str) -> Result<St
 pub async fn get_server_time(client: &Client) -> Result<u64> {
     let url = format!("{}/time", Urls::clob());
     let v: Value = client.get(&url).send().await?.json().await?;
-    Ok(v["time"].as_u64().unwrap_or(0))
+    Ok(v["time"].as_u64().ok_or_else(|| anyhow::anyhow!("missing 'time' field in server time response"))?)
 }
 
 pub async fn get_balance_allowance(

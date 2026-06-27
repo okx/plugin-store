@@ -1,8 +1,9 @@
 use clap::Args;
 use reqwest::Client;
 
-use crate::api::{check_clob_access, get_positions, Position};
+use crate::api::{get_positions, Position};
 use crate::onchainos::{get_existing_proxy, get_pol_balance, get_usdc_balance, get_wallet_address};
+use crate::readiness::{assess_readiness_fresh, RegionStatus};
 
 const ABOUT: &str = "Polymarket is the largest prediction-market protocol on Polygon — trade YES/NO outcome tokens on real-world events with USDC.e. This skill supports both EOA and Polymarket proxy (gasless) trading modes.";
 
@@ -70,9 +71,27 @@ async fn run_inner(args: QuickstartArgs) -> anyhow::Result<()> {
         .or_else(|| proxy.clone())
         .unwrap_or_else(|| eoa.clone());
 
-    // 4. Parallel fetch: CLOB access + EOA POL + EOA USDC.e + positions
-    let (access_result, pol_result, eoa_usdc_result, positions_result) = tokio::join!(
-        check_clob_access(&client),
+    // 4. Region check + parallel fetch: EOA POL + EOA USDC.e + positions
+    let region = assess_readiness_fresh(&client).await;
+    let (accessible, access_warning): (bool, Option<String>) = match &region {
+        RegionStatus::Accessible => (true, None),
+        RegionStatus::Restricted { country } => (
+            false,
+            Some(format!(
+                "Polymarket is not available in your region ({}) — trading is restricted.",
+                country
+            )),
+        ),
+        RegionStatus::Indeterminate { reason } => (
+            true,
+            Some(format!(
+                "Region status indeterminate: {} — run `check-access` to verify.",
+                reason
+            )),
+        ),
+    };
+
+    let (pol_result, eoa_usdc_result, positions_result) = tokio::join!(
         get_pol_balance(&eoa),
         get_usdc_balance(&eoa),
         get_positions(&client, &primary_wallet),
@@ -83,10 +102,6 @@ async fn run_inner(args: QuickstartArgs) -> anyhow::Result<()> {
         Some(paddr) => get_usdc_balance(paddr).await.ok(),
         None => None,
     };
-
-    // Accessibility: check_clob_access returns Some(warning) when blocked
-    let accessible = access_result.is_none();
-    let access_warning = access_result;
 
     // Silently tolerate RPC errors on balance/positions — quickstart is a status probe,
     // not a trading command; returning 0 + a clear status is better than aborting.

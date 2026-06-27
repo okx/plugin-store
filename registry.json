@@ -1963,8 +1963,8 @@
     },
     {
       "name": "polymarket-plugin",
-      "version": "0.6.1",
-      "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
+      "version": "0.6.2",
+      "description": "Trade prediction markets on Polymarket - buy and sell YES/NO outcome tokens on Polygon",
       "author": {
         "name": "skylavis-sky",
         "github": "skylavis-sky"
@@ -1979,7 +1979,7 @@
         "defi",
         "clob"
       ],
-      "modify_date": "1779956246",
+      "modify_date": "1782534564",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -1990,7 +1990,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "polymarket-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/polymarket-plugin@0.6.1"
+          "release_tag": "plugins/polymarket-plugin@0.6.2"
         }
       },
       "build": {
@@ -2009,6 +2009,9 @@
         "https://data-api.polymarket.com",
         "https://bridge.polymarket.com",
         "https://relayer-v2.polymarket.com",
+        "https://relayer.polymarket.com",
+        "https://polymarket.com",
+        "https://docs.polymarket.com",
         "coins.llama.fi",
         "polygon.drpc.org",
         "polygon-bor-rpc.publicnode.com",

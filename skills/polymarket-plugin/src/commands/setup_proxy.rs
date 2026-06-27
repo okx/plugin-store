@@ -96,10 +96,33 @@ impl ApprovalReport {
 }
 
 pub async fn run(dry_run: bool) -> Result<()> {
+    // Region check — WARNING only, do not abort. Proxy wallet setup is a wallet management
+    // operation and must remain usable even from restricted regions so users can configure
+    // their wallet infrastructure. Trading commands (buy/sell/deposit) enforce the hard gate.
+    if !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                eprintln!(
+                    "[polymarket] WARNING: Polymarket reports this IP as restricted ({}). \
+                     Proxy wallet setup will proceed — trading commands will be blocked.",
+                    country
+                );
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+            }
+            crate::readiness::RegionStatus::Accessible => {}
+        }
+    }
+
     match run_inner(dry_run).await {
         Ok(()) => Ok(()),
         Err(e) => {
-            // GEN-001: emit structured error to stdout so external Agents can parse.
             println!("{}", super::error_response(&e, Some("setup-proxy"), None));
             Ok(())
         }
@@ -108,13 +131,6 @@ pub async fn run(dry_run: bool) -> Result<()> {
 
 async fn run_inner(dry_run: bool) -> Result<()> {
     let client = Client::new();
-
-    // Geo check — WARNING only, do not abort. Users in restricted regions can still
-    // set up a proxy wallet; trading commands (buy/sell) will hard-fail separately.
-    if let Some(geo_msg) = crate::api::check_clob_access(&client).await {
-        eprintln!("[polymarket] WARNING: {}", geo_msg);
-        eprintln!("[polymarket] Continuing setup — proxy wallet creation does not require trading access.");
-    }
 
     let signer_addr = crate::onchainos::get_wallet_address().await?;
     let mut creds = crate::auth::ensure_credentials(&client, &signer_addr).await?;

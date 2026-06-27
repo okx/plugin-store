@@ -7,6 +7,7 @@ pub mod auth;
 pub mod commands;
 pub mod config;
 pub mod onchainos;
+pub mod readiness;
 pub mod sanitize;
 pub mod series;
 pub mod signing;

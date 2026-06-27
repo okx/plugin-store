@@ -41,10 +41,22 @@ fn format_et(iso: &str) -> String {
         return iso.to_string();
     }
 
-    let month: u32 = date_parts[1].parse().unwrap_or(0);
-    let day: u32 = date_parts[2].parse().unwrap_or(0);
-    let utc_hour: i32 = time_parts[0].parse().unwrap_or(0);
-    let min: u32 = time_parts[1].parse().unwrap_or(0);
+    let month: u32 = match date_parts[1].parse::<u32>() {
+        Ok(m) if m >= 1 && m <= 12 => m,
+        _ => return iso.to_string(),
+    };
+    let day: u32 = match date_parts[2].parse::<u32>() {
+        Ok(d) if d >= 1 && d <= 31 => d,
+        _ => return iso.to_string(),
+    };
+    let utc_hour: i32 = match time_parts[0].parse::<i32>() {
+        Ok(h) if h >= 0 && h <= 23 => h,
+        _ => return iso.to_string(),
+    };
+    let min: u32 = match time_parts[1].parse::<u32>() {
+        Ok(m) if m <= 59 => m,
+        _ => return iso.to_string(),
+    };
 
     // ET = UTC-4 (EDT, currently in effect Apr-Nov)
     let et_hour = ((utc_hour - 4).rem_euclid(24)) as u32;

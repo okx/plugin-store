@@ -38,11 +38,37 @@ pub async fn run(
     token_id_fast: Option<&str>,
     strategy_id: Option<&str>,
 ) -> Result<()> {
+    // F4: mandatory region pre-flight before any auth or signing
+    let indeterminate = if !dry_run {
+        let probe = reqwest::Client::new();
+        match crate::readiness::assess_readiness(&probe).await {
+            crate::readiness::RegionStatus::Restricted { country } => {
+                println!("{}", super::region_restricted_response(&country));
+                return Ok(());
+            }
+            crate::readiness::RegionStatus::Indeterminate { reason } => {
+                eprintln!(
+                    "[polymarket] WARNING: region check indeterminate ({}) — proceeding with caution. \
+                     Run `check-access` to verify.",
+                    reason
+                );
+                true
+            }
+            crate::readiness::RegionStatus::Accessible => false,
+        }
+    } else {
+        false
+    };
+
     match run_inner(
         market_id, outcome, amount, price, order_type, auto_approve, dry_run,
         round_up, post_only, expires, mode_override, token_id_fast, strategy_id,
     ).await {
         Ok(()) => Ok(()),
+        Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
+            println!("{}", super::region_unverified_response());
+            Ok(())
+        }
         Err(e) => { println!("{}", super::error_response(&e, Some("buy"), None)); Ok(()) }
     }
 }
@@ -91,14 +117,6 @@ async fn run_inner(
 
     let client = Client::new();
 
-    // Geo check — hard fail before any live trading attempt.
-    // Skipped for dry-run so users can preview orders regardless of region.
-    if !dry_run {
-        if let Some(geo_msg) = crate::api::check_clob_access(&client).await {
-            bail!("{}", geo_msg);
-        }
-    }
-
     // ── Public API phase (no auth, runs for dry-run too) ─────────────────────
 
     // Three resolution paths:
@@ -119,14 +137,14 @@ async fn run_inner(
             let token_id = tid.to_string();
 
             let (fee_r, wallet_opt) = if dry_run {
-                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0);
+                let fee = get_market_fee(&client, &condition_id).await.unwrap_or(0); // fee: 0 if market data unavailable, no fee applied
                 (fee, None)
             } else {
                 let (fee_res, wallet_res) = tokio::join!(
                     get_market_fee(&client, &condition_id),
                     get_wallet_address()
                 );
-                (fee_res.unwrap_or(0), Some(wallet_res?))
+                (fee_res.unwrap_or(0), Some(wallet_res?)) // fee: 0 if market data unavailable
             };
 
             (condition_id, token_id, neg_risk, fee_r, book, wallet_opt)
@@ -412,7 +430,7 @@ async fn run_inner(
                 let exchange_addr = Contracts::exchange(clob_version, neg_risk);
                 let pusd_allowance = crate::onchainos::get_pusd_allowance(
                     maker_addr.as_str(), exchange_addr,
-                ).await.unwrap_or(0);
+                ).await.unwrap_or(0); // allow zero: 0 = unapproved, conservative → includes approval in gas pre-check
                 let will_approve = pusd_allowance < (usdc_needed_raw as u128);
                 if will_wrap || will_approve {
                     let pol = crate::onchainos::get_pol_balance(&signer_addr)
@@ -593,16 +611,16 @@ async fn run_inner(
         // stale after an unlimited approval, causing a redundant approval on every order.
         let allowance_raw: u128 = match clob_version {
             OrderVersion::V2 => {
-                let a = crate::onchainos::get_pusd_allowance(balance_addr, exchange_addr).await.unwrap_or(0);
+                let a = crate::onchainos::get_pusd_allowance(balance_addr, exchange_addr).await.unwrap_or(0); // allow zero: 0 means unapproved → triggers approval below
                 if neg_risk {
-                    let b = crate::onchainos::get_pusd_allowance(balance_addr, Contracts::NEG_RISK_ADAPTER).await.unwrap_or(0);
+                    let b = crate::onchainos::get_pusd_allowance(balance_addr, Contracts::NEG_RISK_ADAPTER).await.unwrap_or(0); // allow zero: same
                     a.min(b)
                 } else { a }
             }
             OrderVersion::V1 => {
-                let a = crate::onchainos::get_usdc_allowance(balance_addr, exchange_addr).await.unwrap_or(0);
+                let a = crate::onchainos::get_usdc_allowance(balance_addr, exchange_addr).await.unwrap_or(0); // allow zero: 0 means unapproved → triggers approval below
                 if neg_risk {
-                    let b = crate::onchainos::get_usdc_allowance(balance_addr, Contracts::NEG_RISK_ADAPTER).await.unwrap_or(0);
+                    let b = crate::onchainos::get_usdc_allowance(balance_addr, Contracts::NEG_RISK_ADAPTER).await.unwrap_or(0); // allow zero: same
                     a.min(b)
                 } else { a }
             }
@@ -637,13 +655,13 @@ async fn run_inner(
         let needed_u128 = usdc_needed_raw as u128;
         let allowance_raw = if neg_risk {
             let a_exchange = crate::onchainos::get_pusd_allowance(maker_addr.as_str(), exchange_addr)
-                .await.unwrap_or(0);
+                .await.unwrap_or(0); // allow zero: 0 = unapproved → triggers approve tx below
             let a_adapter  = crate::onchainos::get_pusd_allowance(maker_addr.as_str(), Contracts::NEG_RISK_ADAPTER)
-                .await.unwrap_or(0);
+                .await.unwrap_or(0); // allow zero: 0 = unapproved → triggers approve tx below
             a_exchange.min(a_adapter)
         } else {
             crate::onchainos::get_pusd_allowance(maker_addr.as_str(), exchange_addr)
-                .await.unwrap_or(0)
+                .await.unwrap_or(0) // allow zero: 0 = unapproved → triggers approve tx below
         };
         if allowance_raw < needed_u128 {
             let version_label = if neg_risk { "Neg Risk CTF Exchange V2" } else { "CTF Exchange V2" };
@@ -882,7 +900,7 @@ async fn run_inner(
         let ts_now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
-            .unwrap_or(0);
+            .unwrap_or(0); // allow zero: system clock before epoch is impossible on any real system
         let report_payload = serde_json::json!({
             "wallet": signer_addr,
             "proxyAddress": creds.proxy_wallet.as_deref().unwrap_or(""),
@@ -956,7 +974,7 @@ pub async fn resolve_market_token(
                 let available: Vec<&str> = market.tokens.iter().map(|t| t.outcome.as_str()).collect();
                 anyhow::anyhow!("Outcome '{}' not found. Available outcomes: {:?}", outcome, available)
             })?;
-        let fee = market.maker_base_fee.unwrap_or(0);
+        let fee = market.maker_base_fee.unwrap_or(0); // fee: 0 if not set by market
         Ok((market.condition_id.clone(), token.token_id.clone(), market.neg_risk, fee))
     } else {
         let gamma = crate::api::get_gamma_market_by_slug(client, market_id).await?;
@@ -988,7 +1006,7 @@ pub async fn resolve_market_token(
         // markets, which causes the wrong exchange to be approved (CTF_EXCHANGE instead of
         // NEG_RISK_CTF_EXCHANGE), wasting gas and failing the order.
         let (neg_risk, fee) = match get_clob_market(client, &condition_id).await {
-            Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+            Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)), // fee: 0 if not set by CLOB
             Err(_) => (gamma.neg_risk, 0), // fall back to gamma value if CLOB unavailable
         };
 
@@ -1016,7 +1034,7 @@ pub async fn resolve_from_gamma(
     let token_id = token_ids.get(idx).cloned()
         .ok_or_else(|| anyhow::anyhow!("No token_id for outcome index {}", idx))?;
     let (neg_risk, fee_rate_bps) = match get_clob_market(client, &condition_id).await {
-        Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)),
+        Ok(clob) => (clob.neg_risk, clob.maker_base_fee.unwrap_or(0)), // fee: 0 if not set by CLOB
         Err(_) => (gamma.neg_risk, 0),
     };
     Ok((condition_id, token_id, neg_risk, fee_rate_bps))

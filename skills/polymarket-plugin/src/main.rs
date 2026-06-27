@@ -3,6 +3,7 @@ mod auth;
 mod commands;
 mod config;
 mod onchainos;
+mod readiness;
 mod sanitize;
 mod series;
 mod signing;
@@ -453,8 +454,12 @@ async fn main() {
             } else if let Some(mid) = market_id {
                 commands::redeem::run(&mid, dry_run, strategy_id.as_deref()).await
             } else {
-                eprintln!("Error: provide --market-id <ID> or --all");
-                std::process::exit(1);
+                println!("{}", commands::error_response(
+                    &anyhow::anyhow!("Provide --market-id <ID> or --all"),
+                    Some("redeem"),
+                    None,
+                ));
+                Ok(())
             }
         }
         Commands::Cancel { order_id, market, all } => {
@@ -465,9 +470,12 @@ async fn main() {
             } else if let Some(mkt) = market {
                 commands::cancel::run_cancel_market(&mkt, None).await
             } else {
-                Err(anyhow::anyhow!(
-                    "Specify --order-id <id>, --market <condition_id>, or --all"
-                ))
+                println!("{}", commands::error_response(
+                    &anyhow::anyhow!("Specify --order-id <id>, --market <condition_id>, or --all"),
+                    Some("cancel"),
+                    None,
+                ));
+                Ok(())
             }
         }
         Commands::Orders { state, v1, limit } => {
@@ -488,14 +496,7 @@ async fn main() {
     };
 
     if let Err(e) = result {
-        let err_out = serde_json::json!({
-            "ok": false,
-            "error": e.to_string(),
-        });
-        eprintln!(
-            "{}",
-            serde_json::to_string_pretty(&err_out).unwrap_or_else(|_| e.to_string())
-        );
+        println!("{}", commands::error_response(&e, None, None));
         std::process::exit(1);
     }
 }
