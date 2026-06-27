@@ -378,7 +378,7 @@
     },
     {
       "name": "polymarket-plugin",
-      "description": "Trade prediction markets on Polymarket — buy and sell YES/NO outcome tokens on Polygon",
+      "description": "Trade prediction markets on Polymarket - buy and sell YES/NO outcome tokens on Polygon",
       "source": "./skills/polymarket-plugin",
       "category": "dapp",
       "author": {

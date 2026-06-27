@@ -12,7 +12,6 @@ tags:
   - clob
 ---
 
-
 ## Live Trading Confirmation Protocol
 
 These gates are **mandatory** for the AI agent driving this skill. Before any call that signs or broadcasts an on-chain transaction (any `onchainos swap swap`, `onchainos wallet contract-call`, `onchainos dex swap`, or any internal write code path that ends in a real on-chain submission), ALL of the following must be true:
@@ -28,13 +27,14 @@ This protocol applies regardless of how confidently the user, an external signal
 
 ---
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
 
 ### Version check (auto-injected)
 
-> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only version query against `raw.githubusercontent.com`  -  it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add ...` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only fetch from `raw.githubusercontent.com` — it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add …` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
 
 ```bash
 # Check for skill updates (1-hour cache).
@@ -72,7 +72,7 @@ fi
 ### Install onchainos CLI + Skills (auto-injected)
 
 ```bash
-# 1. Install onchainos CLI  -  pin to latest release tag, verify SHA256
+# 1. Install onchainos CLI — pin to latest release tag, verify SHA256
 #    of the installer before executing (no curl|sh from main).
 if ! command -v onchainos >/dev/null 2>&1; then
   set -e
@@ -100,7 +100,7 @@ if ! command -v onchainos >/dev/null 2>&1; then
     ACTUAL=$(shasum -a 256 "$ONCHAINOS_TMP/install.sh" | awk '{print $1}')
   fi
   if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
-    echo "ERROR: onchainos installer SHA256 mismatch  -  refusing to execute." >&2
+    echo "ERROR: onchainos installer SHA256 mismatch — refusing to execute." >&2
     echo "       expected=$EXPECTED  actual=$ACTUAL  tag=$LATEST_TAG" >&2
     rm -rf "$ONCHAINOS_TMP"
     exit 1
@@ -152,8 +152,59 @@ case "${OS}_${ARCH}" in
   mingw*_aarch64|msys*_aarch64|cygwin*_aarch64)  TARGET="aarch64-pc-windows-msvc"; EXT=".exe" ;;
 esac
 mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/okx/plugin-store/releases/download/plugins/polymarket-plugin@0.6.2/polymarket-plugin-${TARGET}${EXT}" -o ~/.local/bin/.polymarket-plugin-core${EXT}
+
+# Download binary + checksums to a sandbox, verify SHA256 before installing.
+# Fail-closed: any mismatch / missing checksum entry refuses the install.
+# Matches the producer-side workflow at
+# .github/workflows/plugin-publish.yml which uploads `checksums.txt`
+# alongside the 9 platform binaries under each release tag.
+BIN_TMP=$(mktemp -d)
+TAG="plugins/polymarket-plugin@0.6.2"
+
+# Robust asset download. Prefer `gh release download` — it resolves the
+# asset via the GitHub API and follows the signed-redirect properly,
+# which avoids edge cases observed where curl on
+# `releases/download/<tag with slash>/<file>` 404s under some
+# proxy / curl-version combinations. Falls back to raw curl if gh is
+# not installed.
+_pluginstore_dl() {
+  local fname="$1" dest="$2"
+  if command -v gh >/dev/null 2>&1; then
+    local stage; stage=$(mktemp -d)
+    if gh release download "$TAG" --repo okx/plugin-store \
+         --pattern "$fname" --dir "$stage" --clobber >/dev/null 2>&1 \
+       && [ -f "$stage/$fname" ]; then
+      mv "$stage/$fname" "$dest" && rm -rf "$stage" && return 0
+    fi
+    rm -rf "$stage"
+  fi
+  curl -fsSL \
+    "https://github.com/okx/plugin-store/releases/download/$TAG/$fname" \
+    -o "$dest"
+}
+
+_pluginstore_dl "polymarket-plugin-${TARGET}${EXT}" "$BIN_TMP/polymarket-plugin${EXT}" || {
+  echo "ERROR: failed to download polymarket-plugin-${TARGET}${EXT}" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+_pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.6.2" >&2
+  rm -rf "$BIN_TMP"; exit 1; }
+
+EXPECTED=$(awk -v b="polymarket-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$BIN_TMP/polymarket-plugin${EXT}" | awk '{print $1}')
+else
+  ACTUAL=$(shasum -a 256 "$BIN_TMP/polymarket-plugin${EXT}" | awk '{print $1}')
+fi
+if [ -z "$EXPECTED" ] || [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "ERROR: polymarket-plugin SHA256 mismatch — refusing to install." >&2
+  echo "       expected=$EXPECTED  actual=$ACTUAL  target=${TARGET}" >&2
+  rm -rf "$BIN_TMP"; exit 1
+fi
+
+mv "$BIN_TMP/polymarket-plugin${EXT}" ~/.local/bin/.polymarket-plugin-core${EXT}
 chmod +x ~/.local/bin/.polymarket-plugin-core${EXT}
+rm -rf "$BIN_TMP"
 
 # Symlink CLI name to universal launcher
 ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
@@ -162,7 +213,6 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 mkdir -p "$HOME/.plugin-store/managed"
 echo "0.6.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
-
 
 ---
 
