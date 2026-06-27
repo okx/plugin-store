@@ -3,7 +3,7 @@ use reqwest::Client;
 
 use crate::api::{get_positions, Position};
 use crate::onchainos::{get_existing_proxy, get_pol_balance, get_usdc_balance, get_wallet_address};
-use crate::readiness::{assess_readiness, RegionStatus};
+use crate::readiness::{assess_readiness_fresh, RegionStatus};
 
 const ABOUT: &str = "Polymarket is the largest prediction-market protocol on Polygon — trade YES/NO outcome tokens on real-world events with USDC.e. This skill supports both EOA and Polymarket proxy (gasless) trading modes.";
 
@@ -72,7 +72,7 @@ async fn run_inner(args: QuickstartArgs) -> anyhow::Result<()> {
         .unwrap_or_else(|| eoa.clone());
 
     // 4. Region check + parallel fetch: EOA POL + EOA USDC.e + positions
-    let region = assess_readiness(&client).await;
+    let region = assess_readiness_fresh(&client).await;
     let (accessible, access_warning): (bool, Option<String>) = match &region {
         RegionStatus::Accessible => (true, None),
         RegionStatus::Restricted { country } => (

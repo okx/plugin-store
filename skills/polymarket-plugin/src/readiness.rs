@@ -95,9 +95,7 @@ struct GeoblockResponse {
     country: Option<String>,
 }
 
-/// Call `GET /api/geoblock` directly — always performs a network request.
-/// Use this for the `check-access` command (user expects a fresh result).
-pub async fn assess_readiness_fresh(client: &Client) -> RegionStatus {
+async fn probe_geoblock(client: &Client) -> RegionStatus {
     let url = format!("{}/api/geoblock", Urls::web());
 
     let resp = match client
@@ -154,6 +152,14 @@ pub async fn assess_readiness_fresh(client: &Client) -> RegionStatus {
     }
 }
 
+/// Call `GET /api/geoblock` directly and update the local cache with the result.
+/// Use this when the user explicitly requests a fresh check (`check-access`, `quickstart`).
+pub async fn assess_readiness_fresh(client: &Client) -> RegionStatus {
+    let result = probe_geoblock(client).await;
+    write_cache(&result); // cache the fresh result so subsequent commands benefit
+    result
+}
+
 /// Check region status with a local cache (TTL: Accessible=1h, Restricted=15min).
 /// Cache hit on Accessible → zero network overhead for the typical case.
 /// Indeterminate is never cached so transient errors don't permanently suppress checks.
@@ -161,7 +167,5 @@ pub async fn assess_readiness(client: &Client) -> RegionStatus {
     if let Some(cached) = read_cache() {
         return cached;
     }
-    let result = assess_readiness_fresh(client).await;
-    write_cache(&result);
-    result
+    assess_readiness_fresh(client).await
 }
