@@ -21,6 +21,10 @@ use super::buy::{resolve_from_gamma, resolve_market_token};
 ///   token_id_fast is provided.
 /// mode_override: optional one-time trading mode override ("eoa" or "proxy").
 /// token_id_fast: skip all market resolution when token ID is known (from get-series output).
+/// autotrade_job: copy-trading job ID from an onchainos execution card. When present,
+///   the order must pass `onchainos agent autotrade-grant-check` (fail-closed) before
+///   any credential derivation, signing, or order placement.
+#[allow(clippy::too_many_arguments)]
 pub async fn run(
     market_id: Option<&str>,
     outcome: &str,
@@ -34,6 +38,7 @@ pub async fn run(
     mode_override: Option<&str>,
     token_id_fast: Option<&str>,
     strategy_id: Option<&str>,
+    autotrade_job: Option<&str>,
 ) -> Result<()> {
     // F4: mandatory region pre-flight before any auth or signing
     let indeterminate = if !dry_run {
@@ -57,9 +62,20 @@ pub async fn run(
         false
     };
 
+    // Autotrade authorization gate — after the region pre-flight, before any
+    // credential derivation / signing / order placement (fail-closed).
+    // For sell the granted amount is the share count (--shares), passed through verbatim.
+    if let Some(job_id) = autotrade_job {
+        if let Err(rejection) = super::autotrade_gate(job_id, "sell", shares, dry_run).await {
+            println!("{}", rejection);
+            return Ok(());
+        }
+    }
+
     match run_inner(
         market_id, outcome, shares, price, order_type, auto_approve, dry_run,
         post_only, expires, mode_override, token_id_fast, strategy_id,
+        autotrade_job,
     ).await {
         Ok(()) => Ok(()),
         Err(e) if indeterminate && super::is_auth_error(&format!("{:#}", e)) => {
@@ -70,6 +86,7 @@ pub async fn run(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_inner(
     market_id: Option<&str>,
     outcome: &str,
@@ -83,6 +100,7 @@ async fn run_inner(
     mode_override: Option<&str>,
     token_id_fast: Option<&str>,
     strategy_id: Option<&str>,
+    autotrade_job: Option<&str>,
 ) -> Result<()> {
     // Parse shares and validate order flags up front (before any network calls).
     let share_amount: f64 = shares.parse().context("invalid shares amount")?;
@@ -262,31 +280,33 @@ async fn run_inner(
     if dry_run {
         // Include price adjustment info in dry-run if applicable.
         let price_adjusted = requested_price.map_or(false, |p| (limit_price - p).abs() > 1e-9);
-        println!(
-            "{}",
-            serde_json::json!({
-                "ok": true,
-                "dry_run": true,
-                "data": {
-                    "market_id": market_id,
-                    "condition_id": condition_id,
-                    "outcome": outcome,
-                    "token_id": token_id,
-                    "side": "SELL",
-                    "order_type": effective_order_type.to_uppercase(),
-                    "limit_price": limit_price,
-                    "limit_price_requested": requested_price,
-                    "price_adjusted": price_adjusted,
-                    "shares": actual_shares,
-                    "shares_requested": share_amount,
-                    "usdc_out": taker_amount_raw as f64 / 1_000_000.0,
-                    "fee_rate_bps": fee_rate_bps,
-                    "post_only": post_only,
-                    "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
-                    "note": "dry-run: order not submitted"
-                }
-            })
-        );
+        let mut dry_result = serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "data": {
+                "market_id": market_id,
+                "condition_id": condition_id,
+                "outcome": outcome,
+                "token_id": token_id,
+                "side": "SELL",
+                "order_type": effective_order_type.to_uppercase(),
+                "limit_price": limit_price,
+                "limit_price_requested": requested_price,
+                "price_adjusted": price_adjusted,
+                "shares": actual_shares,
+                "shares_requested": share_amount,
+                "usdc_out": taker_amount_raw as f64 / 1_000_000.0,
+                "fee_rate_bps": fee_rate_bps,
+                "post_only": post_only,
+                "expires": if expiration > 0 { serde_json::Value::Number(expiration.into()) } else { serde_json::Value::Null },
+                "note": "dry-run: order not submitted"
+            }
+        });
+        if autotrade_job.is_some() {
+            dry_result["data"]["autotradeGrantCheck"] =
+                serde_json::Value::String("skipped (dry-run)".to_string());
+        }
+        println!("{}", dry_result);
         return Ok(());
     }
 
@@ -708,7 +728,7 @@ async fn run_inner(
         }
     }
 
-    let result = serde_json::json!({
+    let mut result = serde_json::json!({
         "ok": true,
         "data": {
             "market_id": market_id,
@@ -728,6 +748,9 @@ async fn run_inner(
             "tx_hashes": resp.tx_hashes,
         }
     });
+    if let Some(job_id) = autotrade_job {
+        result["data"]["autotradeJob"] = serde_json::Value::String(job_id.to_string());
+    }
     println!("{}", serde_json::to_string_pretty(&result)?);
     Ok(())
 }

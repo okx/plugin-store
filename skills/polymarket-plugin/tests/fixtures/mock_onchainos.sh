@@ -84,6 +84,42 @@ case "$*" in
     printf '{"ok":true}\n'
     ;;
 
+  *"agent autotrade-grant-check"*)
+    # Autotrade grant check (FR-3 contract). Behaviour driven by
+    # MOCK_ONCHAINOS_GRANT_RESULT:
+    #   ok      — {"ok":true}, exit 0 (grant allows the order)
+    #   deny    — {"ok":false,"reason":...}, exit 1 (reason from MOCK_ONCHAINOS_GRANT_REASON)
+    #   hang    — sleep to trigger the plugin-side timeout
+    #   badjson — non-JSON stdout with exit 0 (parse-failure path)
+    #   unset   — behave like an old onchainos that does not know the subcommand
+    case "${MOCK_ONCHAINOS_GRANT_RESULT:-}" in
+      ok)
+        printf '{"ok":true}\n'
+        ;;
+      deny)
+        printf '{"ok":false,"reason":"%s"}\n' "${MOCK_ONCHAINOS_GRANT_REASON:-per-trade cap exceeded}"
+        exit 1
+        ;;
+      hang)
+        sleep "${MOCK_ONCHAINOS_GRANT_HANG_SECS:-30}"
+        printf '{"ok":true}\n'
+        ;;
+      badjson)
+        printf 'this is not json\n'
+        ;;
+      crash)
+        # Simulates an onchainos panic whose stderr references the grant file it
+        # was reading — the plugin must NOT leak this path into its error output.
+        echo "thread 'main' panicked: failed to open /home/user/.onchainos/grants/job-secret.json: permission denied" >&2
+        exit 101
+        ;;
+      *)
+        echo '{"ok":false,"error":"mock_onchainos: unrecognised command: '"$*"'"}' >&2
+        exit 1
+        ;;
+    esac
+    ;;
+
   *"--version"*)
     printf 'mock-onchainos 0.0.0 (test fixture)\n'
     ;;
