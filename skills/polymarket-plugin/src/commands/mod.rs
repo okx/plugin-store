@@ -21,6 +21,60 @@ pub mod watch;
 pub mod withdraw;
 
 
+/// Autotrade (copy-trading) authorization gate for `buy` / `sell` with `--autotrade-job`.
+///
+/// Runs AFTER the region pre-flight and BEFORE any credential derivation, signing,
+/// or order placement. Fail-closed: the caller must print the returned `Err` JSON
+/// to stdout and abort the order without touching the auth phase.
+///
+/// - Invalid jobId (charset/length) → `invalid_input`, no subprocess is spawned.
+/// - `--dry-run` → the grant check is skipped entirely (no real write happens);
+///   the dry-run output notes the skip via `autotradeGrantCheck`.
+/// - Otherwise `onchainos agent autotrade-grant-check` decides; any failure form
+///   (deny / timeout / bad JSON / missing or outdated onchainos) → `autotrade_grant_denied`.
+pub async fn autotrade_gate(
+    job_id: &str,
+    action: &str,
+    amount: &str,
+    dry_run: bool,
+) -> Result<(), String> {
+    if !crate::onchainos::is_valid_autotrade_job_id(job_id) {
+        return Err(autotrade_invalid_input_response());
+    }
+    if dry_run {
+        return Ok(());
+    }
+    crate::onchainos::autotrade_grant_check(job_id, action, amount)
+        .await
+        .map_err(|reason| autotrade_grant_denied_response(&reason))
+}
+
+/// Structured rejection for an `--autotrade-job` value that fails validation.
+pub fn autotrade_invalid_input_response() -> String {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "ok": false,
+        "error": {
+            "code": "invalid_input",
+            "field": "autotrade-job",
+            "reason": "invalid --autotrade-job: expected 1..=128 characters from [A-Za-z0-9_-]",
+        }
+    }))
+    .unwrap_or_else(|_| r#"{"ok":false,"error":{"code":"invalid_input","field":"autotrade-job"}}"#.to_string())
+}
+
+/// Structured fail-closed rejection when the OnchainOS autotrade grant check
+/// does not pass (deny / timeout / invalid output / missing or outdated CLI).
+pub fn autotrade_grant_denied_response(reason: &str) -> String {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "ok": false,
+        "error": {
+            "code": "autotrade_grant_denied",
+            "reason": reason,
+        }
+    }))
+    .unwrap_or_else(|_| r#"{"ok":false,"error":{"code":"autotrade_grant_denied"}}"#.to_string())
+}
+
 /// Structured error response for REGION_RESTRICTED (blocked by geoblock API).
 pub fn region_restricted_response(country: &str) -> String {
     serde_json::to_string_pretty(&serde_json::json!({

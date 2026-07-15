@@ -35,6 +35,119 @@ pub fn approve_timeout_secs() -> u64 {
         .and_then(|v| v.parse().ok())
         .unwrap_or(90)
 }
+
+// ─── Autotrade (copy-trading) grant check ────────────────────────────────────
+
+/// Grant-check timeout in seconds — configurable via POLYMARKET_GRANT_CHECK_TIMEOUT_SECS
+/// (used by tests to exercise the timeout path without waiting the full default).
+/// Default: 10s (PRD FR-1 defensive upper bound; typical check is < 1s).
+pub fn grant_check_timeout_secs() -> u64 {
+    std::env::var("POLYMARKET_GRANT_CHECK_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10)
+}
+
+/// Validate an `--autotrade-job` ID: charset `[A-Za-z0-9_-]`, length 1..=128.
+/// A 0x-prefixed hex jobId naturally satisfies this. Anything else (shell
+/// metacharacters, whitespace, overlong values) is rejected before any
+/// subprocess call is made.
+pub fn is_valid_autotrade_job_id(job_id: &str) -> bool {
+    (1..=128).contains(&job_id.len())
+        && job_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+/// Ask onchainos whether an autotrade (copy-trading) job authorizes this order.
+///
+/// Runs `onchainos agent autotrade-grant-check --job-id <id> --venue polymarket
+/// --action <buy|sell> --amount <amount> --format json` (process contract frozen
+/// by the Dev PRD FR-3; the grant file, per-trade limits, and subscription state
+/// all live on the onchainos side — this plugin never reads the grant itself).
+///
+/// Returns `Ok(())` ONLY when the subprocess exits 0 AND its stdout is valid JSON
+/// with `ok == true`. Every other outcome is fail-closed and returns
+/// `Err(reason)`: non-zero exit, `ok:false` (reason passed through verbatim),
+/// invalid JSON, timeout, missing binary, or an onchainos too old to know the
+/// subcommand. The reason string never includes grant-file contents or paths.
+pub async fn autotrade_grant_check(
+    job_id: &str,
+    action: &str,
+    amount: &str,
+) -> std::result::Result<(), String> {
+    let mut cmd = tokio::process::Command::new(onchainos_bin());
+    cmd.args([
+        "agent", "autotrade-grant-check",
+        "--job-id", job_id,
+        "--venue", "polymarket",
+        "--action", action,
+        "--amount", amount,
+        "--format", "json",
+    ]);
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+    // Dropping the child on timeout must kill it — a hung grant check may not exit on its own.
+    cmd.kill_on_drop(true);
+
+    let child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(format!(
+                "could not launch onchainos for the grant check ({}). \
+                 Ensure the onchainos CLI is installed and on PATH.",
+                e
+            ))
+        }
+    };
+
+    let timeout = std::time::Duration::from_secs(grant_check_timeout_secs());
+    let output = match tokio::time::timeout(timeout, child.wait_with_output()).await {
+        Ok(Ok(out)) => out,
+        Ok(Err(e)) => return Err(format!("grant check process error: {}", e)),
+        Err(_) => return Err("grant check timeout".to_string()),
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Option<Value> = serde_json::from_str(stdout.trim()).ok();
+
+    if output.status.success() {
+        return match parsed {
+            Some(v) if v["ok"].as_bool() == Some(true) => Ok(()),
+            Some(v) => Err(v["reason"]
+                .as_str()
+                .unwrap_or("grant check returned ok=false without a reason")
+                .to_string()),
+            None => Err("grant check returned invalid JSON".to_string()),
+        };
+    }
+
+    // Non-zero exit. Prefer the structured reason when the CLI printed one
+    // (FR-3: exit code matches `ok`, so ok:false normally arrives here).
+    if let Some(v) = parsed {
+        if let Some(reason) = v["reason"].as_str() {
+            return Err(reason.to_string());
+        }
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{} {}", stderr, stdout).to_lowercase();
+    if combined.contains("unrecognized subcommand")
+        || combined.contains("unrecognised command")
+        || combined.contains("unexpected argument")
+    {
+        return Err(
+            "installed onchainos does not support autotrade-grant-check — \
+             run `onchainos upgrade` and retry on the next signal"
+                .to_string(),
+        );
+    }
+    // Deliberately NOT echoing the subprocess stderr: onchainos crash output can
+    // reference the grant file it was reading, and NFR-3 forbids grant-file
+    // contents or paths in this plugin's error output. The exit status alone
+    // identifies the failure form.
+    Err(format!("grant check failed ({})", output.status))
+}
 /// Sign an EIP-712 structured data JSON via `onchainos sign-message --type eip712`.
 ///
 /// The JSON must include EIP712Domain in the `types` field — this is required for correct

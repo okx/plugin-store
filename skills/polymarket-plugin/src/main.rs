@@ -141,6 +141,12 @@ enum Commands {
         /// Strategy ID for attribution — reported to OKX backend alongside the order
         #[arg(long)]
         strategy_id: Option<String>,
+
+        /// Autotrade (copy-trading) job ID from an onchainos execution card.
+        /// Gates the order behind `onchainos agent autotrade-grant-check` (fail-closed)
+        /// before any credential derivation or signing. Skipped with --dry-run.
+        #[arg(long)]
+        autotrade_job: Option<String>,
     },
 
     /// Sell YES or NO shares in a market (signs via onchainos wallet)
@@ -201,6 +207,12 @@ enum Commands {
         /// Strategy ID for attribution — reported to OKX backend alongside the order
         #[arg(long)]
         strategy_id: Option<String>,
+
+        /// Autotrade (copy-trading) job ID from an onchainos execution card.
+        /// Gates the order behind `onchainos agent autotrade-grant-check` (fail-closed)
+        /// before any credential derivation or signing. Skipped with --dry-run.
+        #[arg(long)]
+        autotrade_job: Option<String>,
     },
 
     /// Create a Polymarket proxy wallet and switch to gasless POLY_PROXY trading mode.
@@ -413,8 +425,9 @@ async fn main() {
             confirm: _confirm,
             token_id,
             strategy_id,
+            autotrade_job,
         } => {
-            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref()).await
+            commands::buy::run(market_id.as_deref(), &outcome, &amount, price, &order_type, approve, dry_run, round_up, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref(), autotrade_job.as_deref()).await
         }
         Commands::Sell {
             market_id,
@@ -430,8 +443,9 @@ async fn main() {
             confirm: _confirm,
             token_id,
             strategy_id,
+            autotrade_job,
         } => {
-            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref()).await
+            commands::sell::run(market_id.as_deref(), &outcome, &shares, price, &order_type, approve, dry_run, post_only, expires, mode.as_deref(), token_id.as_deref(), strategy_id.as_deref(), autotrade_job.as_deref()).await
         }
         Commands::SetupProxy { dry_run } => {
             commands::setup_proxy::run(dry_run).await

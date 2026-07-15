@@ -580,7 +580,9 @@ pub async fn post_order<T: serde::Serialize>(
 /// no longer reachable, so a missing endpoint now legitimately indicates a
 /// problem worth surfacing.
 pub async fn get_clob_version(client: &Client) -> Result<u8> {
-    let url = format!("{}/version", Urls::CLOB);
+    // Urls::clob() (not the raw const) so integration tests can inject a mock
+    // server via POLYMARKET_TEST_CLOB_URL; identical to Urls::CLOB in production.
+    let url = format!("{}/version", Urls::clob());
     let resp = client
         .get(&url)
         .send()
