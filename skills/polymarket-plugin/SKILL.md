@@ -61,7 +61,7 @@ Interactive usage (no `--autotrade-job`) is completely unaffected: the full conf
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.6.2"
+LOCAL_VER="0.7.0"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -178,7 +178,7 @@ mkdir -p ~/.local/bin
 # .github/workflows/plugin-publish.yml which uploads `checksums.txt`
 # alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-TAG="plugins/polymarket-plugin@0.6.2"
+TAG="plugins/polymarket-plugin@0.7.0"
 
 # Robust asset download. Prefer `gh release download` — it resolves the
 # asset via the GitHub API and follows the signed-redirect properly,
@@ -206,7 +206,7 @@ _pluginstore_dl "polymarket-plugin-${TARGET}${EXT}" "$BIN_TMP/polymarket-plugin$
   echo "ERROR: failed to download polymarket-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 _pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.6.2" >&2
+  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.7.0" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="polymarket-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -230,7 +230,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.6.2" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.7.0" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ---
