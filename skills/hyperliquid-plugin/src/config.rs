@@ -18,8 +18,44 @@ pub fn is_testnet() -> bool {
     )
 }
 
+/// Test-only endpoint overrides must never activate from a stray production variable.
+pub fn test_overrides_enabled() -> bool {
+    matches!(
+        std::env::var("HYPERLIQUID_TEST_MODE").as_deref(),
+        Ok("1") | Ok("true")
+    )
+}
+
+/// Base override for both API endpoints, read once per process.
+///
+/// The autotrade grant gate sits behind read-only market/position lookups, so any
+/// assertion about the gate rejecting (and about nothing being signed when it does)
+/// requires those lookups to resolve against a controllable host. Unset — the
+/// production case — this contributes nothing and the endpoints stay byte-identical
+/// to the hardcoded constants.
+fn api_base_override() -> Option<&'static str> {
+    static BASE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    BASE.get_or_init(|| {
+        if !test_overrides_enabled() {
+            return None;
+        }
+        std::env::var("HYPERLIQUID_TEST_API_BASE")
+            .ok()
+            .map(|b| b.trim_end_matches('/').to_string())
+            .filter(|b| !b.is_empty())
+    })
+    .as_deref()
+}
+
 /// Hyperliquid info endpoint — mainnet or testnet.
 pub fn info_url() -> &'static str {
+    static OVERRIDE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    if let Some(u) = OVERRIDE
+        .get_or_init(|| api_base_override().map(|b| format!("{}/info", b)))
+        .as_deref()
+    {
+        return u;
+    }
     if is_testnet() {
         "https://api.hyperliquid-testnet.xyz/info"
     } else {
@@ -29,6 +65,13 @@ pub fn info_url() -> &'static str {
 
 /// Hyperliquid exchange endpoint — mainnet or testnet.
 pub fn exchange_url() -> &'static str {
+    static OVERRIDE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    if let Some(u) = OVERRIDE
+        .get_or_init(|| api_base_override().map(|b| format!("{}/exchange", b)))
+        .as_deref()
+    {
+        return u;
+    }
     if is_testnet() {
         "https://api.hyperliquid-testnet.xyz/exchange"
     } else {
