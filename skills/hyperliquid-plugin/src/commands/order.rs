@@ -6,7 +6,7 @@ use crate::api::{
 };
 use crate::config::{info_url, exchange_url, normalize_coin, now_ms, CHAIN_ID, ARBITRUM_CHAIN_ID, USDC_ARBITRUM};
 use crate::onchainos::{onchainos_hl_sign, report_plugin_info, resolve_wallet};
-use crate::rpc::{ARBITRUM_RPC, erc20_balance};
+use crate::rpc::{arbitrum_rpc, erc20_balance};
 use crate::signing::{
     build_bracketed_order_action, build_limit_order_action, build_market_order_action,
     build_update_leverage_action,
@@ -78,6 +78,12 @@ pub struct OrderArgs {
     /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
     #[arg(long)]
     pub strategy_id: Option<String>,
+
+    /// Autotrade (copy-trading) job ID from an OnchainOS execution card. Gates the
+    /// order behind `onchainos agent autotrade-grant-check` (fail-closed) before any
+    /// signing or submission. Skipped with --dry-run.
+    #[arg(long)]
+    pub autotrade_job: Option<String>,
 }
 
 /// Format a size value to exactly `decimals` decimal places, trimming trailing zeros.
@@ -91,6 +97,14 @@ fn fmt_size(sz: f64, decimals: u32) -> String {
 }
 
 pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
+    let is_autotrade = args.autotrade_job.is_some();
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        if let Err(rejection) = super::check_autotrade_job_id(job_id) {
+            println!("{}", rejection);
+            return Ok(());
+        }
+    }
+
     let info = info_url();
     let exchange = exchange_url();
     // HIP-3: detect dex prefix from coin name (e.g. "xyz:CL" -> dex="xyz", base="CL").
@@ -112,22 +126,73 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     let size_f: f64 = match args.size.parse() {
         Ok(v) => v,
         Err(_) => {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 &format!("Invalid size '{}' — must be a number (e.g. 0.01)", args.size),
                 "INVALID_ARGUMENT",
-                "Provide a numeric size value, e.g. --size 0.01"
+                "Provide a numeric size value, e.g. --size 0.01",
+                is_autotrade,
             ));
             return Ok(());
         }
     };
 
+    if is_autotrade && (!args.slippage.is_finite() || args.slippage < 0.0 || args.slippage >= 100.0)
+    {
+        println!(
+            "{}",
+            super::execution_error_response(
+                "--slippage must be a finite percentage in [0, 100) for autotrade",
+                "INVALID_INPUT",
+                "Provide a valid slippage percentage.",
+                true,
+            )
+        );
+        return Ok(());
+    }
+    if is_autotrade
+        && (args.sl_px.is_some() || args.tp_px.is_some())
+        && (!args.trigger_slippage.is_finite()
+            || args.trigger_slippage < 0.0
+            || args.trigger_slippage >= 100.0)
+    {
+        println!(
+            "{}",
+            super::execution_error_response(
+                "--trigger-slippage must be a finite percentage in [0, 100) for autotrade",
+                "INVALID_INPUT",
+                "Provide a valid trigger slippage percentage.",
+                true,
+            )
+        );
+        return Ok(());
+    }
+    if is_autotrade
+        && args
+            .sl_px
+            .into_iter()
+            .chain(args.tp_px)
+            .any(|price| !price.is_finite() || price <= 0.0)
+    {
+        println!(
+            "{}",
+            super::execution_error_response(
+                "Autotrade SL/TP prices must be finite and positive.",
+                "INVALID_INPUT",
+                "Provide valid SL/TP prices.",
+                true,
+            )
+        );
+        return Ok(());
+    }
+
     // Validate leverage range (Hyperliquid accepts 1–100)
     if let Some(lev) = args.leverage {
         if !(1..=100).contains(&lev) {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 &format!("--leverage must be between 1 and 100 (got {})", lev),
                 "INVALID_ARGUMENT",
-                "Provide a leverage value between 1 and 100, e.g. --leverage 10"
+                "Provide a leverage value between 1 and 100, e.g. --leverage 10",
+                is_autotrade,
             ));
             return Ok(());
         }
@@ -136,18 +201,20 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     // TP/SL bracket validation
     if let Some(sl) = args.sl_px {
         if is_buy && args.tp_px.is_some_and(|tp| tp <= sl) {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 "Take-profit must be above stop-loss for a long position",
                 "INVALID_ARGUMENT",
-                "For a long: SL below entry, TP above entry."
+                "For a long: SL below entry, TP above entry.",
+                is_autotrade,
             ));
             return Ok(());
         }
         if !is_buy && args.tp_px.is_some_and(|tp| tp >= sl) {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 "Take-profit must be below stop-loss for a short position",
                 "INVALID_ARGUMENT",
-                "For a short: SL above entry, TP below entry."
+                "For a short: SL above entry, TP below entry.",
+                is_autotrade,
             ));
             return Ok(());
         }
@@ -162,10 +229,92 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     let (asset_idx, sz_decimals, only_isolated) = match get_asset_meta_with_flags(info, &coin, &registry).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list` to verify the DEX exists."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list` to verify the DEX exists.", is_autotrade));
             return Ok(());
         }
     };
+
+    let autotrade_size = if is_autotrade {
+        match super::normalize_autotrade_size(&args.size, sz_decimals) {
+            Some(size) => Some(size),
+            None => {
+                println!(
+                    "{}",
+                    super::execution_error_response(
+                        &format!(
+                            "Autotrade size '{}' must be a positive fixed-point decimal already aligned to {} decimal places.",
+                            args.size, sz_decimals
+                        ),
+                        "INVALID_INPUT",
+                        "Provide a positive size aligned to the market size grid.",
+                        true,
+                    )
+                );
+                return Ok(());
+            }
+        }
+    } else {
+        None
+    };
+
+    if is_autotrade {
+        if args.r#type == "limit" {
+            let Some(price) = args.price.as_deref() else {
+                println!(
+                    "{}",
+                    super::execution_error_response(
+                        "--price is required for limit orders",
+                        "INVALID_INPUT",
+                        "Provide a limit price.",
+                        true,
+                    )
+                );
+                return Ok(());
+            };
+            let parsed_price = price.parse::<f64>().ok();
+            let aligned = parsed_price
+                .filter(|value| value.is_finite() && *value > 0.0)
+                .map(|value| round_px(value, sz_decimals))
+                .is_some_and(|rounded| super::positive_decimals_equal(price, &rounded));
+            if !aligned {
+                println!(
+                    "{}",
+                    super::execution_error_response(
+                        &format!(
+                            "Autotrade limit price '{}' must already satisfy Hyperliquid's price precision.",
+                            price
+                        ),
+                        "INVALID_INPUT",
+                        "Provide an exchange-aligned limit price.",
+                        true,
+                    )
+                );
+                return Ok(());
+            }
+        }
+
+        for (name, price) in [("--sl-px", args.sl_px), ("--tp-px", args.tp_px)] {
+            if let Some(price) = price {
+                let input = price.to_string();
+                let rounded = round_px(price, sz_decimals);
+                if !super::positive_decimals_equal(&input, &rounded) {
+                    println!(
+                        "{}",
+                        super::execution_error_response(
+                            &format!(
+                                "Autotrade {} value '{}' must already satisfy Hyperliquid's price precision.",
+                                name, input
+                            ),
+                            "INVALID_INPUT",
+                            "Provide an exchange-aligned trigger price.",
+                            true,
+                        )
+                    );
+                    return Ok(());
+                }
+            }
+        }
+    }
 
     // HIP-3: Some RWA / equity markets (xyz:CL / xyz:HOOD / xyz:INTC / xyz:PLTR / xyz:COIN /
     // etc.) have `onlyIsolated: true` — HL rejects cross-margin orders on these with
@@ -173,13 +322,28 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     // flag is set, so the user doesn't need to memorize per-coin margin restrictions.
     let auto_isolated = only_isolated && !args.isolated;
     if auto_isolated {
+        if is_autotrade && args.leverage.is_some() {
+            println!(
+                "{}",
+                super::execution_error_response(
+                    &format!(
+                        "{} requires isolated margin, but the execution card did not include --isolated.",
+                        coin
+                    ),
+                    "INVALID_INPUT",
+                    "Add --isolated and retry.",
+                    true,
+                )
+            );
+            return Ok(());
+        }
         eprintln!("[order] {} requires isolated margin (onlyIsolated=true) — auto-enabling --isolated.", coin);
     }
     let use_isolated = args.isolated || only_isolated;
     let mids = match mids_res {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry.", is_autotrade));
             return Ok(());
         }
     };
@@ -198,11 +362,32 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     // landed below $10 (e.g. NVDA @217.5 sz_decimals=3: 0.010→0.011 = $2.39).
     // Compute the smallest size such that size*mid >= $10 directly.
     let sz_factor = 10_f64.powi(sz_decimals as i32);
-    let mut size_rounded = (size_f * sz_factor).round() / sz_factor;
+    let mut size_rounded = match autotrade_size.as_deref() {
+        Some(size) => size.parse::<f64>().unwrap_or(0.0),
+        None => (size_f * sz_factor).round() / sz_factor,
+    };
 
     if mid_f > 0.0 {
         let n = size_rounded * mid_f;
         if n > 0.0 && n < 10.0 {
+            // On the autotrade path the amount submitted for authorization must equal the
+            // amount broadcast. Bumping it up would let an order clear a grant for X and
+            // then execute at more than X, so the shortfall is refused instead.
+            if is_autotrade {
+                println!(
+                    "{}",
+                    super::execution_error_response(
+                        &format!(
+                            "Order notional ${:.2} is below the $10 exchange minimum; size cannot be raised on the autotrade path.",
+                            n
+                        ),
+                        "ORDER_BELOW_MIN_NOTIONAL",
+                        "Increase the order size to the exchange minimum.",
+                        true,
+                    )
+                );
+                return Ok(());
+            }
             // ceil(10 / mid * sz_factor) / sz_factor → smallest grid-aligned size with notional >= $10.
             // Add small epsilon to mid for floating-point safety so we don't land
             // exactly on $9.999999 due to rounding.
@@ -217,7 +402,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             size_rounded = min_size;
         }
     }
-    let size_str = fmt_size(size_rounded, sz_decimals);
+    let size_str = autotrade_size.unwrap_or_else(|| fmt_size(size_rounded, sz_decimals));
     let notional = size_rounded * mid_f;
 
     // Slippage-protected price for market orders
@@ -250,7 +435,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             get_spot_clearinghouse_state(info, w),
             async move {
                 match aw_clone.as_deref() {
-                    Some(aw) => erc20_balance(USDC_ARBITRUM, aw, ARBITRUM_RPC).await,
+                    Some(aw) => erc20_balance(USDC_ARBITRUM, aw, arbitrum_rpc()).await,
                     None => Ok(0u128),
                 }
             }
@@ -259,10 +444,11 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         let arb_raw = match arb_res {
             Ok(v) => v,
             Err(e) => {
-                println!("{}", super::error_response(
+                println!("{}", super::execution_error_response(
                     &format!("Failed to query Arbitrum USDC balance: {:#}", e),
                     "RPC_ERROR",
-                    "Check your Arbitrum connection and retry."
+                    "Check your Arbitrum connection and retry.",
+                    is_autotrade,
                 ));
                 return Ok(());
             }
@@ -385,6 +571,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                     ),
                 )
             };
+            let tip = super::execution_failure_suggestion(is_autotrade, &tip);
             println!(
                 "{}",
                 serde_json::to_string_pretty(&serde_json::json!({
@@ -420,12 +607,12 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 let price_str = match args.price.as_deref() {
                     Some(p) => p,
                     None => {
-                        println!("{}", super::error_response("--price is required for limit orders", "INVALID_ARGUMENT", "Provide a limit price, e.g. --price 100000"));
+                        println!("{}", super::execution_error_response("--price is required for limit orders", "INVALID_ARGUMENT", "Provide a limit price, e.g. --price 100000", is_autotrade));
                         return Ok(());
                     }
                 };
                 if price_str.parse::<f64>().is_err() {
-                    println!("{}", super::error_response(&format!("Invalid price '{}'", price_str), "INVALID_ARGUMENT", "Provide a numeric price value."));
+                    println!("{}", super::execution_error_response(&format!("Invalid price '{}'", price_str), "INVALID_ARGUMENT", "Provide a numeric price value.", is_autotrade));
                     return Ok(());
                 }
                 serde_json::json!({
@@ -438,7 +625,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 })
             }
             _ => {
-                println!("{}", super::error_response(&format!("Unknown order type '{}'", args.r#type), "INVALID_ARGUMENT", "Use --type market or --type limit."));
+                println!("{}", super::execution_error_response(&format!("Unknown order type '{}'", args.r#type), "INVALID_ARGUMENT", "Use --type market or --type limit.", is_autotrade));
                 return Ok(());
             }
         };
@@ -460,18 +647,18 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                 let price_str = match args.price.as_deref() {
                     Some(p) => p,
                     None => {
-                        println!("{}", super::error_response("--price is required for limit orders", "INVALID_ARGUMENT", "Provide a limit price, e.g. --price 100000"));
+                        println!("{}", super::execution_error_response("--price is required for limit orders", "INVALID_ARGUMENT", "Provide a limit price, e.g. --price 100000", is_autotrade));
                         return Ok(());
                     }
                 };
                 if price_str.parse::<f64>().is_err() {
-                    println!("{}", super::error_response(&format!("Invalid price '{}'", price_str), "INVALID_ARGUMENT", "Provide a numeric price value."));
+                    println!("{}", super::execution_error_response(&format!("Invalid price '{}'", price_str), "INVALID_ARGUMENT", "Provide a numeric price value.", is_autotrade));
                     return Ok(());
                 }
                 build_limit_order_action(asset_idx, is_buy, price_str, &size_str, args.reduce_only, "Gtc")
             }
             _ => {
-                println!("{}", super::error_response(&format!("Unknown order type '{}'", args.r#type), "INVALID_ARGUMENT", "Use --type market or --type limit."));
+                println!("{}", super::execution_error_response(&format!("Unknown order type '{}'", args.r#type), "INVALID_ARGUMENT", "Use --type market or --type limit.", is_autotrade));
                 return Ok(());
             }
         }
@@ -505,6 +692,14 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     if let Some(ref bj) = balance_json {
         preview_obj["fund_landscape"] = bj.clone();
     }
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        preview_obj["autotradeJob"] = serde_json::Value::String(job_id.to_string());
+        if args.dry_run {
+            // Say it out loud, otherwise a dry-run preview reads as if it had been authorized.
+            preview_obj["autotradeGrantCheck"] =
+                serde_json::Value::String("skipped (dry-run)".to_string());
+        }
+    }
 
     println!(
         "{}",
@@ -526,11 +721,31 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Authorization must clear before anything is signed — including the leverage
+    // update below, which is its own signed action.
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        let limit_px = args.price.as_deref().unwrap_or("");
+        let prices = [current_price, slippage_px_str.as_str(), limit_px];
+        let amount = match super::autotrade_quote_amount(&size_str, &prices) {
+            Some(a) => a,
+            None => {
+                println!("{}", super::autotrade_amount_unavailable_response());
+                return Ok(());
+            }
+        };
+        if let Err(rejection) =
+            super::autotrade_gate(job_id, &args.side, &amount, args.dry_run).await
+        {
+            println!("{}", rejection);
+            return Ok(());
+        }
+    }
+
     // ─── Submit ───────────────────────────────────────────────────────────────
     let wallet = match wallet_opt {
         Some(w) => w,
         None => {
-            println!("{}", super::error_response("Cannot resolve wallet. Log in via onchainos.", "WALLET_NOT_FOUND", "Run onchainos wallet addresses to verify login."));
+            println!("{}", super::execution_error_response("Cannot resolve wallet. Log in via onchainos.", "WALLET_NOT_FOUND", "Run onchainos wallet addresses to verify login.", is_autotrade));
             return Ok(());
         }
     };
@@ -544,22 +759,23 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         let lev_signed = match onchainos_hl_sign(&lev_action, lev_nonce, &wallet, ARBITRUM_CHAIN_ID, true, false) {
             Ok(v) => v,
             Err(e) => {
-                println!("{}", super::error_response(&format!("Leverage update signing failed: {:#}", e), "SIGNING_FAILED", "Retry the command."));
+                println!("{}", super::execution_error_response(&format!("Leverage update signing failed: {:#}", e), "SIGNING_FAILED", "Retry the command.", is_autotrade));
                 return Ok(());
             }
         };
         let lev_result = match submit_exchange_request(exchange, lev_signed).await {
             Ok(v) => v,
             Err(e) => {
-                println!("{}", super::error_response(&format!("Leverage update failed: {:#}", e), "TX_SUBMIT_FAILED", "Retry the command."));
+                println!("{}", super::execution_error_response(&format!("Leverage update failed: {:#}", e), "TX_SUBMIT_FAILED", "Retry the command.", is_autotrade));
                 return Ok(());
             }
         };
         if lev_result["status"].as_str() == Some("err") {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 &format!("Leverage update rejected: {}", lev_result["response"].as_str().unwrap_or("unknown error")),
                 "TX_SUBMIT_FAILED",
-                "Check your leverage settings and retry."
+                "Check your leverage settings and retry.",
+                is_autotrade,
             ));
             return Ok(());
         }
@@ -572,14 +788,14 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     let signed = match onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false) {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "SIGNING_FAILED", "Retry the command. If the issue persists, check onchainos status."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "SIGNING_FAILED", "Retry the command. If the issue persists, check onchainos status.", is_autotrade));
             return Ok(());
         }
     };
     let result = match submit_exchange_request(exchange, signed).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status.", is_autotrade));
             return Ok(());
         }
     };
@@ -624,25 +840,26 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         }
     }
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&serde_json::json!({
-            "ok": true,
-            "coin": coin,
-            "side": args.side,
-            "size": size_str,
-            "notional_usd": format!("{:.2}", notional),
-            "type": args.r#type,
-            "stopLoss": sl_px_str,
-            "takeProfit": tp_px_str,
-            "data": {
-                "avg_px": avg_px,
-                "fill_px": avg_px,
-                "oid": oid,
-            },
-            "result": result
-        }))?
-    );
+    let mut success = serde_json::json!({
+        "ok": true,
+        "coin": coin,
+        "side": args.side,
+        "size": size_str,
+        "notional_usd": format!("{:.2}", notional),
+        "type": args.r#type,
+        "stopLoss": sl_px_str,
+        "takeProfit": tp_px_str,
+        "data": {
+            "avg_px": avg_px,
+            "fill_px": avg_px,
+            "oid": oid,
+        },
+        "result": result
+    });
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        success["autotradeJob"] = serde_json::Value::String(job_id.to_string());
+    }
+    println!("{}", serde_json::to_string_pretty(&success)?);
 
     Ok(())
 }

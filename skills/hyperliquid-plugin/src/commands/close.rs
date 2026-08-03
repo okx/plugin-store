@@ -33,9 +33,36 @@ pub struct CloseArgs {
     /// backend regardless; this flag just attaches a strategy label. Empty if omitted.
     #[arg(long)]
     pub strategy_id: Option<String>,
+
+    /// Autotrade (copy-trading) job ID from an OnchainOS execution card. Gates the
+    /// close behind `onchainos agent autotrade-grant-check` (fail-closed) before any
+    /// signing or submission. Skipped with --dry-run.
+    #[arg(long)]
+    pub autotrade_job: Option<String>,
 }
 
 pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
+    let is_autotrade = args.autotrade_job.is_some();
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        if let Err(rejection) = super::check_autotrade_job_id(job_id) {
+            println!("{}", rejection);
+            return Ok(());
+        }
+    }
+    if is_autotrade && (!args.slippage.is_finite() || args.slippage < 0.0 || args.slippage >= 100.0)
+    {
+        println!(
+            "{}",
+            super::execution_error_response(
+                "--slippage must be a finite percentage in [0, 100) for autotrade",
+                "INVALID_INPUT",
+                "Provide a valid slippage percentage.",
+                true,
+            )
+        );
+        return Ok(());
+    }
+
     let info = info_url();
     let exchange = exchange_url();
 
@@ -55,7 +82,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let (asset_idx, sz_decimals) = match get_asset_meta_for_coin(info, &coin, &registry).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list`."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry. If using a builder DEX coin (e.g. xyz:CL), run `hyperliquid-plugin dex-list`.", is_autotrade));
             return Ok(());
         }
     };
@@ -64,7 +91,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let wallet = match resolve_wallet(CHAIN_ID) {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "WALLET_NOT_FOUND", "Run onchainos wallet addresses to verify login."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "WALLET_NOT_FOUND", "Run onchainos wallet addresses to verify login.", is_autotrade));
             return Ok(());
         }
     };
@@ -73,47 +100,65 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let state = match get_clearinghouse_state_for_dex(info, &wallet, dex_opt.as_deref()).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry.", is_autotrade));
             return Ok(());
         }
     };
     let empty_vec = vec![];
     let positions = state["assetPositions"].as_array().unwrap_or(&empty_vec);
 
-    let mut position_szi: Option<f64> = None;
+    let mut position_szi: Option<String> = None;
     for pw in positions {
         let pos = &pw["position"];
         if pos["coin"].as_str().map(|c| c.to_uppercase()) == Some(coin.to_uppercase()) {
             if let Some(s) = pos["szi"].as_str() {
-                position_szi = s.parse().ok();
+                position_szi = Some(s.to_string());
                 break;
             }
         }
     }
 
-    let szi = match position_szi {
+    let szi_raw = match position_szi {
         Some(v) => v,
         None => {
-            println!("{}", super::error_response(
+            println!("{}", super::execution_error_response(
                 &format!("No open {} position found.", coin),
                 "POSITION_NOT_FOUND",
-                "Run positions to see open positions."
+                "Run positions to see open positions.",
+                is_autotrade,
             ));
+            return Ok(());
+        }
+    };
+    let szi = match szi_raw.parse::<f64>() {
+        Ok(v) if v.is_finite() => v,
+        _ => {
+            println!(
+                "{}",
+                super::execution_error_response(
+                    "Open position returned an invalid size.",
+                    "API_ERROR",
+                    "Retry after checking the current position.",
+                    is_autotrade,
+                )
+            );
             return Ok(());
         }
     };
 
     if szi == 0.0 {
-        println!("{}", super::error_response(
+        println!("{}", super::execution_error_response(
             &format!("No open {} position (size is 0).", coin),
             "POSITION_NOT_FOUND",
-            "Run positions to see open positions."
+            "Run positions to see open positions.",
+            is_autotrade,
         ));
         return Ok(());
     }
 
     let position_is_long = szi > 0.0;
     let position_size = szi.abs();
+    let position_size_raw = szi_raw.trim_start_matches('-');
     let position_side = if position_is_long { "long" } else { "short" };
 
     // Determine close size
@@ -122,25 +167,67 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
             let v: f64 = match s.parse() {
                 Ok(v) => v,
                 Err(_) => {
-                    println!("{}", super::error_response(&format!("Invalid size '{}' — must be a number", s), "INVALID_ARGUMENT", "Provide a numeric size value, e.g. --size 0.01"));
+                    println!("{}", super::execution_error_response(&format!("Invalid size '{}' — must be a number", s), "INVALID_ARGUMENT", "Provide a numeric size value, e.g. --size 0.01", is_autotrade));
                     return Ok(());
                 }
             };
             if v <= 0.0 {
-                println!("{}", super::error_response("Close size must be positive", "INVALID_ARGUMENT", "Provide a positive close size value."));
+                println!("{}", super::execution_error_response("Close size must be positive", "INVALID_ARGUMENT", "Provide a positive close size value.", is_autotrade));
                 return Ok(());
             }
             if v > position_size {
-                println!("{}", super::error_response(
+                println!("{}", super::execution_error_response(
                     &format!("Close size {} exceeds position size {}", v, position_size),
                     "INVALID_ARGUMENT",
-                    &format!("Maximum close size is {}.", position_size)
+                    &format!("Maximum close size is {}.", position_size),
+                    is_autotrade,
                 ));
                 return Ok(());
             }
-            s.clone()
+            if is_autotrade {
+                match super::normalize_autotrade_size(s, sz_decimals) {
+                    Some(size) => size,
+                    None => {
+                        println!(
+                            "{}",
+                            super::execution_error_response(
+                                &format!(
+                                    "Autotrade close size '{}' must be a positive fixed-point decimal already aligned to {} decimal places.",
+                                    s, sz_decimals
+                                ),
+                                "INVALID_INPUT",
+                                "Provide a positive close size aligned to the market size grid.",
+                                true,
+                            )
+                        );
+                        return Ok(());
+                    }
+                }
+            } else {
+                s.clone()
+            }
         }
-        None => format!("{}", position_size),
+        None => {
+            if is_autotrade {
+                match super::normalize_autotrade_size(position_size_raw, sz_decimals) {
+                    Some(size) => size,
+                    None => {
+                        println!(
+                            "{}",
+                            super::execution_error_response(
+                                "The resolved position size is not aligned to the market size grid.",
+                                "API_ERROR",
+                                "Refresh the position and retry.",
+                                true,
+                            )
+                        );
+                        return Ok(());
+                    }
+                }
+            } else {
+                format!("{}", position_size)
+            }
+        }
     };
 
     // Fetch current price — must use the per-DEX mids endpoint when the coin lives on a
@@ -150,7 +237,7 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
     let mids = match get_all_mids_for_dex(info, dex_opt.as_deref()).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "API_ERROR", "Check your connection and retry.", is_autotrade));
             return Ok(());
         }
     };
@@ -167,22 +254,32 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
 
     let action = build_close_action(asset_idx, position_is_long, &close_size, &slippage_px_str);
 
+    let mut preview_obj = serde_json::json!({
+        "coin": coin,
+        "positionSide": position_side,
+        "positionSize": position_size,
+        "closingSize": close_size,
+        "closingSide": closing_side,
+        "currentMidPrice": current_price,
+        "type": "market",
+        "slippagePct": args.slippage,
+        "worstFillPrice": slippage_px_str,
+        "reduceOnly": true,
+        "nonce": nonce
+    });
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        preview_obj["autotradeJob"] = serde_json::Value::String(job_id.to_string());
+        if args.dry_run {
+            // Say it out loud, otherwise a dry-run preview reads as if it had been authorized.
+            preview_obj["autotradeGrantCheck"] =
+                serde_json::Value::String("skipped (dry-run)".to_string());
+        }
+    }
+
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
-            "preview": {
-                "coin": coin,
-                "positionSide": position_side,
-                "positionSize": position_size,
-                "closingSize": close_size,
-                "closingSide": closing_side,
-                "currentMidPrice": current_price,
-                "type": "market",
-                "slippagePct": args.slippage,
-                "worstFillPrice": slippage_px_str,
-                "reduceOnly": true,
-                "nonce": nonce
-            },
+            "preview": preview_obj,
             "action": action
         }))?
     );
@@ -198,17 +295,36 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Authorization must clear before anything is signed. The notional is derived from the
+    // resolved close size, so it matches what gets broadcast even when --size was omitted.
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        let prices = [current_price, slippage_px_str.as_str()];
+        let amount = match super::autotrade_quote_amount(&close_size, &prices) {
+            Some(a) => a,
+            None => {
+                println!("{}", super::autotrade_amount_unavailable_response());
+                return Ok(());
+            }
+        };
+        if let Err(rejection) =
+            super::autotrade_gate(job_id, closing_side, &amount, args.dry_run).await
+        {
+            println!("{}", rejection);
+            return Ok(());
+        }
+    }
+
     let signed = match onchainos_hl_sign(&action, nonce, &wallet, ARBITRUM_CHAIN_ID, true, false) {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "SIGNING_FAILED", "Retry the command. If the issue persists, check onchainos status."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "SIGNING_FAILED", "Retry the command. If the issue persists, check onchainos status.", is_autotrade));
             return Ok(());
         }
     };
     let result = match submit_exchange_request(exchange, signed).await {
         Ok(v) => v,
         Err(e) => {
-            println!("{}", super::error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status."));
+            println!("{}", super::execution_error_response(&format!("{:#}", e), "TX_SUBMIT_FAILED", "Retry the command. If the issue persists, check onchainos status.", is_autotrade));
             return Ok(());
         }
     };
@@ -251,17 +367,18 @@ pub async fn run(args: CloseArgs) -> anyhow::Result<()> {
         }
     }
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&serde_json::json!({
-            "ok": true,
-            "action": "close",
-            "coin": coin,
-            "side": closing_side,
-            "size": close_size,
-            "result": result
-        }))?
-    );
+    let mut success = serde_json::json!({
+        "ok": true,
+        "action": "close",
+        "coin": coin,
+        "side": closing_side,
+        "size": close_size,
+        "result": result
+    });
+    if let Some(job_id) = args.autotrade_job.as_deref() {
+        success["autotradeJob"] = serde_json::Value::String(job_id.to_string());
+    }
+    println!("{}", serde_json::to_string_pretty(&success)?);
 
     Ok(())
 }

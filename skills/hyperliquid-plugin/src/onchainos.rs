@@ -7,6 +7,137 @@ use sha3::{Digest, Keccak256};
 const BIZ_TYPE: &str = "dapp";
 const STRATEGY: &str = env!("CARGO_PKG_NAME");
 
+/// Single resolution point for the onchainos executable.
+///
+/// Every onchainos invocation in this file goes through here: two resolution rules in
+/// one binary would be an invariant that re-diverges silently. The default install path
+/// is preferred because non-interactive agent shells may not include it in PATH.
+fn onchainos_bin() -> std::ffi::OsString {
+    if let Ok(path) = std::env::var("HYPERLIQUID_ONCHAINOS_BIN") {
+        if !path.is_empty() {
+            return std::ffi::OsString::from(path);
+        }
+    }
+    let local = std::env::var("HOME")
+        .ok()
+        .map(|h| std::path::PathBuf::from(h).join(".local/bin/onchainos"))
+        .filter(|p| p.is_file());
+    match local {
+        Some(p) => p.into_os_string(),
+        None => std::ffi::OsString::from("onchainos"),
+    }
+}
+
+/// Grant-check timeout in seconds. Overridable so tests can exercise the timeout
+/// path without waiting out the defensive default.
+fn grant_check_timeout_secs() -> u64 {
+    std::env::var("HYPERLIQUID_GRANT_CHECK_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10)
+}
+
+/// Validate an `--autotrade-job` ID: charset `[A-Za-z0-9_-]`, length 1..=128.
+/// A 0x-prefixed hex jobId satisfies this; shell metacharacters, whitespace and
+/// overlong values do not, and are rejected before anything is spawned.
+pub fn is_valid_autotrade_job_id(job_id: &str) -> bool {
+    (1..=128).contains(&job_id.len())
+        && job_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+/// Ask onchainos whether a copy-trading job authorizes this order.
+///
+/// Returns `Ok(())` ONLY when the subprocess exits 0 AND its stdout parses as JSON
+/// with `ok == true`. Every other outcome — non-zero exit, `ok:false`, unparseable
+/// stdout, timeout, unlaunchable binary, or an onchainos too old to know the
+/// subcommand — is a rejection. The authorization grant, the per-trade limits and
+/// the subscription state all live on the onchainos side; this plugin never reads
+/// them.
+pub async fn autotrade_grant_check(
+    job_id: &str,
+    action: &str,
+    amount: &str,
+) -> std::result::Result<(), String> {
+    let mut cmd = tokio::process::Command::new(onchainos_bin());
+    cmd.args([
+        "agent",
+        "autotrade-grant-check",
+        "--job-id",
+        job_id,
+        "--venue",
+        "hyperliquid",
+        "--action",
+        action,
+        "--amount",
+        amount,
+        "--format",
+        "json",
+    ]);
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+    // A hung grant check may never exit on its own, so dropping the child must kill it.
+    cmd.kill_on_drop(true);
+
+    let child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(format!(
+                "could not launch onchainos for the grant check ({}). \
+                 Ensure the onchainos CLI is installed and on PATH.",
+                e
+            ))
+        }
+    };
+
+    let timeout = std::time::Duration::from_secs(grant_check_timeout_secs());
+    let output = match tokio::time::timeout(timeout, child.wait_with_output()).await {
+        Ok(Ok(out)) => out,
+        Ok(Err(e)) => return Err(format!("grant check process error: {}", e)),
+        Err(_) => return Err("grant check timeout".to_string()),
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Option<Value> = serde_json::from_str(stdout.trim()).ok();
+
+    if output.status.success() {
+        return match parsed {
+            Some(v) if v["ok"].as_bool() == Some(true) => Ok(()),
+            Some(v) => Err(v["reason"]
+                .as_str()
+                .unwrap_or("grant check returned ok=false without a reason")
+                .to_string()),
+            None => Err("grant check returned invalid JSON".to_string()),
+        };
+    }
+
+    // Non-zero exit. The contract makes the exit code track `ok`, so a structured
+    // denial normally arrives here.
+    if let Some(v) = parsed {
+        if let Some(reason) = v["reason"].as_str() {
+            return Err(reason.to_string());
+        }
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{} {}", stderr, stdout).to_lowercase();
+    if combined.contains("unrecognized subcommand")
+        || combined.contains("unrecognised command")
+        || combined.contains("unexpected argument")
+    {
+        return Err(
+            "installed onchainos does not support autotrade-grant-check — \
+             run `onchainos upgrade` and retry on the next signal"
+                .to_string(),
+        );
+    }
+    // The subprocess stderr is deliberately NOT echoed: an onchainos crash can name
+    // the grant file it was reading, and no authorization material may reach this
+    // plugin's output. The exit status alone identifies the failure form.
+    Err(format!("grant check failed ({})", output.status))
+}
+
 /// Execute an EVM contract call via onchainos wallet contract-call.
 /// chain_id: the EVM chain (e.g. 42161 for Arbitrum).
 /// to: contract address.
@@ -58,7 +189,7 @@ pub fn wallet_contract_call(
     // Note: --force is intentionally omitted — onchainos handles its own confirmation.
     // The plugin's --confirm flag already gates whether this call is made at all.
 
-    let output = Command::new("onchainos").args(&args).output()?;
+    let output = Command::new(onchainos_bin()).args(&args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !output.status.success() {
         // onchainos returns error as JSON to stdout; stderr is usually empty
@@ -81,7 +212,7 @@ pub fn resolve_wallet(chain_id: u64) -> anyhow::Result<String> {
 /// Like resolve_wallet but also returns the chain index that owns the resolved address.
 /// Used when the signing chain must match the resolved wallet (e.g. user-signed actions).
 pub fn resolve_wallet_with_chain(chain_id: u64) -> anyhow::Result<(String, u64)> {
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args(["wallet", "addresses"])
         .output()?;
     let json: Value = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
@@ -112,7 +243,7 @@ pub fn resolve_wallet_with_chain(chain_id: u64) -> anyhow::Result<(String, u64)>
 /// Returns 65-byte hex signature (0x-prefixed, r+s+v).
 pub fn onchainos_sign_eip712(typed_data: &serde_json::Value, wallet: &str) -> anyhow::Result<String> {
     let message_str = serde_json::to_string(typed_data)?;
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet",
             "sign-message",
@@ -234,7 +365,7 @@ pub fn onchainos_hl_sign(
     let eip712_str = serde_json::to_string(&eip712_message)?;
 
     let wallet_chain_str = wallet_chain_id.to_string();
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet",
             "sign-message",
@@ -337,7 +468,7 @@ pub fn onchainos_hl_sign_withdraw(
     let eip712_str = serde_json::to_string(&eip712_message)?;
     let wallet_chain_str = wallet_chain_id.to_string();
 
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet", "sign-message",
             "--type", "eip712",
@@ -403,7 +534,7 @@ fn onchainos_user_sign_and_wrap(
     let eip712_str = serde_json::to_string(eip712_message)?;
     let wallet_chain_str = wallet_chain_id.to_string();
 
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet", "sign-message",
             "--type", "eip712",
@@ -615,7 +746,7 @@ pub fn onchainos_hl_sign_usd_class_transfer(
     let eip712_str = serde_json::to_string(&eip712_message)?;
     let wallet_chain_str = wallet_chain_id.to_string();
 
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet", "sign-message",
             "--type", "eip712",
@@ -744,7 +875,7 @@ pub fn onchainos_hl_sign_send_asset(
     let eip712_str = serde_json::to_string(&eip712_message)?;
     let wallet_chain_str = wallet_chain_id.to_string();
 
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet", "sign-message",
             "--type", "eip712",
@@ -794,7 +925,7 @@ pub fn onchainos_hl_sign_send_asset(
 pub fn report_plugin_info(payload: &Value) -> anyhow::Result<()> {
     let payload_str = serde_json::to_string(payload)
         .map_err(|e| anyhow::anyhow!("serializing report-plugin-info payload: {}", e))?;
-    let output = Command::new("onchainos")
+    let output = Command::new(onchainos_bin())
         .args([
             "wallet", "report-plugin-info",
             "--plugin-parameter", &payload_str,

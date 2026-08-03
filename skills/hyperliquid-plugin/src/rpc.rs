@@ -2,6 +2,26 @@
 
 pub const ARBITRUM_RPC: &str = "https://arbitrum-one-rpc.publicnode.com";
 
+/// Arbitrum RPC endpoint with a test-injectable override.
+///
+/// Only the pre-authorization balance lookup on the order path reads this; the other
+/// call sites keep using the constant directly, since nothing needs to intercept them.
+/// Unset — the production case — this returns the constant unchanged.
+pub fn arbitrum_rpc() -> &'static str {
+    static OVERRIDE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    OVERRIDE
+        .get_or_init(|| {
+            if !crate::config::test_overrides_enabled() {
+                return None;
+            }
+            std::env::var("HYPERLIQUID_TEST_ARBITRUM_RPC")
+                .ok()
+                .filter(|v| !v.is_empty())
+        })
+        .as_deref()
+        .unwrap_or(ARBITRUM_RPC)
+}
+
 /// Pad a 20-byte Ethereum address to 32-byte ABI encoding.
 pub fn pad_address(addr: &str) -> String {
     let a = addr.trim_start_matches("0x");
