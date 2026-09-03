@@ -367,8 +367,10 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         None => (size_f * sz_factor).round() / sz_factor,
     };
 
-    if mid_f > 0.0 {
-        let n = size_rounded * mid_f;
+    let notional_price = notional_price(&args.r#type, args.price.as_deref(), mid_f);
+
+    if notional_price > 0.0 {
+        let n = size_rounded * notional_price;
         if n > 0.0 && n < 10.0 {
             // On the autotrade path the amount submitted for authorization must equal the
             // amount broadcast. Bumping it up would let an order clear a grant for X and
@@ -391,19 +393,23 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             // ceil(10 / mid * sz_factor) / sz_factor → smallest grid-aligned size with notional >= $10.
             // Add small epsilon to mid for floating-point safety so we don't land
             // exactly on $9.999999 due to rounding.
-            let min_size = (10.0 / mid_f * sz_factor).ceil() / sz_factor;
+            let min_size = min_grid_size(MIN_ORDER_USD, notional_price, sz_decimals);
             eprintln!(
                 "[auto-adjust] size {} → {} to meet $10 minimum notional (${:.2} → ${:.2})",
                 fmt_size(size_rounded, sz_decimals),
                 fmt_size(min_size, sz_decimals),
                 n,
-                min_size * mid_f,
+                min_size * notional_price,
             );
             size_rounded = min_size;
         }
     }
     let size_str = autotrade_size.unwrap_or_else(|| fmt_size(size_rounded, sz_decimals));
-    let notional = size_rounded * mid_f;
+    // Value the order at the price it would actually execute at: the limit price
+    // for a limit order, the mid for a market order. Reporting a mid-based
+    // notional for a limit order priced away from the market understates what
+    // the position and its margin will be if it fills.
+    let notional = size_rounded * notional_price;
 
     // Slippage-protected price for market orders
     let slippage_multiplier = if is_buy { 1.0 + args.slippage / 100.0 } else { 1.0 - args.slippage / 100.0 };
@@ -422,6 +428,27 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         perp: f64,
         spot: f64,
         arb: f64,
+        /// HL account margin mode, from `userAbstraction` (e.g. "unifiedAccount").
+        mode: String,
+    }
+
+    impl Balances {
+        /// True when HL shares one margin pool, so spot USDC backs perp orders.
+        fn unified(&self) -> bool {
+            let m = self.mode.to_ascii_lowercase();
+            m.contains("unified") || m.contains("portfolio")
+        }
+
+        /// Margin that can actually back a perp order right now.
+        ///
+        /// Under HL's unified / portfolio modes spot USDC backs perp orders
+        /// directly and HL *rejects* spot->perp transfers ("Action disabled when
+        /// unified account is active"). Counting only the perp clearinghouse
+        /// balance there blocks a fully funded order and then suggests a
+        /// transfer the exchange refuses — a dead end for the caller.
+        fn available_margin(&self) -> f64 {
+            if self.unified() { self.perp + self.spot } else { self.perp }
+        }
     }
 
     let balances_opt: Option<Balances> = if let Some(ref w) = wallet_opt {
@@ -430,7 +457,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
         // clearinghouse — funds are NOT shared with the default DEX. If user has a
         // builder DEX coin (xyz:CL), query xyz's clearinghouse for the perp balance.
         let dex_clone = dex_opt.clone();
-        let (perp_res, spot_res, arb_res) = tokio::join!(
+        let (perp_res, spot_res, arb_res, mode_res) = tokio::join!(
             get_clearinghouse_state_for_dex(info, w, dex_clone.as_deref()),
             get_spot_clearinghouse_state(info, w),
             async move {
@@ -438,7 +465,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                     Some(aw) => erc20_balance(USDC_ARBITRUM, aw, arbitrum_rpc()).await,
                     None => Ok(0u128),
                 }
-            }
+            },
+            crate::api::info_post(info, serde_json::json!({"type": "userAbstraction", "user": w})),
         );
 
         let arb_raw = match arb_res {
@@ -471,7 +499,12 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             })
             .unwrap_or(0.0);
 
-        Some(Balances { perp, spot, arb: arb_raw as f64 / 1_000_000.0 })
+        let mode = mode_res
+            .ok()
+            .map(|v| v.as_str().map(String::from).unwrap_or_else(|| v.to_string()))
+            .unwrap_or_default();
+
+        Some(Balances { perp, spot, arb: arb_raw as f64 / 1_000_000.0, mode })
     } else {
         None
     };
@@ -497,6 +530,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
             "spot_usdc":         format!("{:.4}", b.spot),
             "arbitrum_usdc":     format!("{:.4}", b.arb),
             "total_usdc":        format!("{:.4}", b.perp + b.spot + b.arb),
+            "margin_mode":       b.mode,
+            "available_margin":  format!("{:.4}", b.available_margin()),
         })
     });
 
@@ -512,8 +547,8 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     // Cap any `deposit` suggestion to `>= $5`.
     const HL_BRIDGE_MIN_USD: f64 = 5.0;
     if let Some(ref b) = balances_opt {
-        if b.perp < required_margin {
-            let shortfall = required_margin - b.perp;
+        if b.available_margin() < required_margin {
+            let shortfall = required_margin - b.available_margin();
             let (error_code, tip) = if let Some(ref dex) = dex_opt {
                 let dex = dex.as_str();
                 let head = format!(
@@ -544,7 +579,7 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
                     "BUILDER_DEX_UNFUNDED",
                     format!("{}\n{}\n{}", head, opt_a, opt_b),
                 )
-            } else if b.spot >= shortfall {
+            } else if !b.unified() && b.spot >= shortfall {
                 (
                     "PERP_INSUFFICIENT_BALANCE",
                     format!(
@@ -862,4 +897,89 @@ pub async fn run(args: OrderArgs) -> anyhow::Result<()> {
     println!("{}", serde_json::to_string_pretty(&success)?);
 
     Ok(())
+}
+
+// ── order sizing helpers ────────────────────────────────────────────────────
+
+/// Hyperliquid rejects any order worth less than this with
+/// `Order must have minimum value of 10 USDC`.
+pub const MIN_ORDER_USD: f64 = 10.0;
+
+/// The price the exchange minimum is charged against.
+///
+/// A limit order's value is `size * limit price` — verified against the live
+/// exchange: a HYPE sell limit at 99 with mid 81.8 and size 0.11 (0.11*99 =
+/// $10.89, 0.11*mid = $9.00) was accepted, so the mid is not what HL measures.
+/// Market orders carry no price of their own, so they use the mid.
+pub fn notional_price(order_type: &str, limit_price: Option<&str>, mid: f64) -> f64 {
+    if !order_type.eq_ignore_ascii_case("limit") {
+        return mid;
+    }
+    limit_price
+        .and_then(|p| p.trim().parse::<f64>().ok())
+        .filter(|p| *p > 0.0)
+        .unwrap_or(mid)
+}
+
+/// Smallest size on the coin's `szDecimals` grid whose value at `price` reaches
+/// `target_usd`.
+pub fn min_grid_size(target_usd: f64, price: f64, sz_decimals: u32) -> f64 {
+    if price <= 0.0 {
+        return 0.0;
+    }
+    let factor = 10_f64.powi(sz_decimals as i32);
+    (target_usd / price * factor).ceil() / factor
+}
+
+#[cfg(test)]
+mod sizing_tests {
+    use super::*;
+
+    #[test]
+    fn limit_orders_are_priced_at_their_own_limit() {
+        // The bug: a sell limit 21% above mid was sized by the mid, so the
+        // order's real value overshot the $10 minimum it was sized for.
+        assert_eq!(notional_price("limit", Some("99"), 82.0), 99.0);
+        assert_eq!(notional_price("LIMIT", Some("99"), 82.0), 99.0);
+    }
+
+    #[test]
+    fn market_orders_are_priced_at_the_mid() {
+        assert_eq!(notional_price("market", None, 82.0), 82.0);
+        // A stray --price on a market order must not change its valuation.
+        assert_eq!(notional_price("market", Some("99"), 82.0), 82.0);
+    }
+
+    #[test]
+    fn unusable_limit_price_falls_back_to_the_mid() {
+        assert_eq!(notional_price("limit", None, 82.0), 82.0);
+        assert_eq!(notional_price("limit", Some(""), 82.0), 82.0);
+        assert_eq!(notional_price("limit", Some("abc"), 82.0), 82.0);
+        assert_eq!(notional_price("limit", Some("0"), 82.0), 82.0);
+        assert_eq!(notional_price("limit", Some("-5"), 82.0), 82.0);
+    }
+
+    #[test]
+    fn min_grid_size_clears_the_minimum_on_the_first_try() {
+        // HYPE szDecimals=2 at the limit price: 0.11*99 = $10.89 >= $10,
+        // whereas the old mid-based path produced 0.13 ($12.87 of real value).
+        let sz = min_grid_size(MIN_ORDER_USD, 99.0, 2);
+        assert!((sz - 0.11).abs() < 1e-9, "got {}", sz);
+        assert!(sz * 99.0 >= MIN_ORDER_USD);
+
+        // Same coin priced at the mid needs a bigger size.
+        let sz_mid = min_grid_size(MIN_ORDER_USD, 82.1, 2);
+        assert!((sz_mid - 0.13).abs() < 1e-9, "got {}", sz_mid);
+
+        // BTC szDecimals=5.
+        let sz_btc = min_grid_size(MIN_ORDER_USD, 77813.0, 5);
+        assert!((sz_btc - 0.00013).abs() < 1e-9, "got {}", sz_btc);
+        assert!(sz_btc * 77813.0 >= MIN_ORDER_USD);
+    }
+
+    #[test]
+    fn min_grid_size_is_safe_on_a_missing_price() {
+        assert_eq!(min_grid_size(MIN_ORDER_USD, 0.0, 2), 0.0);
+        assert_eq!(min_grid_size(MIN_ORDER_USD, -1.0, 2), 0.0);
+    }
 }

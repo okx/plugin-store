@@ -1,7 +1,7 @@
 ---
 name: hyperliquid-plugin
 description: Hyperliquid DEX — trade perps & spot, deposit from Arbitrum, withdraw to Arbitrum, transfer between perp and spot accounts, manage gas on HyperEVM.
-version: "0.6.0"
+version: "0.6.2"
 author: GeoGu360
 tags:
   - perps
@@ -64,7 +64,7 @@ Interactive usage (no `--autotrade-job`) is completely unaffected: the full conf
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/hyperliquid-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.6.0"
+LOCAL_VER="0.6.2"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -181,7 +181,7 @@ mkdir -p ~/.local/bin
 # .github/workflows/plugin-publish.yml which uploads `checksums.txt`
 # alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-TAG="plugins/hyperliquid-plugin@0.6.0"
+TAG="plugins/hyperliquid-plugin@0.6.2"
 
 # Robust asset download. Prefer `gh release download` — it resolves the
 # asset via the GitHub API and follows the signed-redirect properly,
@@ -209,7 +209,7 @@ _pluginstore_dl "hyperliquid-plugin-${TARGET}${EXT}" "$BIN_TMP/hyperliquid-plugi
   echo "ERROR: failed to download hyperliquid-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 _pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for hyperliquid-plugin@0.6.0" >&2
+  echo "ERROR: failed to download checksums.txt for hyperliquid-plugin@0.6.2" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="hyperliquid-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -233,7 +233,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/hyperliquid-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.6.0" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
+echo "0.6.2" > "$HOME/.plugin-store/managed/hyperliquid-plugin"
 ```
 
 ---
@@ -549,6 +549,14 @@ hyperliquid order \
 Before each order the binary queries Perp + Spot + Arbitrum USDC balances in parallel and shows a `fund_landscape` table in the preview. If the estimated required margin (`notional / leverage`) exceeds `perp_withdrawable`, the command stops immediately with a `tip` pointing to `transfer` (Spot→Perp) or `deposit` (Arbitrum→Perp).
 
 **Size precision & minimum notional:**
+
+> The $10 minimum is charged against the order's **own price** — `size × limit price`
+> for a limit order, `size × mid` for a market order. Verified against the live
+> exchange: HYPE `--size 0.11 --type limit --price 99` (`0.11 × 99 = $10.89`,
+> `0.11 × mid 81.8 = $9.00`) is accepted. `notional_usd` in the output is valued the
+> same way, so a limit order priced away from the market reports the value it will
+> actually have if it fills.
+
 `--size` is automatically rounded to the coin's `szDecimals` (BTC: 5 dp, ETH: 4 dp, etc.). If the resulting notional is below the exchange minimum of **$10**, the size is raised to the smallest grid-aligned size that clears $10 and the adjustment is logged to stderr. With `--autotrade-job`, size and user-supplied prices must already satisfy the exchange precision rules: the binary refuses off-grid values instead of rounding them, rejects invalid slippage before network/signing, and refuses a below-minimum order with `ORDER_BELOW_MIN_NOTIONAL` instead of raising it. An autotrade execution card for an `onlyIsolated` market must also carry `--isolated` whenever it carries `--leverage`; the binary will not silently add the flag.
 
 **SL/TP price precision:**
@@ -750,6 +758,15 @@ hyperliquid deposit --amount 100 --dry-run
 **Prerequisites:**
 - USDC on Arbitrum (chain ID 42161) — check with `onchainos wallet balance --chain 42161`
 - ETH on Arbitrum for gas (~$0.01)
+- **Minimum $5.** The HL bridge silently drops smaller deposits — the funds are lost, not returned. Never suggest a deposit below $5, even when the shortfall is smaller.
+
+**Where the funds land:** the bridge credits your Hyperliquid balance, but on a
+**unified account** it shows up as the spot USDC balance while
+`clearinghouseState.withdrawable` stays `0.0`. That is normal — under unified /
+portfolio margin mode spot USDC backs perp orders directly, and HL *rejects*
+`transfer --direction spot-to-perp` with "Action disabled when unified account is
+active". Check `abstraction` for the mode; `order` reports the mode it used in
+`fund_landscape.margin_mode` along with the `available_margin` it gated on.
 
 ---
 
@@ -1051,6 +1068,14 @@ hyperliquid order-batch --orders-json /tmp/grid.json --strategy-id my-btc-grid -
 **Display:** For each order in `orders[]`, show `index`, `summary.coin`, `summary.side`, `summary.size`, `summary.price`, `oid` (if any), and `error` (if any). Do not render `result` raw — it contains the full HL statuses array.
 
 **Flow:**
+**Entry format notes:**
+
+- `--orders-json` takes a **file path** (or `-` for stdin), never inline JSON.
+- `size` / `price` accept a JSON number or a string — `0.01` and `"0.01"` both work.
+- `type` may be omitted: it is inferred from `price` (present → `limit`, absent →
+  `market`), matching what single-order `order` does with the same input. Pass
+  `type` explicitly to override the inference.
+
 1. Parse `--orders-json` (file or stdin); validate each entry (side, size, type, price-for-limit) before any network work
 2. Fetch `meta` once, then resolve `asset_idx` per unique coin (cached via `HashMap`)
 3. Fetch `allMids` once for market-order slippage prices and the $10-notional auto-bump
@@ -1926,6 +1951,23 @@ Found and patched during integration:
 ---
 
 ## Changelog
+
+### v0.6.2 (2026-09-03) — order sizing priced at the order's price, JSON error contract
+
+- **fix**: the $10 minimum-notional check priced every order at the **mid**, including limit orders placed away from the market. A HYPE sell limit at 99 with mid 81.8 was sized to `0.13` from the mid, whose real order value is `0.13 × 99 = $12.87` — 27% above the $10 the caller was told it needed. The minimum (and the reported `notional_usd`) is now charged against the order's own price: the limit price for a limit order, the mid for a market order. Verified live — `--size 0.11 --type limit --price 99` (`$10.89` at the limit, `$9.00` at the mid) is accepted by the exchange, so the mid is not what HL measures.
+- **fix**: `get-gas` let `anyhow` errors escape to `main`, printing a bare `Error: ...` on stderr with an **empty stdout** and exit 1 — unreadable for a caller parsing the JSON contract every other command follows. Failures now return `{"ok":false,"error_code":...}` on stdout; insufficient Arbitrum USDC reports `INSUFFICIENT_BALANCE`, a non-positive `--amount` reports `INVALID_ARGUMENT`.
+- **fix**: `order-batch` entries defaulted `type` to `"limit"`, so an entry without `type` was rejected for a missing price while single-order `order` treated the same input as a market order. `type` is now inferred from `price` (present → limit, absent → market); defaulting to `market` instead would have silently turned an intended limit order into an immediate market fill, so neither existing usage is reinterpreted.
+- **fix**: `order-batch` rejected `"size": 0.01` with `invalid type: floating point`. `size` and `price` now accept a JSON number or a string.
+- **docs**: documented the minimum-notional price basis, and `order-batch`'s file-path argument, numeric-or-string fields, and `type` inference.
+- **tests**: +9. `notional_price` / `min_grid_size` extracted as pure functions with 5 unit tests (limit vs market pricing, unusable limit price, grid convergence at 2 and 5 decimals); 4 unit tests on `order-batch` entry parsing (type inference, explicit override, numeric fields, non-numeric rejection).
+
+### v0.6.1 (2026-09-03) — unified-account margin gate, honest tx confirmation
+
+- **fix**: `order` rejected fully funded orders on a **unified account**. The balance gate compared the required margin against `clearinghouseState.withdrawable` only, which reads `0.0` on a unified account while the USDC sits in the spot balance — and then suggested `transfer --direction spot-to-perp`, which HL refuses with *"Action disabled when unified account is active"*. A dead end with no bypass flag. The gate now reads `userAbstraction`, counts spot USDC as available margin under `unified` / `portfolio` modes, and no longer suggests the transfer HL disabled. `fund_landscape` gained `margin_mode` and `available_margin`.
+- **fix**: `ARBITRUM_RPC` pointed at `arbitrum-one-rpc.publicnode.com`, which answers `eth_getTransactionReceipt` with `-32602 Archive requests require a personal token` even for a tx in the latest block while still serving `eth_call`. Every Arbitrum confirmation wait therefore burned its full 60s and reported "timed out" for transactions that had already succeeded. Switched to `https://arb1.arbitrum.io/rpc` (verified to serve receipts).
+- **fix**: `wait_tx_mined` discarded every failure — HTTP status, JSON-RPC `error`, parse errors — and returned a bare `false`, so callers could only say "timed out". It now returns `Result<bool, String>`: `Ok(true)` mined, `Ok(false)` reverted, `Err(why)` never observed, carrying the actual reason. It also bails out immediately when the endpoint refuses the method instead of retrying to the deadline. `deposit` / `get_gas` / `evm_send` report the real outcome.
+- **fix**: `deposit` reported `"on_chain_status": "0x1"` as a **hardcoded literal** regardless of what happened, so the field could never be used as evidence that the deposit landed. It now carries the observed status (`0x1` / `0x0` / `{"unconfirmed": reason}`).
+- **docs**: `deposit` — documented the $5 bridge minimum (smaller deposits are lost) and that funds land in the spot balance on a unified account, with `withdrawable` staying `0.0`.
 
 ### v0.4.5 (2026-05-10)
 

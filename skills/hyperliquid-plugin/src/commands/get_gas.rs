@@ -69,8 +69,34 @@ fn is_allowance_error(e: &anyhow::Error) -> bool {
 }
 
 pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
+    match run_inner(args).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            // Every other command reports failures as JSON on stdout. An anyhow
+            // error escaping to main printed a bare "Error: ..." on stderr with
+            // an empty stdout and exit 1, which a caller parsing the documented
+            // JSON contract cannot read at all.
+            println!(
+                "{}",
+                super::error_response(
+                    &format!("{:#}", e),
+                    "GET_GAS_FAILED",
+                    "Check the reported reason, then retry.",
+                )
+            );
+            Ok(())
+        }
+    }
+}
+
+async fn run_inner(args: GetGasArgs) -> anyhow::Result<()> {
     if args.amount <= 0.0 {
-        anyhow::bail!("--amount must be positive");
+        println!("{}", super::error_response(
+            "--amount must be positive",
+            "INVALID_ARGUMENT",
+            "Pass a positive USDC amount, e.g. --amount 2.",
+        ));
+        return Ok(());
     }
 
     let usdc_units = (args.amount * 1_000_000.0).round() as u64;
@@ -80,10 +106,15 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
     let balance = erc20_balance(USDC_ARBITRUM, &wallet, ARBITRUM_RPC).await?;
     let balance_usd = balance as f64 / 1_000_000.0;
     if balance < usdc_units as u128 {
-        anyhow::bail!(
-            "Insufficient USDC on Arbitrum: have {:.4} USDC, need {:.4} USDC",
-            balance_usd, args.amount
-        );
+        println!("{}", super::error_response(
+            &format!(
+                "Insufficient USDC on Arbitrum: have {:.4} USDC, need {:.4} USDC",
+                balance_usd, args.amount
+            ),
+            "INSUFFICIENT_BALANCE",
+            "Bridge USDC to Arbitrum (HL bridge minimum is $5) or lower --amount.",
+        ));
+        return Ok(());
     }
 
     // Fetch quote from relay.link
@@ -191,8 +222,11 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
             let tx_hash = result["data"]["txHash"].as_str().unwrap_or("");
             if !tx_hash.is_empty() {
                 eprint!("  Waiting for approve tx {} to confirm...", tx_hash);
-                let confirmed = wait_tx_mined(tx_hash, ARBITRUM_RPC).await;
-                eprintln!(" {}", if confirmed { "confirmed" } else { "timed out (proceeding anyway)" });
+                eprintln!(" {}", match wait_tx_mined(tx_hash, ARBITRUM_RPC).await {
+                    Ok(true) => "confirmed".to_string(),
+                    Ok(false) => "REVERTED on-chain".to_string(),
+                    Err(why) => format!("unconfirmed ({}) — proceeding anyway", why),
+                });
             }
         } else {
             eprintln!("USDC allowance already sufficient, skipping approve.");
@@ -236,11 +270,32 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
             Err(e) => return Err(e),
         }
     };
+    // Report the status actually observed. A revert used to be printed as "timed out",
+    // the result was then discarded, and the final JSON hard-coded "0x1" — so a failed
+    // deposit was indistinguishable from a successful one to any caller.
     let relay_tx_hash = deposit_result["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    let mut on_chain_status = serde_json::Value::Null;
     if !relay_tx_hash.is_empty() {
         eprint!("  Waiting for relay deposit tx {} to confirm on Arbitrum...", relay_tx_hash);
-        let relay_confirmed = wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await;
-        eprintln!(" {}", if relay_confirmed { "confirmed" } else { "timed out (proceeding)" });
+        match wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await {
+            Ok(true) => {
+                eprintln!(" confirmed");
+                on_chain_status = serde_json::json!("0x1");
+            }
+            Ok(false) => {
+                eprintln!(" REVERTED on-chain");
+                println!("{}", super::error_response(
+                    &format!("Relay deposit tx {} reverted on-chain (receipt status 0x0). No USDC reached the relay solver, so no HYPE will arrive.", relay_tx_hash),
+                    "DEPOSIT_REVERTED",
+                    "Inspect the tx on Arbiscan, then retry 'hyperliquid get-gas'."
+                ));
+                return Ok(());
+            }
+            Err(why) => {
+                eprintln!(" unconfirmed ({}) - proceeding; check the tx on Arbiscan", why);
+                on_chain_status = serde_json::json!({ "unconfirmed": why });
+            }
+        }
     }
 
     // Poll relay.link status until HYPE arrives (max ~40s)
@@ -275,7 +330,7 @@ pub async fn run(args: GetGasArgs) -> anyhow::Result<()> {
         "hype_received": hype_out,
         "hype_balance_now": format!("{:.6}", hype_now),
         "relay_tx_hash": relay_tx_hash,
-        "on_chain_status": "0x1",
+        "on_chain_status": on_chain_status,
         "confirmed": arrived,
         "note": if arrived {
             "HYPE arrived. You can now use CoreWriter operations on HyperEVM."
