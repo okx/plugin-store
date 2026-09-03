@@ -5,7 +5,10 @@
 - **fix**: $10 minimum notional (and `notional_usd`) now charged against the order's own price — limit price for limit orders, mid for market. Verified live: 0.11 HYPE @ limit 99 ($10.89 / $9.00 at mid) is accepted, so the old mid-based sizing over-sized limit orders (0.13 → $12.87 of real value).
 - **fix**: `get-gas` returned a bare stderr `Error:` with empty stdout and exit 1; now returns the standard `{"ok":false,"error_code":...}` JSON on stdout.
 - **fix**: `order-batch` `type` defaulted to `"limit"` (inconsistent with single `order`); now inferred from `price`. `size`/`price` accept numbers as well as strings.
-- **tests**: +10 (5 sizing unit tests, 4 batch-input unit tests, 1 error-contract integration test).
+- **fix**: `evm-send` submitted step 2 (spot -> HyperEVM) even when step 1 (perp -> spot) had **reverted** — the new `Result<bool, String>` return of `wait_tx_mined` was matched on `Err` only, so `Ok(false)` fell through silently. A reverted step 1 now aborts with `STEP1_REVERTED` before step 2 is sent.
+- **fix**: `get-gas` printed a reverted relay deposit as "timed out", discarded the result, and returned a hard-coded `"on_chain_status": "0x1"` — a failed deposit was indistinguishable from a successful one. It now reports `DEPOSIT_REVERTED` on revert.
+- **fix**: `evm-send` and `get-gas` carry the observed receipt status (`0x1` / `0x0` / `{"unconfirmed": reason}`) instead of a hard-coded `"0x1"`, matching `deposit`.
+- **tests**: +9 (5 sizing unit tests, 4 batch-input unit tests).
 
 
 ### v0.6.1 (2026-09-03) — unified-account margin gate, honest tx confirmation

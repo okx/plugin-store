@@ -270,11 +270,32 @@ async fn run_inner(args: GetGasArgs) -> anyhow::Result<()> {
             Err(e) => return Err(e),
         }
     };
+    // Report the status actually observed. A revert used to be printed as "timed out",
+    // the result was then discarded, and the final JSON hard-coded "0x1" — so a failed
+    // deposit was indistinguishable from a successful one to any caller.
     let relay_tx_hash = deposit_result["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    let mut on_chain_status = serde_json::Value::Null;
     if !relay_tx_hash.is_empty() {
         eprint!("  Waiting for relay deposit tx {} to confirm on Arbitrum...", relay_tx_hash);
-        let relay_confirmed = matches!(wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await, Ok(true));
-        eprintln!(" {}", if relay_confirmed { "confirmed" } else { "timed out (proceeding)" });
+        match wait_tx_mined(&relay_tx_hash, ARBITRUM_RPC).await {
+            Ok(true) => {
+                eprintln!(" confirmed");
+                on_chain_status = serde_json::json!("0x1");
+            }
+            Ok(false) => {
+                eprintln!(" REVERTED on-chain");
+                println!("{}", super::error_response(
+                    &format!("Relay deposit tx {} reverted on-chain (receipt status 0x0). No USDC reached the relay solver, so no HYPE will arrive.", relay_tx_hash),
+                    "DEPOSIT_REVERTED",
+                    "Inspect the tx on Arbiscan, then retry 'hyperliquid get-gas'."
+                ));
+                return Ok(());
+            }
+            Err(why) => {
+                eprintln!(" unconfirmed ({}) - proceeding; check the tx on Arbiscan", why);
+                on_chain_status = serde_json::json!({ "unconfirmed": why });
+            }
+        }
     }
 
     // Poll relay.link status until HYPE arrives (max ~40s)
@@ -309,7 +330,7 @@ async fn run_inner(args: GetGasArgs) -> anyhow::Result<()> {
         "hype_received": hype_out,
         "hype_balance_now": format!("{:.6}", hype_now),
         "relay_tx_hash": relay_tx_hash,
-        "on_chain_status": "0x1",
+        "on_chain_status": on_chain_status,
         "confirmed": arrived,
         "note": if arrived {
             "HYPE arrived. You can now use CoreWriter operations on HyperEVM."

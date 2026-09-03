@@ -218,12 +218,27 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
         }
     };
 
-    // Wait for step 1 to be mined before submitting step 2 (HyperCore needs the tx on-chain)
+    // Wait for step 1 to be mined before submitting step 2 (HyperCore needs the tx on-chain).
+    //
+    // A reverted step 1 has to stop the command: step 2 would move USDC that the
+    // perp -> spot leg never delivered. An unobserved receipt is a different case —
+    // the move may well have landed — so that one only warns and proceeds.
     eprintln!("  Waiting for HyperCore to process...");
     let tx1_hash = result1["data"]["txHash"].as_str().unwrap_or("");
     if !tx1_hash.is_empty() {
-        if let Err(why) = wait_tx_mined(tx1_hash, HYPER_EVM_RPC).await {
-            eprintln!("  Warning: step 1 tx unconfirmed ({}). Proceeding with step 2.", why);
+        match wait_tx_mined(tx1_hash, HYPER_EVM_RPC).await {
+            Ok(true) => {}
+            Ok(false) => {
+                println!("{}", super::error_response(
+                    &format!("Step 1 (perp -> spot) reverted on-chain: tx {} has receipt status 0x0. Step 2 was not submitted.", tx1_hash),
+                    "STEP1_REVERTED",
+                    "No USDC left your perp balance. Inspect the tx on HyperEVM, then retry the command."
+                ));
+                return Ok(());
+            }
+            Err(why) => {
+                eprintln!("  Warning: step 1 tx unconfirmed ({}). Proceeding with step 2.", why);
+            }
         }
     }
 
@@ -237,11 +252,31 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
         }
     };
 
+    // Report the status actually observed for tx2. This field used to be the literal
+    // "0x1" regardless of outcome, so it could not be used as evidence of anything.
     let tx2_hash = result2["data"]["txHash"].as_str().unwrap_or("").to_owned();
+    let mut on_chain_status = serde_json::Value::Null;
     if !tx2_hash.is_empty() {
         eprint!("  Waiting for tx2 {} to confirm on HyperEVM...", tx2_hash);
-        let confirmed2 = matches!(wait_tx_mined(&tx2_hash, HYPER_EVM_RPC).await, Ok(true));
-        eprintln!(" {}", if confirmed2 { "confirmed" } else { "timed out (proceeding)" });
+        match wait_tx_mined(&tx2_hash, HYPER_EVM_RPC).await {
+            Ok(true) => {
+                eprintln!(" confirmed");
+                on_chain_status = serde_json::json!("0x1");
+            }
+            Ok(false) => {
+                eprintln!(" REVERTED on-chain");
+                println!("{}", super::error_response(
+                    &format!("Step 2 (spot -> HyperEVM) reverted on-chain: tx {} has receipt status 0x0. The USDC moved in step 1 is still in your spot balance.", tx2_hash),
+                    "STEP2_REVERTED",
+                    "Funds are safe in spot. Inspect the tx on HyperEVM, then retry the command."
+                ));
+                return Ok(());
+            }
+            Err(why) => {
+                eprintln!(" unconfirmed ({}) - proceeding; verify with 'hyperliquid address'", why);
+                on_chain_status = serde_json::json!({ "unconfirmed": why });
+            }
+        }
     }
 
     println!("{}", serde_json::json!({
@@ -251,7 +286,7 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
         "destination": destination,
         "amount_usdc": args.amount,
         "tx2_hash": tx2_hash,
-        "on_chain_status": "0x1",
+        "on_chain_status": on_chain_status,
         "note": "USDC sent to HyperEVM. Verify with 'hyperliquid address'."
     }));
 
