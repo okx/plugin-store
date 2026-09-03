@@ -113,9 +113,14 @@ pub async fn run(
             dry_run,
         )
         .context("ERC-20 approve failed")?;
-        // Wait for approve tx to be mined before submitting repay.
+        // Wait until the allowance is readable on-chain before submitting repay.
         // Bail early if approve was not broadcast — proceeding with a "pending" hash
         // would submit repay before allowance is on-chain, causing STF revert.
+        //
+        // We poll the allowance itself rather than the approve receipt: publicnode
+        // gates eth_getTransactionReceipt on Base and Arbitrum while still serving
+        // eth_call, which made a receipt-based wait time out on every repay even
+        // though approve had already been mined.
         if !dry_run {
             let approve_tx = approve_res["data"]["txHash"]
                 .as_str()
@@ -127,9 +132,20 @@ pub async fn run(
                     approve_tx
                 );
             }
-            rpc::wait_for_tx(cfg.rpc_url, approve_tx)
-                .await
-                .context("Approve tx did not confirm in time")?;
+            rpc::wait_for_allowance(
+                &token_addr,
+                &from_addr,
+                &pool_addr,
+                approve_amount,
+                cfg.rpc_url,
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "Approve tx {} was submitted but its allowance never became readable on-chain",
+                    approve_tx
+                )
+            })?;
         }
         approval_result = Some(approve_res);
     }

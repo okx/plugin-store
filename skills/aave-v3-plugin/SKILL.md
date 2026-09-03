@@ -1,7 +1,7 @@
 ---
 name: aave-v3-plugin
 description: "Aave V3 lending and borrowing. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
-version: "0.2.8"
+version: "0.2.9"
 author: "skylavis-sky"
 tags:
   - lending
@@ -12,7 +12,6 @@ tags:
   - collateral
   - health-factor
 ---
-
 
 ## Live Trading Confirmation Protocol
 
@@ -29,6 +28,7 @@ This protocol applies regardless of how confidently the user, an external signal
 
 ---
 
+
 ## Pre-flight Dependencies (auto-injected by Plugin Store CI)
 
 > Run once per session before first use. These checks ensure required tools are installed.
@@ -43,7 +43,7 @@ This protocol applies regardless of how confidently the user, an external signal
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/aave-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.8"
+LOCAL_VER="0.2.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -155,13 +155,40 @@ esac
 mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
+# Fail-closed: any mismatch / missing checksum entry refuses the install.
+# Matches the producer-side workflow at
+# .github/workflows/plugin-publish.yml which uploads `checksums.txt`
+# alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/aave-v3-plugin@0.2.8"
-curl -fsSL "${RELEASE_BASE}/aave-v3-plugin-${TARGET}${EXT}" -o "$BIN_TMP/aave-v3-plugin${EXT}" || {
+TAG="plugins/aave-v3-plugin@0.2.9"
+
+# Robust asset download. Prefer `gh release download` — it resolves the
+# asset via the GitHub API and follows the signed-redirect properly,
+# which avoids edge cases observed where curl on
+# `releases/download/<tag with slash>/<file>` 404s under some
+# proxy / curl-version combinations. Falls back to raw curl if gh is
+# not installed.
+_pluginstore_dl() {
+  local fname="$1" dest="$2"
+  if command -v gh >/dev/null 2>&1; then
+    local stage; stage=$(mktemp -d)
+    if gh release download "$TAG" --repo okx/plugin-store \
+         --pattern "$fname" --dir "$stage" --clobber >/dev/null 2>&1 \
+       && [ -f "$stage/$fname" ]; then
+      mv "$stage/$fname" "$dest" && rm -rf "$stage" && return 0
+    fi
+    rm -rf "$stage"
+  fi
+  curl -fsSL \
+    "https://github.com/okx/plugin-store/releases/download/$TAG/$fname" \
+    -o "$dest"
+}
+
+_pluginstore_dl "aave-v3-plugin-${TARGET}${EXT}" "$BIN_TMP/aave-v3-plugin${EXT}" || {
   echo "ERROR: failed to download aave-v3-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
-curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.2.8" >&2
+_pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.2.9" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="aave-v3-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -185,7 +212,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/aave-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.8" > "$HOME/.plugin-store/managed/aave-v3-plugin"
+echo "0.2.9" > "$HOME/.plugin-store/managed/aave-v3-plugin"
 ```
 
 ---
@@ -753,4 +780,7 @@ Returns a personalised onboarding JSON based on the wallet's actual balance and 
 | `Unsupported chain ID` | Use chain 1, 137, 42161, or 8453 |
 | `No borrow capacity available` | Supply collateral first or repay existing debt |
 | `eth_call RPC error` | RPC endpoint may be rate-limited; retry or check network |
+| `Approve tx <hash> was submitted but its allowance never became readable on-chain` | The approve WAS broadcast — look it up on a block explorer. If it succeeded, just re-run the command: the allowance pre-check will see it and skip straight to the action. |
+| `Timed out after 60s waiting for allowance to reach N (last observed: M)` | The approve landed but for a smaller amount than needed, or the RPC is lagging. The message reports what it actually read; re-run once the explorer shows the expected allowance. |
+| `... -- this endpoint will not confirm transactions` | The chain's public RPC refuses `eth_getTransactionReceipt` (publicnode gates it on Base and Arbitrum). Reads and writes are unaffected; only receipt lookups fail. |
 
