@@ -132,6 +132,40 @@ pub fn defi_positions(chain_id: u64, wallet_addr: &str) -> anyhow::Result<Value>
     run_cmd(cmd)
 }
 
+/// Summarise what onchainos actually answered, for errors raised on a call that
+/// *succeeded* but returned an unusable payload.
+///
+/// `run_cmd` attaches stderr and stdout only when the process exits non-zero. A
+/// search that comes back `{"ok":true,"data":[],"notifications":[...]}` exits 0,
+/// so without this the caller sees "no token match" and cannot tell an unknown
+/// symbol apart from a quota or rate-limit notice on the market API.
+fn describe_response(result: &Value) -> String {
+    let mut parts: Vec<String> = Vec::new();
+
+    if let Some(arr) = result.get("data").and_then(|d| d.as_array()) {
+        parts.push(format!("onchainos data: {} entries", arr.len()));
+    }
+
+    let codes: Vec<&str> = result
+        .get("notifications")
+        .and_then(|n| n.as_array())
+        .map(|ns| {
+            ns.iter()
+                .filter_map(|n| n.get("code").and_then(|c| c.as_str()))
+                .collect()
+        })
+        .unwrap_or_default();
+    if !codes.is_empty() {
+        parts.push(format!("notifications: {}", codes.join(", ")));
+    }
+
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!(" ({})", parts.join("; "))
+    }
+}
+
 /// Resolve a token symbol or address to (contract_address, decimals).
 /// For both symbol and address inputs, queries onchainos token search to get actual decimals.
 /// Falls back to decimals=18 only if the token is not found in onchainos.
@@ -145,10 +179,22 @@ pub fn resolve_token(asset: &str, chain_id: u64) -> anyhow::Result<(String, u8)>
     let tokens = result
         .as_array()
         .or_else(|| result.get("data").and_then(|d| d.as_array()))
-        .ok_or_else(|| anyhow::anyhow!("No tokens found for '{}' on chain {}", asset, chain_id))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "No tokens found for '{}' on chain {}{}",
+                asset,
+                chain_id,
+                describe_response(&result)
+            )
+        })?;
 
     let first = tokens.first().ok_or_else(|| {
-        anyhow::anyhow!("No token match for '{}' on chain {}", asset, chain_id)
+        anyhow::anyhow!(
+            "No token match for '{}' on chain {}{}",
+            asset,
+            chain_id,
+            describe_response(&result)
+        )
     })?;
 
     // For address input: use the original address directly (token search confirms it exists);
@@ -314,4 +360,40 @@ pub fn wallet_address(chain_id: u64) -> anyhow::Result<String> {
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("Could not resolve wallet address from onchainos wallet addresses"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::describe_response;
+    use serde_json::json;
+
+    #[test]
+    fn describes_an_empty_result_carrying_a_quota_notification() {
+        // The shape observed live on Arbitrum: the call succeeds, the payload is
+        // empty, and the only hint at why sits in `notifications`.
+        let r = json!({
+            "ok": true,
+            "data": [],
+            "notifications": [{ "code": "MARKET_API_OLD_USER_POST_GRACE_OVER_QUOTA" }]
+        });
+        let s = describe_response(&r);
+        assert!(s.contains("data: 0 entries"), "got: {s}");
+        assert!(
+            s.contains("MARKET_API_OLD_USER_POST_GRACE_OVER_QUOTA"),
+            "the notification code is the only actionable detail: {s}"
+        );
+    }
+
+    #[test]
+    fn describes_an_empty_result_with_no_notifications() {
+        let r = json!({ "ok": true, "data": [] });
+        let s = describe_response(&r);
+        assert!(s.contains("data: 0 entries"), "got: {s}");
+        assert!(!s.contains("notifications"), "nothing to say about them: {s}");
+    }
+
+    #[test]
+    fn says_nothing_when_the_payload_has_neither_field() {
+        assert_eq!(describe_response(&json!({ "ok": true })), "");
+    }
 }

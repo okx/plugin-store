@@ -82,7 +82,7 @@ fn fetch_per_asset_positions(chain_id: u64, user_addr: &str) -> Value {
     let raw = match onchainos::defi_position_detail(chain_id, user_addr) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("[positions] onchainos position-detail failed: {}", e);
+            eprintln!("[positions] onchainos position-detail failed: {:#}", e);
             return json!(null);
         }
     };

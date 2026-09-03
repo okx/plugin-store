@@ -172,15 +172,72 @@ async fn main() {
             println!("{}", serde_json::to_string_pretty(&val).unwrap_or_default());
         }
         Err(err) => {
-            let error_json = serde_json::json!({
-                "ok": false,
-                "error": err.to_string()
-            });
-            eprintln!(
+            // Failures belong on stdout with ok:false, the JSON contract SKILL.md
+            // documents and the other plugins already follow. They used to go to
+            // stderr with exit 1 and an empty stdout, leaving an agent that parses
+            // stdout with nothing to report but "the command failed".
+            println!(
                 "{}",
-                serde_json::to_string_pretty(&error_json).unwrap_or_default()
+                serde_json::to_string_pretty(&error_json(&err)).unwrap_or_default()
             );
-            std::process::exit(1);
         }
+    }
+}
+
+/// The failure payload shared by every command.
+///
+/// `err.to_string()` renders only the outermost context and silently drops the
+/// cause chain — which is exactly where the reason lives: onchainos's stderr and
+/// stdout, an unusable search payload, a JSON parse failure. `{:#}` flattens the
+/// whole chain onto one line for humans; `causes` keeps each layer addressable
+/// for a caller that wants to match on the innermost one.
+fn error_json(err: &anyhow::Error) -> Value {
+    serde_json::json!({
+        "ok": false,
+        "error": format!("{:#}", err),
+        "causes": err.chain().map(|c| c.to_string()).collect::<Vec<_>>(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::error_json;
+    use anyhow::Context;
+
+    #[test]
+    fn error_json_reports_ok_false_and_flattens_the_cause_chain() {
+        let err = Err::<(), _>(anyhow::anyhow!("onchainos data has 0 entries"))
+            .context("No token match for 'NOSUCHTOKEN' on chain 42161")
+            .context("Could not resolve token address for 'NOSUCHTOKEN'")
+            .unwrap_err();
+
+        let v = error_json(&err);
+
+        assert_eq!(v["ok"], false);
+        // The outermost context alone is not enough to act on; the flattened form
+        // has to carry the innermost reason too.
+        let msg = v["error"].as_str().expect("error is a string");
+        assert!(msg.contains("Could not resolve token address"), "got: {msg}");
+        assert!(msg.contains("onchainos data has 0 entries"), "got: {msg}");
+
+        let causes: Vec<&str> = v["causes"]
+            .as_array()
+            .expect("causes is an array")
+            .iter()
+            .map(|c| c.as_str().unwrap_or_default())
+            .collect();
+        assert_eq!(causes.len(), 3, "every layer is listed: {causes:?}");
+        assert_eq!(causes[0], "Could not resolve token address for 'NOSUCHTOKEN'");
+        assert_eq!(causes[2], "onchainos data has 0 entries");
+    }
+
+    #[test]
+    fn error_json_handles_a_single_layer_error() {
+        let err = anyhow::anyhow!("No --from address and could not resolve active wallet.");
+        let v = error_json(&err);
+
+        assert_eq!(v["ok"], false);
+        assert_eq!(v["error"], "No --from address and could not resolve active wallet.");
+        assert_eq!(v["causes"].as_array().expect("array").len(), 1);
     }
 }

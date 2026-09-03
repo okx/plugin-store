@@ -55,7 +55,10 @@ pub async fn run(
     let result = match crate::onchainos::defi_collect(platform_id, chain_id, &wallet_addr, "REWARD_PLATFORM") {
         Ok(res) => res,
         Err(e) => {
-            let msg = e.to_string();
+            // Match against the whole chain: this test only works today because
+            // defi_collect returns run_cmd's error unwrapped. One with_context on
+            // that path would push the text out of to_string()'s reach silently.
+            let msg = format!("{:#}", e);
             if msg.contains("No reward tokens found") || msg.contains("no reward") {
                 return Ok(json!({
                     "ok": true,

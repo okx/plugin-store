@@ -1,7 +1,7 @@
 ---
 name: aave-v3-plugin
 description: "Aave V3 lending and borrowing. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
-version: "0.2.9"
+version: "0.3.0"
 author: "skylavis-sky"
 tags:
   - lending
@@ -43,7 +43,7 @@ This protocol applies regardless of how confidently the user, an external signal
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/aave-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.9"
+LOCAL_VER="0.3.0"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -160,7 +160,7 @@ mkdir -p ~/.local/bin
 # .github/workflows/plugin-publish.yml which uploads `checksums.txt`
 # alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-TAG="plugins/aave-v3-plugin@0.2.9"
+TAG="plugins/aave-v3-plugin@0.3.0"
 
 # Robust asset download. Prefer `gh release download` — it resolves the
 # asset via the GitHub API and follows the signed-redirect properly,
@@ -188,7 +188,7 @@ _pluginstore_dl "aave-v3-plugin-${TARGET}${EXT}" "$BIN_TMP/aave-v3-plugin${EXT}"
   echo "ERROR: failed to download aave-v3-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 _pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.2.9" >&2
+  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.3.0" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="aave-v3-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -212,7 +212,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/aave-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.9" > "$HOME/.plugin-store/managed/aave-v3-plugin"
+echo "0.3.0" > "$HOME/.plugin-store/managed/aave-v3-plugin"
 ```
 
 ---
@@ -771,6 +771,31 @@ Returns a personalised onboarding JSON based on the wallet's actual balance and 
 
 ---
 
+## Error output contract
+
+Every command writes JSON to **stdout**, whether it succeeds or fails. Parse stdout
+and branch on the `ok` field — do **not** branch on the exit code, which is `0` for
+a reported failure:
+
+```json
+{
+  "ok": false,
+  "error": "Could not resolve token address for 'USDC': No token match for 'USDC' on chain 42161 (onchainos data: 0 entries; notifications: MARKET_API_OLD_USER_POST_GRACE_OVER_QUOTA)",
+  "causes": [
+    "Could not resolve token address for 'USDC'",
+    "No token match for 'USDC' on chain 42161 (onchainos data: 0 entries; notifications: MARKET_API_OLD_USER_POST_GRACE_OVER_QUOTA)"
+  ]
+}
+```
+
+- `error` — the whole failure on one line, outermost context first.
+- `causes` — the same chain as an array, outermost first, innermost last. The
+  innermost entry is the one to act on; the outermost only says which step failed.
+
+Before v0.3.0 failures went to **stderr** with exit `1` and an empty stdout, and
+`error` carried only the outermost context — so a caller parsing stdout got an
+empty string and could report nothing but "the command failed".
+
 ## Troubleshooting
 
 | Error | Solution |
@@ -783,4 +808,5 @@ Returns a personalised onboarding JSON based on the wallet's actual balance and 
 | `Approve tx <hash> was submitted but its allowance never became readable on-chain` | The approve WAS broadcast — look it up on a block explorer. If it succeeded, just re-run the command: the allowance pre-check will see it and skip straight to the action. |
 | `Timed out after 60s waiting for allowance to reach N (last observed: M)` | The approve landed but for a smaller amount than needed, or the RPC is lagging. The message reports what it actually read; re-run once the explorer shows the expected allowance. |
 | `... -- this endpoint will not confirm transactions` | The chain's public RPC refuses `eth_getTransactionReceipt` (publicnode gates it on Base and Arbitrum). Reads and writes are unaffected; only receipt lookups fail. |
+| `notifications: MARKET_API_..._OVER_QUOTA` inside a `No token match` cause | The market API answered, but under a quota notice. The notice appears on successful lookups too, so it is not by itself the reason a symbol failed to resolve — an unknown symbol returns `data: 0 entries` regardless. Pass the contract address instead of the symbol to skip the search. |
 

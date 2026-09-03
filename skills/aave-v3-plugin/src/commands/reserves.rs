@@ -87,7 +87,7 @@ pub async fn run(
                 reserves.push(reserve_data);
             }
             Err(e) => {
-                eprintln!("Warning: failed to fetch data for reserve {}: {}", addr, e);
+                eprintln!("Warning: failed to fetch data for reserve {}: {:#}", addr, e);
             }
         }
     }
