@@ -62,7 +62,7 @@
     },
     {
       "name": "aave-v3-plugin",
-      "version": "0.2.9",
+      "version": "0.3.0",
       "description": "Lend and borrow crypto assets on Aave V3 — the leading decentralized liquidity protocol. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards.",
       "author": {
         "name": "skylavis-sky",
@@ -79,7 +79,7 @@
         "collateral",
         "health-factor"
       ],
-      "modify_date": "1788431125",
+      "modify_date": "1788448333",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -90,7 +90,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "aave-v3-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/aave-v3-plugin@0.2.9"
+          "release_tag": "plugins/aave-v3-plugin@0.3.0"
         }
       },
       "build": {
@@ -1030,7 +1030,7 @@
         "hyperliquid",
         "derivatives"
       ],
-      "modify_date": "1788432595",
+      "modify_date": "1788437539",
       "type": "community-developer",
       "components": {
         "skill": {
