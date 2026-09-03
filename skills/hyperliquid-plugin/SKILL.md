@@ -1961,7 +1961,6 @@ Found and patched during integration:
 - **docs**: documented the minimum-notional price basis, and `order-batch`'s file-path argument, numeric-or-string fields, and `type` inference.
 - **tests**: +9. `notional_price` / `min_grid_size` extracted as pure functions with 5 unit tests (limit vs market pricing, unusable limit price, grid convergence at 2 and 5 decimals); 4 unit tests on `order-batch` entry parsing (type inference, explicit override, numeric fields, non-numeric rejection).
 
-
 ### v0.6.1 (2026-09-03) — unified-account margin gate, honest tx confirmation
 
 - **fix**: `order` rejected fully funded orders on a **unified account**. The balance gate compared the required margin against `clearinghouseState.withdrawable` only, which reads `0.0` on a unified account while the USDC sits in the spot balance — and then suggested `transfer --direction spot-to-perp`, which HL refuses with *"Action disabled when unified account is active"*. A dead end with no bypass flag. The gate now reads `userAbstraction`, counts spot USDC as available margin under `unified` / `portfolio` modes, and no longer suggests the transfer HL disabled. `fund_landscape` gained `margin_mode` and `available_margin`.
@@ -1969,7 +1968,6 @@ Found and patched during integration:
 - **fix**: `wait_tx_mined` discarded every failure — HTTP status, JSON-RPC `error`, parse errors — and returned a bare `false`, so callers could only say "timed out". It now returns `Result<bool, String>`: `Ok(true)` mined, `Ok(false)` reverted, `Err(why)` never observed, carrying the actual reason. It also bails out immediately when the endpoint refuses the method instead of retrying to the deadline. `deposit` / `get_gas` / `evm_send` report the real outcome.
 - **fix**: `deposit` reported `"on_chain_status": "0x1"` as a **hardcoded literal** regardless of what happened, so the field could never be used as evidence that the deposit landed. It now carries the observed status (`0x1` / `0x0` / `{"unconfirmed": reason}`).
 - **docs**: `deposit` — documented the $5 bridge minimum (smaller deposits are lost) and that funds land in the spot balance on a unified account, with `withdrawable` staying `0.0`.
-
 
 ### v0.4.5 (2026-05-10)
 

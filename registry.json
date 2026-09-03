@@ -1016,8 +1016,8 @@
     },
     {
       "name": "hyperliquid-plugin",
-      "version": "0.6.0",
-      "description": "Trade perpetuals and spot on Hyperliquid, stake HYPE tokens for rewards (v0.6.0)",
+      "version": "0.6.2",
+      "description": "Trade perpetuals and spot on Hyperliquid, stake HYPE tokens for rewards (v0.6.2)",
       "author": {
         "name": "GeoGu360",
         "github": "GeoGu360"
@@ -1030,7 +1030,7 @@
         "hyperliquid",
         "derivatives"
       ],
-      "modify_date": "1785328553",
+      "modify_date": "1788432595",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -1041,7 +1041,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "hyperliquid-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/hyperliquid-plugin@0.6.0"
+          "release_tag": "plugins/hyperliquid-plugin@0.6.2"
         }
       },
       "build": {
