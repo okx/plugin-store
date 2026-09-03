@@ -1,7 +1,7 @@
 ---
 name: polymarket-plugin
 description: "Trade prediction markets on Polymarket - buy outcome tokens (YES/NO and categorical markets), check positions, list markets, manage orders, redeem winning tokens, and deposit funds on Polygon. Trigger phrases: buy polymarket shares, sell polymarket position, check my polymarket positions, list polymarket markets, get polymarket market, cancel polymarket order, redeem polymarket tokens, polymarket yes token, polymarket no token, prediction market trade, polymarket price, get started with polymarket, just installed polymarket, how do I use polymarket, set up polymarket, polymarket quickstart, new to polymarket, polymarket setup, help me trade on polymarket, place a bet on, buy prediction market, bet on, trade on prediction markets, prediction trading, place a prediction market bet, i want to bet on, deposit, top up, fund, transfer in, add funds, fund polymarket, top up polymarket, add funds to polymarket, recharge polymarket, deposit usdc, deposit eth, polymarket deposit, BTC 5-minute, ETH 5-minute, 5-minute market, 5min market, short-term market, list 5-minute, BTC up or down, find 5-minute, view 5-minute, 5m updown, crypto 5m, 5-minute up-down, updown market, BTC 5min, ETH 5min, SOL 5min, 5-minute prediction."
-version: "0.6.2"
+version: "0.7.1"
 author: "skylavis-sky"
 tags:
   - prediction-market
@@ -61,7 +61,7 @@ Interactive usage (no `--autotrade-job`) is completely unaffected: the full conf
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/polymarket-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.7.0"
+LOCAL_VER="0.7.1"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -178,7 +178,7 @@ mkdir -p ~/.local/bin
 # .github/workflows/plugin-publish.yml which uploads `checksums.txt`
 # alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-TAG="plugins/polymarket-plugin@0.7.0"
+TAG="plugins/polymarket-plugin@0.7.1"
 
 # Robust asset download. Prefer `gh release download` — it resolves the
 # asset via the GitHub API and follows the signed-redirect properly,
@@ -206,7 +206,7 @@ _pluginstore_dl "polymarket-plugin-${TARGET}${EXT}" "$BIN_TMP/polymarket-plugin$
   echo "ERROR: failed to download polymarket-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 _pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.7.0" >&2
+  echo "ERROR: failed to download checksums.txt for polymarket-plugin@0.7.1" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="polymarket-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -230,7 +230,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/polymarket-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.7.0" > "$HOME/.plugin-store/managed/polymarket-plugin"
+echo "0.7.1" > "$HOME/.plugin-store/managed/polymarket-plugin"
 ```
 
 ---
@@ -455,7 +455,7 @@ The first `buy` or `sell` automatically derives your Polymarket API credentials 
 polymarket-plugin --version
 ```
 
-Expected: `polymarket-plugin 0.6.2`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
+Expected: `polymarket-plugin 0.7.1`. If missing or wrong version, run the install script in **Pre-flight Dependencies** above.
 
 ### Step 2  -  Install `onchainos` CLI (required for buy/sell/cancel/redeem only)
 
@@ -613,7 +613,9 @@ polymarket-plugin list-5m --coin <COIN> [--count <N>]
 
 **Missing parameters:** If `--coin` is not provided, the command returns `"missing_params": ["coin"]` with a hint. The Agent **must ask the user** which coin before retrying.
 
-**Output fields per market:** `slug`, `conditionId`, `question` (includes ET time range), `timeWindow`, `endDateUtc`, `upPrice`, `downPrice`, `upTokenId`, `downTokenId`, `acceptingOrders`
+**Output fields per market:** `slug`, `conditionId`, `question` (includes ET time range), `timeWindow`, `endDateUtc`, `upPrice`, `downPrice`, `upBid`, `upAsk`, `downBid`, `downAsk`, `priceSource`, `upTokenId`, `downTokenId`, `acceptingOrders`
+
+`upPrice` / `downPrice` are the live CLOB order-book mid; `priceSource` is `clob_book` when the book was readable and `gamma_snapshot` when it fell back to Gamma's cached (possibly minutes-stale) `outcomePrices` — see the price-source table under `get-series`.
 
 **Example:**
 ```bash
@@ -642,9 +644,18 @@ Polymarket runs recurring "Up/Down" markets on a fixed cadence (5min / 15min / 4
 
 **Auth required:** No
 
-**Output (per slot):** `slot` (`current` / `next`), `slug`, `condition_id`, `question`, `start`, `end`, `seconds_remaining`, `up_price`, `down_price`, `up_token_id`, `down_token_id`, `liquidity`, `volume_24hr`, `accepting_orders`. Top level also has `session` (NYSE-hours status), `tip` (a ready-to-paste `buy` command), and `trading_hours`.
+**Output (per slot):** `slot` (`current` / `next`), `slug`, `condition_id`, `question`, `start`, `end`, `seconds_remaining`, `up_price`, `down_price`, `up_bid`, `up_ask`, `down_bid`, `down_ask`, `price_source`, `gamma_snapshot`, `up_token_id`, `down_token_id`, `liquidity`, `volume_24hr`, `accepting_orders`. Top level also has `session` (whether a slot is accepting orders), `tip` (a ready-to-paste `buy` command), and `trading_hours`.
 
-**Trading hours:** 5min and 15min series trade only during NYSE hours (9:30 AM - 4:00 PM ET, Mon-Fri). 4h series are 24/7. Out-of-hours queries return `accepting_orders: false` and a `next_slot.start` pointing to the next session open.
+**Trading hours:** All crypto Up/Down series quote **24/7** — 5min, 15min and 4h alike. `session` reports whether a slot is currently accepting orders, read from the market's own `accepting_orders` flag rather than from a calendar, so it cannot contradict the slot it describes. (Earlier versions modelled 5min/15min as NYSE-hours-only and reported them "outside trading hours" while they were quoting with a live two-sided book.)
+
+**Price source — read this before quoting a price:** `up_price` / `down_price` are the **live CLOB order-book mid**, with `up_bid`/`up_ask`/`down_bid`/`down_ask` giving the tradeable sides. `price_source` says which source was used:
+
+| `price_source` | Meaning |
+|----------------|---------|
+| `clob_book` | Live order book. Safe to quote and to trade against. |
+| `gamma_snapshot` | The book could not be read, so Gamma's cached `outcomePrices` was used. **May be minutes stale** — surface that caveat to the user. |
+
+`gamma_snapshot` in the output always carries Gamma's cached values for comparison. Do not quote them as the price: that cache has been observed 6m39s behind the book on a live 5-minute market, reporting 0.495 against a 0.82/0.83 book. For a market that resolves every five minutes, the cached value is neither accurate nor tradeable.
 
 **Comparison with `list-5m`:**
 - `list-5m` covers 7 coins (BTC/ETH/SOL/XRP/BNB/DOGE/HYPE) for 5-minute markets only, returning the next N windows.
@@ -1633,4 +1644,4 @@ If a command exits with `ok: false` and no actionable suggestion, run the same c
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.6.2** (2026-05-05).
+See [CHANGELOG.md](CHANGELOG.md) for full version history. Current version: **0.7.1** (2026-09-03).

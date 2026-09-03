@@ -1313,8 +1313,16 @@ pub struct FiveMinMarket {
     pub slug: String,
     pub condition_id: String,
     pub question: String,
+    /// Reported quote for Up. Live CLOB book mid when the book is readable,
+    /// otherwise Gamma's cached `outcomePrices` — see `price_source`.
     pub up_price: f64,
     pub down_price: f64,
+    pub up_bid: Option<f64>,
+    pub up_ask: Option<f64>,
+    pub down_bid: Option<f64>,
+    pub down_ask: Option<f64>,
+    /// "clob_book" if the quote is live, "gamma_snapshot" if it is the cached one.
+    pub price_source: &'static str,
     pub end_date: String,    // ISO-8601 UTC
     pub up_token_id: String,
     pub down_token_id: String,
@@ -1339,8 +1347,96 @@ pub async fn get_5m_market(client: &Client, slug: &str) -> Result<Option<FiveMin
         Some(a) if !a.is_empty() => a,
         _ => return Ok(None),
     };
-    let m = &arr[0];
+    let mut market = match five_min_from_gamma_json(slug, &arr[0]) {
+        Some(m) => m,
+        None => return Ok(None),
+    };
+    enrich_with_live_book(client, &mut market).await;
+    Ok(Some(market))
+}
 
+/// Best bid / best ask read from a CLOB order book.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BookQuote {
+    pub best_bid: Option<f64>,
+    pub best_ask: Option<f64>,
+}
+
+impl BookQuote {
+    /// Mid price, rounded to 6 decimals. Falls back to whichever side is quoted
+    /// when the book is one-sided; `None` for an empty book.
+    pub fn mid(&self) -> Option<f64> {
+        let raw = match (self.best_bid, self.best_ask) {
+            (Some(b), Some(a)) => (b + a) / 2.0,
+            (Some(b), None) => b,
+            (None, Some(a)) => a,
+            (None, None) => return None,
+        };
+        Some((raw * 1e6).round() / 1e6)
+    }
+}
+
+/// Extract the best bid and ask from a book.
+///
+/// The CLOB does not document the ordering of `bids` / `asks`, so take the
+/// extremes rather than trusting array position.
+pub fn book_quote(book: &OrderBook) -> BookQuote {
+    let parse = |levels: &[PriceLevel]| -> Vec<f64> {
+        levels.iter().filter_map(|l| l.price.parse::<f64>().ok()).collect()
+    };
+    let bids = parse(&book.bids);
+    let asks = parse(&book.asks);
+    BookQuote {
+        best_bid: bids.iter().copied().fold(None, |acc: Option<f64>, p| {
+            Some(acc.map_or(p, |m: f64| m.max(p)))
+        }),
+        best_ask: asks.iter().copied().fold(None, |acc: Option<f64>, p| {
+            Some(acc.map_or(p, |m: f64| m.min(p)))
+        }),
+    }
+}
+
+/// Live quote for one outcome token, straight from the CLOB order book.
+///
+/// Returns an empty quote instead of an error when the book cannot be read, so
+/// callers can fall back to a cached snapshot and label it as such.
+pub async fn get_book_quote(client: &Client, token_id: &str) -> BookQuote {
+    if token_id.is_empty() {
+        return BookQuote::default();
+    }
+    match get_orderbook(client, token_id).await {
+        Ok(book) => book_quote(&book),
+        Err(_) => BookQuote::default(),
+    }
+}
+
+/// Replace a 5-minute market's quote with the live CLOB book when it is readable.
+///
+/// Gamma's `outcomePrices` is served from a cache that has been observed 6m39s
+/// behind the book on a live 5-minute market (0.495 reported against a 0.82/0.83
+/// book). That is not a usable quote for a market that resolves every five
+/// minutes, so the book wins whenever both sides can be read; otherwise the
+/// snapshot is kept and `price_source` stays "gamma_snapshot".
+pub async fn enrich_with_live_book(client: &Client, market: &mut FiveMinMarket) {
+    let (up, down) = tokio::join!(
+        get_book_quote(client, &market.up_token_id),
+        get_book_quote(client, &market.down_token_id),
+    );
+    market.up_bid = up.best_bid;
+    market.up_ask = up.best_ask;
+    market.down_bid = down.best_bid;
+    market.down_ask = down.best_ask;
+    if let (Some(up_mid), Some(down_mid)) = (up.mid(), down.mid()) {
+        market.up_price = up_mid;
+        market.down_price = down_mid;
+        market.price_source = "clob_book";
+    }
+}
+
+/// Build a `FiveMinMarket` from one Gamma `/markets` entry.
+///
+/// Split out from the HTTP fetch so the Up/Down mapping is unit-testable.
+pub fn five_min_from_gamma_json(slug: &str, m: &serde_json::Value) -> Option<FiveMinMarket> {
     let prices: Vec<f64> = m["outcomePrices"]
         .as_str()
         .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
@@ -1352,17 +1448,35 @@ pub async fn get_5m_market(client: &Client, slug: &str) -> Result<Option<FiveMin
         .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
         .unwrap_or_default();
 
-    Ok(Some(FiveMinMarket {
+    // Gamma does not guarantee the order of `outcomes`, so pair prices and token
+    // ids with the outcome that names them rather than with their array position.
+    // A positional read silently swaps the two sides when "Down" comes first —
+    // which would make `buy --token-id <up_token_id>` buy the opposite outcome.
+    // Fall back to position only when `outcomes` is absent.
+    let outcomes: Vec<String> = m["outcomes"]
+        .as_str()
+        .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+        .unwrap_or_default();
+    let idx_of = |name: &str| outcomes.iter().position(|o| o.eq_ignore_ascii_case(name));
+    let up_idx = idx_of("up").unwrap_or(0);
+    let down_idx = idx_of("down").unwrap_or(1);
+
+    Some(FiveMinMarket {
         slug: slug.to_string(),
         condition_id: m["conditionId"].as_str().unwrap_or("").to_string(),
         question: m["question"].as_str().unwrap_or("").to_string(),
-        up_price: prices.first().copied().unwrap_or(0.0),
-        down_price: prices.get(1).copied().unwrap_or(0.0),
+        up_price: prices.get(up_idx).copied().unwrap_or(0.0),
+        down_price: prices.get(down_idx).copied().unwrap_or(0.0),
+        up_bid: None,
+        up_ask: None,
+        down_bid: None,
+        down_ask: None,
+        price_source: "gamma_snapshot",
         end_date: m["endDate"].as_str().unwrap_or("").to_string(),
-        up_token_id: token_ids.first().cloned().unwrap_or_default(),
-        down_token_id: token_ids.get(1).cloned().unwrap_or_default(),
+        up_token_id: token_ids.get(up_idx).cloned().unwrap_or_default(),
+        down_token_id: token_ids.get(down_idx).cloned().unwrap_or_default(),
         accepting_orders: m["acceptingOrders"].as_bool().unwrap_or(false),
-    }))
+    })
 }
 
 // ─── Deposit Wallet — Builder Auth ───────────────────────────────────────────
@@ -1644,4 +1758,119 @@ pub async fn sync_balance_allowance_deposit_wallet(
         anyhow::bail!("balance-allowance/update returned {}: {}", status, body);
     }
     Ok(())
+}
+
+// ── tests ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod five_min_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn gamma_entry(outcomes: &str, prices: &str, tokens: &str) -> serde_json::Value {
+        json!({
+            "conditionId": "0xcond",
+            "question": "Bitcoin Up or Down - test",
+            "endDate": "2026-09-03T08:35:00Z",
+            "acceptingOrders": true,
+            "outcomes": outcomes,
+            "outcomePrices": prices,
+            "clobTokenIds": tokens,
+        })
+    }
+
+    #[test]
+    fn maps_up_down_by_outcome_name_not_array_position() {
+        // Gamma does not guarantee the order of `outcomes`. When "Down" comes
+        // first, a positional read reports Down's price and token as Up's —
+        // and `buy --token-id <up_token_id>` would then buy the wrong side.
+        let m = gamma_entry(
+            r#"["Down","Up"]"#,
+            r#"["0.30","0.70"]"#,
+            r#"["tokenDOWN","tokenUP"]"#,
+        );
+        let fm = five_min_from_gamma_json("btc-updown-5m-1", &m).unwrap();
+        assert_eq!(fm.up_price, 0.70, "up_price must follow the \"Up\" outcome");
+        assert_eq!(fm.down_price, 0.30, "down_price must follow the \"Down\" outcome");
+        assert_eq!(fm.up_token_id, "tokenUP", "up_token_id must be the Up token");
+        assert_eq!(fm.down_token_id, "tokenDOWN", "down_token_id must be the Down token");
+    }
+
+    #[test]
+    fn maps_up_down_in_the_common_order() {
+        let m = gamma_entry(
+            r#"["Up","Down"]"#,
+            r#"["0.70","0.30"]"#,
+            r#"["tokenUP","tokenDOWN"]"#,
+        );
+        let fm = five_min_from_gamma_json("btc-updown-5m-1", &m).unwrap();
+        assert_eq!(fm.up_price, 0.70);
+        assert_eq!(fm.down_price, 0.30);
+        assert_eq!(fm.up_token_id, "tokenUP");
+        assert_eq!(fm.down_token_id, "tokenDOWN");
+    }
+
+    #[test]
+    fn falls_back_to_positional_when_outcomes_absent() {
+        let mut m = gamma_entry(r#"["Up","Down"]"#, r#"["0.70","0.30"]"#, r#"["tokenUP","tokenDOWN"]"#);
+        m.as_object_mut().unwrap().remove("outcomes");
+        let fm = five_min_from_gamma_json("btc-updown-5m-1", &m).unwrap();
+        assert_eq!(fm.up_price, 0.70);
+        assert_eq!(fm.up_token_id, "tokenUP");
+    }
+}
+
+#[cfg(test)]
+mod book_quote_tests {
+    use super::*;
+
+    fn levels(prices: &[&str]) -> Vec<PriceLevel> {
+        prices.iter().map(|p| PriceLevel { price: p.to_string(), size: "100".into() }).collect()
+    }
+
+    fn book_of(bids: &[&str], asks: &[&str]) -> OrderBook {
+        OrderBook {
+            market: None,
+            asset_id: None,
+            bids: levels(bids),
+            asks: levels(asks),
+            min_order_size: None,
+            tick_size: None,
+            neg_risk: false,
+            last_trade_price: None,
+        }
+    }
+
+    #[test]
+    fn picks_the_extremes_regardless_of_array_order() {
+        // The CLOB does not document the ordering of bids/asks, so the best
+        // levels must be found by value, not by taking first or last.
+        let q = book_quote(&book_of(&["0.10", "0.82", "0.05"], &["0.99", "0.83", "0.95"]));
+        assert_eq!(q.best_bid, Some(0.82));
+        assert_eq!(q.best_ask, Some(0.83));
+        assert_eq!(q.mid(), Some(0.825));
+    }
+
+    #[test]
+    fn empty_book_has_no_quote() {
+        let q = book_quote(&book_of(&[], &[]));
+        assert_eq!(q.best_bid, None);
+        assert_eq!(q.best_ask, None);
+        assert_eq!(q.mid(), None);
+    }
+
+    #[test]
+    fn one_sided_book_falls_back_to_the_quoted_side() {
+        let bid_only = book_quote(&book_of(&["0.40", "0.44"], &[]));
+        assert_eq!(bid_only.mid(), Some(0.44));
+        let ask_only = book_quote(&book_of(&[], &["0.60", "0.56"]));
+        assert_eq!(ask_only.mid(), Some(0.56));
+    }
+
+    #[test]
+    fn unparseable_levels_are_ignored_not_treated_as_zero() {
+        let q = book_quote(&book_of(&["oops", "0.42"], &["0.58", ""]));
+        assert_eq!(q.best_bid, Some(0.42));
+        assert_eq!(q.best_ask, Some(0.58));
+    }
 }

@@ -2,11 +2,11 @@
 ///
 /// Polymarket runs recurring "Up or Down" series markets on crypto assets:
 ///
-/// 5-minute slots  — NYSE trading hours only (9:30 AM – 4:00 PM ET, Mon–Fri)
+/// 5-minute slots  — quote 24/7
 ///   Slug: `{asset}-updown-5m-{unix_start_utc}`
 ///   IDs:  btc-5m, eth-5m, sol-5m, xrp-5m
 ///
-/// 15-minute slots — NYSE trading hours only
+/// 15-minute slots — quote 24/7
 ///   Slug: `{asset}-updown-15m-{unix_start_utc}`
 ///   IDs:  btc-15m, eth-15m, sol-15m, xrp-15m
 ///
@@ -33,16 +33,18 @@ pub struct SeriesSpec {
 }
 
 pub const SERIES: &[SeriesSpec] = &[
-    // 5-minute slots (NYSE hours)
-    SeriesSpec { id: "btc-5m",  asset: "btc", display: "Bitcoin",  interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
-    SeriesSpec { id: "eth-5m",  asset: "eth", display: "Ethereum", interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
-    SeriesSpec { id: "sol-5m",  asset: "sol", display: "Solana",   interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
-    SeriesSpec { id: "xrp-5m",  asset: "xrp", display: "XRP",     interval_secs: 300,   interval_label: "5m",  nyse_hours_only: true  },
-    // 15-minute slots (NYSE hours)
-    SeriesSpec { id: "btc-15m", asset: "btc", display: "Bitcoin",  interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
-    SeriesSpec { id: "eth-15m", asset: "eth", display: "Ethereum", interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
-    SeriesSpec { id: "sol-15m", asset: "sol", display: "Solana",   interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
-    SeriesSpec { id: "xrp-15m", asset: "xrp", display: "XRP",     interval_secs: 900,   interval_label: "15m", nyse_hours_only: true  },
+    // Crypto Up/Down markets quote around the clock — verified accepting orders
+    // at 04:41 ET with a live two-sided book — so none of these are NYSE-gated.
+    // 5-minute slots
+    SeriesSpec { id: "btc-5m",  asset: "btc", display: "Bitcoin",  interval_secs: 300,   interval_label: "5m",  nyse_hours_only: false  },
+    SeriesSpec { id: "eth-5m",  asset: "eth", display: "Ethereum", interval_secs: 300,   interval_label: "5m",  nyse_hours_only: false  },
+    SeriesSpec { id: "sol-5m",  asset: "sol", display: "Solana",   interval_secs: 300,   interval_label: "5m",  nyse_hours_only: false  },
+    SeriesSpec { id: "xrp-5m",  asset: "xrp", display: "XRP",     interval_secs: 300,   interval_label: "5m",  nyse_hours_only: false  },
+    // 15-minute slots
+    SeriesSpec { id: "btc-15m", asset: "btc", display: "Bitcoin",  interval_secs: 900,   interval_label: "15m", nyse_hours_only: false  },
+    SeriesSpec { id: "eth-15m", asset: "eth", display: "Ethereum", interval_secs: 900,   interval_label: "15m", nyse_hours_only: false  },
+    SeriesSpec { id: "sol-15m", asset: "sol", display: "Solana",   interval_secs: 900,   interval_label: "15m", nyse_hours_only: false  },
+    SeriesSpec { id: "xrp-15m", asset: "xrp", display: "XRP",     interval_secs: 900,   interval_label: "15m", nyse_hours_only: false  },
     // 4-hour slots (24/7 — no NYSE hours restriction)
     SeriesSpec { id: "btc-4h",  asset: "btc", display: "Bitcoin",  interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
     SeriesSpec { id: "eth-4h",  asset: "eth", display: "Ethereum", interval_secs: 14400, interval_label: "4h",  nyse_hours_only: false },
@@ -145,6 +147,7 @@ pub fn is_in_trading_hours(unix_ts: u64) -> bool {
 
 /// Compute how many seconds remain in the current trading session,
 /// or 0 if currently outside trading hours.
+#[allow(dead_code)] // retained for any future NYSE-gated (equity) series
 pub fn seconds_remaining_in_session(unix_ts: u64) -> u64 {
     if !is_in_trading_hours(unix_ts) {
         return 0;
@@ -162,6 +165,7 @@ pub fn seconds_remaining_in_session(unix_ts: u64) -> u64 {
 }
 
 /// Compute seconds until the next NYSE trading session opens (0 if currently open).
+#[allow(dead_code)] // retained for any future NYSE-gated (equity) series
 pub fn seconds_until_trading_opens(from_unix: u64) -> u64 {
     if is_in_trading_hours(from_unix) {
         return 0;

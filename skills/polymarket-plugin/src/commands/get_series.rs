@@ -2,7 +2,8 @@ use anyhow::Result;
 use reqwest::Client;
 
 use crate::sanitize::sanitize_opt_owned;
-use crate::series::{self, seconds_remaining_in_session, seconds_until_trading_opens, SERIES};
+use crate::api;
+use crate::series::{self, SERIES};
 
 pub async fn run(series_id: Option<&str>, list: bool) -> Result<()> {
     match run_inner(series_id, list).await {
@@ -33,7 +34,7 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&serde_json::json!({
             "ok": true,
             "data": {
-                "note": "5m and 15m series: NYSE hours only. 4h series: 24/7.",
+                "note": "All crypto Up/Down series quote 24/7. Query a single series to see whether a slot is currently accepting orders.",
                 "supported_series": supported,
             }
         }))?);
@@ -54,10 +55,19 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
         .unwrap_or_default()
         .as_secs();
 
-    let (in_hours, current, next) = series::get_series_info(&client, spec).await?;
+    let (_in_hours, current, next) = series::get_series_info(&client, spec).await?;
+
+    // Live quotes come from the CLOB book, not Gamma's cached outcomePrices.
+    let (current_quotes, next_quotes) = tokio::join!(
+        slot_quotes(&client, &current),
+        slot_quotes(&client, &next),
+    );
 
     // Format a slot for JSON output
-    let format_slot = |slot: &series::SlotSummary, label: &str| -> serde_json::Value {
+    let format_slot = |slot: &series::SlotSummary,
+                       label: &str,
+                       quotes: (api::BookQuote, api::BookQuote)|
+     -> serde_json::Value {
         let start_iso = chrono::DateTime::from_timestamp(slot.start_unix as i64, 0)
             .map(|d| d.to_rfc3339())
             .unwrap_or_default();
@@ -84,8 +94,18 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
             let down_idx = outcomes.iter().position(|o| o.to_lowercase() == "down");
             let up_token_id = up_idx.and_then(|i| token_ids.get(i)).cloned();
             let down_token_id = down_idx.and_then(|i| token_ids.get(i)).cloned();
-            let up_price = up_idx.and_then(|i| prices.get(i)).and_then(|p| p.parse::<f64>().ok());
-            let down_price = down_idx.and_then(|i| prices.get(i)).and_then(|p| p.parse::<f64>().ok());
+            let snapshot_up = up_idx.and_then(|i| prices.get(i)).and_then(|p| p.parse::<f64>().ok());
+            let snapshot_down = down_idx.and_then(|i| prices.get(i)).and_then(|p| p.parse::<f64>().ok());
+
+            // Prefer the live book. Gamma's outcomePrices is a cached snapshot that
+            // has been observed minutes behind the book on a live 5-minute market,
+            // which makes it useless as a quote for a market resolving that fast.
+            let (up_quote, down_quote) = quotes;
+            let (up_price, down_price, price_source) =
+                match (up_quote.mid(), down_quote.mid()) {
+                    (Some(u), Some(d)) => (Some(u), Some(d), "clob_book"),
+                    _ => (snapshot_up, snapshot_down, "gamma_snapshot"),
+                };
 
             serde_json::json!({
                 "slot": label,
@@ -101,6 +121,15 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
                 "down_token_id": down_token_id,
                 "up_price": up_price,
                 "down_price": down_price,
+                "up_bid": up_quote.best_bid,
+                "up_ask": up_quote.best_ask,
+                "down_bid": down_quote.best_bid,
+                "down_ask": down_quote.best_ask,
+                "price_source": price_source,
+                "gamma_snapshot": {
+                    "up_price": snapshot_up,
+                    "down_price": snapshot_down,
+                },
                 "outcomes": outcome_map,
                 "liquidity": m.liquidity,
                 "volume_24hr": m.volume24hr,
@@ -120,8 +149,8 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
         }
     };
 
-    let current_json = format_slot(&current, "current");
-    let next_json = format_slot(&next, "next");
+    let current_json = format_slot(&current, "current", current_quotes);
+    let next_json = format_slot(&next, "next", next_quotes);
 
     // Build buy hint using the accepting slot
     let accepting_slug = if current.market.as_ref().map_or(false, |m| m.accepting_orders) {
@@ -140,28 +169,22 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
         spec.id
     ));
 
-    let (session_note, trading_hours_str, interval_str) = if !spec.nyse_hours_only {
-        (
-            "24/7 — market open".to_string(),
-            "24/7",
-            format!("{} hours", spec.interval_secs / 3600),
-        )
-    } else if in_hours {
-        let secs = seconds_remaining_in_session(now);
-        (
-            format!("in trading hours — {}m {}s remaining in session", secs / 60, secs % 60),
-            "9:30 AM – 4:00 PM ET, Monday–Friday",
-            format!("{} minutes", spec.interval_secs / 60),
-        )
+    // Report the session from what the market itself says, not from a hardcoded
+    // calendar. A NYSE-hours model mislabelled these markets as closed while they
+    // were quoting (04:41 ET, live two-sided book) and contradicted the very
+    // `accepting_orders` flag in the same response.
+    let interval_str = if spec.interval_secs >= 3600 {
+        format!("{} hours", spec.interval_secs / 3600)
     } else {
-        let secs = seconds_until_trading_opens(now);
-        let h = secs / 3600;
-        let m = (secs % 3600) / 60;
-        (
-            format!("outside trading hours — next session opens in ~{}h {}m", h, m),
-            "9:30 AM – 4:00 PM ET, Monday–Friday",
-            format!("{} minutes", spec.interval_secs / 60),
-        )
+        format!("{} minutes", spec.interval_secs / 60)
+    };
+    let trading_hours_str = "24/7";
+    let any_accepting = current.market.as_ref().map_or(false, |m| m.accepting_orders)
+        || next.market.as_ref().map_or(false, |m| m.accepting_orders);
+    let session_note = if any_accepting {
+        "open — a slot is accepting orders".to_string()
+    } else {
+        "no slot is currently accepting orders".to_string()
     };
 
     println!("{}", serde_json::to_string_pretty(&serde_json::json!({
@@ -179,4 +202,28 @@ async fn run_inner(series_id: Option<&str>, list: bool) -> Result<()> {
     }))?);
 
     Ok(())
+}
+
+/// Live CLOB book quotes for a slot's Up and Down tokens.
+///
+/// Pairs token ids with the outcome that names them (Gamma does not guarantee
+/// the order of `outcomes`). Returns empty quotes when the slot has no market,
+/// leaving the caller on the Gamma snapshot.
+async fn slot_quotes(
+    client: &Client,
+    slot: &series::SlotSummary,
+) -> (api::BookQuote, api::BookQuote) {
+    let market = match &slot.market {
+        Some(m) => m,
+        None => return (api::BookQuote::default(), api::BookQuote::default()),
+    };
+    let token_ids = market.token_ids();
+    let outcomes = market.outcome_list();
+    let idx_of = |name: &str| outcomes.iter().position(|o| o.eq_ignore_ascii_case(name));
+    let up_token = token_ids.get(idx_of("up").unwrap_or(0)).cloned().unwrap_or_default();
+    let down_token = token_ids.get(idx_of("down").unwrap_or(1)).cloned().unwrap_or_default();
+    tokio::join!(
+        api::get_book_quote(client, &up_token),
+        api::get_book_quote(client, &down_token),
+    )
 }
