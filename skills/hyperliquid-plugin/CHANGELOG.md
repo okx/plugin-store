@@ -1,5 +1,22 @@
 # Hyperliquid Plugin Changelog
 
+### v0.6.2 (2026-09-03) — order sizing priced at the order's price, JSON error contract
+
+- **fix**: $10 minimum notional (and `notional_usd`) now charged against the order's own price — limit price for limit orders, mid for market. Verified live: 0.11 HYPE @ limit 99 ($10.89 / $9.00 at mid) is accepted, so the old mid-based sizing over-sized limit orders (0.13 → $12.87 of real value).
+- **fix**: `get-gas` returned a bare stderr `Error:` with empty stdout and exit 1; now returns the standard `{"ok":false,"error_code":...}` JSON on stdout.
+- **fix**: `order-batch` `type` defaulted to `"limit"` (inconsistent with single `order`); now inferred from `price`. `size`/`price` accept numbers as well as strings.
+- **tests**: +10 (5 sizing unit tests, 4 batch-input unit tests, 1 error-contract integration test).
+
+
+### v0.6.1 (2026-09-03) — unified-account margin gate, honest tx confirmation
+
+- **fix**: `order` blocked fully funded orders on a unified account (gate read only `clearinghouseState.withdrawable`, which is `0.0` there) and suggested a `transfer --direction spot-to-perp` that HL rejects as "Action disabled when unified account is active". Gate now reads `userAbstraction` and counts spot USDC as margin under `unified` / `portfolio`.
+- **fix**: switched `ARBITRUM_RPC` off `arbitrum-one-rpc.publicnode.com` (refuses `eth_getTransactionReceipt` with `-32602`) to `https://arb1.arbitrum.io/rpc`.
+- **fix**: `wait_tx_mined` now returns `Result<bool, String>` and surfaces the real failure instead of a bare `false`; bails out on endpoint refusal rather than retrying to the deadline.
+- **fix**: `deposit`'s `on_chain_status` was a hardcoded `"0x1"`; it now reports the observed status.
+- **docs**: `deposit` — $5 bridge minimum and unified-account fund destination.
+
+
 ### v0.6.0 (2026-07-29) — Autotrade (copy-trading) authorization gate
 
 - **feat**: `order` / `close` accept an optional `--autotrade-job <jobId>`. When present, the binary calls `onchainos agent autotrade-grant-check --job-id <id> --venue hyperliquid --action <buy|sell> --amount <quote-notional> --format json` **before any signing or submission** — including before the separate leverage-update action that `--leverage` triggers. The order proceeds only when stdout parses as JSON with `ok:true`; the subcommand exits 0 even on denial, so the verdict is read from the `ok` field, never the exit status. Every other outcome — `ok:false` (reason passed through verbatim), non-zero exit, unparseable stdout, timeout (10s, child killed), unlaunchable binary, or an onchainos too old to know the subcommand — fail-closes with `{ok:false, error_code:"AUTOTRADE_GRANT_DENIED"}`. The plugin never reads the authorization grant itself; grant, per-trade limit and subscription state all live on the onchainos side, and the error output never carries grant-file contents or paths (the subprocess stderr is deliberately not echoed).

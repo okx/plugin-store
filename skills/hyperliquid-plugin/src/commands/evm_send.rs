@@ -222,9 +222,8 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
     eprintln!("  Waiting for HyperCore to process...");
     let tx1_hash = result1["data"]["txHash"].as_str().unwrap_or("");
     if !tx1_hash.is_empty() {
-        let confirmed = wait_tx_mined(tx1_hash, HYPER_EVM_RPC).await;
-        if !confirmed {
-            eprintln!("  Warning: step 1 tx confirmation timed out. Proceeding with step 2.");
+        if let Err(why) = wait_tx_mined(tx1_hash, HYPER_EVM_RPC).await {
+            eprintln!("  Warning: step 1 tx unconfirmed ({}). Proceeding with step 2.", why);
         }
     }
 
@@ -241,7 +240,7 @@ pub async fn run(args: EvmSendArgs) -> anyhow::Result<()> {
     let tx2_hash = result2["data"]["txHash"].as_str().unwrap_or("").to_owned();
     if !tx2_hash.is_empty() {
         eprint!("  Waiting for tx2 {} to confirm on HyperEVM...", tx2_hash);
-        let confirmed2 = wait_tx_mined(&tx2_hash, HYPER_EVM_RPC).await;
+        let confirmed2 = matches!(wait_tx_mined(&tx2_hash, HYPER_EVM_RPC).await, Ok(true));
         eprintln!(" {}", if confirmed2 { "confirmed" } else { "timed out (proceeding)" });
     }
 

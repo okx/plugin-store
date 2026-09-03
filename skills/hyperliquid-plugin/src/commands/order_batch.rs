@@ -35,18 +35,46 @@ pub struct OrderBatchArgs {
     pub strategy_id: Option<String>,
 }
 
+/// Accept a JSON number or string for numeric fields. Callers naturally write
+/// `"size": 0.01`, which a bare `String` field rejects with a serde type error.
+fn de_num_or_str<'de, D>(d: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    match serde_json::Value::deserialize(d)? {
+        serde_json::Value::String(s) => Ok(s),
+        serde_json::Value::Number(n) => Ok(n.to_string()),
+        other => Err(D::Error::custom(format!("expected a number or string, got {}", other))),
+    }
+}
+
+fn de_opt_num_or_str<'de, D>(d: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    match Option::<serde_json::Value>::deserialize(d)? {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::String(s)) => Ok(Some(s)),
+        Some(serde_json::Value::Number(n)) => Ok(Some(n.to_string())),
+        Some(other) => Err(D::Error::custom(format!("expected a number or string, got {}", other))),
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct OrderInput {
     coin: String,
     /// "buy" or "sell"
     side: String,
-    /// Size in base units, e.g. "0.001"
+    /// Size in base units, e.g. "0.001" or 0.001
+    #[serde(deserialize_with = "de_num_or_str")]
     size: String,
-    /// "market" or "limit"
-    #[serde(default = "default_order_type")]
-    r#type: String,
-    /// Limit price (required when type == "limit")
+    /// "market" or "limit". Omit to infer from `price`.
     #[serde(default)]
+    r#type: Option<String>,
+    /// Limit price (required when type == "limit")
+    #[serde(default, deserialize_with = "de_opt_num_or_str")]
     price: Option<String>,
     /// Time-in-force for limit orders: Gtc | Alo | Ioc. Default "Gtc".
     #[serde(default = "default_tif")]
@@ -59,7 +87,25 @@ struct OrderInput {
     reduce_only: bool,
 }
 
-fn default_order_type() -> String { "limit".to_string() }
+impl OrderInput {
+    /// Order type, inferring from `price` when the caller omitted it:
+    /// price present -> "limit", absent -> "market".
+    ///
+    /// This field used to default to "limit" unconditionally, so a batch entry
+    /// without `type` was rejected for a missing price while the single-order
+    /// command defaulted to "market" for the same input. Defaulting to "market"
+    /// instead would silently turn an intended limit order into an immediate
+    /// market fill, so infer from `price`: both existing usages keep working and
+    /// neither is reinterpreted.
+    fn resolved_type(&self) -> String {
+        match self.r#type.as_deref() {
+            Some(t) if !t.trim().is_empty() => t.to_string(),
+            _ if self.price.as_deref().unwrap_or("").trim().is_empty() => "market".to_string(),
+            _ => "limit".to_string(),
+        }
+    }
+}
+
 fn default_tif() -> String { "Gtc".to_string() }
 fn default_slippage() -> f64 { 5.0 }
 
@@ -130,10 +176,10 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
             ));
             return Ok(());
         }
-        let type_lc = o.r#type.to_lowercase();
+        let type_lc = o.resolved_type().to_lowercase();
         if type_lc != "market" && type_lc != "limit" {
             println!("{}", super::error_response(
-                &format!("orders[{}].type must be 'market' or 'limit' (got '{}')", i, o.r#type),
+                &format!("orders[{}].type must be 'market' or 'limit' (got '{}')", i, o.resolved_type()),
                 "INVALID_ARGUMENT", "Use type='market' or 'limit'.",
             ));
             return Ok(());
@@ -210,7 +256,7 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
         };
 
         let is_buy = o.side.to_lowercase() == "buy";
-        let type_lc = o.r#type.to_lowercase();
+        let type_lc = o.resolved_type().to_lowercase();
 
         let size_f: f64 = o.size.parse().unwrap();  // already validated
         let sz_factor = 10_f64.powi(sz_decimals as i32);
@@ -392,4 +438,58 @@ pub async fn run(args: OrderBatchArgs) -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod batch_input_tests {
+    use super::*;
+
+    fn parse(json: &str) -> Vec<OrderInput> {
+        serde_json::from_str(json).expect("orders array should parse")
+    }
+
+    #[test]
+    fn type_is_inferred_from_price_when_omitted() {
+        // `type` used to default to "limit" unconditionally, so this entry was
+        // rejected for a missing price while single-order `order` treated the
+        // same input as a market order.
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":"0.01"}]"#);
+        assert_eq!(os[0].resolved_type(), "market");
+
+        let os = parse(r#"[{"coin":"ETH","side":"sell","size":"0.01","price":"3000"}]"#);
+        assert_eq!(os[0].resolved_type(), "limit");
+    }
+
+    #[test]
+    fn explicit_type_beats_inference() {
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":"0.01","type":"limit","price":"3000"}]"#);
+        assert_eq!(os[0].resolved_type(), "limit");
+        // An explicit market order keeps its type even with a stray price.
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":"0.01","type":"market","price":"3000"}]"#);
+        assert_eq!(os[0].resolved_type(), "market");
+        // Blank type falls back to inference rather than failing validation.
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":"0.01","type":"  "}]"#);
+        assert_eq!(os[0].resolved_type(), "market");
+    }
+
+    #[test]
+    fn size_and_price_accept_numbers_as_well_as_strings() {
+        // `"size": 0.01` is the natural thing to write and used to fail with
+        // `invalid type: floating point`.
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":0.01,"price":3000}]"#);
+        assert_eq!(os[0].size, "0.01");
+        assert_eq!(os[0].price.as_deref(), Some("3000"));
+        assert_eq!(os[0].resolved_type(), "limit");
+
+        let os = parse(r#"[{"coin":"ETH","side":"buy","size":"0.01"}]"#);
+        assert_eq!(os[0].size, "0.01");
+        assert_eq!(os[0].price, None);
+    }
+
+    #[test]
+    fn a_non_numeric_size_is_still_rejected() {
+        assert!(serde_json::from_str::<Vec<OrderInput>>(
+            r#"[{"coin":"ETH","side":"buy","size":true}]"#
+        ).is_err());
+    }
 }

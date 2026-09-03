@@ -288,10 +288,23 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         .unwrap_or("")
         .to_owned();
 
+    // Report the status we actually observed. This field used to be the literal
+    // "0x1" regardless of outcome, so it could not be used as evidence that the
+    // deposit landed.
+    let mut on_chain_status = serde_json::Value::Null;
     if !deposit_tx_hash.is_empty() {
         eprint!("  Waiting for deposit tx {} to confirm on Arbitrum...", deposit_tx_hash);
-        let confirmed_on_chain = wait_tx_mined(&deposit_tx_hash, ARBITRUM_RPC).await;
-        eprintln!(" {}", if confirmed_on_chain { "confirmed" } else { "timed out (proceeding)" });
+        let wait = wait_tx_mined(&deposit_tx_hash, ARBITRUM_RPC).await;
+        eprintln!(" {}", match &wait {
+            Ok(true) => "confirmed".to_string(),
+            Ok(false) => "REVERTED on-chain".to_string(),
+            Err(why) => format!("unconfirmed ({}) — proceeding; check the tx on Arbiscan", why),
+        });
+        on_chain_status = match &wait {
+            Ok(true) => serde_json::json!("0x1"),
+            Ok(false) => serde_json::json!("0x0"),
+            Err(why) => serde_json::json!({ "unconfirmed": why }),
+        };
     }
 
     println!("{}", serde_json::json!({
@@ -302,7 +315,7 @@ pub async fn run(args: DepositArgs) -> anyhow::Result<()> {
         "usdc_units": usdc_units,
         "bridge": HL_BRIDGE_ARBITRUM,
         "deposit_tx_hash": deposit_tx_hash,
-        "on_chain_status": "0x1",
+        "on_chain_status": on_chain_status,
         "note": "USDC bridging from Arbitrum to Hyperliquid typically takes 2-5 minutes."
     }));
 

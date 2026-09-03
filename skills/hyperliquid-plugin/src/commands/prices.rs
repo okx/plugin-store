@@ -18,6 +18,11 @@ pub struct PricesArgs {
 
 pub async fn run(args: PricesArgs) -> anyhow::Result<()> {
     let url = info_url();
+    // Diagnostic on stderr (not part of the JSON contract): makes the resolved
+    // base URL observable, so the endpoint-override guard in
+    // tests/endpoint_overrides.rs can assert that test-injection seams never
+    // redirect production traffic.
+    eprintln!("[endpoint] {}", url);
 
     // Auto-extract DEX from --coin prefix if present (e.g. "xyz:CL" -> dex=xyz, base=CL)
     let (effective_dex, coin_filter) = match &args.coin {

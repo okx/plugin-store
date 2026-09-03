@@ -1,6 +1,13 @@
 //! Minimal JSON-RPC eth_call helpers for Arbitrum (read-only EVM queries).
 
-pub const ARBITRUM_RPC: &str = "https://arbitrum-one-rpc.publicnode.com";
+/// Arbitrum One RPC. Must serve `eth_getTransactionReceipt`.
+///
+/// The previous default (publicnode) answers that method with
+/// `-32602 Archive requests require a personal token` even for a tx in the
+/// latest block, while still serving `eth_call` / `eth_getBalance`. Every
+/// confirmation wait therefore burned its full timeout and reported a
+/// misleading "timed out" for a tx that had already succeeded.
+pub const ARBITRUM_RPC: &str = "https://arb1.arbitrum.io/rpc";
 
 /// Arbitrum RPC endpoint with a test-injectable override.
 ///
@@ -152,28 +159,93 @@ pub async fn eth_native_balance(address: &str, rpc: &str) -> anyhow::Result<u128
     Ok(wei)
 }
 
-/// Poll for transaction receipt until mined or timeout.
-/// Returns true if status == "0x1" (success), false if failed or timed out.
-pub async fn wait_tx_mined(tx_hash: &str, rpc: &str) -> bool {
-    for _ in 0..30 {
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+/// Poll for a transaction receipt until mined or timeout.
+///
+/// `Ok(true)`  — mined, status 0x1
+/// `Ok(false)` — mined, status 0x0 (reverted)
+/// `Err(why)`  — no receipt was ever observed; `why` says what actually went
+///               wrong so the caller does not have to report a bare "timed out"
+///               for a transaction that may well have succeeded.
+///
+/// Bails out immediately when the endpoint refuses the method outright (a
+/// JSON-RPC error, or a non-retryable HTTP status) instead of retrying until the
+/// deadline: retrying a refusal only wastes the whole timeout and hides why.
+pub async fn wait_tx_mined(tx_hash: &str, rpc: &str) -> Result<bool, String> {
+    const ATTEMPTS: u32 = 30;
+    const INTERVAL_SECS: u64 = 2;
+    let client = reqwest::Client::new();
+    let mut last_err: Option<String> = None;
+
+    for _ in 0..ATTEMPTS {
+        tokio::time::sleep(std::time::Duration::from_secs(INTERVAL_SECS)).await;
         let body = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "eth_getTransactionReceipt",
             "params": [tx_hash],
             "id": 1
         });
-        if let Ok(resp) = reqwest::Client::new().post(rpc).json(&body).send().await {
-            if let Ok(v) = resp.json::<serde_json::Value>().await {
-                let status = v["result"]["status"].as_str().unwrap_or("");
-                if status == "0x1" {
-                    return true;
-                }
-                if !status.is_empty() && status != "0x0" {
-                    // receipt exists but unknown status
-                }
+        let resp = match client.post(rpc).json(&body).send().await {
+            Ok(r) => r,
+            Err(e) => {
+                last_err = Some(format!("request failed: {}", e));
+                continue;
             }
+        };
+        let status_code = resp.status().as_u16();
+        let text = match resp.text().await {
+            Ok(t) => t,
+            Err(e) => {
+                last_err = Some(format!("body read failed: {}", e));
+                continue;
+            }
+        };
+        if !(200..300).contains(&status_code) {
+            let msg = format!("HTTP {}: {}", status_code, snippet(&text));
+            // 408/429/5xx may clear on retry; anything else is a refusal.
+            if status_code == 408 || status_code == 429 || (500..600).contains(&status_code) {
+                last_err = Some(msg);
+                continue;
+            }
+            return Err(format!(
+                "{} — this RPC will not serve eth_getTransactionReceipt", msg
+            ));
+        }
+        let v: serde_json::Value = match serde_json::from_str(&text) {
+            Ok(v) => v,
+            Err(_) => {
+                last_err = Some(format!("non-JSON response: {}", snippet(&text)));
+                continue;
+            }
+        };
+        if let Some(err) = v.get("error").filter(|e| !e.is_null()) {
+            return Err(format!(
+                "RPC error {}: {} — this RPC will not serve eth_getTransactionReceipt",
+                err["code"].as_i64().unwrap_or(0),
+                err["message"].as_str().unwrap_or("")
+            ));
+        }
+        match v["result"]["status"].as_str() {
+            Some("0x1") => return Ok(true),
+            Some("0x0") => return Ok(false),
+            _ => {} // null result: not mined yet
         }
     }
-    false
+    Err(match last_err {
+        Some(why) => format!(
+            "no receipt after {}s — last RPC failure: {}",
+            ATTEMPTS as u64 * INTERVAL_SECS, why
+        ),
+        None => format!(
+            "no receipt after {}s — the RPC kept reporting it as pending",
+            ATTEMPTS as u64 * INTERVAL_SECS
+        ),
+    })
+}
+
+fn snippet(body: &str) -> String {
+    let t = body.trim();
+    if t.is_empty() {
+        return "<empty body>".to_string();
+    }
+    t.chars().take(160).collect()
 }
