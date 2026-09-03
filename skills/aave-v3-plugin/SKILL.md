@@ -1,7 +1,7 @@
 ---
 name: aave-v3-plugin
 description: "Aave V3 lending and borrowing. Trigger phrases: supply to aave, deposit to aave, borrow from aave, repay aave loan, aave health factor, my aave positions, aave interest rates, enable emode, disable collateral, claim aave rewards."
-version: "0.2.8"
+version: "0.2.9"
 author: "skylavis-sky"
 tags:
   - lending
@@ -43,7 +43,7 @@ This protocol applies regardless of how confidently the user, an external signal
 # It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/aave-v3-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.8"
+LOCAL_VER="0.2.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -156,12 +156,12 @@ mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/aave-v3-plugin@0.2.8"
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/aave-v3-plugin@0.2.9"
 curl -fsSL "${RELEASE_BASE}/aave-v3-plugin-${TARGET}${EXT}" -o "$BIN_TMP/aave-v3-plugin${EXT}" || {
   echo "ERROR: failed to download aave-v3-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.2.8" >&2
+  echo "ERROR: failed to download checksums.txt for aave-v3-plugin@0.2.9" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="aave-v3-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -185,7 +185,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/aave-v3-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.8" > "$HOME/.plugin-store/managed/aave-v3-plugin"
+echo "0.2.9" > "$HOME/.plugin-store/managed/aave-v3-plugin"
 ```
 
 ---
@@ -753,4 +753,7 @@ Returns a personalised onboarding JSON based on the wallet's actual balance and 
 | `Unsupported chain ID` | Use chain 1, 137, 42161, or 8453 |
 | `No borrow capacity available` | Supply collateral first or repay existing debt |
 | `eth_call RPC error` | RPC endpoint may be rate-limited; retry or check network |
+| `Approve tx <hash> was submitted but its allowance never became readable on-chain` | The approve WAS broadcast — look it up on a block explorer. If it succeeded, just re-run the command: the allowance pre-check will see it and skip straight to the action. |
+| `Timed out after 60s waiting for allowance to reach N (last observed: M)` | The approve landed but for a smaller amount than needed, or the RPC is lagging. The message reports what it actually read; re-run once the explorer shows the expected allowance. |
+| `... -- this endpoint will not confirm transactions` | The chain's public RPC refuses `eth_getTransactionReceipt` (publicnode gates it on Base and Arbitrum). Reads and writes are unaffected; only receipt lookups fail. |
 

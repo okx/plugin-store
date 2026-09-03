@@ -88,9 +88,21 @@ pub async fn run(
                         tx
                     );
                 }
-                rpc::wait_for_tx(cfg.rpc_url, &tx)
-                    .await
-                    .context("WETH wrap tx did not confirm in time")?;
+                // Wait on the wrapped balance rather than the wrap receipt — see
+                // rpc::wait_for_allowance for why receipts are unreliable here.
+                rpc::wait_for_erc20_balance(
+                    &token_addr,
+                    &from_addr,
+                    amount_minimal,
+                    cfg.rpc_url,
+                )
+                .await
+                .with_context(|| {
+                    format!(
+                        "WETH wrap tx {} was submitted but the wrapped balance never became readable on-chain",
+                        tx
+                    )
+                })?;
                 wrap_tx = Some(tx);
             }
         }
@@ -158,7 +170,7 @@ pub async fn run(
         .unwrap_or("pending")
         .to_string();
 
-    // Wait for approve tx to be mined before submitting supply.
+    // Wait until the allowance is readable on-chain before submitting supply.
     // Bail early if approve was not broadcast — proceeding with a "pending" hash
     // would submit supply before allowance is on-chain, causing STF revert.
     if approve_tx == "pending" || !approve_tx.starts_with("0x") {
@@ -167,9 +179,20 @@ pub async fn run(
             approve_tx
         );
     }
-    rpc::wait_for_tx(cfg.rpc_url, &approve_tx)
-        .await
-        .context("Approve tx did not confirm in time")?;
+    rpc::wait_for_allowance(
+        &token_addr,
+        &from_addr,
+        &pool_addr,
+        amount_minimal,
+        cfg.rpc_url,
+    )
+    .await
+    .with_context(|| {
+        format!(
+            "Approve tx {} was submitted but its allowance never became readable on-chain",
+            approve_tx
+        )
+    })?;
 
     // Step 2: supply
     let supply_calldata = calldata::encode_supply(&token_addr, amount_minimal, &from_addr)
