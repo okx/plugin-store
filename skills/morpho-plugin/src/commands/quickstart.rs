@@ -68,7 +68,7 @@ pub async fn run(chain_id: u64, from: Option<&str>) -> anyhow::Result<()> {
     let vault_count = vault_res.as_ref()
         .map(|positions| {
             positions.iter().filter(|p| {
-                p.assets.as_deref().unwrap_or("0").parse::<u128>().unwrap_or(0) > 0
+                p.state.assets.as_deref().unwrap_or("0").parse::<u128>().unwrap_or(0) > 0
             }).count()
         })
         .unwrap_or(0);

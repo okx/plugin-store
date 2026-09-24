@@ -1,6 +1,6 @@
+use crate::config::GRAPHQL_URL;
 use anyhow::Context;
 use serde::{Deserialize, Deserializer};
-use crate::config::GRAPHQL_URL;
 
 /// Deserialize a field that may be a JSON number or string into Option<String>.
 fn deser_number_or_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
@@ -16,12 +16,8 @@ where
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MarketParams {
-    pub loan_token: String,
-    pub collateral_token: String,
-    pub oracle: String,
-    pub irm: String,
-    pub lltv: String,
+pub struct Oracle {
+    pub address: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -39,14 +35,13 @@ pub struct MarketState {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Market {
-    pub unique_key: String,
+    pub market_id: String,
     pub loan_asset: Option<Asset>,
     pub collateral_asset: Option<Asset>,
-    pub oracle_address: Option<String>,
+    pub oracle: Option<Oracle>,
     pub irm_address: Option<String>,
     pub lltv: Option<String>,
     pub state: Option<MarketState>,
-    pub params: Option<MarketParams>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,15 +94,24 @@ pub struct Vault {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VaultPosition {
-    pub vault: Vault,
+pub struct VaultPositionState {
     #[serde(deserialize_with = "deser_number_or_string", default)]
     pub assets: Option<String>,
     #[serde(deserialize_with = "deser_number_or_string", default)]
     pub shares: Option<String>,
 }
 
-async fn graphql_query(query: &str, variables: serde_json::Value) -> anyhow::Result<serde_json::Value> {
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultPosition {
+    pub vault: Vault,
+    pub state: VaultPositionState,
+}
+
+async fn graphql_query(
+    query: &str,
+    variables: serde_json::Value,
+) -> anyhow::Result<serde_json::Value> {
     let client = reqwest::Client::new();
     let body = serde_json::json!({ "query": query, "variables": variables });
     let resp: serde_json::Value = client
@@ -120,50 +124,66 @@ async fn graphql_query(query: &str, variables: serde_json::Value) -> anyhow::Res
         .await
         .context("GraphQL response parse failed")?;
 
-    if let Some(errors) = resp.get("errors") {
-        anyhow::bail!("GraphQL errors: {}", errors);
-    }
+    ensure_graphql_success(&resp)?;
     Ok(resp)
 }
 
-/// Fetch full market details (including MarketParams) for a given market uniqueKey.
-pub async fn get_market(unique_key: &str, chain_id: u64) -> anyhow::Result<Market> {
-    let query = r#"
-        query GetMarket($uniqueKey: String!, $chainId: Int!) {
-            marketByUniqueKey(uniqueKey: $uniqueKey, chainId: $chainId) {
-                uniqueKey
-                loanAsset { address symbol decimals }
-                collateralAsset { address symbol decimals }
-                oracleAddress
-                irmAddress
-                lltv
-                state {
-                    supplyApy
-                    borrowApy
-                    supplyAssets
-                    borrowAssets
-                    utilization
-                }
+fn ensure_graphql_success(resp: &serde_json::Value) -> anyhow::Result<()> {
+    if let Some(errors) = resp.get("errors").filter(|errors| !errors.is_null()) {
+        anyhow::bail!("GraphQL errors: {}", errors);
+    }
+    Ok(())
+}
+
+fn parse_market_response(resp: &serde_json::Value) -> anyhow::Result<Market> {
+    let value = resp["data"]["marketById"].clone();
+    if value.is_null() {
+        anyhow::bail!("Morpho market detail response did not contain data.marketById");
+    }
+    serde_json::from_value(value).context("Failed to parse market detail from GraphQL response")
+}
+
+const GET_MARKET_QUERY: &str = r#"
+    query GetMarket($marketId: String!, $chainId: Int!) {
+        marketById(marketId: $marketId, chainId: $chainId) {
+            marketId
+            loanAsset { address symbol decimals }
+            collateralAsset { address symbol decimals }
+            oracle { address }
+            irmAddress
+            lltv
+            state {
+                supplyApy
+                borrowApy
+                supplyAssets
+                borrowAssets
+                utilization
             }
         }
-    "#;
-    let vars = serde_json::json!({ "uniqueKey": unique_key, "chainId": chain_id });
-    let resp = graphql_query(query, vars).await?;
-    let market: Market = serde_json::from_value(resp["data"]["marketByUniqueKey"].clone())
-        .context("Failed to parse market from GraphQL response")?;
-    Ok(market)
+    }
+"#;
+
+/// Fetch full market details (including the fields required for MarketParams)
+/// for a given Morpho Blue market ID.
+pub async fn get_market(market_id: &str, chain_id: u64) -> anyhow::Result<Market> {
+    let vars = serde_json::json!({ "marketId": market_id, "chainId": chain_id });
+    let resp = graphql_query(GET_MARKET_QUERY, vars).await?;
+    parse_market_response(&resp)
 }
 
 /// Fetch all markets for a chain, optionally filtered by loan asset symbol.
-pub async fn list_markets(chain_id: u64, asset_filter: Option<&str>) -> anyhow::Result<Vec<Market>> {
+pub async fn list_markets(
+    chain_id: u64,
+    asset_filter: Option<&str>,
+) -> anyhow::Result<Vec<Market>> {
     let query = r#"
         query ListMarkets($chainId: Int!, $first: Int!) {
             markets(where: { chainId_in: [$chainId] }, first: $first) {
                 items {
-                    uniqueKey
+                    marketId
                     loanAsset { address symbol decimals }
                     collateralAsset { address symbol decimals }
-                    oracleAddress
+                    oracle { address }
                     irmAddress
                     lltv
                     state {
@@ -209,7 +229,7 @@ pub async fn get_user_positions(user: &str, chain_id: u64) -> anyhow::Result<Vec
             marketPositions(where: { userAddress_in: [$address], chainId_in: [$chainId] }) {
                 items {
                     market {
-                        uniqueKey
+                        marketId
                         loanAsset { address symbol decimals }
                         collateralAsset { address symbol decimals }
                         lltv
@@ -253,8 +273,10 @@ pub async fn get_vault_positions(user: &str, chain_id: u64) -> anyhow::Result<Ve
                         asset { address symbol decimals }
                         state { apy totalAssets }
                     }
-                    assets
-                    shares
+                    state {
+                        assets
+                        shares
+                    }
                 }
             }
         }
@@ -319,17 +341,43 @@ pub fn build_market_params(market: &Market) -> anyhow::Result<crate::calldata::M
     let loan_token = market
         .loan_asset
         .as_ref()
-        .map(|a| a.address.clone())
-        .unwrap_or_default();
+        .map(|a| a.address.trim())
+        .filter(|address| !address.is_empty())
+        .context("Market detail is missing loanAsset.address")?
+        .to_string();
     let collateral_token = market
         .collateral_asset
         .as_ref()
-        .map(|a| a.address.clone())
-        .unwrap_or_default();
-    let oracle = market.oracle_address.clone().unwrap_or_default();
-    let irm = market.irm_address.clone().unwrap_or_default();
-    let lltv_str = market.lltv.clone().unwrap_or_else(|| "0".to_string());
-    let lltv: u128 = lltv_str.parse().unwrap_or(0);
+        .map(|a| a.address.trim())
+        .filter(|address| !address.is_empty())
+        .context("Market detail is missing collateralAsset.address")?
+        .to_string();
+    let oracle = market
+        .oracle
+        .as_ref()
+        .map(|oracle| oracle.address.trim())
+        .filter(|address| !address.is_empty())
+        .context("Market detail is missing oracle.address")?
+        .to_string();
+    let irm = market
+        .irm_address
+        .as_deref()
+        .map(str::trim)
+        .filter(|address| !address.is_empty())
+        .context("Market detail is missing irmAddress")?
+        .to_string();
+    let lltv_str = market
+        .lltv
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .context("Market detail is missing lltv")?;
+    let lltv: u128 = lltv_str
+        .parse()
+        .with_context(|| format!("Market detail contains invalid lltv '{}'", lltv_str))?;
+    if lltv == 0 {
+        anyhow::bail!("Market detail contains zero lltv");
+    }
 
     Ok(crate::calldata::MarketParamsData {
         loan_token,
@@ -338,4 +386,94 @@ pub fn build_market_params(market: &Market) -> anyhow::Result<crate::calldata::M
         irm,
         lltv,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn current_market_fixture() -> serde_json::Value {
+        serde_json::json!({
+            "data": {
+                "marketById": {
+                    "marketId": "0xmarket",
+                    "loanAsset": { "address": "0xloan", "symbol": "USDC", "decimals": 6 },
+                    "collateralAsset": { "address": "0xcollateral", "symbol": "WETH", "decimals": 18 },
+                    "oracle": { "address": "0xoracle" },
+                    "irmAddress": "0xirm",
+                    "lltv": "860000000000000000",
+                    "state": null
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn current_market_schema_builds_complete_market_params() {
+        assert!(GET_MARKET_QUERY.contains("marketById(marketId:"));
+        assert!(GET_MARKET_QUERY.contains("oracle { address }"));
+        assert!(!GET_MARKET_QUERY.contains("marketByUniqueKey"));
+        let market = parse_market_response(&current_market_fixture()).unwrap();
+        assert_eq!(market.market_id, "0xmarket");
+
+        let params = build_market_params(&market).unwrap();
+        assert_eq!(params.loan_token, "0xloan");
+        assert_eq!(params.collateral_token, "0xcollateral");
+        assert_eq!(params.oracle, "0xoracle");
+        assert_eq!(params.irm, "0xirm");
+        assert_eq!(params.lltv, 860_000_000_000_000_000);
+    }
+
+    #[test]
+    fn market_detail_failure_is_distinct_from_a_position_response() {
+        let position_only = serde_json::json!({
+            "data": { "marketPositions": { "items": [] } }
+        });
+        let err = parse_market_response(&position_only).unwrap_err();
+        assert!(
+            err.to_string().contains("market detail") && err.to_string().contains("marketById"),
+            "got: {err:#}"
+        );
+    }
+
+    #[test]
+    fn missing_required_market_param_is_rejected() {
+        let mut fixture = current_market_fixture();
+        fixture["data"]["marketById"]["oracle"] = serde_json::Value::Null;
+        let market = parse_market_response(&fixture).unwrap();
+        let err = build_market_params(&market).unwrap_err();
+        assert!(err.to_string().contains("oracle.address"), "got: {err:#}");
+    }
+
+    #[test]
+    fn graphql_unknown_field_error_keeps_server_detail() {
+        let response = serde_json::json!({
+            "errors": [{
+                "message": "Cannot query field \"marketByUniqueKey\" on type \"Query\"."
+            }]
+        });
+        let rendered = ensure_graphql_success(&response).unwrap_err().to_string();
+        assert!(rendered.contains("marketByUniqueKey"));
+        assert!(rendered.contains("Cannot query field"));
+    }
+
+    #[test]
+    fn current_vault_position_schema_reads_balances_from_state() {
+        let fixture = serde_json::json!({
+            "vault": {
+                "address": "0xvault",
+                "name": "Test Vault",
+                "symbol": "tvUSDC",
+                "asset": { "address": "0xloan", "symbol": "USDC", "decimals": 6 },
+                "state": { "apy": 0.05, "totalAssets": "1000000" }
+            },
+            "state": {
+                "assets": "123456",
+                "shares": "120000"
+            }
+        });
+        let position: VaultPosition = serde_json::from_value(fixture).unwrap();
+        assert_eq!(position.state.assets.as_deref(), Some("123456"));
+        assert_eq!(position.state.shares.as_deref(), Some("120000"));
+    }
 }

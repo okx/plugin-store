@@ -39,7 +39,7 @@ pub async fn run(chain_id: u64, from: Option<&str>) -> anyhow::Result<()> {
         let collateral_raw: u128 = pos.state.collateral.as_deref().unwrap_or("0").parse().unwrap_or(0);
 
         positions_out.push(serde_json::json!({
-            "marketId": pos.market.unique_key,
+            "marketId": pos.market.market_id,
             "loanAsset": loan_symbol,
             "collateralAsset": collateral_symbol,
             "supplyAssets": calldata::format_amount(supply_assets_raw, loan_decimals),
@@ -52,7 +52,7 @@ pub async fn run(chain_id: u64, from: Option<&str>) -> anyhow::Result<()> {
     for pos in &vault_positions {
         let asset_symbol = pos.vault.asset.as_ref().map(|a| a.symbol.clone()).unwrap_or_default();
         let asset_decimals = pos.vault.asset.as_ref().and_then(|a| a.decimals).unwrap_or(18);
-        let assets_raw: u128 = pos.assets.as_deref().unwrap_or("0").parse().unwrap_or(0);
+        let assets_raw: u128 = pos.state.assets.as_deref().unwrap_or("0").parse().unwrap_or(0);
         let apy = pos.vault.state.as_ref().and_then(|s| s.apy).unwrap_or(0.0);
 
         vaults_out.push(serde_json::json!({
@@ -75,4 +75,3 @@ pub async fn run(chain_id: u64, from: Option<&str>) -> anyhow::Result<()> {
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
 }
-

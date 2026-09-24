@@ -24,7 +24,7 @@ pub async fn run(chain_id: u64, asset_filter: Option<&str>) -> anyhow::Result<()
         };
 
         let mut entry = serde_json::json!({
-            "marketId": m.unique_key,
+            "marketId": m.market_id,
             "loanAsset": loan_symbol,
             "collateralAsset": collateral_symbol,
             "lltv": format!("{:.1}%", lltv_val),

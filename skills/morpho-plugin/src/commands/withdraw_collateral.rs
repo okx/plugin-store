@@ -36,7 +36,7 @@ pub async fn run(
     if all {
         // Fetch collateral balance from GraphQL positions
         let positions = api::get_user_positions(owner, chain_id).await?;
-        let pos = positions.iter().find(|p| p.market.unique_key == market_id)
+        let pos = positions.iter().find(|p| p.market.market_id == market_id)
             .context("No position found for this market. Nothing to withdraw.")?;
 
         let collateral_str = pos.state.collateral.as_deref().unwrap_or("0");
