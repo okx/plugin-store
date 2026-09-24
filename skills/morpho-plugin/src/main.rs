@@ -6,6 +6,7 @@ mod onchainos;
 mod rpc;
 
 use clap::{Parser, Subcommand};
+use serde_json::Value;
 
 #[derive(Parser)]
 #[command(name = "morpho", version, about = "Supply, borrow and earn yield on Morpho — a permissionless lending protocol")]
@@ -292,11 +293,37 @@ async fn main() {
     };
 
     if let Err(e) = result {
-        let err_out = serde_json::json!({
-            "ok": false,
-            "error": e.to_string(),
-        });
-        eprintln!("{}", serde_json::to_string_pretty(&err_out).unwrap_or_else(|_| e.to_string()));
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&error_json(&e)).unwrap_or_else(|_| format!("{e:#}"))
+        );
         std::process::exit(1);
+    }
+}
+
+fn error_json(error: &anyhow::Error) -> Value {
+    serde_json::json!({
+        "ok": false,
+        "error": format!("{:#}", error),
+        "causes": error.chain().map(|cause| cause.to_string()).collect::<Vec<_>>(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::error_json;
+    use anyhow::Context;
+
+    #[test]
+    fn error_json_preserves_the_full_cause_chain() {
+        let error = Err::<(), _>(anyhow::anyhow!("Cannot query field marketByUniqueKey"))
+            .context("GraphQL errors")
+            .context("Failed to fetch market from Morpho API")
+            .unwrap_err();
+        let output = error_json(&error);
+        let message = output["error"].as_str().unwrap();
+        assert!(message.contains("Failed to fetch market"));
+        assert!(message.contains("marketByUniqueKey"));
+        assert_eq!(output["causes"].as_array().unwrap().len(), 3);
     }
 }

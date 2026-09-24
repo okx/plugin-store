@@ -1,3 +1,4 @@
+use anyhow::Context;
 use serde_json::Value;
 
 /// `--biz-type` / `--strategy`: attribution to the onchainos backend.
@@ -61,47 +62,78 @@ pub async fn wallet_contract_call(
     let output = tokio::process::Command::new("onchainos")
         .args(&args)
         .output()
-        .await?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(serde_json::from_str(&stdout)?)
+        .await
+        .context("Failed to spawn onchainos wallet contract-call")?;
+    parse_command_output(
+        output.status.success(),
+        output.status.code(),
+        &output.stdout,
+        &output.stderr,
+    )
 }
 
-/// Poll until a transaction is confirmed on-chain.
-/// Called after approve --force so the main op simulation sees the updated allowance.
-/// Uses 20 attempts × 2s = 40s for all chains (Base ~2s blocks still needs headroom for RPC lag).
-pub async fn wait_for_tx(tx_hash: &str, rpc_url: &str, _chain_id: u64) -> anyhow::Result<()> {
-    if tx_hash == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-        return Ok(()); // dry-run stub hash — nothing to wait for
+fn output_summary(bytes: &[u8]) -> String {
+    let text = String::from_utf8_lossy(bytes);
+    let trimmed = text.trim();
+    if trimmed.chars().count() <= 500 {
+        trimmed.to_string()
+    } else {
+        format!("{}…", trimmed.chars().take(500).collect::<String>())
     }
-    let max_attempts: u32 = 20; // 40s — same for all chains
-    let client = reqwest::Client::new();
-    for _ in 0..max_attempts {
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        let body = serde_json::json!({
-            "jsonrpc": "2.0", "method": "eth_getTransactionReceipt",
-            "params": [tx_hash], "id": 1
-        });
-        if let Ok(resp) = client.post(rpc_url).json(&body).send().await {
-            if let Ok(v) = resp.json::<serde_json::Value>().await {
-                if !v["result"].is_null() {
-                    return Ok(());
-                }
+}
+
+fn parse_command_output(
+    success: bool,
+    exit_code: Option<i32>,
+    stdout: &[u8],
+    stderr: &[u8],
+) -> anyhow::Result<Value> {
+    let stdout_summary = output_summary(stdout);
+    let stderr_summary = output_summary(stderr);
+    if !success {
+        anyhow::bail!(
+            "onchainos exited with status {}: stderr={} stdout={}",
+            exit_code.unwrap_or(-1),
+            if stderr_summary.is_empty() {
+                "<empty>"
+            } else {
+                &stderr_summary
+            },
+            if stdout_summary.is_empty() {
+                "<empty>"
+            } else {
+                &stdout_summary
+            },
+        );
+    }
+
+    let value: Value = serde_json::from_slice(stdout).with_context(|| {
+        format!(
+            "Failed to parse onchainos JSON output: {}",
+            if stdout_summary.is_empty() {
+                "<empty>"
+            } else {
+                &stdout_summary
             }
-        }
+        )
+    })?;
+    if value.get("ok").and_then(Value::as_bool) == Some(false) {
+        let message = value
+            .get("error")
+            .and_then(Value::as_str)
+            .or_else(|| value.get("message").and_then(Value::as_str))
+            .unwrap_or("unknown structured error");
+        anyhow::bail!("onchainos wallet contract-call failed: {}", message);
     }
-    anyhow::bail!(
-        "Approval tx {} not confirmed within {}s — network may be congested. \
-         Check the tx on-chain and retry the command once it confirms.",
-        tx_hash,
-        max_attempts * 2
-    )
+    Ok(value)
 }
 
 /// Extract txHash from wallet contract-call response, returning an error if the call failed.
 /// Response format: {"ok":true,"data":{"txHash":"0x..."}}
 pub fn extract_tx_hash_or_err(result: &Value) -> anyhow::Result<String> {
     if result["ok"].as_bool() != Some(true) {
-        let err_msg = result["error"].as_str()
+        let err_msg = result["error"]
+            .as_str()
             .or_else(|| result["message"].as_str())
             .unwrap_or("unknown error");
         return Err(anyhow::anyhow!("contract-call failed: {}", err_msg));
@@ -159,7 +191,57 @@ pub async fn resolve_wallet(from: Option<&str>, chain_id: u64) -> anyhow::Result
         .map_err(|e| anyhow::anyhow!("wallet addresses parse error: {}\nraw: {}", e, stdout))?;
     let addr = v["data"]["evm"][0]["address"]
         .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Could not determine active EVM wallet address. Ensure onchainos is logged in."))?
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Could not determine active EVM wallet address. Ensure onchainos is logged in."
+            )
+        })?
         .to_string();
     Ok(addr)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nonzero_subprocess_exit_preserves_stderr_and_stdout() {
+        let err = parse_command_output(
+            false,
+            Some(17),
+            br#"{"ok":false,"error":"wallet rejected"}"#,
+            b"signer unavailable",
+        )
+        .unwrap_err();
+        let message = format!("{err:#}");
+        assert!(message.contains("status 17"), "got: {message}");
+        assert!(message.contains("signer unavailable"), "got: {message}");
+        assert!(message.contains("wallet rejected"), "got: {message}");
+    }
+
+    #[test]
+    fn structured_failure_uses_downstream_error() {
+        let err = parse_command_output(
+            true,
+            Some(0),
+            br#"{"ok":false,"error":"simulation reverted: insufficient allowance"}"#,
+            b"",
+        )
+        .unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("simulation reverted: insufficient allowance"),
+            "got: {err:#}"
+        );
+    }
+
+    #[test]
+    fn invalid_json_keeps_raw_output() {
+        let err =
+            parse_command_output(true, Some(0), b"not-json from downstream", b"").unwrap_err();
+        assert!(
+            err.to_string().contains("not-json from downstream"),
+            "got: {err:#}"
+        );
+    }
 }

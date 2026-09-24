@@ -1524,7 +1524,7 @@
     },
     {
       "name": "morpho-plugin",
-      "version": "0.2.8",
+      "version": "0.2.9",
       "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol",
       "author": {
         "name": "GeoGu360",
@@ -1551,7 +1551,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "morpho-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/morpho-plugin@0.2.8"
+          "release_tag": "plugins/morpho-plugin@0.2.9"
         }
       },
       "build": {

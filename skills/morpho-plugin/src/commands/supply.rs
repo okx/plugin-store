@@ -1,9 +1,8 @@
-use anyhow::Context;
-use crate::api;
 use crate::calldata;
 use crate::config::get_chain_config;
 use crate::onchainos;
 use crate::rpc;
+use anyhow::Context;
 
 /// Supply assets to a MetaMorpho vault (ERC-4626 deposit).
 pub async fn run(
@@ -19,18 +18,20 @@ pub async fn run(
 
     // Resolve vault asset address and decimals
     let asset_addr = resolve_asset_address(asset, chain_id)?;
-    let decimals = rpc::erc20_decimals(&asset_addr, cfg.rpc_url).await.unwrap_or(18);
-    let symbol = rpc::erc20_symbol(&asset_addr, cfg.rpc_url).await.unwrap_or_else(|_| "TOKEN".to_string());
+    let decimals = rpc::erc20_decimals(&asset_addr, cfg.rpc_url)
+        .await
+        .unwrap_or(18);
+    let symbol = rpc::erc20_symbol(&asset_addr, cfg.rpc_url)
+        .await
+        .unwrap_or_else(|_| "TOKEN".to_string());
 
-    let raw_amount = calldata::parse_amount(amount, decimals)
-        .context("Failed to parse amount")?;
+    let raw_amount = calldata::parse_amount(amount, decimals).context("Failed to parse amount")?;
 
     // Resolve the caller's wallet address (used as receiver in deposit)
     let wallet_addr = onchainos::resolve_wallet(from, chain_id).await?;
 
     // Pre-flight: balance check and auto-wrap ETH→WETH if needed
-    let is_weth = weth_address(chain_id)
-        .map_or(false, |w| w.eq_ignore_ascii_case(&asset_addr));
+    let is_weth = weth_address(chain_id).map_or(false, |w| w.eq_ignore_ascii_case(&asset_addr));
     let mut wrap_tx: Option<String> = None;
 
     if !dry_run {
@@ -53,23 +54,43 @@ pub async fn run(
                         eth_bal as f64 / 1e18,
                     );
                 }
-                // Auto-wrap ETH → WETH using WETH.deposit()
-                eprintln!("[morpho] Wrapping {:.6} ETH → WETH (WETH balance insufficient)...",
-                    needed as f64 / 1e18);
-                let wrap_result = onchainos::wallet_contract_call(
-                    chain_id,
-                    &asset_addr,
-                    "0xd0e30db0", // WETH.deposit() selector
-                    Some(wallet_addr.as_str()),
-                    Some(needed),
-                    false,
-                    false,
-                ).await?;
-                let wrap_hash = onchainos::extract_tx_hash_or_err(&wrap_result)?;
-                eprintln!("[morpho] Wrap tx: {} — waiting for confirmation...", wrap_hash);
-                onchainos::wait_for_tx(&wrap_hash, cfg.rpc_url, chain_id).await
-                    .context("WETH wrap tx did not confirm in time")?;
-                wrap_tx = Some(wrap_hash);
+                if confirm {
+                    // Auto-wrap ETH → WETH using WETH.deposit(). Confirm through
+                    // balanceOf rather than a receipt API that public RPCs may gate.
+                    eprintln!(
+                        "[morpho] Wrapping {:.6} ETH → WETH (WETH balance insufficient)...",
+                        needed as f64 / 1e18
+                    );
+                    let wrap_result = onchainos::wallet_contract_call(
+                        chain_id,
+                        &asset_addr,
+                        "0xd0e30db0", // WETH.deposit() selector
+                        Some(wallet_addr.as_str()),
+                        Some(needed),
+                        false,
+                        false,
+                    )
+                    .await?;
+                    let wrap_hash = onchainos::extract_tx_hash_or_err(&wrap_result)?;
+                    eprintln!(
+                        "[morpho] Wrap tx: {} — waiting for WETH balance...",
+                        wrap_hash
+                    );
+                    rpc::wait_for_erc20_balance(
+                        &asset_addr,
+                        &wallet_addr,
+                        raw_amount,
+                        cfg.rpc_url,
+                    )
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "WETH wrap tx {} was submitted but the wrapped balance did not reach {}",
+                            wrap_hash, raw_amount
+                        )
+                    })?;
+                    wrap_tx = Some(wrap_hash);
+                }
             }
         } else {
             // Non-WETH: check ERC-20 balance before proceeding
@@ -116,21 +137,70 @@ pub async fn run(
 
     // Step 1: Approve vault to spend asset
     let step = if wrap_tx.is_some() { "2/3" } else { "1/2" };
-    eprintln!("[morpho] Step {}: Approving {} to spend {} {}...", step, vault, amount, symbol);
+    eprintln!(
+        "[morpho] Step {}: Approving {} to spend {} {}...",
+        step, vault, amount, symbol
+    );
     if dry_run {
         eprintln!("[morpho] [dry-run] Would approve: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, asset_addr, approve_calldata);
     }
-    let approve_result = onchainos::wallet_contract_call(chain_id, &asset_addr, &approve_calldata, Some(wallet_addr.as_str()), None, dry_run, true).await?;
-    let approve_tx = onchainos::extract_tx_hash_or_err(&approve_result)?;
-    onchainos::wait_for_tx(&approve_tx, cfg.rpc_url, chain_id).await?;
+    let mut approve_tx: Option<String> = None;
+    let current_allowance = if dry_run {
+        0
+    } else {
+        rpc::erc20_allowance(&asset_addr, &wallet_addr, vault, cfg.rpc_url)
+            .await
+            .context("Failed to read current vault allowance")?
+    };
+    if dry_run || rpc::allowance_needs_approval(current_allowance, raw_amount) {
+        let approve_result = onchainos::wallet_contract_call(
+            chain_id,
+            &asset_addr,
+            &approve_calldata,
+            Some(wallet_addr.as_str()),
+            None,
+            dry_run,
+            true,
+        )
+        .await?;
+        let tx_hash = onchainos::extract_tx_hash_or_err(&approve_result)?;
+        if !dry_run {
+            rpc::wait_for_allowance(&asset_addr, &wallet_addr, vault, raw_amount, cfg.rpc_url)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Approve tx {} was submitted but its allowance did not become usable",
+                        tx_hash
+                    )
+                })?;
+        }
+        approve_tx = Some(tx_hash);
+    } else {
+        eprintln!(
+            "[morpho] Existing allowance {} already covers {}; skipping approve.",
+            current_allowance, raw_amount
+        );
+    }
 
     // Step 2: Deposit to vault
     let step = if wrap_tx.is_some() { "3/3" } else { "2/2" };
-    eprintln!("[morpho] Step {}: Depositing {} {} into vault {}...", step, amount, symbol, vault);
+    eprintln!(
+        "[morpho] Step {}: Depositing {} {} into vault {}...",
+        step, amount, symbol, vault
+    );
     if dry_run {
         eprintln!("[morpho] [dry-run] Would deposit: onchainos wallet contract-call --chain {} --to {} --input-data {}", chain_id, vault, deposit_calldata);
     }
-    let deposit_result = onchainos::wallet_contract_call(chain_id, vault, &deposit_calldata, Some(wallet_addr.as_str()), None, dry_run, false).await?;
+    let deposit_result = onchainos::wallet_contract_call(
+        chain_id,
+        vault,
+        &deposit_calldata,
+        Some(wallet_addr.as_str()),
+        None,
+        dry_run,
+        false,
+    )
+    .await?;
     let deposit_tx = onchainos::extract_tx_hash_or_err(&deposit_result)?;
 
     let output = serde_json::json!({
@@ -154,10 +224,10 @@ pub async fn run(
 /// Return the WETH contract address for known chains, or None.
 fn weth_address(chain_id: u64) -> Option<&'static str> {
     match chain_id {
-        1     => Some("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
-        8453  => Some("0x4200000000000000000000000000000000000006"),
+        1 => Some("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"),
+        8453 => Some("0x4200000000000000000000000000000000000006"),
         42161 => Some("0x82af49447d8a07e3bd95bd0d56f35241523fbab1"), // Arbitrum
-        10    => Some("0x4200000000000000000000000000000000000006"), // Optimism
+        10 => Some("0x4200000000000000000000000000000000000006"),    // Optimism
         _ => None,
     }
 }
@@ -178,7 +248,11 @@ fn resolve_asset_address(asset: &str, chain_id: u64) -> anyhow::Result<String> {
         (8453, "USDC") => "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
         (8453, "CBETH") => "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
         (8453, "CBBTC") => "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
-        _ => anyhow::bail!("Unknown asset symbol '{}' on chain {}. Please provide the token address.", asset, chain_id),
+        _ => anyhow::bail!(
+            "Unknown asset symbol '{}' on chain {}. Please provide the token address.",
+            asset,
+            chain_id
+        ),
     };
     Ok(addr.to_string())
 }

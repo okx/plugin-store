@@ -1,7 +1,7 @@
 ---
 name: morpho-plugin
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.8"
+version: "0.2.9"
 author: "GeoGu360"
 tags:
   - lending
@@ -25,7 +25,7 @@ tags:
 # Check for skill updates (1-hour cache)
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/morpho-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.8"
+LOCAL_VER="0.2.9"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -137,12 +137,12 @@ mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.8"
+RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.9"
 curl -fsSL "${RELEASE_BASE}/morpho-plugin-${TARGET}${EXT}" -o "$BIN_TMP/morpho-plugin${EXT}" || {
   echo "ERROR: failed to download morpho-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for morpho-plugin@0.2.8" >&2
+  echo "ERROR: failed to download checksums.txt for morpho-plugin@0.2.9" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="morpho-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -166,7 +166,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/morpho-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.8" > "$HOME/.plugin-store/managed/morpho-plugin"
+echo "0.2.9" > "$HOME/.plugin-store/managed/morpho-plugin"
 ```
 
 ---
@@ -829,33 +829,11 @@ morpho-plugin --chain 8453 quickstart
 |-------|----------|
 | `Could not resolve active wallet` | Run `onchainos wallet login` |
 | `Unsupported chain ID` | Use chain 1 (Ethereum) or 8453 (Base) |
-| `Failed to fetch market from Morpho API` | Check market ID is a valid bytes32 hex; run `morpho markets` to list valid market IDs |
+| `Failed to fetch market from Morpho API` | Read the complete `error`/`causes` output. Check that the market ID is valid; run `morpho markets` to list valid market IDs. |
 | `No position found for this market` | No open position in the specified market |
 | `No claimable rewards found` | No unclaimed rewards for this address on this chain |
 | `eth_call RPC error` | RPC endpoint may be rate-limited; retry or check network |
 | `Unknown asset symbol` | Provide the ERC-20 contract address instead of symbol |
 | `execution reverted: transferFrom reverted` on supply/repay | The approve tx was not yet confirmed when the main operation ran. This should not occur in v0.2.0+ (the plugin waits for approve confirmation). If it does, retry after a few seconds. |
+| `Timed out ... waiting for allowance` | The approve was submitted but the required allowance was not yet readable. The error includes the last observed value and last RPC error; check the transaction and retry when state catches up. |
 | `--all` withdraw-collateral fails with `insufficient collateral` | The GraphQL API may lag behind on-chain state by a few blocks. Use `--amount` with the exact balance from `morpho positions` instead. |
-
----
-
-## Changelog
-
-### v0.2.6
-- **New: `quickstart` command** — Checks ETH, USDC, and WETH balances plus open positions in parallel. Detects 5 states (active/ready/needs_gas/needs_funds/no_funds) and returns `about`, `onboarding_steps` with wallet address, and `next_command` for guided onboarding.
-
-### v0.2.5
-- **Fix: resolved wallet address now always forwarded as `--from`** — All 7 write commands (`supply`, `withdraw`, `borrow`, `repay`, `supply-collateral`, `withdraw-collateral`, `claim-rewards`) now pass the resolved wallet address explicitly to onchainos. Previously, when `--from` was omitted, `resolve_wallet()` determined the address but the original `None` was forwarded, causing broadcast failures on Base (chain 8453) where onchainos cannot infer the signer without an explicit address.
-- **Fix: `wait_for_tx` timeout extended to 40s on all chains** — Base (~2s block time) was previously limited to 16s (8 attempts), causing false timeout errors when RPC lag delayed receipt confirmation. All chains now use 20 attempts × 2s = 40s.
-
-### v0.2.2
-- **Safety: `--confirm` gate for all write operations** — Supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, and claim-rewards now require `--confirm` to broadcast. Calling without `--confirm` prints a rich `preview` JSON (operation, asset, amount, pending transactions) and exits safely. This prevents accidental on-chain execution.
-- **APY anomaly warnings** — `morpho markets` and `morpho vaults` now emit a `"warning"` field on any entry where supply or borrow APY exceeds 500%. This surfaces expired Pendle PT positions (which inflate APY to thousands of percent after maturity) so agents and users are not misled.
-
-### v0.2.1
-- Initial public release
-- Supply, withdraw, borrow, repay, supply-collateral, withdraw-collateral, claim-rewards
-- MetaMorpho vault listing and Morpho Blue market listing with APY/utilization data
-- Positions view with Blue and vault balances
-- Ethereum Mainnet and Base support
-
