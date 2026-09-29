@@ -1016,8 +1016,8 @@
     },
     {
       "name": "hyperliquid-plugin",
-      "version": "0.6.2",
-      "description": "Trade perpetuals and spot on Hyperliquid, stake HYPE tokens for rewards (v0.6.2)",
+      "version": "0.6.3",
+      "description": "Trade perpetuals and spot on Hyperliquid, stake HYPE tokens for rewards (v0.6.3)",
       "author": {
         "name": "GeoGu360",
         "github": "GeoGu360"
@@ -1030,7 +1030,7 @@
         "hyperliquid",
         "derivatives"
       ],
-      "modify_date": "1788437539",
+      "modify_date": "1790655150",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -1041,7 +1041,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "hyperliquid-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/hyperliquid-plugin@0.6.2"
+          "release_tag": "plugins/hyperliquid-plugin@0.6.3"
         }
       },
       "build": {
@@ -1524,7 +1524,7 @@
     },
     {
       "name": "morpho-plugin",
-      "version": "0.2.9",
+      "version": "0.2.10",
       "description": "Supply, borrow and earn yield on Morpho — a permissionless lending protocol",
       "author": {
         "name": "GeoGu360",
@@ -1540,7 +1540,7 @@
         "morpho",
         "collateral"
       ],
-      "modify_date": "1779956246",
+      "modify_date": "1790654622",
       "type": "community-developer",
       "components": {
         "skill": {
@@ -1551,7 +1551,7 @@
           "repo": "okx/plugin-store",
           "asset_pattern": "morpho-plugin-{target}",
           "checksums_asset": "checksums.txt",
-          "release_tag": "plugins/morpho-plugin@0.2.9"
+          "release_tag": "plugins/morpho-plugin@0.2.10"
         }
       },
       "build": {

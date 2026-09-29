@@ -1,5 +1,12 @@
 # Hyperliquid Plugin Changelog
 
+### v0.6.3 (2026-09-29) — remove the Autotrade (copy-trading) exception from SKILL.md
+
+- **docs**: removed the `## Autotrade (copy-trading) exception` section. The autotrade path no longer goes through the OnchainOS CLI — the agent just follows the rules in SKILL.md to trade — so the exception, which was premised on `onchainos agent next-action` execution cards plus a binary-side `onchainos agent autotrade-grant-check`, no longer describes how autotrade works. The Live Trading Confirmation Protocol now applies to every trade with no carve-out: this removes an exemption and relaxes no gate.
+- **docs**: removed every reference that granted that exemption, so no dangling pointer to the removed section remains — the autotrade sentences in the `--size` precision paragraph (the `szDecimals` rounding and $10-minimum text is kept) and the `**Autotrade authorization (--autotrade-job):**` blocks under `order` and `close`.
+- **note**: documentation only, no behavior change in the binary. `--autotrade-job` and its fail-closed grant check remain implemented in the binary (`src/`, `tests/autotrade_grant.rs` unchanged); only the agent-facing instruction to use it is withdrawn.
+
+
 ### v0.6.2 (2026-09-03) — order sizing priced at the order's price, JSON error contract
 
 - **fix**: $10 minimum notional (and `notional_usd`) now charged against the order's own price — limit price for limit orders, mid for market. Verified live: 0.11 HYPE @ limit 99 ($10.89 / $9.00 at mid) is accepted, so the old mid-based sizing over-sized limit orders (0.13 → $12.87 of real value).
