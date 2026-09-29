@@ -1,7 +1,7 @@
 ---
 name: morpho-plugin
 description: "Supply, borrow and earn yield on Morpho — a permissionless lending protocol with $5B+ TVL. Trigger phrases: supply to morpho, deposit to morpho vault, borrow from morpho, repay morpho loan, morpho health factor, my morpho positions, morpho interest rates, claim morpho rewards, morpho markets, metamorpho vaults."
-version: "0.2.9"
+version: "0.2.10"
 author: "GeoGu360"
 tags:
   - lending
@@ -19,13 +19,15 @@ tags:
 
 ### Version check (auto-injected)
 
-> **AI Agent Instruction**: Run this version check before executing any commands from this skill. If an update is applied, re-read this SKILL.md before proceeding — the instructions may have changed.
+> **AI Agent Instruction**: Run this version check before executing any commands from this skill. The check is a read-only fetch from `raw.githubusercontent.com` — it does **not** install anything. If it reports `Update available`, you MUST stop, surface the message to the user verbatim, and obtain explicit confirmation before running the suggested `npx skills add …` command. Do not run the update silently. After a confirmed update completes, re-read this SKILL.md before proceeding.
 
 ```bash
-# Check for skill updates (1-hour cache)
+# Check for skill updates (1-hour cache).
+# Network scope: this block calls raw.githubusercontent.com for the version probe only.
+# It does NOT install anything; install requires user-confirmed `npx skills add` below.
 UPDATE_CACHE="$HOME/.plugin-store/update-cache/morpho-plugin"
 CACHE_MAX=3600
-LOCAL_VER="0.2.9"
+LOCAL_VER="0.2.10"
 DO_CHECK=true
 
 if [ -f "$UPDATE_CACHE" ]; then
@@ -45,9 +47,10 @@ fi
 
 REMOTE_VER=$(cat "$UPDATE_CACHE" 2>/dev/null || echo "$LOCAL_VER")
 if [ "$REMOTE_VER" != "$LOCAL_VER" ]; then
-  echo "Update available: morpho-plugin v$LOCAL_VER -> v$REMOTE_VER. Updating..."
-  npx skills add okx/plugin-store --skill morpho-plugin --yes --global 2>/dev/null || true
-  echo "Updated morpho-plugin to v$REMOTE_VER. Please re-read this SKILL.md."
+  echo "Update available: morpho-plugin v$LOCAL_VER -> v$REMOTE_VER."
+  echo "ACTION REQUIRED: ask the user to confirm before running:"
+  echo "  npx skills add okx/plugin-store --skill morpho-plugin --global"
+  echo "(This contacts the npm registry and github.com/okx/plugin-store and overwrites this skill. Do NOT auto-run.)"
 fi
 ```
 
@@ -136,13 +139,40 @@ esac
 mkdir -p ~/.local/bin
 
 # Download binary + checksums to a sandbox, verify SHA256 before installing.
+# Fail-closed: any mismatch / missing checksum entry refuses the install.
+# Matches the producer-side workflow at
+# .github/workflows/plugin-publish.yml which uploads `checksums.txt`
+# alongside the 9 platform binaries under each release tag.
 BIN_TMP=$(mktemp -d)
-RELEASE_BASE="https://github.com/okx/plugin-store/releases/download/plugins/morpho-plugin@0.2.9"
-curl -fsSL "${RELEASE_BASE}/morpho-plugin-${TARGET}${EXT}" -o "$BIN_TMP/morpho-plugin${EXT}" || {
+TAG="plugins/morpho-plugin@0.2.10"
+
+# Robust asset download. Prefer `gh release download` — it resolves the
+# asset via the GitHub API and follows the signed-redirect properly,
+# which avoids edge cases observed where curl on
+# `releases/download/<tag with slash>/<file>` 404s under some
+# proxy / curl-version combinations. Falls back to raw curl if gh is
+# not installed.
+_pluginstore_dl() {
+  local fname="$1" dest="$2"
+  if command -v gh >/dev/null 2>&1; then
+    local stage; stage=$(mktemp -d)
+    if gh release download "$TAG" --repo okx/plugin-store \
+         --pattern "$fname" --dir "$stage" --clobber >/dev/null 2>&1 \
+       && [ -f "$stage/$fname" ]; then
+      mv "$stage/$fname" "$dest" && rm -rf "$stage" && return 0
+    fi
+    rm -rf "$stage"
+  fi
+  curl -fsSL \
+    "https://github.com/okx/plugin-store/releases/download/$TAG/$fname" \
+    -o "$dest"
+}
+
+_pluginstore_dl "morpho-plugin-${TARGET}${EXT}" "$BIN_TMP/morpho-plugin${EXT}" || {
   echo "ERROR: failed to download morpho-plugin-${TARGET}${EXT}" >&2
   rm -rf "$BIN_TMP"; exit 1; }
-curl -fsSL "${RELEASE_BASE}/checksums.txt" -o "$BIN_TMP/checksums.txt" || {
-  echo "ERROR: failed to download checksums.txt for morpho-plugin@0.2.9" >&2
+_pluginstore_dl "checksums.txt" "$BIN_TMP/checksums.txt" || {
+  echo "ERROR: failed to download checksums.txt for morpho-plugin@0.2.10" >&2
   rm -rf "$BIN_TMP"; exit 1; }
 
 EXPECTED=$(awk -v b="morpho-plugin-${TARGET}${EXT}" '$2 == b {print $1; exit}' "$BIN_TMP/checksums.txt")
@@ -166,7 +196,7 @@ ln -sf "$LAUNCHER" ~/.local/bin/morpho-plugin
 
 # Register version
 mkdir -p "$HOME/.plugin-store/managed"
-echo "0.2.9" > "$HOME/.plugin-store/managed/morpho-plugin"
+echo "0.2.10" > "$HOME/.plugin-store/managed/morpho-plugin"
 ```
 
 ---
