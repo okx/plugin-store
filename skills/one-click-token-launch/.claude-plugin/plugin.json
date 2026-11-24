@@ -1,0 +1,21 @@
+{
+  "name": "one-click-token-launch",
+  "description": "One-click multi-launchpad token creation with bundled buy, IPFS metadata, MEV protection across 6 launchpads on Solana and BSC",
+  "version": "1.0.0",
+  "author": {
+    "name": "victorlee",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "solana",
+    "bsc",
+    "token-launch",
+    "meme-coin",
+    "pump.fun",
+    "launchpad",
+    "onchainos",
+    "one-click-token-launch"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

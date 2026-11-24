@@ -1,0 +1,28 @@
+[package]
+name = "meteora-plugin"
+version = "0.3.9"
+edition = "2021"
+
+[[bin]]
+name = "meteora-plugin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+bincode = "1"
+bs58 = "0.5"
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+solana-pubkey = { version = "2", features = ["curve25519"] }
+solana-hash = { version = "2", features = ["serde"] }
+solana-instruction = { version = "2", features = ["serde", "bincode"] }
+solana-message = { version = "2", features = ["serde", "bincode"] }
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

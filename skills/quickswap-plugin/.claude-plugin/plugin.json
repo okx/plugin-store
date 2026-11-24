@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "quickswap-plugin",
+  "version": "0.1.2",
+  "description": "Swap tokens and provide concentrated liquidity on QuickSwap V3 CLMM on Polygon",
+  "binary": "quickswap"
+}

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Structure Dashboard — __TOKEN__</title>
+<style>
+  :root {
+    --bg: #0a0e14; --surface: #12171f; --surface2: #1a2030;
+    --border: #252d3a; --text: #e0e6ed; --muted: #6b7a8d;
+    --green: #00e676; --red: #ff5252; --yellow: #ffd740;
+    --blue: #448aff; --purple: #b388ff; --cyan: #18ffff;
+    --orange: #ff9100;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; }
+
+  .header { padding: 20px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); }
+  .header .token { font-size: 24px; font-weight: 800; }
+  .header .price { font-size: 20px; font-weight: 600; margin-left: 8px; }
+  .header .change { font-size: 14px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+  .header .change.up { background: rgba(0,230,118,0.15); color: var(--green); }
+  .header .change.down { background: rgba(255,82,82,0.15); color: var(--red); }
+  .header .vol-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(179,136,255,0.15); color: var(--purple); }
+  .header .timestamp { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 0 24px 16px; }
+  @media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .panel-title.deriv { color: var(--blue); }
+  .panel-title.vol { color: var(--purple); }
+  .panel-title.struct { color: var(--purple); }
+  .panel-title.macro { color: var(--yellow); }
+  .panel-title.liq { color: var(--orange); }
+  .panel-title.chain { color: var(--cyan); }
+  .panel-title.gamma { color: var(--green); }
+  .panel-title.skew-title { color: var(--red); }
+
+  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { color: var(--muted); }
+  .metric-value { font-weight: 600; }
+  .metric-value.positive { color: var(--green); }
+  .metric-value.negative { color: var(--red); }
+  .metric-value.neutral { color: var(--yellow); }
+
+  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; margin-left: 6px; }
+  .tag.green { background: rgba(0,230,118,0.15); color: var(--green); }
+  .tag.red { background: rgba(255,82,82,0.15); color: var(--red); }
+  .tag.yellow { background: rgba(255,215,64,0.15); color: var(--yellow); }
+  .tag.blue { background: rgba(68,138,255,0.15); color: var(--blue); }
+
+  .gauge { width: 100%; height: 8px; background: var(--surface2); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .gauge-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+
+  .sentiment-gauge { text-align: center; padding: 16px 0; }
+  .sentiment-gauge .value { font-size: 48px; font-weight: 800; }
+  .sentiment-gauge .label { font-size: 14px; margin-top: 4px; }
+
+  .funding-spark { display: flex; gap: 2px; align-items: flex-end; height: 40px; margin-top: 8px; }
+  .funding-bar { flex: 1; min-width: 6px; border-radius: 2px 2px 0 0; transition: height 0.3s; }
+
+  .liq-bar-wrap { display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .liq-bar-long { background: var(--red); height: 100%; }
+  .liq-bar-short { background: var(--green); height: 100%; }
+
+  .gamma-chart { display: flex; align-items: flex-end; gap: 1px; height: 60px; margin-top: 8px; }
+  .gamma-col { flex: 1; min-width: 4px; border-radius: 2px 2px 0 0; position: relative; }
+  .gamma-col .gamma-tip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; white-space: nowrap; background: var(--surface2); padding: 2px 4px; border-radius: 3px; }
+  .gamma-col:hover .gamma-tip { display: block; }
+  .mvrv-zone { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; margin-top: 4px; }
+  .skew-meter { width: 100%; height: 6px; background: linear-gradient(to right, var(--green), var(--yellow), var(--red)); border-radius: 3px; margin-top: 8px; position: relative; }
+  .skew-needle { position: absolute; top: -4px; width: 3px; height: 14px; background: white; border-radius: 2px; transform: translateX(-50%); }
+
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; padding: 0 24px 24px; }
+  .status-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.warn { background: var(--yellow); }
+  .status-dot.fail { background: var(--red); }
+
+  .disclaimer { padding: 12px 24px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="token" id="token-symbol">__TOKEN__</span>
+  <span class="price" id="price">$—</span>
+  <span class="change" id="price-change">—%</span>
+  <span class="vol-tag" id="vol-tag"></span>
+  <span class="timestamp" id="timestamp">—</span>
+</div>
+
+<div class="grid">
+  <!-- Derivatives Panel -->
+  <div class="panel">
+    <div class="panel-title deriv">Derivatives Positioning</div>
+    <div class="metric-row">
+      <span class="metric-label">Funding Rate (8h)</span>
+      <span class="metric-value" id="funding-rate">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Funding Annualized</span>
+      <span class="metric-value" id="funding-annual">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Funding Trend (48h)</span>
+      <span class="metric-value" id="funding-trend">—</span>
+    </div>
+    <div id="funding-spark-container" style="display:none;">
+      <div style="font-size:10px;color:var(--muted);margin-top:8px;">Last 6 periods</div>
+      <div class="funding-spark" id="funding-spark"></div>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Open Interest</span>
+      <span class="metric-value" id="open-interest">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">OI Change (24h)</span>
+      <span class="metric-value" id="oi-delta">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Futures Basis</span>
+      <span class="metric-value" id="basis">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Funding Divergence (OKX vs BN)</span>
+      <span class="metric-value" id="funding-div">—</span>
+    </div>
+  </div>
+
+  <!-- Market Structure Panel -->
+  <div class="panel">
+    <div class="panel-title struct">Market Structure</div>
+    <div class="metric-row">
+      <span class="metric-label">Long/Short Ratio</span>
+      <span class="metric-value" id="long-short">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Top Trader Long %</span>
+      <span class="metric-value" id="top-long">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Global Long %</span>
+      <span class="metric-value" id="global-long">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Taker Buy/Sell Ratio</span>
+      <span class="metric-value" id="taker-ratio">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">24h Volume</span>
+      <span class="metric-value" id="volume-24h">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">24h Range</span>
+      <span class="metric-value" id="high-low">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Options Put/Call</span>
+      <span class="metric-value" id="put-call">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Max Pain</span>
+      <span class="metric-value" id="max-pain">—</span>
+    </div>
+  </div>
+
+  <!-- Macro Panel -->
+  <div class="panel">
+    <div class="panel-title macro">Macro Sentiment</div>
+    <div class="sentiment-gauge">
+      <div class="value" id="fng-value">—</div>
+      <div class="label" id="fng-label">Fear & Greed</div>
+      <div class="gauge"><div class="gauge-fill" id="fng-gauge" style="width:50%;background:var(--yellow);"></div></div>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">F&G Trend (7d)</span>
+      <span class="metric-value" id="fng-trend">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">BTC Dominance</span>
+      <span class="metric-value" id="btc-dom">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Total Crypto Market Cap</span>
+      <span class="metric-value" id="total-mcap">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Stablecoin Dry Powder</span>
+      <span class="metric-value" id="stable-mcap">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Market Cap Change 24h</span>
+      <span class="metric-value" id="mcap-change">—</span>
+    </div>
+  </div>
+
+  <!-- Volatility + Liquidations Panel -->
+  <div class="panel">
+    <div class="panel-title liq">Volatility & Liquidations</div>
+    <div class="metric-row">
+      <span class="metric-label">Realized Vol (24h ann.)</span>
+      <span class="metric-value" id="rvol">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Liquidation Pressure</span>
+      <span class="metric-value" id="liq-pressure">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">L/S Ratio (latest)</span>
+      <span class="metric-value" id="liq-ratio">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">L/S Swing (12h)</span>
+      <span class="metric-value" id="liq-swing">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Liq Bias</span>
+      <span class="metric-value" id="liq-bias">—</span>
+    </div>
+    <div id="liq-bar-container" style="display:none;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:10px;">
+        <span>Longs</span><span>Shorts</span>
+      </div>
+      <div class="liq-bar-wrap">
+        <div class="liq-bar-long" id="liq-bar-long" style="width:50%;"></div>
+        <div class="liq-bar-short" id="liq-bar-short" style="width:50%;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quant Panels: MVRV, Gamma Wall, Skew -->
+<div class="grid-3">
+  <!-- On-Chain: MVRV -->
+  <div class="panel">
+    <div class="panel-title chain">On-Chain (MVRV)</div>
+    <div style="text-align:center;padding:8px 0;">
+      <div style="font-size:36px;font-weight:800;" id="mvrv-value">—</div>
+      <div class="mvrv-zone" id="mvrv-zone" style="background:rgba(0,230,118,0.15);color:var(--green);">—</div>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Realized Price</span>
+      <span class="metric-value" id="mvrv-realized">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">30d Range</span>
+      <span class="metric-value" id="mvrv-range">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">30d Average</span>
+      <span class="metric-value" id="mvrv-avg">—</span>
+    </div>
+  </div>
+
+  <!-- Gamma Wall -->
+  <div class="panel">
+    <div class="panel-title gamma">Gamma Wall</div>
+    <div class="metric-row">
+      <span class="metric-label">Wall Strike</span>
+      <span class="metric-value" id="gamma-strike" style="font-size:16px;">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Wall Type</span>
+      <span class="metric-value" id="gamma-type">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Exposure</span>
+      <span class="metric-value" id="gamma-exposure">—</span>
+    </div>
+    <div id="gamma-chart-container" style="display:none;">
+      <div style="font-size:10px;color:var(--muted);margin-top:10px;">Top Strikes by Gamma Exposure</div>
+      <div class="gamma-chart" id="gamma-chart"></div>
+    </div>
+  </div>
+
+  <!-- Options Skew -->
+  <div class="panel">
+    <div class="panel-title skew-title">25-Delta Skew</div>
+    <div style="text-align:center;padding:8px 0;">
+      <div style="font-size:28px;font-weight:800;" id="skew-value">—</div>
+      <div id="skew-signal" style="font-size:12px;margin-top:4px;">—</div>
+    </div>
+    <div id="skew-meter-container" style="display:none;">
+      <div class="skew-meter"><div class="skew-needle" id="skew-needle" style="left:50%;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px;">
+        <span>Bullish</span><span>Neutral</span><span>Bearish</span>
+      </div>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Put 25d IV</span>
+      <span class="metric-value" id="skew-put-iv">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Call 25d IV</span>
+      <span class="metric-value" id="skew-call-iv">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">ATM IV</span>
+      <span class="metric-value" id="skew-atm">—</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Butterfly</span>
+      <span class="metric-value" id="skew-butterfly">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- Data Source Status -->
+<div style="padding:8px 24px;"><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">Data Sources</span></div>
+<div class="status-grid" id="status-grid"></div>
+
+<div class="disclaimer">
+  Market structure data for informational purposes only. Not financial advice. Data may be delayed or incomplete. Always verify with primary sources.
+</div>
+
+<script>
+// DATA is injected as a safe JSON string and parsed (prevents XSS)
+const DATA = JSON.parse('__JSON_SAFE_PLACEHOLDER__');
+
+function fmt(n, decimals) { decimals = decimals ?? 2; return n != null ? n.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: decimals}) : '\u2014'; }
+function fmtPct(n) { return n != null ? (n >= 0 ? '+' : '') + fmt(n) + '%' : '\u2014'; }
+function fmtUSD(n) {
+  if (n == null) return '\u2014';
+  if (n >= 1e12) return '$' + fmt(n/1e12) + 'T';
+  if (n >= 1e9) return '$' + fmt(n/1e9) + 'B';
+  if (n >= 1e6) return '$' + fmt(n/1e6) + 'M';
+  if (n >= 1e3) return '$' + fmt(n/1e3) + 'K';
+  return '$' + fmt(n);
+}
+function colorClass(n) { return n > 0 ? 'positive' : n < 0 ? 'negative' : 'neutral'; }
+function trendTag(trend) {
+  const colors = {increasing:'red', decreasing:'green', stable:'blue', improving:'green', deteriorating:'red', flat:'yellow'};
+  return '<span class="tag ' + (colors[trend]||'yellow') + '">' + trend + '</span>';
+}
+
+function render() {
+  const token = Object.keys(DATA.tokens || {})[0] || '\u2014';
+  const td = (DATA.tokens || {})[token] || {};
+  const macro = DATA.macro || {};
+  const deriv = td.derivatives || {};
+  const mstruct = td.market_structure || {};
+
+  // Header
+  document.getElementById('token-symbol').textContent = token;
+  document.getElementById('timestamp').textContent = DATA.generated_at || '\u2014';
+
+  const ticker = mstruct.ticker_24h || {};
+  if (ticker.price) {
+    document.getElementById('price').textContent = '$' + fmt(ticker.price);
+    const el = document.getElementById('price-change');
+    el.textContent = fmtPct(ticker.price_change_pct);
+    el.className = 'change ' + (ticker.price_change_pct >= 0 ? 'up' : 'down');
+  }
+
+  // Realized vol in header tag
+  const rvol = mstruct.realized_vol || {};
+  if (rvol.realized_vol_annualized_pct != null) {
+    document.getElementById('vol-tag').textContent = 'RVol ' + fmt(rvol.realized_vol_annualized_pct, 1) + '%';
+  }
+
+  // ── Derivatives ──
+  const funding = deriv.funding || {};
+  if (funding.rate_pct != null) {
+    const el = document.getElementById('funding-rate');
+    el.textContent = funding.rate_pct.toFixed(4) + '%';
+    el.className = 'metric-value ' + colorClass(funding.rate_pct);
+  }
+  if (funding.rate_annualized_pct != null) {
+    const el = document.getElementById('funding-annual');
+    el.textContent = fmtPct(funding.rate_annualized_pct);
+    el.className = 'metric-value ' + colorClass(funding.rate_annualized_pct);
+  }
+
+  // Funding history trend
+  const fh = deriv.funding_history || {};
+  if (fh.trend) {
+    document.getElementById('funding-trend').innerHTML = fh.avg_rate_pct != null
+      ? 'Avg ' + fh.avg_rate_pct.toFixed(4) + '% ' + trendTag(fh.trend)
+      : trendTag(fh.trend);
+  }
+
+  // Funding sparkline
+  if (fh.rates && fh.rates.length > 0) {
+    const container = document.getElementById('funding-spark-container');
+    container.style.display = 'block';
+    const spark = document.getElementById('funding-spark');
+    const rates = fh.rates.slice().reverse(); // oldest first
+    const maxAbs = Math.max(...rates.map(Math.abs), 0.001);
+    spark.innerHTML = rates.map(r => {
+      const h = Math.max(4, Math.abs(r) / maxAbs * 36);
+      const c = r >= 0 ? 'var(--green)' : 'var(--red)';
+      return '<div class="funding-bar" style="height:' + h + 'px;background:' + c + ';"></div>';
+    }).join('');
+  }
+
+  // Open Interest
+  const oi = deriv.open_interest || {};
+  if (oi.oi) {
+    document.getElementById('open-interest').textContent = fmt(oi.oi, 0) + ' contracts';
+  }
+  if (oi.oi_currency) {
+    document.getElementById('open-interest').textContent += ' (' + fmt(oi.oi_currency, 2) + ' coin)';
+  }
+
+  // OI delta
+  const oih = deriv.oi_history || {};
+  if (oih.oi_delta_1d_pct != null) {
+    const el = document.getElementById('oi-delta');
+    el.textContent = fmtPct(oih.oi_delta_1d_pct);
+    el.className = 'metric-value ' + colorClass(oih.oi_delta_1d_pct);
+  }
+
+  // Basis
+  const basis = deriv.basis || {};
+  if (basis.basis_pct != null) {
+    const el = document.getElementById('basis');
+    el.textContent = basis.basis_pct.toFixed(4) + '% ' + (basis.interpretation || '');
+    el.className = 'metric-value ' + colorClass(basis.basis_pct);
+  }
+
+  // Funding divergence
+  const fdiv = deriv.funding_divergence || {};
+  if (fdiv.divergence_pct != null) {
+    const el = document.getElementById('funding-div');
+    el.innerHTML = fdiv.divergence_pct.toFixed(4) + '% ' + (fdiv.signal ? '<span class="tag blue">' + fdiv.signal + '</span>' : '');
+  }
+
+  // ── Market Structure ──
+  const ls = mstruct.long_short || {};
+  // OKX path: long_ratio / short_ratio
+  if (ls.long_ratio != null) {
+    document.getElementById('long-short').textContent = (ls.long_ratio * 100).toFixed(1) + '% L / ' + ((ls.short_ratio || (1 - ls.long_ratio)) * 100).toFixed(1) + '% S';
+    document.getElementById('long-short').className = 'metric-value ' + (ls.long_ratio > 0.5 ? 'positive' : 'negative');
+  }
+  // Binance fallback path
+  if (ls.top_long_ratio != null) {
+    document.getElementById('top-long').textContent = (ls.top_long_ratio * 100).toFixed(1) + '%';
+    if (!ls.long_ratio) {
+      document.getElementById('long-short').textContent = 'Top ' + (ls.top_long_ratio * 100).toFixed(1) + '% L';
+    }
+  }
+  if (ls.global_long_ratio != null) {
+    document.getElementById('global-long').textContent = (ls.global_long_ratio * 100).toFixed(1) + '%';
+  }
+
+  // Taker — from taker_volume object (separate from long_short)
+  const tv = mstruct.taker_volume || {};
+  if (tv.buy_sell_ratio != null) {
+    const el = document.getElementById('taker-ratio');
+    el.textContent = fmt(tv.buy_sell_ratio, 3);
+    el.className = 'metric-value ' + (tv.buy_sell_ratio > 1 ? 'positive' : tv.buy_sell_ratio < 1 ? 'negative' : 'neutral');
+  } else if (ls.taker_buy_sell_ratio != null) {
+    // Binance fallback bundles taker in long_short
+    const el = document.getElementById('taker-ratio');
+    el.textContent = fmt(ls.taker_buy_sell_ratio, 3);
+    el.className = 'metric-value ' + (ls.taker_buy_sell_ratio > 1 ? 'positive' : 'negative');
+  }
+
+  if (ticker.volume_24h_quote) document.getElementById('volume-24h').textContent = fmtUSD(ticker.volume_24h_quote);
+  if (ticker.high_24h && ticker.low_24h) document.getElementById('high-low').textContent = '$' + fmt(ticker.high_24h) + ' / $' + fmt(ticker.low_24h);
+
+  // Options
+  const opts = deriv.options || {};
+  if (opts.put_call_ratio != null) document.getElementById('put-call').textContent = fmt(opts.put_call_ratio, 3);
+  if (opts.max_pain != null) document.getElementById('max-pain').textContent = '$' + fmt(opts.max_pain, 0);
+
+  // ── Macro ──
+  const fng = macro.fear_greed || {};
+  if (fng.value != null) {
+    document.getElementById('fng-value').textContent = fng.value;
+    document.getElementById('fng-label').textContent = fng.classification || 'Fear & Greed';
+    const gauge = document.getElementById('fng-gauge');
+    gauge.style.width = fng.value + '%';
+    gauge.style.background = fng.value < 25 ? 'var(--red)' : fng.value < 50 ? 'var(--yellow)' : fng.value < 75 ? 'var(--green)' : 'var(--cyan)';
+  }
+  if (fng.trend_7d) {
+    document.getElementById('fng-trend').innerHTML = trendTag(fng.trend_7d);
+  }
+
+  const glob = macro.global || {};
+  if (glob.btc_dominance) document.getElementById('btc-dom').textContent = glob.btc_dominance + '%';
+  if (glob.total_market_cap_usd) document.getElementById('total-mcap').textContent = fmtUSD(glob.total_market_cap_usd);
+  if (glob.market_cap_change_24h_pct != null) {
+    const el = document.getElementById('mcap-change');
+    el.textContent = fmtPct(glob.market_cap_change_24h_pct);
+    el.className = 'metric-value ' + colorClass(glob.market_cap_change_24h_pct);
+  }
+  const stable = macro.stablecoins || {};
+  if (stable.total_stablecoin_mcap) document.getElementById('stable-mcap').textContent = fmtUSD(stable.total_stablecoin_mcap);
+
+  // ── Volatility & Liquidations ──
+  if (rvol.realized_vol_annualized_pct != null) {
+    document.getElementById('rvol').textContent = rvol.realized_vol_annualized_pct.toFixed(1) + '%';
+  }
+
+  const liq = mstruct.liquidations || {};
+  if (liq.pressure) {
+    const el = document.getElementById('liq-pressure');
+    const pColor = liq.pressure.startsWith('high') ? 'red' : liq.pressure.startsWith('moderate') ? 'yellow' : 'green';
+    el.innerHTML = '<span class="tag ' + pColor + '">' + liq.pressure.split('—')[0].trim() + '</span>';
+  }
+  if (liq.latest_ls_ratio != null) {
+    document.getElementById('liq-ratio').textContent = fmt(liq.latest_ls_ratio, 4) + ' (avg ' + fmt(liq.avg_ls_ratio_12h, 4) + ')';
+  }
+  if (liq.ratio_swing_12h != null) {
+    const el = document.getElementById('liq-swing');
+    el.textContent = fmt(liq.ratio_swing_12h, 4);
+    el.className = 'metric-value ' + (liq.ratio_swing_12h > 0.1 ? 'negative' : 'neutral');
+  }
+  if (liq.bias) {
+    const el = document.getElementById('liq-bias');
+    const biasColor = liq.bias.includes('longs') ? 'red' : liq.bias.includes('shorts') ? 'green' : 'yellow';
+    el.innerHTML = '<span class="tag ' + biasColor + '">' + liq.bias + '</span>';
+  }
+  if (liq.long_pct != null) {
+    const container = document.getElementById('liq-bar-container');
+    container.style.display = 'block';
+    document.getElementById('liq-bar-long').style.width = liq.long_pct + '%';
+    document.getElementById('liq-bar-short').style.width = (100 - liq.long_pct) + '%';
+  }
+
+  // ── On-Chain: MVRV ──
+  const onchain = td.on_chain || {};
+  const mvrv = onchain.mvrv || {};
+  if (mvrv.mvrv != null) {
+    document.getElementById('mvrv-value').textContent = mvrv.mvrv.toFixed(3);
+    const zoneEl = document.getElementById('mvrv-zone');
+    const zone = mvrv.zone || '';
+    zoneEl.textContent = zone;
+    if (zone.includes('overheated') || zone.includes('danger')) {
+      zoneEl.style.background = 'rgba(255,82,82,0.15)'; zoneEl.style.color = 'var(--red)';
+    } else if (zone.includes('undervalued') || zone.includes('accumulation')) {
+      zoneEl.style.background = 'rgba(0,230,118,0.15)'; zoneEl.style.color = 'var(--green)';
+    } else if (zone.includes('underwater')) {
+      zoneEl.style.background = 'rgba(68,138,255,0.15)'; zoneEl.style.color = 'var(--blue)';
+    } else {
+      zoneEl.style.background = 'rgba(255,215,64,0.15)'; zoneEl.style.color = 'var(--yellow)';
+    }
+  }
+  if (mvrv.realized_price != null) {
+    document.getElementById('mvrv-realized').textContent = '$' + fmt(mvrv.realized_price, 0);
+  }
+  if (mvrv.mvrv_30d_low != null && mvrv.mvrv_30d_high != null) {
+    document.getElementById('mvrv-range').textContent = mvrv.mvrv_30d_low.toFixed(3) + ' — ' + mvrv.mvrv_30d_high.toFixed(3);
+  }
+  if (mvrv.mvrv_30d_avg != null) {
+    document.getElementById('mvrv-avg').textContent = mvrv.mvrv_30d_avg.toFixed(3);
+  }
+
+  // ── Gamma Wall ──
+  const gw = deriv.gamma_wall || {};
+  if (gw.gamma_wall_strike != null) {
+    document.getElementById('gamma-strike').textContent = '$' + fmt(gw.gamma_wall_strike, 0);
+    document.getElementById('gamma-type').innerHTML = gw.wall_type ? '<span class="tag ' + (gw.wall_type.includes('support') ? 'green' : 'red') + '">' + gw.wall_type + '</span>' : '';
+    document.getElementById('gamma-exposure').textContent = fmt(gw.gamma_wall_exposure, 0);
+  }
+  if (gw.top_strikes && gw.top_strikes.length > 0) {
+    const container = document.getElementById('gamma-chart-container');
+    container.style.display = 'block';
+    const chart = document.getElementById('gamma-chart');
+    const maxGamma = Math.max(...gw.top_strikes.map(s => s.gamma));
+    chart.innerHTML = gw.top_strikes.map(s => {
+      const h = Math.max(6, (s.gamma / maxGamma) * 56);
+      const isWall = s.strike === gw.gamma_wall_strike;
+      const c = isWall ? 'var(--green)' : 'var(--blue)';
+      return '<div class="gamma-col" style="height:' + h + 'px;background:' + c + ';' + (isWall ? 'box-shadow:0 0 6px var(--green);' : '') + '">'
+        + '<span class="gamma-tip">$' + fmt(s.strike, 0) + ': ' + fmt(s.gamma, 0) + '</span></div>';
+    }).join('');
+  }
+
+  // ── Options Skew ──
+  const skew = deriv.skew || {};
+  if (skew.skew_25d != null) {
+    const el = document.getElementById('skew-value');
+    el.textContent = (skew.skew_25d >= 0 ? '+' : '') + skew.skew_25d.toFixed(2) + '%';
+    el.style.color = skew.skew_25d > 2 ? 'var(--red)' : skew.skew_25d < -2 ? 'var(--green)' : 'var(--yellow)';
+  }
+  if (skew.signal) {
+    const sigEl = document.getElementById('skew-signal');
+    const sigColor = skew.signal.includes('bearish') ? 'red' : skew.signal.includes('bullish') ? 'green' : 'yellow';
+    sigEl.innerHTML = '<span class="tag ' + sigColor + '">' + skew.signal + '</span>';
+  }
+  if (skew.skew_25d != null) {
+    document.getElementById('skew-meter-container').style.display = 'block';
+    // Map skew from [-15, +15] to [0%, 100%]
+    const pct = Math.min(100, Math.max(0, (skew.skew_25d + 15) / 30 * 100));
+    document.getElementById('skew-needle').style.left = pct + '%';
+  }
+  if (skew.put_25d_iv != null) document.getElementById('skew-put-iv').textContent = skew.put_25d_iv.toFixed(2) + '%';
+  if (skew.call_25d_iv != null) document.getElementById('skew-call-iv').textContent = skew.call_25d_iv.toFixed(2) + '%';
+  if (skew.atm_iv != null) document.getElementById('skew-atm').textContent = skew.atm_iv.toFixed(2) + '%';
+  if (skew.butterfly != null) document.getElementById('skew-butterfly').textContent = skew.butterfly.toFixed(2) + '%';
+
+  // ── Data Source Status ──
+  const sources = [
+    {name: 'OKX Spot',        ok: ticker.status === 'available'},
+    {name: 'OKX Funding',     ok: (deriv.funding || {}).source === 'okx'},
+    {name: 'OKX OI',          ok: (deriv.open_interest || {}).source === 'okx'},
+    {name: 'OKX Options',     ok: (deriv.options || {}).status === 'available'},
+    {name: 'OKX Taker',       ok: tv.status === 'available'},
+    {name: 'OKX Gamma Wall',  ok: gw.status === 'available'},
+    {name: 'OKX Skew',        ok: skew.status === 'available'},
+    {name: 'CoinMetrics MVRV', ok: mvrv.status === 'available'},
+    {name: 'Binance L/S',     ok: ls.source === 'binance_fallback'},
+    {name: 'Binance Liq',     ok: liq.status === 'available'},
+    {name: 'Fear & Greed',    ok: fng.status === 'available'},
+    {name: 'CoinGecko',       ok: glob.status === 'available'},
+    {name: 'DefiLlama',       ok: stable.status === 'available'},
+  ];
+  const sg = document.getElementById('status-grid');
+  sg.innerHTML = sources.map(s => {
+    const cls = s.ok === true ? 'ok' : s.ok === false ? 'fail' : 'warn';
+    return '<div class="status-item"><span class="status-dot ' + cls + '"></span>' + s.name + '</div>';
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>

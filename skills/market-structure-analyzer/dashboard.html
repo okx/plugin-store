@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Analyzer · Pro</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<script src="https://unpkg.com/lightweight-charts@4/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+/* ═══ OKX Sans Font ═══ */
+@font-face{font-display:swap;font-family:OKXSans;font-weight:200;src:url(https://static.okx.com/cdn/assets/okfe/libs/fonts/OKX_Sans/Thin.woff2) format("woff2")}
+@font-face{font-display:swap;font-family:OKXSans;font-weight:300;src:url(https://static.okx.com/cdn/assets/okfe/libs/fonts/OKX_Sans/Light.woff2) format("woff2")}
+@font-face{font-display:swap;font-family:OKXSans;font-weight:400;src:url(https://static.okx.com/cdn/assets/okfe/libs/fonts/OKX_Sans/Regular.woff2) format("woff2")}
+@font-face{font-display:swap;font-family:OKXSans;font-weight:500;src:url(https://static.okx.com/cdn/assets/okfe/libs/fonts/OKX_Sans/Medium.woff2) format("woff2")}
+@font-face{font-display:swap;font-family:OKXSans;font-weight:600;src:url(https://static.okx.com/cdn/assets/okfe/libs/fonts/OKX_Sans/Bold.woff2) format("woff2")}
+
+/* ═══ Reset ═══ */
+*{margin:0;padding:0;box-sizing:border-box;font-family:inherit;-webkit-tap-highlight-color:transparent}
+html,body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+input,select,textarea,button{background:transparent;border:none;outline:0;resize:none;-webkit-appearance:none}
+a{text-decoration:none;cursor:pointer}ul,ol{list-style:none}
+
+/* ═══ Design Tokens ═══ */
+:root {
+  --bg:#080c14;
+  --panel:rgba(255,255,255,0.04);--panel-2:rgba(255,255,255,0.06);
+  --panel-glass:rgba(255,255,255,0.045);--panel-glass-border:rgba(255,255,255,0.10);
+  --panel-glass-shine:rgba(255,255,255,0.12);
+  --hair:rgba(255,255,255,0.07);--hair-2:rgba(255,255,255,0.12);
+  --ink-1:#f0f2f5;--ink-2:#c4c8d0;--ink-3:#8a8f9c;--ink-4:#5a5f6b;
+  --lime:#bcff2f;--profit:#25a750;--profit-2:#1fd65c;
+  --loss:#f04872;--loss-2:#ff5d73;--amber:#ffb117;--violet:#8a91ff;--blue:#3077ff;
+  --cyan:#22d3ee;--teal:#14b8a6;
+  --glass-blur:20px;--glass-sat:1.3;
+  --font:'OKXSans','system-ui','Helvetica Neue','PingFang SC','Arial',sans-serif;
+}
+html,body{background:var(--bg);color:var(--ink-1);font-family:var(--font);font-feature-settings:"ss01","cv11";overflow-x:hidden}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.overline{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+
+/* ═══ Glass Panel ═══ */
+.panel{
+  background:var(--panel-glass);
+  border:1px solid var(--panel-glass-border);
+  border-radius:10px;
+  position:relative;
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.06),
+    0 4px 24px -4px rgba(0,0,0,0.4),
+    0 0 0 0.5px rgba(255,255,255,0.04);
+  overflow:hidden;
+}
+.panel::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,transparent 40%,transparent 60%,rgba(255,255,255,0.02) 100%);
+  transition:opacity 0.3s;
+}
+.panel:hover{
+  border-color:rgba(255,255,255,0.14);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.08),
+    0 6px 32px -4px rgba(0,0,0,0.5),
+    0 0 0 0.5px rgba(255,255,255,0.06);
+  transition:border-color 0.3s, box-shadow 0.3s;
+}
+
+.kv{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.05);font-size:12px}
+.kv:last-child{border-bottom:0}.kv .k{color:var(--ink-3)}.kv .v{color:var(--ink-1);font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:5px;font-size:10.5px;font-weight:600;letter-spacing:0.02em;backdrop-filter:blur(8px)}
+
+/* ═══ Gradient Mesh Background ═══ */
+.grid-bg{
+  background:
+    radial-gradient(ellipse 120% 80% at 15% 10%, rgba(20,50,100,0.55) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 70% at 85% 20%, rgba(15,60,80,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 100% at 50% 90%, rgba(30,20,70,0.40) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 70% 60%, rgba(10,50,60,0.30) 0%, transparent 50%),
+    var(--bg);
+  background-attachment:fixed;
+}
+.grid-bg::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.grid-bg::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:0.025;
+  mix-blend-mode:overlay;
+}
+
+/* ═══ Scrollbar ═══ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ═══ Animations ═══ */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--profit-2);box-shadow:0 0 8px rgba(37,167,80,0.9);animation:pulse 1.6s ease-in-out infinite}
+@keyframes flashUp{0%{background:rgba(37,167,80,0.28)}100%{background:transparent}}
+@keyframes flashDown{0%{background:rgba(240,72,114,0.30)}100%{background:transparent}}
+.flash-up{animation:flashUp 0.6s ease-out}.flash-down{animation:flashDown 0.6s ease-out}
+@keyframes scan{0%{transform:translateX(-8%);opacity:0}15%{opacity:0.85}85%{opacity:0.85}100%{transform:translateX(108%);opacity:0}}
+.scanline{position:absolute;top:0;bottom:0;width:2px;pointer-events:none;background:linear-gradient(180deg,transparent,var(--lime),transparent);filter:drop-shadow(0 0 6px var(--lime));animation:scan 6s linear infinite}
+@keyframes breathe{0%,100%{opacity:0.45}50%{opacity:1}}
+.card-live-dot{width:5px;height:5px;border-radius:50%;background:var(--profit-2);box-shadow:0 0 6px rgba(37,167,80,0.8);animation:breathe 2.4s ease-in-out infinite;display:inline-block}
+@keyframes blinkCursor{0%,100%{opacity:1}50%{opacity:0.3}}
+.cursor-blink{animation:blinkCursor 1.1s ease-in-out infinite}
+@keyframes wobble{0%,100%{transform:rotate(-0.4deg)}50%{transform:rotate(0.4deg)}}
+.wobble{transform-origin:center bottom;animation:wobble 3.2s ease-in-out infinite}
+@keyframes barBlink{0%,100%{opacity:1}50%{opacity:0.55}}
+.bar-live{animation:barBlink 2s ease-in-out infinite}
+@keyframes stripeMove{from{background-position:0 0}to{background-position:24px 0}}
+.stripes{background-image:repeating-linear-gradient(-45deg,rgba(255,255,255,0.08) 0 6px,transparent 6px 12px);animation:stripeMove 1s linear infinite}
+@keyframes fadeSlideIn{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeSlideIn 0.4s ease-out both}
+@keyframes tickUp{0%{transform:translateY(6px);opacity:0.5}100%{transform:translateY(0);opacity:1}}
+@keyframes tickDown{0%{transform:translateY(-6px);opacity:0.5}100%{transform:translateY(0);opacity:1}}
+.tick-up{animation:tickUp 0.3s ease-out}.tick-down{animation:tickDown 0.3s ease-out}
+.data-age{font-size:9px;color:var(--ink-4);letter-spacing:0.06em;font-family:var(--mono)}
+.data-age-stale{color:var(--amber)}
+
+/* ═══ Fetch Activity Indicators ═══ */
+@keyframes fetchBar{0%{left:-30%;width:30%}50%{left:40%;width:40%}100%{left:100%;width:30%}}
+.fetch-bar{position:fixed;top:0;left:0;right:0;height:2px;z-index:9998;pointer-events:none;overflow:hidden}
+.fetch-bar-inner{position:absolute;top:0;height:100%;border-radius:0 2px 2px 0;
+  background:linear-gradient(90deg,transparent,var(--lime),var(--cyan),var(--lime),transparent);
+  animation:fetchBar 1.4s ease-in-out infinite;
+  box-shadow:0 0 12px rgba(188,255,47,0.5),0 0 4px rgba(34,211,238,0.4)}
+
+@keyframes fetchPulse{0%,100%{opacity:1;box-shadow:0 0 8px rgba(37,167,80,0.9)}50%{opacity:0.6;box-shadow:0 0 14px rgba(188,255,47,0.9),0 0 4px rgba(34,211,238,0.6)}}
+.live-dot-fetching{animation:fetchPulse 0.6s ease-in-out infinite !important;background:var(--lime) !important}
+
+@keyframes cardShimmer{0%{left:-100%}100%{left:200%}}
+.card-shimmer{position:absolute;top:0;left:-100%;width:50%;height:100%;pointer-events:none;z-index:1;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),rgba(255,255,255,0.06),rgba(255,255,255,0.03),transparent);
+  animation:cardShimmer 1.2s ease-out forwards}
+
+@keyframes dotRipple{0%{transform:scale(1);opacity:1}100%{transform:scale(3.5);opacity:0}}
+.dot-ripple{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--profit-2);animation:dotRipple 0.8s ease-out forwards}
+</style>
+</head>
+<body class="grid-bg">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="env,react">
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS & FORMATTERS
+// ═══════════════════════════════════════════════════════════════════
+const PROFIT='#1fd65c',LOSS='#f04872',LIME='#bcff2f',AMBER='#ffb117',VIOLET='#8a91ff',BLUE='#3077ff',CYAN='#22d3ee',INK3='#8a8f9c',INK4='#5a5f6b',HAIR='rgba(255,255,255,0.07)',HAIR2='rgba(255,255,255,0.04)';
+
+const fmt = {
+  usd: (n,d=0) => n!=null ? '$'+n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—',
+  n: (n,d=0) => n!=null ? n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—',
+  pct: (n,d=2) => n!=null ? (n>=0?'+':'')+(n*100).toFixed(d)+'%' : '—',
+  pctR: (n,d=2) => n!=null ? n.toFixed(d)+'%' : '—',
+  signed: (n,d=2) => n!=null ? (n>=0?'+':'')+n.toFixed(d) : '—',
+  bps: (n) => n!=null ? (n*10000).toFixed(1)+' bps' : '—',
+  compact: (n) => {
+    if(n==null) return '—';
+    if(n>=1e12) return '$'+(n/1e12).toFixed(2)+'T';
+    if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'B';
+    if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+    if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+    return '$'+n.toFixed(2);
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// DATA HOOKS
+// ═══════════════════════════════════════════════════════════════════
+const DataContext = React.createContext(null);
+
+function DataProvider({ children }) {
+  const [state, setState] = React.useState(null);
+  const [candles, setCandles] = React.useState(null);
+  const [token, _setToken] = React.useState('BTC');
+  const [bar, _setBar] = React.useState('1H');
+  const [loading, setLoading] = React.useState(true);
+  const [feedCount, setFeedCount] = React.useState(0);
+  const [latency, setLatency] = React.useState(0);
+  const prevPrice = React.useRef(null);
+  const [flash, setFlash] = React.useState('');
+  const [ticker, setTicker] = React.useState(null);       // fast price ticker
+  const [stateAge, setStateAge] = React.useState(0);       // seconds since last state refresh
+  const [candleAge, setCandleAge] = React.useState(0);     // seconds since last candle refresh
+  const stateTs = React.useRef(0);
+  const candleTs = React.useRef(0);
+  const [fetchingTicker, setFetchingTicker] = React.useState(false);
+  const [fetchingState, setFetchingState] = React.useState(false);
+  const [fetchingCandles, setFetchingCandles] = React.useState(false);
+  const [stateShimmer, setStateShimmer] = React.useState(0);   // increment to trigger shimmer
+  const [candleShimmer, setCandleShimmer] = React.useState(0);
+
+  const setToken = React.useCallback((t) => {
+    _setToken(t);
+    fetch('/api/set?token=' + t);
+  }, []);
+
+  const setBar = React.useCallback((b) => {
+    _setBar(b);
+    fetch('/api/set?bar=' + b);
+  }, []);
+
+  // Fetch state
+  React.useEffect(() => {
+    let active = true;
+    const go = async () => {
+      const t0 = Date.now();
+      setFetchingState(true);
+      try {
+        const r = await fetch('/api/state?token=' + token);
+        const d = await r.json();
+        if (active) {
+          setState(d);
+          setLatency(Date.now() - t0);
+          const s = d.structure || {};
+          const m = d.macro || {};
+          let count = 0;
+          const check = (obj) => { if (obj && obj.status === 'available') count++; };
+          const deriv = s.derivatives || {};
+          const mstruct = s.market_structure || {};
+          check(deriv.funding); check(deriv.open_interest); check(deriv.options);
+          check(mstruct.taker_volume); check(mstruct.ticker_24h); check(mstruct.long_short);
+          check(mstruct.liquidations); check(deriv.gamma_wall); check(deriv.skew);
+          check((s.on_chain||{}).mvrv); check(m.fear_greed); check(m.global); check(m.stablecoins);
+          setFeedCount(count);
+          setLoading(false);
+          stateTs.current = Date.now();
+          setStateShimmer(v => v + 1);
+        }
+      } catch(e) { console.error('fetchState:', e); }
+      if (active) setFetchingState(false);
+    };
+    go();
+    const iv = setInterval(go, 60000);
+    return () => { active = false; clearInterval(iv); };
+  }, [token]);
+
+  // Fast ticker (every 3s)
+  React.useEffect(() => {
+    let active = true;
+    const go = async () => {
+      setFetchingTicker(true);
+      try {
+        const r = await fetch('/api/ticker?token=' + token);
+        const d = await r.json();
+        if (active && d.price != null) {
+          const prev = ticker;
+          setTicker(d);
+          if (prev && prev.price != null) {
+            if (d.price > prev.price) setFlash('flash-up');
+            else if (d.price < prev.price) setFlash('flash-down');
+            setTimeout(() => setFlash(''), 650);
+          }
+        }
+      } catch(e) {}
+      if (active) setFetchingTicker(false);
+    };
+    go();
+    const iv = setInterval(go, 3000);
+    return () => { active = false; clearInterval(iv); };
+  }, [token]);
+
+  // Fetch candles
+  React.useEffect(() => {
+    let active = true;
+    const go = async () => {
+      setFetchingCandles(true);
+      try {
+        const r = await fetch(`/api/candles?token=${token}&bar=${bar}`);
+        const d = await r.json();
+        if (active && !d.error) {
+          setCandles(d);
+          candleTs.current = Date.now();
+          setCandleShimmer(v => v + 1);
+          const last = d.candles && d.candles.length ? d.candles[d.candles.length-1].close : null;
+          if (last != null && prevPrice.current != null) {
+            if (last > prevPrice.current) setFlash('flash-up');
+            else if (last < prevPrice.current) setFlash('flash-down');
+          }
+          prevPrice.current = last;
+          setTimeout(() => setFlash(''), 650);
+        }
+      } catch(e) { console.error('fetchCandles:', e); }
+      if (active) setFetchingCandles(false);
+    };
+    go();
+    const iv = setInterval(go, 30000);
+    return () => { active = false; clearInterval(iv); };
+  }, [token, bar]);
+
+  // Age counter — ticks every second
+  React.useEffect(() => {
+    const iv = setInterval(() => {
+      if (stateTs.current) setStateAge(Math.floor((Date.now() - stateTs.current) / 1000));
+      if (candleTs.current) setCandleAge(Math.floor((Date.now() - candleTs.current) / 1000));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const fetching = fetchingTicker || fetchingState || fetchingCandles;
+
+  const value = React.useMemo(() => ({
+    state, candles, token, setToken, bar, setBar, loading, feedCount, latency, flash,
+    ticker, stateAge, candleAge,
+    fetching, fetchingTicker, fetchingState, fetchingCandles,
+    stateShimmer, candleShimmer,
+  }), [state, candles, token, setToken, bar, setBar, loading, feedCount, latency, flash,
+    ticker, stateAge, candleAge,
+    fetching, fetchingTicker, fetchingState, fetchingCandles,
+    stateShimmer, candleShimmer]);
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+}
+
+function useData() { return React.useContext(DataContext); }
+
+// ═══════════════════════════════════════════════════════════════════
+// SVG CHART PRIMITIVES
+// ═══════════════════════════════════════════════════════════════════
+
+function Sparkline({ points, width=140, height=32, color=LIME, fill=true }) {
+  if (!points || !points.length) return null;
+  const lo=Math.min(...points), hi=Math.max(...points), rng=hi-lo||1;
+  const stepX=width/(points.length-1);
+  const y=v=>height-((v-lo)/rng)*height;
+  const d=points.map((p,i)=>(i?'L':'M')+(i*stepX)+' '+y(p)).join(' ');
+  const area=d+` L ${width} ${height} L 0 ${height} Z`;
+  const id='spk'+Math.random().toString(36).slice(2,8);
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{display:'block'}}>
+      {fill && <>
+        <defs><linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35"/><stop offset="100%" stopColor={color} stopOpacity="0"/>
+        </linearGradient></defs>
+        <path d={area} fill={`url(#${id})`}/>
+      </>}
+      <path d={d} stroke={color} strokeWidth="1.4" fill="none"/>
+    </svg>
+  );
+}
+
+function FundingHistogram({ data, width=460, height=56 }) {
+  if (!data || !data.length) return null;
+  const W=width,H=height,max=Math.max(...data.map(d=>Math.abs(d)),0.001);
+  const bw=W/data.length, zero=H/2;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{display:'block'}}>
+      <line x1="0" x2={W} y1={zero} y2={zero} stroke={HAIR}/>
+      {data.map((d,i) => {
+        const h=(Math.abs(d)/max)*(H/2-2);
+        const up=d>=0;
+        return <rect key={i} x={i*bw+0.4} y={up?zero-h:zero} width={bw-0.8} height={h} fill={up?PROFIT:LOSS} opacity="0.85"/>;
+      })}
+    </svg>
+  );
+}
+
+function RegimeGauge({ score, width=200, height=120 }) {
+  const cx=width/2, cy=height-10, r=82;
+  const start=Math.PI, end=0;
+  const normalized = Math.max(-1, Math.min(1, score / 100));
+  const angle=start-(normalized+1)/2*(start-end);
+  const x=cx+Math.cos(angle)*r, y=cy-Math.sin(angle)*r;
+  const segs=60;
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height}>
+      {Array.from({length:segs},(_,i) => {
+        const a0=start-(i/segs)*(start-end);
+        const a1=start-((i+1)/segs)*(start-end);
+        const t=i/segs;
+        const col=t<0.4?LOSS:t<0.6?'#7d7d7d':PROFIT;
+        const x0=cx+Math.cos(a0)*r,y0=cy-Math.sin(a0)*r;
+        const x1=cx+Math.cos(a1)*r,y1=cy-Math.sin(a1)*r;
+        return <path key={i} d={`M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`} fill="none" stroke={col} strokeWidth="8" strokeLinecap="butt"/>;
+      })}
+      <line x1={cx} y1={cy} x2={x} y2={y} stroke="#fff" strokeWidth="2"/>
+      <circle cx={cx} cy={cy} r="5" fill="#fff"/>
+      <text x={cx} y={cy+18} fontSize="9" fill={INK3} textAnchor="middle" fontFamily="inherit">BEAR · NEUTRAL · BULL</text>
+    </svg>
+  );
+}
+
+function GreedGauge({ value }) {
+  const W=130,H=78,cx=W/2,cy=H-6,r=54;
+  const ang=Math.PI*(1-(value||0)/100);
+  const x=cx+Math.cos(ang)*r,y=cy-Math.sin(ang)*r;
+  const seg=(a0,a1,col)=>{
+    const x0=cx+Math.cos(a0)*r,y0=cy-Math.sin(a0)*r;
+    const x1=cx+Math.cos(a1)*r,y1=cy-Math.sin(a1)*r;
+    return <path d={`M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`} stroke={col} strokeWidth="7" fill="none"/>;
+  };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
+      {seg(Math.PI, Math.PI*0.75, '#f04872')}
+      {seg(Math.PI*0.75, Math.PI*0.5, '#ffb117')}
+      {seg(Math.PI*0.5, Math.PI*0.25, '#bcff2f')}
+      {seg(Math.PI*0.25, 0, '#25a750')}
+      <line x1={cx} y1={cy} x2={x} y2={y} stroke="#fff" strokeWidth="2"/>
+      <circle cx={cx} cy={cy} r="4" fill="#fff"/>
+    </svg>
+  );
+}
+
+function GammaChart({ strikes, wallStrike }) {
+  if (!strikes || !strikes.length) return null;
+  const max = Math.max(...strikes.map(s => s.gamma), 1);
+  return (
+    <div style={{display:'flex',alignItems:'flex-end',gap:1,height:56,marginTop:8}}>
+      {strikes.map((s,i) => {
+        const h = Math.max(6, (s.gamma/max)*50);
+        const isWall = s.strike === wallStrike;
+        const c = isWall ? PROFIT : BLUE;
+        return (
+          <div key={i} style={{flex:1,height:h,background:c,borderRadius:'2px 2px 0 0',
+            boxShadow:isWall?'0 0 6px '+PROFIT:'none',position:'relative',cursor:'pointer'}} title={`$${fmt.n(s.strike,0)}: ${fmt.n(s.gamma,0)}`}/>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LIGHTWEIGHT CHARTS WRAPPER
+// ═══════════════════════════════════════════════════════════════════
+
+function LWChart({ candles, ta, height=340 }) {
+  const containerRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  const seriesRef = React.useRef({});
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const chart = LightweightCharts.createChart(containerRef.current, {
+      layout: { background:{type:'solid',color:'transparent'}, textColor:'#8a8f9c', fontFamily:"'OKXSans',system-ui,sans-serif", fontSize:11 },
+      grid: { vertLines:{color:'rgba(255,255,255,0.03)'}, horzLines:{color:'rgba(255,255,255,0.03)'} },
+      crosshair: { mode: 0 },
+      rightPriceScale: { borderColor:'rgba(255,255,255,0.07)' },
+      timeScale: { borderColor:'rgba(255,255,255,0.07)', timeVisible:true, secondsVisible:false },
+      height,
+    });
+    chartRef.current = chart;
+    seriesRef.current.candle = chart.addCandlestickSeries({
+      upColor:'#1fd65c',downColor:'#f04872',borderUpColor:'#1fd65c',borderDownColor:'#f04872',
+      wickUpColor:'#1fd65c',wickDownColor:'#f04872',
+    });
+    seriesRef.current.vol = chart.addHistogramSeries({ priceFormat:{type:'volume'}, priceScaleId:'vol' });
+    chart.priceScale('vol').applyOptions({ scaleMargins:{top:0.85,bottom:0} });
+    seriesRef.current.bbU = chart.addLineSeries({ color:'rgba(138,145,255,0.4)', lineWidth:1, priceScaleId:'right' });
+    seriesRef.current.bbM = chart.addLineSeries({ color:'rgba(138,145,255,0.6)', lineWidth:1, lineStyle:2, priceScaleId:'right' });
+    seriesRef.current.bbL = chart.addLineSeries({ color:'rgba(138,145,255,0.4)', lineWidth:1, priceScaleId:'right' });
+    seriesRef.current.ema = chart.addLineSeries({ color:'rgba(188,255,47,0.85)', lineWidth:1.25, priceScaleId:'right' });
+
+    const handleResize = () => chart.applyOptions({ width: containerRef.current.clientWidth });
+    window.addEventListener('resize', handleResize);
+    return () => { window.removeEventListener('resize', handleResize); chart.remove(); };
+  }, []);
+
+  React.useEffect(() => {
+    const s = seriesRef.current;
+    if (!candles || !candles.length || !s.candle) return;
+    s.candle.setData(candles);
+    s.vol.setData(candles.map(c => ({
+      time:c.time, value:c.volume,
+      color: c.close>=c.open ? 'rgba(31,214,92,0.15)' : 'rgba(240,72,114,0.15)',
+    })));
+    // EMA20
+    const k = 2/21; let ema = candles[0].close;
+    const emaData = candles.map(c => { ema = c.close*k+ema*(1-k); return {time:c.time,value:ema}; });
+    s.ema.setData(emaData);
+    // BB
+    if (ta && ta.bb) {
+      s.bbU.setData(ta.bb.upper||[]); s.bbM.setData(ta.bb.middle||[]); s.bbL.setData(ta.bb.lower||[]);
+    }
+    chartRef.current.timeScale().fitContent();
+  }, [candles, ta]);
+
+  return <div ref={containerRef} style={{width:'100%',borderRadius:4,overflow:'hidden'}}/>;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════════
+
+const Card = ({ title, right, children, padded=true, className='', accent, shimmerKey }) => {
+  const [shimmerActive, setShimmerActive] = React.useState(false);
+  const prevKey = React.useRef(shimmerKey);
+  React.useEffect(() => {
+    if (shimmerKey != null && shimmerKey !== prevKey.current && prevKey.current != null) {
+      setShimmerActive(true);
+      const t = setTimeout(() => setShimmerActive(false), 1200);
+      prevKey.current = shimmerKey;
+      return () => clearTimeout(t);
+    }
+    prevKey.current = shimmerKey;
+  }, [shimmerKey]);
+
+  return (
+    <div className={'panel '+className} style={{display:'flex',flexDirection:'column',borderLeft:accent?`2px solid ${accent}`:undefined}}>
+      {shimmerActive && <div className="card-shimmer"/>}
+      {title && (
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px 8px',borderBottom:'1px solid rgba(255,255,255,0.06)',background:'rgba(255,255,255,0.015)'}}>
+          <div className="overline">{title}</div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>{right}</div>
+        </div>
+      )}
+      <div style={{padding:padded?14:0,flex:1,minHeight:0}}>{children}</div>
+    </div>
+  );
+};
+
+function MiniStat({ label, value, tone, bar: barVal }) {
+  const col = tone==='profit'?'var(--profit-2)':tone==='loss'?'var(--loss)':'var(--ink-1)';
+  return (
+    <div style={{padding:'0 14px',borderRight:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',gap:3}}>
+      <div className="overline">{label}</div>
+      <div className="mono" style={{fontSize:13,fontWeight:500,color:col}}>{value}</div>
+      {barVal!=null && (
+        <div style={{height:2,background:'rgba(255,255,255,0.06)',borderRadius:1,marginTop:3}}>
+          <div style={{height:'100%',width:Math.min(100,barVal)+'%',background:col,borderRadius:1}}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StackedRatio({ longPct, shortPct }) {
+  const lp = longPct||50, sp = shortPct||(100-lp);
+  return (
+    <div style={{display:'flex',height:20,borderRadius:3,overflow:'hidden'}}>
+      <div style={{width:lp+'%',background:'#25a750',display:'flex',alignItems:'center',justifyContent:'flex-start',paddingLeft:8,fontSize:10.5,fontWeight:600,color:'#000'}}>
+        LONG {lp.toFixed(1)}%
+      </div>
+      <div style={{width:sp+'%',background:'#ca3f64',display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:8,fontSize:10.5,fontWeight:600,color:'#fff'}}>
+        SHORT {sp.toFixed(1)}%
+      </div>
+    </div>
+  );
+}
+
+function SignalBar({ label, score, note }) {
+  const pct = Math.abs(score||0);
+  const col = score>0?'var(--profit-2)':'var(--loss)';
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'115px 1fr 56px',gap:10,alignItems:'center',padding:'4px 0',fontSize:11}}>
+      <div style={{color:'var(--ink-2)'}}>{label}</div>
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <div style={{position:'relative',flex:1,height:4,background:'rgba(255,255,255,0.04)',borderRadius:2}}>
+          <div style={{position:'absolute',left:'50%',top:0,bottom:0,width:1,background:'rgba(255,255,255,0.12)'}}/>
+          <div style={{
+            position:'absolute',
+            left:score>0?'50%':`calc(50% - ${pct/2}%)`,
+            width:(pct/2)+'%',top:0,bottom:0,background:col,borderRadius:1,
+          }}/>
+        </div>
+        {note && <div className="mono" style={{fontSize:10,color:'var(--ink-3)',width:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{note}</div>}
+      </div>
+      <div className="mono" style={{fontSize:11,color:col,fontWeight:600,textAlign:'right'}}>
+        {fmt.signed(score,0)}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HERO MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function Hero() {
+  const { state, candles, flash, ticker: fastTicker, stateAge, fetchingTicker } = useData();
+  if (!state) return null;
+
+  const td = state.structure || {};
+  const slowTicker = (td.market_structure||{}).ticker_24h || {};
+  const deriv = td.derivatives || {};
+  const funding = deriv.funding || {};
+  const oi = deriv.open_interest || {};
+  const macro = state.macro || {};
+  const glob = macro.global || {};
+
+  // Use fast ticker (3s) for price, fall back to slow ticker (60s)
+  const price = (fastTicker && fastTicker.price) || slowTicker.price || 0;
+  const change = (fastTicker && fastTicker.change_pct != null) ? fastTicker.change_pct : (slowTicker.price_change_pct || 0);
+  const hi24 = (fastTicker && fastTicker.high_24h) || slowTicker.high_24h || price;
+  const lo24 = (fastTicker && fastTicker.low_24h) || slowTicker.low_24h || price;
+  const rangePos = hi24 !== lo24 ? Math.max(0, Math.min(1, (price-lo24)/(hi24-lo24))) : 0.5;
+
+  // Sparkline from candles
+  const spark = candles && candles.candles ? candles.candles.slice(-60).map(c=>c.close) : [];
+
+  const whole = Math.floor(price).toLocaleString('en-US');
+  const frac = price.toFixed(2).split('.')[1] || '00';
+  const dir = change >= 0;
+
+  // OI in billions
+  const oiVal = oi.oi_currency ? '$'+fmt.n(oi.oi_currency * price / 1e9, 1)+'B' : oi.oi ? fmt.n(oi.oi,0) : '—';
+  const oiDelta = (deriv.oi_history||{}).oi_delta_1d_pct;
+
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr',gap:0,border:'1px solid rgba(255,255,255,0.10)',borderRadius:12,overflow:'hidden',background:'rgba(255,255,255,0.035)',backdropFilter:'blur(24px) saturate(1.4)',WebkitBackdropFilter:'blur(24px) saturate(1.4)',boxShadow:'0 8px 32px -8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)'}}>
+      {/* Price block */}
+      <div style={{padding:'18px 22px',borderRight:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',gap:6}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:26,height:26,borderRadius:'50%',background:'#f7931a',color:'#000',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:16}}>₿</div>
+          <div style={{fontSize:14,fontWeight:600,letterSpacing:'0.02em'}}>{state.token} / USD</div>
+          <div className="chip" style={{background:'rgba(255,255,255,0.06)',color:'var(--ink-2)'}}>PERP · SPOT AGG</div>
+          <div style={{display:'flex',alignItems:'center',gap:5,marginLeft:'auto'}}>
+            <span className={fetchingTicker ? 'live-dot live-dot-fetching' : 'live-dot'}/>
+            <span style={{fontSize:10,color:fetchingTicker?'var(--lime)':'var(--ink-3)',letterSpacing:'0.08em',transition:'color 0.2s'}}>{fetchingTicker ? 'SYNC' : 'LIVE'}</span>
+            {fastTicker && <span className="mono" style={{fontSize:9,color:'var(--ink-4)',marginLeft:4}}>{fastTicker.age_ms != null ? Math.round(fastTicker.age_ms/1000)+'s' : ''}</span>}
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'flex-end',gap:12}}>
+          <div className={`mono ${flash}`} style={{fontSize:52,fontWeight:300,letterSpacing:'-0.02em',lineHeight:1,color:dir?'var(--profit-2)':'var(--loss)',borderRadius:3,padding:'0 4px',transition:'color 0.2s'}}>
+            {whole}<span style={{color:'var(--ink-3)',fontWeight:200}}>.{frac}</span>
+            <span className="cursor-blink" style={{display:'inline-block',width:3,height:36,background:dir?'var(--profit-2)':'var(--loss)',marginLeft:6,verticalAlign:'middle'}}/>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:4,paddingBottom:4}}>
+            <div className="mono" style={{fontSize:13,color:dir?'var(--profit-2)':'var(--loss)',fontWeight:600}}>
+              {change>=0?'+':''}{change.toFixed(2)}%
+            </div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:18,marginTop:4}}>
+          <div><div style={{fontSize:9.5,color:'var(--ink-3)',letterSpacing:'0.1em'}}>24H HIGH</div><div className="mono" style={{fontSize:13,fontWeight:500}}>{fmt.n(hi24,0)}</div></div>
+          <div><div style={{fontSize:9.5,color:'var(--ink-3)',letterSpacing:'0.1em'}}>24H LOW</div><div className="mono" style={{fontSize:13,fontWeight:500}}>{fmt.n(lo24,0)}</div></div>
+          <div style={{flex:1,maxWidth:180}}>
+            <div style={{fontSize:9.5,color:'var(--ink-3)',letterSpacing:'0.1em',marginBottom:4}}>RANGE POSITION</div>
+            <div style={{height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,position:'relative'}}>
+              <div style={{position:'absolute',left:0,right:0,top:0,bottom:0,borderRadius:3,background:'linear-gradient(90deg,rgba(240,72,114,0.6),rgba(125,125,125,0.4),rgba(37,167,80,0.6))'}}/>
+              <div style={{position:'absolute',left:`calc(${rangePos*100}% - 1px)`,top:-2,bottom:-2,width:2,background:'#fff'}}/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sparkline */}
+      <div style={{padding:'14px 18px',borderRight:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
+        <div><div className="overline">24H PRICE</div><div className="mono" style={{fontSize:14,fontWeight:500,marginTop:2,color:dir?'var(--profit-2)':'var(--loss)'}}>{change>=0?'+':''}{change.toFixed(2)}%</div></div>
+        <Sparkline points={spark} width={180} height={40} color={dir?'#1fd65c':'#f04872'}/>
+        <div className="mono" style={{fontSize:10,color:'var(--ink-3)'}}>σ {((td.market_structure||{}).realized_vol||{}).realized_vol_annualized_pct ? ((td.market_structure.realized_vol.realized_vol_annualized_pct/Math.sqrt(365)).toFixed(2)+'%') : '—'}</div>
+      </div>
+
+      <StatBlock label="24H VOLUME" value={fmt.compact((fastTicker && fastTicker.volume_24h) || slowTicker.volume_24h_quote)} sub={glob.market_cap_change_24h_pct != null ? (glob.market_cap_change_24h_pct>=0?'+':'')+glob.market_cap_change_24h_pct.toFixed(1)+'% mkt' : ''} accent="neutral"/>
+      <StatBlock label="MARKET CAP" value={fmt.compact(glob.total_market_cap_usd)} sub={glob.btc_dominance ? 'Dominance '+glob.btc_dominance+'%' : ''} accent="neutral"/>
+      <StatBlock label="PERP OPEN INT." value={oiVal} sub={oiDelta!=null?(oiDelta>=0?'+':'')+oiDelta.toFixed(1)+'% · 24H':''} accent={oiDelta>0?'profit':oiDelta<0?'loss':'neutral'}/>
+      <StatBlock label="AGG FUNDING" value={funding.rate_pct!=null?(funding.rate_pct>=0?'+':'')+funding.rate_pct.toFixed(4)+'%':'—'} sub={funding.rate_annualized_pct!=null?'annualized '+(funding.rate_annualized_pct>=0?'+':'')+funding.rate_annualized_pct.toFixed(1)+'%':''} accent={funding.rate_pct>0.01?'loss':funding.rate_pct<0?'profit':'neutral'} last/>
+    </div>
+  );
+}
+
+function StatBlock({ label, value, sub, accent, last }) {
+  const col = accent==='profit'?'var(--profit-2)':accent==='loss'?'var(--loss)':'var(--ink-1)';
+  return (
+    <div style={{padding:'14px 18px',borderRight:last?0:'1px solid rgba(255,255,255,0.07)',display:'flex',flexDirection:'column',justifyContent:'center',gap:4}}>
+      <div className="overline">{label}</div>
+      <div className="mono" style={{fontSize:20,fontWeight:500,color:col}}>{value}</div>
+      <div className="mono" style={{fontSize:10.5,color:'var(--ink-3)'}}>{sub}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRICE MODULE (Lightweight Charts + TA stats)
+// ═══════════════════════════════════════════════════════════════════
+
+function PriceModule() {
+  const { candles, bar, setBar, token, candleAge, candleShimmer } = useData();
+  const bars = ['5m','15m','1H','4H','1D'];
+  const candleData = candles?.candles || [];
+  const ta = candles?.ta || {};
+
+  // Compute mini stats from TA
+  const rsiVal = ta.rsi?.length ? ta.rsi[ta.rsi.length-1].value : null;
+  const macdHist = ta.macd?.histogram?.length ? ta.macd.histogram[ta.macd.histogram.length-1].value : null;
+  const macdVal = ta.macd?.macd?.length ? ta.macd.macd[ta.macd.macd.length-1].value : null;
+
+  // ATR from last 14 candles
+  let atr = null;
+  if (candleData.length >= 15) {
+    const last14 = candleData.slice(-14);
+    atr = last14.reduce((sum,c) => sum + (c.high-c.low), 0) / 14;
+  }
+
+  // BB Width
+  let bbWidth = null;
+  if (ta.bb?.upper?.length && ta.bb?.lower?.length && ta.bb?.middle?.length) {
+    const lastU = ta.bb.upper[ta.bb.upper.length-1].value;
+    const lastL = ta.bb.lower[ta.bb.lower.length-1].value;
+    const lastM = ta.bb.middle[ta.bb.middle.length-1].value;
+    if (lastM) bbWidth = ((lastU-lastL)/lastM*100);
+  }
+
+  return (
+    <Card
+      title={<span>{token} / USD · CANDLES <span className="card-live-dot" style={{marginLeft:6,verticalAlign:'middle'}}/>{candleAge>0 && <span className={`data-age${candleAge>45?' data-age-stale':''}`} style={{marginLeft:8}}>{candleAge}s</span>}</span>}
+      shimmerKey={candleShimmer}
+      right={
+        <div style={{display:'flex',gap:2,background:'rgba(255,255,255,0.04)',borderRadius:4,padding:2}}>
+          {bars.map(b => (
+            <button key={b} onClick={()=>setBar(b)} style={{
+              padding:'4px 10px',fontSize:11,fontWeight:500,fontFamily:'inherit',
+              background:bar===b?'rgba(255,255,255,0.10)':'transparent',
+              color:bar===b?'var(--ink-1)':'var(--ink-3)',
+              border:0,borderRadius:3,cursor:'pointer'
+            }}>{b}</button>
+          ))}
+          <div style={{width:1,background:'var(--hair)',margin:'2px 4px'}}/>
+          {['EMA20','BB'].map((x,i) => (
+            <button key={x} style={{
+              padding:'4px 8px',fontSize:11,fontWeight:500,fontFamily:'inherit',
+              background:'rgba(188,255,47,0.10)',color:'var(--lime)',
+              border:0,borderRadius:3,cursor:'pointer'
+            }}>{x}</button>
+          ))}
+        </div>
+      }
+      padded={false}
+    >
+      <div style={{position:'relative',padding:'8px 14px 0'}}>
+        <LWChart candles={candleData} ta={ta} height={280}/>
+        <div className="scanline" style={{left:0}}/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:0,borderTop:'1px solid var(--hair)',padding:'12px 0'}}>
+        <MiniStat label="RSI 14" value={rsiVal!=null?rsiVal.toFixed(1):'—'} tone={rsiVal>70?'loss':rsiVal<30?'profit':'neutral'} bar={rsiVal}/>
+        <MiniStat label="MACD" value={macdVal!=null?(macdVal>=0?'+':'')+macdVal.toFixed(0):'—'} tone={macdVal>0?'profit':macdVal<0?'loss':'neutral'}/>
+        <MiniStat label="MACD H" value={macdHist!=null?(macdHist>=0?'+':'')+macdHist.toFixed(0):'—'} tone={macdHist>0?'profit':macdHist<0?'loss':'neutral'}/>
+        <MiniStat label="ATR" value={atr!=null?fmt.usd(atr,0):'—'} tone="neutral"/>
+        <MiniStat label="BB WIDTH" value={bbWidth!=null?bbWidth.toFixed(1)+'%':'—'} tone="neutral"/>
+        <MiniStat label="BAR" value={bar} tone="neutral"/>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REGIME MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function RegimeModule() {
+  const { state, stateShimmer } = useData();
+  const comp = state?.composite || {};
+  const score = comp.score || 0;
+  const label = comp.label || 'NO DATA';
+  const signals = comp.signals || [];
+  const vcol = label.includes('BULL')?'var(--profit-2)':label.includes('BEAR')?'var(--loss)':'var(--amber)';
+
+  // Map signal names to notes based on score
+  const noteFor = (s) => {
+    if (s.name==='Funding Rate') return s.value>0?'shorts paying premium':'longs paying premium';
+    if (s.name==='RSI') return s.value>0?'oversold zone':'overbought zone';
+    if (s.name==='MACD') return s.value>0?'histogram positive':'histogram negative';
+    if (s.name==='Fear & Greed') return s.value>0?'contrarian: fear':'contrarian: greed';
+    return s.value>0?'bullish signal':'bearish signal';
+  };
+
+  return (
+    <Card title="REGIME · COMPOSITE SIGNAL" accent="var(--lime)" shimmerKey={stateShimmer}>
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:8}}>
+        <div className="wobble">
+          <RegimeGauge score={score} width={200} height={110}/>
+        </div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,color:'var(--ink-3)',letterSpacing:'0.1em'}}>READ</div>
+          <div className="mono" style={{fontSize:22,fontWeight:500,color:vcol,lineHeight:1.1}}>{label}</div>
+          <div className="mono" style={{fontSize:11,color:'var(--ink-3)',marginTop:4}}>score {fmt.signed(score,1)} · {signals.length} inputs</div>
+        </div>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:2}}>
+        {signals.map((s,i) => (
+          <SignalBar key={i} label={s.name} score={s.value} note={noteFor(s)}/>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DERIVATIVES MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function DerivsModule() {
+  const { state, ticker: fastTicker, stateAge, stateShimmer } = useData();
+  const deriv = (state?.structure||{}).derivatives || {};
+  const funding = deriv.funding || {};
+  const fh = deriv.funding_history || {};
+  const oi = deriv.open_interest || {};
+  const oih = deriv.oi_history || {};
+  const basis = deriv.basis || {};
+  const slowTicker = ((state?.structure||{}).market_structure||{}).ticker_24h||{};
+  const price = (fastTicker && fastTicker.price) || slowTicker.price || 0;
+
+  const oiStr = oi.oi_currency ? fmt.n(oi.oi_currency,2)+' coin' : '';
+  const oiUsd = oi.oi_currency ? '$'+fmt.n(oi.oi_currency*price/1e9,1)+'B' : oi.oi ? fmt.n(oi.oi,0) : '—';
+
+  // Funding countdown (approximate next 8h)
+  const now = new Date();
+  const nextFunding = new Date(now);
+  const h = now.getUTCHours();
+  const nextH = h < 8 ? 8 : h < 16 ? 16 : 24;
+  nextFunding.setUTCHours(nextH===24?0:nextH, 0, 0, 0);
+  if (nextH === 24) nextFunding.setUTCDate(nextFunding.getUTCDate()+1);
+  const diff = Math.max(0, Math.floor((nextFunding - now) / 1000));
+  const [countdown, setCountdown] = React.useState(diff);
+  React.useEffect(() => {
+    const iv = setInterval(() => setCountdown(v => Math.max(0, v-1)), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const hh = String(Math.floor(countdown/3600)).padStart(2,'0');
+  const mm = String(Math.floor((countdown%3600)/60)).padStart(2,'0');
+  const ss = String(countdown%60).padStart(2,'0');
+  const pct = 1 - countdown / (8*3600);
+
+  return (
+    <Card title={<span>DERIVATIVES · OPEN INTEREST & FUNDING <span className="card-live-dot" style={{marginLeft:6,verticalAlign:'middle'}}/>{stateAge>0 && <span className={`data-age${stateAge>90?' data-age-stale':''}`} style={{marginLeft:8}}>{stateAge}s</span>}</span>} shimmerKey={stateShimmer}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
+        <div className="mono" style={{fontSize:24,fontWeight:500}}>
+          {oiUsd}
+          {oih.oi_delta_1d_pct!=null && <span className="mono" style={{fontSize:12,color:oih.oi_delta_1d_pct>=0?'var(--profit-2)':'var(--loss)',marginLeft:8}}>{oih.oi_delta_1d_pct>=0?'+':''}{oih.oi_delta_1d_pct.toFixed(1)}%</span>}
+        </div>
+        <div className="mono" style={{fontSize:10,color:'var(--ink-3)'}}>{oiStr}</div>
+      </div>
+
+      {/* Funding section */}
+      <div style={{borderTop:'1px solid var(--hair)',marginTop:10,paddingTop:10}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+          <div className="overline">FUNDING · HISTORY</div>
+          <div className="mono" style={{fontSize:10,color:'var(--ink-3)'}}>next in <span style={{color:'var(--lime)'}}>{hh}:{mm}:{ss}</span></div>
+        </div>
+        {fh.rates && fh.rates.length > 0 && (
+          <FundingHistogram data={[...fh.rates].reverse()} width={460} height={52}/>
+        )}
+        <div className="stripes" style={{height:3,marginTop:4,background:'rgba(188,255,47,0.10)',borderRadius:2,position:'relative',overflow:'hidden'}}>
+          <div style={{position:'absolute',left:0,top:0,bottom:0,width:(pct*100)+'%',background:'var(--lime)',opacity:0.7}}/>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0,marginTop:6}}>
+          <MiniStat label="CURRENT" value={funding.rate_pct!=null?(funding.rate_pct>=0?'+':'')+funding.rate_pct.toFixed(4)+'%':'—'} tone={funding.rate_pct>0.01?'loss':funding.rate_pct<0?'profit':'neutral'}/>
+          <MiniStat label="TREND" value={fh.trend||'—'} tone={fh.trend==='decreasing'?'profit':fh.trend==='increasing'?'loss':'neutral'}/>
+          <MiniStat label="BASIS" value={basis.basis_pct!=null?basis.basis_pct.toFixed(4)+'%':'—'} tone={basis.basis_pct>0?'profit':basis.basis_pct<0?'loss':'neutral'}/>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LIQUIDATION MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function LiquidationModule() {
+  const { state } = useData();
+  const liq = ((state?.structure||{}).market_structure||{}).liquidations || {};
+
+  const longPct = liq.long_pct || 50;
+  const shortPct = 100 - longPct;
+  const bias = liq.bias || 'unknown';
+  const biasCol = bias.includes('longs')?'var(--loss)':bias.includes('shorts')?'var(--profit-2)':'var(--amber)';
+
+  return (
+    <Card title="LIQUIDATION PRESSURE">
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:8}}>
+        <div>
+          <div className="overline">LONGS</div>
+          <div className="mono" style={{fontSize:17,fontWeight:500,color:'var(--loss)'}}>{longPct.toFixed(1)}%</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div className="overline">SHORTS</div>
+          <div className="mono" style={{fontSize:17,fontWeight:500,color:'var(--profit-2)'}}>{shortPct.toFixed(1)}%</div>
+        </div>
+      </div>
+
+      <StackedRatio longPct={longPct} shortPct={shortPct}/>
+
+      <div style={{marginTop:12,display:'flex',flexDirection:'column',gap:0}}>
+        <div className="kv"><span className="k">Pressure</span><span className="v">{liq.pressure||'—'}</span></div>
+        <div className="kv"><span className="k">L/S Ratio</span><span className="v mono">{liq.latest_ls_ratio!=null?liq.latest_ls_ratio.toFixed(4):'—'}</span></div>
+        <div className="kv"><span className="k">12h Avg</span><span className="v mono">{liq.avg_ls_ratio_12h!=null?liq.avg_ls_ratio_12h.toFixed(4):'—'}</span></div>
+        <div className="kv"><span className="k">12h Swing</span><span className="v mono" style={{color:liq.ratio_swing_12h>0.1?'var(--loss)':'var(--ink-1)'}}>{liq.ratio_swing_12h!=null?liq.ratio_swing_12h.toFixed(4):'—'}</span></div>
+      </div>
+      <div className="mono" style={{fontSize:10,color:biasCol,marginTop:8,textAlign:'center'}}>bias: {bias}</div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OPTIONS MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function OptionsModule() {
+  const { state } = useData();
+  const deriv = (state?.structure||{}).derivatives || {};
+  const skew = deriv.skew || {};
+  const opts = deriv.options || {};
+
+  const skewPct = skew.skew_25d != null ? Math.min(100, Math.max(0, (skew.skew_25d+15)/30*100)) : 50;
+
+  return (
+    <Card title="OPTIONS · IV & GREEKS">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,borderBottom:'1px solid var(--hair)',paddingBottom:10,marginBottom:10}}>
+        <MiniStat label="ATM IV" value={skew.atm_iv!=null?skew.atm_iv.toFixed(1)+'%':'—'} tone="neutral"/>
+        <MiniStat label="25Δ RR" value={skew.skew_25d!=null?(skew.skew_25d>=0?'+':'')+skew.skew_25d.toFixed(2)+'%':'—'} tone={skew.skew_25d<-2?'profit':skew.skew_25d>2?'loss':'neutral'}/>
+        <MiniStat label="P/C RATIO" value={opts.put_call_ratio!=null?opts.put_call_ratio.toFixed(3):'—'} tone={opts.put_call_ratio<0.7?'loss':opts.put_call_ratio>1.2?'profit':'neutral'}/>
+        <MiniStat label="BUTTERFLY" value={skew.butterfly!=null?skew.butterfly.toFixed(2)+'%':'—'} tone="neutral"/>
+      </div>
+
+      {/* Skew meter */}
+      {skew.skew_25d!=null && (
+        <div style={{marginBottom:12}}>
+          <div style={{width:'100%',height:6,background:'linear-gradient(to right,var(--profit),var(--amber),var(--loss))',borderRadius:3,position:'relative'}}>
+            <div style={{position:'absolute',top:-4,width:3,height:14,background:'white',borderRadius:2,transform:'translateX(-50%)',left:skewPct+'%'}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'var(--ink-3)',marginTop:2}}>
+            <span>Bullish</span><span>Neutral</span><span>Bearish</span>
+          </div>
+        </div>
+      )}
+
+      {skew.signal && (
+        <div className="mono" style={{fontSize:10,color:skew.signal.includes('bearish')?'var(--loss)':skew.signal.includes('bullish')?'var(--profit-2)':'var(--amber)',textAlign:'center',marginBottom:8}}>
+          {skew.signal}
+        </div>
+      )}
+
+      <div style={{display:'flex',flexDirection:'column',gap:0}}>
+        <div className="kv"><span className="k">Put 25d IV</span><span className="v mono">{skew.put_25d_iv!=null?skew.put_25d_iv.toFixed(2)+'%':'—'}</span></div>
+        <div className="kv"><span className="k">Call 25d IV</span><span className="v mono">{skew.call_25d_iv!=null?skew.call_25d_iv.toFixed(2)+'%':'—'}</span></div>
+        <div className="kv"><span className="k">Max Pain</span><span className="v mono">{opts.max_pain!=null?'$'+fmt.n(opts.max_pain,0):'—'}</span></div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FLOW MODULE (Long/Short + Taker)
+// ═══════════════════════════════════════════════════════════════════
+
+function FlowModule() {
+  const { state } = useData();
+  const ms = (state?.structure||{}).market_structure || {};
+  const ls = ms.long_short || {};
+  const tv = ms.taker_volume || {};
+
+  const longR = ls.long_ratio != null ? ls.long_ratio * 100 : null;
+  const shortR = longR != null ? 100 - longR : null;
+  const takerR = tv.buy_sell_ratio || ls.taker_buy_sell_ratio;
+
+  return (
+    <Card title="ORDER FLOW · L/S & TAKER">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+        <div className="overline">LONG / SHORT RATIO · TOP TRADERS</div>
+      </div>
+      {longR!=null && <StackedRatio longPct={longR} shortPct={shortR}/>}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:0,marginTop:10,borderTop:'1px solid var(--hair)',paddingTop:10}}>
+        <MiniStat label="GLOBAL L/S" value={ls.global_long_ratio!=null?(ls.global_long_ratio*100).toFixed(1)+'%':'—'} tone={ls.global_long_ratio>0.5?'profit':'loss'}/>
+        <MiniStat label="TOP TRADER" value={ls.top_long_ratio!=null?(ls.top_long_ratio*100).toFixed(1)+'%':'—'} tone={ls.top_long_ratio>0.5?'profit':'loss'}/>
+        <MiniStat label="TAKER B/S" value={takerR!=null?takerR.toFixed(3):'—'} tone={takerR>1?'profit':takerR<1?'loss':'neutral'}/>
+      </div>
+      {/* Realized vol */}
+      <div style={{borderTop:'1px solid var(--hair)',marginTop:10,paddingTop:10}}>
+        <div className="kv"><span className="k">Realized Vol (24h)</span><span className="v mono">{(ms.realized_vol||{}).realized_vol_annualized_pct!=null?ms.realized_vol.realized_vol_annualized_pct.toFixed(1)+'%':'—'}</span></div>
+        <div className="kv"><span className="k">24h Volume</span><span className="v mono">{fmt.compact((ms.ticker_24h||{}).volume_24h_quote)}</span></div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GAMMA WALL MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function GammaWallModule() {
+  const { state } = useData();
+  const gw = ((state?.structure||{}).derivatives||{}).gamma_wall || {};
+
+  const wtCol = gw.wall_type?.includes('support') ? 'var(--profit-2)' : 'var(--loss)';
+
+  return (
+    <Card title="GAMMA WALL">
+      <div className="kv"><span className="k">Wall Strike</span><span className="v mono" style={{fontSize:15,fontWeight:600}}>{gw.gamma_wall_strike!=null?'$'+fmt.n(gw.gamma_wall_strike,0):'—'}</span></div>
+      <div className="kv"><span className="k">Wall Type</span><span className="v" style={{color:wtCol}}>{gw.wall_type||'—'}</span></div>
+      <div className="kv"><span className="k">Exposure</span><span className="v mono">{gw.gamma_wall_exposure!=null?fmt.n(gw.gamma_wall_exposure,0):'—'}</span></div>
+      {gw.top_strikes && gw.top_strikes.length > 0 && (
+        <>
+          <div style={{fontSize:10,color:'var(--ink-3)',marginTop:10}}>Top Strikes by Gamma Exposure</div>
+          <GammaChart strikes={gw.top_strikes} wallStrike={gw.gamma_wall_strike}/>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ON-CHAIN MODULE (MVRV)
+// ═══════════════════════════════════════════════════════════════════
+
+function OnchainModule() {
+  const { state } = useData();
+  const onchain = (state?.structure||{}).on_chain || {};
+  const mvrv = onchain.mvrv || {};
+
+  const zone = mvrv.zone || '';
+  let zoneCol = 'var(--amber)', zoneBg = 'rgba(255,177,23,0.15)';
+  if (zone.includes('overheated')) { zoneCol='var(--loss)'; zoneBg='rgba(240,72,114,0.15)'; }
+  else if (zone.includes('undervalued')||zone.includes('accumulation')) { zoneCol='var(--profit-2)'; zoneBg='rgba(31,214,92,0.15)'; }
+  else if (zone.includes('underwater')) { zoneCol='var(--blue)'; zoneBg='rgba(48,119,255,0.15)'; }
+
+  return (
+    <Card title="ON-CHAIN · MVRV">
+      <div style={{textAlign:'center',padding:'8px 0'}}>
+        <div className="mono" style={{fontSize:32,fontWeight:500}}>{mvrv.mvrv!=null?mvrv.mvrv.toFixed(3):'—'}</div>
+        {zone && <div style={{display:'inline-block',padding:'3px 10px',borderRadius:4,fontSize:12,fontWeight:700,marginTop:6,background:zoneBg,color:zoneCol}}>{zone}</div>}
+      </div>
+      <div className="kv"><span className="k">Realized Price</span><span className="v mono">{mvrv.realized_price!=null?'$'+fmt.n(mvrv.realized_price,0):'—'}</span></div>
+      <div className="kv"><span className="k">30d Range</span><span className="v mono">{mvrv.mvrv_30d_low!=null&&mvrv.mvrv_30d_high!=null?mvrv.mvrv_30d_low.toFixed(3)+' — '+mvrv.mvrv_30d_high.toFixed(3):'—'}</span></div>
+      <div className="kv"><span className="k">30d Average</span><span className="v mono">{mvrv.mvrv_30d_avg!=null?mvrv.mvrv_30d_avg.toFixed(3):'—'}</span></div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SENTIMENT MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function SentimentModule() {
+  const { state } = useData();
+  const macro = state?.macro || {};
+  const fng = macro.fear_greed || {};
+  const glob = macro.global || {};
+  const stable = macro.stablecoins || {};
+
+  const val = fng.value || 0;
+  const cls = fng.classification || 'Fear & Greed';
+  const fngCol = val<25?'var(--loss)':val<50?'var(--amber)':val<75?'var(--lime)':'var(--profit-2)';
+
+  return (
+    <Card title="SENTIMENT · MACRO COMPOSITE">
+      <div style={{display:'flex',alignItems:'center',gap:14}}>
+        <GreedGauge value={val}/>
+        <div style={{flex:1}}>
+          <div className="overline">FEAR & GREED</div>
+          <div className="mono" style={{fontSize:28,fontWeight:400,lineHeight:1}}>{val||'—'}</div>
+          <div className="mono" style={{fontSize:12,color:fngCol,fontWeight:500,marginTop:2}}>{cls}</div>
+          {fng.trend_7d && <div className="mono" style={{fontSize:10,color:'var(--ink-3)',marginTop:4}}>7d trend: {fng.trend_7d}</div>}
+        </div>
+      </div>
+      <div style={{borderTop:'1px solid var(--hair)',marginTop:10,paddingTop:8,display:'flex',flexDirection:'column',gap:0}}>
+        <div className="kv"><span className="k">BTC Dominance</span><span className="v mono">{glob.btc_dominance||'—'}%</span></div>
+        <div className="kv"><span className="k">Total Market Cap</span><span className="v mono">{fmt.compact(glob.total_market_cap_usd)}</span></div>
+        <div className="kv"><span className="k">MCap Δ 24h</span><span className="v mono" style={{color:glob.market_cap_change_24h_pct>=0?'var(--profit-2)':'var(--loss)'}}>{glob.market_cap_change_24h_pct!=null?(glob.market_cap_change_24h_pct>=0?'+':'')+glob.market_cap_change_24h_pct.toFixed(2)+'%':'—'}</span></div>
+        <div className="kv"><span className="k">Stablecoin Supply</span><span className="v mono">{fmt.compact(stable.total_stablecoin_mcap)}</span></div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SMART MONEY FLOW MODULE (OnchainOS)
+// ═══════════════════════════════════════════════════════════════════
+
+function SmartMoneyModule() {
+  const { state } = useData();
+  const sm = state?.macro?.smart_money || {};
+
+  if (sm.status !== 'available') {
+    return (
+      <Card title="SMART MONEY · ON-CHAIN">
+        <div style={{textAlign:'center',color:'var(--ink-4)',fontSize:11,padding:20}}>Loading on-chain signals...</div>
+      </Card>
+    );
+  }
+
+  const buyPct = sm.buy_pct || 50;
+  const sentCol = buyPct>55?'var(--profit-2)':buyPct<45?'var(--loss)':'var(--amber)';
+  const signals = sm.top_signals || [];
+
+  return (
+    <Card title="SMART MONEY · ON-CHAIN" accent="var(--violet)">
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:8}}>
+        {/* Flow bar */}
+        <div style={{flex:1}}>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--ink-3)',marginBottom:3}}>
+            <span>SELL {(100-buyPct).toFixed(0)}%</span>
+            <span style={{color:sentCol,fontWeight:600}}>{sm.sentiment?.toUpperCase()}</span>
+            <span>BUY {buyPct.toFixed(0)}%</span>
+          </div>
+          <div style={{height:8,borderRadius:4,background:'var(--loss)',overflow:'hidden'}}>
+            <div style={{height:'100%',width:buyPct+'%',background:'var(--profit-2)',borderRadius:4,transition:'width 0.4s ease'}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--ink-4)',marginTop:3}}>
+            <span className="mono">${fmt.compact(sm.sell_volume_usd)}</span>
+            <span className="mono">net: <span style={{color:sm.net_flow_usd>=0?'var(--profit-2)':'var(--loss)'}}>{sm.net_flow_usd>=0?'+':''}{fmt.compact(sm.net_flow_usd)}</span></span>
+            <span className="mono">${fmt.compact(sm.buy_volume_usd)}</span>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:8,fontSize:10,color:'var(--ink-3)',marginBottom:6}}>
+        <span>{sm.total_signals} signals</span>
+        <span>·</span>
+        <span>{sm.buy_count} buys / {sm.sell_count} sells</span>
+        <span>·</span>
+        <span>{(sm.chains_scanned||[]).join(', ')}</span>
+      </div>
+      {signals.length > 0 && (
+        <div style={{borderTop:'1px solid var(--hair)',paddingTop:6}}>
+          <div className="overline" style={{marginBottom:4}}>TOP SIGNALS</div>
+          {signals.map((s,i) => (
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,fontSize:11,padding:'3px 0',borderBottom:'1px dashed rgba(255,255,255,0.04)'}}>
+              <span className="chip" style={{
+                background:s.action==='buy'?'rgba(31,214,92,0.12)':'rgba(240,72,114,0.12)',
+                color:s.action==='buy'?'var(--profit-2)':'var(--loss)',
+                fontSize:9,padding:'1px 5px',
+              }}>{s.action.toUpperCase()}</span>
+              <span className="mono" style={{color:'var(--ink-1)',fontWeight:500,minWidth:60}}>{s.symbol}</span>
+              <span className="mono" style={{color:'var(--ink-3)',fontSize:10}}>${fmt.compact(s.amount_usd)}</span>
+              <span style={{marginLeft:'auto',fontSize:9,color:'var(--ink-4)'}}>{s.wallet_type==='smart_money'?'SM':'🐋'} ×{s.wallets}</span>
+              <span className="chip" style={{background:'rgba(255,255,255,0.04)',color:'var(--ink-4)',fontSize:8,padding:'1px 4px'}}>{s.chain}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DEX HOT TOKENS MODULE (OnchainOS)
+// ═══════════════════════════════════════════════════════════════════
+
+function DexHotTokensModule() {
+  const { state } = useData();
+  const ht = state?.macro?.hot_tokens_dex || {};
+
+  if (ht.status !== 'available') {
+    return (
+      <Card title="DEX PULSE · ON-CHAIN">
+        <div style={{textAlign:'center',color:'var(--ink-4)',fontSize:11,padding:20}}>Loading DEX data...</div>
+      </Card>
+    );
+  }
+
+  const tokens = (ht.top_tokens || []).slice(0, 8);
+
+  return (
+    <Card title="DEX PULSE · ON-CHAIN" accent="var(--cyan)">
+      <div style={{display:'flex',gap:16,marginBottom:8}}>
+        <MiniStat label="DEX Vol 24h" value={'$'+fmt.compact(ht.total_dex_volume_24h)} />
+        <MiniStat label="Net Inflow" value={(ht.net_inflow_usd>=0?'+':'')+fmt.compact(ht.net_inflow_usd)} color={ht.net_inflow_usd>=0?'var(--profit-2)':'var(--loss)'} />
+        <MiniStat label="Chains" value={(ht.chains_active||[]).join(' · ')} />
+      </div>
+      <div style={{borderTop:'1px solid var(--hair)',paddingTop:6}}>
+        <div className="overline" style={{marginBottom:4}}>TRENDING BY VOLUME</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 16px'}}>
+          {tokens.map((t,i) => {
+            const chgCol = t.change_24h_pct>0?'var(--profit-2)':t.change_24h_pct<0?'var(--loss)':'var(--ink-3)';
+            return (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:11,padding:'3px 0',borderBottom:'1px dashed rgba(255,255,255,0.04)'}}>
+                <span style={{color:'var(--ink-4)',fontSize:9,width:12}}>{i+1}</span>
+                <span className="mono" style={{color:'var(--ink-1)',fontWeight:500,minWidth:50}}>{t.symbol}</span>
+                <span className="chip" style={{background:'rgba(255,255,255,0.04)',color:'var(--ink-4)',fontSize:8,padding:'1px 4px'}}>{t.chain}</span>
+                <span style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
+                  <span className="mono" style={{color:chgCol,fontSize:10}}>{t.change_24h_pct>0?'+':''}{t.change_24h_pct?.toFixed(1)}%</span>
+                  <span className="mono" style={{color:'var(--ink-3)',fontSize:9}}>${fmt.compact(t.volume_24h)}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SIGNAL BREAKDOWN MODULE
+// ═══════════════════════════════════════════════════════════════════
+
+function SignalBreakdownModule() {
+  const { state } = useData();
+  const signals = state?.composite?.signals || [];
+  if (!signals.length) return null;
+
+  return (
+    <Card title="COMPOSITE SIGNAL BREAKDOWN" padded={true}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 24px'}}>
+        {signals.map((s,i) => {
+          const col = s.value>10?'var(--profit-2)':s.value<-10?'var(--loss)':'var(--amber)';
+          return (
+            <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,padding:'4px 0',borderBottom:'1px dashed rgba(255,255,255,0.04)'}}>
+              <span style={{color:'var(--ink-3)'}}>{s.name} ({s.weight}%)</span>
+              <span className="mono" style={{color:col,fontWeight:600}}>{s.value>=0?'+':''}{s.value}</span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOP BAR
+// ═══════════════════════════════════════════════════════════════════
+
+function TopBar() {
+  const { token, setToken, feedCount, latency, state, ticker: fastTicker, fetching } = useData();
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const iso = now.toISOString().replace('T',' · ').slice(0,19)+' UTC';
+  const tokens = state?.supported_tokens || ['BTC','ETH','SOL','BNB','DOGE','AVAX','ARB'];
+
+  return (
+    <div style={{
+      display:'flex',alignItems:'center',gap:20,padding:'10px 20px',
+      borderBottom:'1px solid rgba(255,255,255,0.08)',
+      background:'rgba(10,15,25,0.55)',
+      backdropFilter:'blur(28px) saturate(1.5)',
+      WebkitBackdropFilter:'blur(28px) saturate(1.5)',
+      position:'sticky',top:0,zIndex:40,
+      boxShadow:'0 4px 30px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,255,255,0.04)',
+    }}>
+      <div style={{display:'flex',alignItems:'center',gap:9}}>
+        <div style={{width:18,height:18,borderRadius:3,background:'var(--lime)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{width:8,height:8,background:'#000',borderRadius:1}}/>
+        </div>
+        <div style={{fontSize:13,fontWeight:600,letterSpacing:'0.02em'}}>MARKET ANALYZER</div>
+        <div className="chip" style={{background:'rgba(188,255,47,0.12)',color:'var(--lime)'}}>{token} · PRO</div>
+      </div>
+
+      <div style={{display:'flex',gap:2,marginLeft:8}}>
+        {tokens.slice(0,7).map(t => (
+          <button key={t} onClick={()=>setToken(t)} style={{
+            padding:'6px 12px',fontSize:12,fontWeight:500,fontFamily:'inherit',
+            background:token===t?'rgba(188,255,47,0.12)':'transparent',
+            color:token===t?'var(--lime)':'var(--ink-3)',
+            border:0,borderRadius:4,cursor:'pointer',
+          }}>{t}</button>
+        ))}
+      </div>
+
+      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:14}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10.5,color:'var(--ink-3)'}}>
+          <span style={{position:'relative',display:'inline-block'}}>
+            <span className={fetching ? 'live-dot live-dot-fetching' : 'live-dot'}/>
+            {fetching && <span className="dot-ripple" key={Date.now()}/>}
+          </span>
+          <span className="mono">{feedCount} feeds · {latency}ms{fastTicker ? ' · tick '+Math.round((fastTicker.age_ms||0)/1000)+'s' : ''}</span>
+        </div>
+        <div style={{width:1,height:16,background:'var(--hair-2)'}}/>
+        <div className="mono" style={{fontSize:11,color:'var(--ink-2)'}}>{iso}</div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DATA FOOTER
+// ═══════════════════════════════════════════════════════════════════
+
+function DataFooter() {
+  const { state } = useData();
+  const td = state?.structure || {};
+  const macro = state?.macro || {};
+  const deriv = td.derivatives || {};
+  const ms = td.market_structure || {};
+  const tv = ms.taker_volume || {};
+  const ls = ms.long_short || {};
+
+  const sources = [
+    {name:'OKX CeFi CLI',     ok: (ms.ticker_24h||{}).source?.includes('cli')},
+    {name:'OKX Funding',      ok: (deriv.funding||{}).status==='available'},
+    {name:'OKX OI',           ok: (deriv.open_interest||{}).status==='available'},
+    {name:'OKX Options',      ok: (deriv.options||{}).status==='available'},
+    {name:'OKX Taker',        ok: tv.status==='available'},
+    {name:'OKX Gamma Wall',   ok: (deriv.gamma_wall||{}).status==='available'},
+    {name:'OKX Skew',         ok: (deriv.skew||{}).status==='available'},
+    {name:'OnchainOS Signals', ok: (macro.smart_money||{}).status==='available'},
+    {name:'OnchainOS DEX',    ok: (macro.hot_tokens_dex||{}).status==='available'},
+    {name:'CoinMetrics MVRV', ok: ((td.on_chain||{}).mvrv||{}).status==='available'},
+    {name:'Fear & Greed',     ok: (macro.fear_greed||{}).status==='available'},
+    {name:'CoinGecko',        ok: (macro.global||{}).status==='available'},
+    {name:'DefiLlama',        ok: (macro.stablecoins||{}).status==='available'},
+  ];
+
+  return (
+    <div className="panel" style={{padding:'14px 20px',marginTop:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:20,flexWrap:'wrap'}}>
+        <div className="overline">DATA SOURCES</div>
+        <div style={{display:'flex',gap:14,flexWrap:'wrap'}}>
+          {sources.map(s => (
+            <div key={s.name} style={{display:'flex',alignItems:'center',gap:5,fontSize:10.5,color:'var(--ink-3)'}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:s.ok?'var(--profit-2)':s.ok===false?'var(--loss)':'var(--amber)'}}/>
+              {s.name}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{marginTop:10,fontSize:10,color:'var(--ink-4)',textAlign:'center'}}>
+        Market structure data for informational purposes only. Not financial advice. Auto-refresh: price 3s · candles 30s · structure 60s.
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LOADING STATE
+// ═══════════════════════════════════════════════════════════════════
+
+function LoadingScreen() {
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',gap:16}}>
+      <div style={{width:32,height:32,borderRadius:6,background:'var(--lime)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{width:14,height:14,background:'#000',borderRadius:2}}/>
+      </div>
+      <div style={{fontSize:14,fontWeight:600,letterSpacing:'0.02em'}}>MARKET ANALYZER</div>
+      <div className="mono" style={{fontSize:11,color:'var(--ink-3)'}}>Loading market data...</div>
+      <div className="stripes" style={{width:200,height:3,borderRadius:2,background:'rgba(188,255,47,0.10)',overflow:'hidden'}}/>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════════════
+
+function FetchIndicator() {
+  const { fetching, fetchingTicker, fetchingState, fetchingCandles } = useData();
+  if (!fetching) return null;
+  const label = fetchingState ? 'structure' : fetchingCandles ? 'candles' : 'price';
+  return (
+    <div className="fetch-bar">
+      <div className="fetch-bar-inner"/>
+      <div style={{position:'absolute',right:16,top:5,fontSize:9,color:'var(--ink-3)',letterSpacing:'0.08em',fontFamily:'var(--font)'}}>
+        FETCHING {label.toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const { loading } = useData();
+  const gap = 12;
+  const pad = 16;
+
+  if (loading) return <LoadingScreen/>;
+
+  return (
+    <div>
+      <FetchIndicator/>
+      <TopBar/>
+      <div style={{padding:pad,maxWidth:1920,margin:'0 auto',display:'flex',flexDirection:'column',gap}}>
+        <Hero/>
+
+        {/* Row 1: Price chart + Regime */}
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap}}>
+          <PriceModule/>
+          <RegimeModule/>
+        </div>
+
+        {/* Row 2: Derivatives + Liquidation + Options */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap}}>
+          <DerivsModule/>
+          <LiquidationModule/>
+          <OptionsModule/>
+        </div>
+
+        {/* Row 3: Flow + Gamma Wall + On-chain */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap}}>
+          <FlowModule/>
+          <GammaWallModule/>
+          <OnchainModule/>
+        </div>
+
+        {/* Row 4: Smart Money + DEX Pulse (OnchainOS) */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap}}>
+          <SmartMoneyModule/>
+          <DexHotTokensModule/>
+        </div>
+
+        {/* Row 5: Sentiment + Signal Breakdown */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap}}>
+          <SentimentModule/>
+          <SignalBreakdownModule/>
+        </div>
+
+        <DataFooter/>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <DataProvider><App/></DataProvider>
+);
+</script>
+</body>
+</html>

@@ -1,0 +1,910 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  plugin-publish.yml  —  GitHub Actions (publish-only)
+#
+#  Scope (intentionally narrow):
+#    1. Detect plugins changed in the latest push to main
+#    2. Compile each plugin for 9 targets (3 macOS, 4 Linux musl, 3 Windows MSVC)
+#       — plugin × target matrix runs every (plugin, platform) cell in parallel
+#    3. Create GitHub Release per plugin (tag: plugins/<name>@<version>)
+#    4. Upload binaries + checksums.txt as release assets
+#
+#  Out of scope (handled by GitLab on-prem):
+#    × lint / static security rules
+#    × build verification (we trust GitLab's build check)
+#    × AI code review
+#    × pre-flight injection into SKILL.md
+#    × registry.json / marketplace.json regeneration
+#    × user-facing PR feedback
+#
+#  Trust boundary (relaxed mode — see verify-source job):
+#    GitHub repo accepts NO direct push from any human, NO pull_request, and
+#    NO pull_request_target. The ONLY ingress is the GitLab sync bot pushing
+#    to `main` via deploy key. Since there is no inbound surface, verify-source
+#    currently records the actor for audit but does NOT block. Re-tighten
+#    later once a concrete bot actor name is observed.
+#
+#  Triggers:
+#    • push: branches=[main]   from GitLab mirror sync only (no other ingress exists)
+#
+#  Auditable design choices:
+#    - Top-level permissions: read-all. Only create-release opts into contents: write.
+#    - All actions pinned by SHA.
+#    - Strict input validation in detect (semver / SHA40 / shell-safe names / path traversal refusal).
+#    - Releases are append-only and immutable: skip if tag already exists.
+#    - notify-failure runs on any job failure so silent CI breakage is detected.
+# ═══════════════════════════════════════════════════════════════════════════
+
+name: "Publish — compile, tag, release"
+
+on:
+  push:
+    branches: [main]
+    # Only fire when something publish-relevant changes
+    paths:
+      - 'skills/**'
+      - 'registry.json'
+      - '.claude-plugin/marketplace.json'
+
+# Top-level: read-only. Each job opts into the minimum needed (e.g. contents: write).
+permissions: read-all
+
+# Releases are append-only and immutable; do not cancel an in-flight publish.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 1  verify-source (RELAXED — accept all pushes for now)
+  #
+  # GitHub repo accepts no inbound push other than the GitLab mirror sync
+  # (deploy key auth). There is no PR / pull_request_target / human-push
+  # surface. We log the actor for future audit / tightening but do not
+  # block. When we have observed a stable actor identity, restore the
+  # `if [ "$ACTOR" != "$BOT" ]; then exit 1; fi` check.
+  # ═══════════════════════════════════════════════════════════════════════
+  verify-source:
+    name: Verify source (relaxed)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      verified: ${{ steps.check.outputs.verified }}
+    steps:
+      - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          # RELAXED mode: log only, do not block.
+          # GitHub repo has no inbound push surface other than the GitLab
+          # mirror sync (deploy key auth). The actor name observed here
+          # is the GitHub side's interpretation
+          # of the deploy-key push — record it so future audit can
+          # restore strict actor matching.
+          echo "push by actor='${ACTOR}' event='${EVENT}' — accepted (relaxed mode)"
+          echo "verified=true" >> "$GITHUB_OUTPUT"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 2  detect
+  #
+  # Find which plugins changed in this push. A plugin is "buildable" if
+  # skills/<name>/plugin.yaml contains a `build:` section with lang in
+  # {rust, go}. Strict validation rejects anything unsafe for shell args.
+  # ═══════════════════════════════════════════════════════════════════════
+  detect:
+    name: Detect changes
+    needs: verify-source
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_builds: ${{ steps.build_info.outputs.has_builds }}
+      build_plugins_json: ${{ steps.build_info.outputs.build_plugins_json }}
+      has_node_builds: ${{ steps.build_info.outputs.has_node_builds }}
+      build_node_plugins_json: ${{ steps.build_info.outputs.build_node_plugins_json }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install yq (pinned + SHA256 verified)
+        run: |
+          # Pin yq to a specific tag and SHA256. If GitHub mirror is
+          # tampered with or the asset is replaced, the sha256sum -c step
+          # below refuses to use it. The expected SHA is taken from yq's
+          # own published checksums.txt in the same GitHub release.
+          set -euo pipefail
+          YQ_VERSION=v4.44.3
+          # SHA256 of yq_linux_amd64 for v4.44.3 (from the release's checksums.txt).
+          YQ_SHA256=a2c097180dd884a8d50c956ee16a9cec070f30a7947cf4ebf87d5f36213e9ed7
+          TMP=$(mktemp)
+          curl -sSL -o "${TMP}" \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  ${TMP}" | sha256sum -c -
+          sudo mv "${TMP}" /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: List changed plugins
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # First push to main / branch was just created. Build everything.
+            PLUGINS=$(ls -d skills/*/plugin.yaml 2>/dev/null \
+              | xargs -I{} dirname {} | xargs -I{} basename {} \
+              | sort -u | tr '\n' ' ' | sed 's/ $//')
+            echo "first-push mode: ${PLUGINS}"
+          else
+            # Normal sync: diff before…HEAD, take skills/<name> level
+            git fetch --depth=50 origin "$BEFORE" 2>/dev/null || true
+            PLUGINS=$(git diff --name-only "$BEFORE...HEAD" -- 'skills/' \
+              | cut -d'/' -f2 | sort -u | grep -v '^$' \
+              | tr '\n' ' ' | sed 's/ $//')
+            echo "diff mode: ${PLUGINS:-<none>}"
+          fi
+          if [ -z "$PLUGINS" ]; then
+            echo "changed_plugins=" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed_plugins=${PLUGINS}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Filter to plugins with build section + collect metadata
+        id: build_info
+        env:
+          PLUGINS: ${{ steps.changed.outputs.changed_plugins }}
+        run: |
+          set -euo pipefail
+          BUILD_PLUGINS_JSON='[]'
+          BUILD_NODE_PLUGINS_JSON='[]'
+
+          # Pre-compute (plugin_name, author.github, author.name) for every
+          # plugin in skills/. Used below to mark contributors as "new" only
+          # when this is their first plugin in the repo — keeps the release
+          # notes' `## New Contributors` section honest across versions.
+          ALL_AUTHORS=$(mktemp)
+          for OYAML in skills/*/plugin.yaml; do
+            [ -f "$OYAML" ] || continue
+            ON=$(basename "$(dirname "$OYAML")")
+            case "$ON" in _*) continue ;; esac
+            OG=$(yq -r '.author.github // ""' "$OYAML" 2>/dev/null || echo "")
+            OA=$(yq -r '.author.name // ""'   "$OYAML" 2>/dev/null || echo "")
+            printf '%s\t%s\t%s\n' "$ON" "$OG" "$OA" >> "$ALL_AUTHORS"
+          done
+
+          for p in $PLUGINS; do
+            # Strict name validation — refuse anything we cannot safely use in shell args / URLs
+            if ! echo "$p" | grep -qE '^[a-z0-9][a-z0-9-]*[a-z0-9]$'; then
+              echo "::warning::skipping invalid plugin name '$p'"
+              continue
+            fi
+            YAML="skills/${p}/plugin.yaml"
+            [ -f "$YAML" ] || { echo "no plugin.yaml for $p, skip"; continue; }
+            HAS_BUILD=$(yq '.build // null | type == "!!map"' "$YAML")
+            [ "$HAS_BUILD" = "true" ] || { echo "$p has no build section, skip"; continue; }
+
+            LANG=$(yq -r '.build.lang // ""' "$YAML")
+            BIN=$(yq -r '.build.binary_name // ""' "$YAML")
+            VER=$(yq -r '.version // ""' "$YAML")
+            REPO=$(yq -r '.build.source_repo // ""' "$YAML")
+            COMMIT=$(yq -r '.build.source_commit // ""' "$YAML")
+            SUBDIR=$(yq -r '.build.source_dir // "."' "$YAML")
+            CAT=$(yq -r '.category // ""' "$YAML")
+
+            # Validate every field we will later interpolate into shell
+            echo "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([-+][a-zA-Z0-9.-]+)?$' \
+              || { echo "::warning::$p version '$VER' not semver, skip"; continue; }
+            echo "$BIN" | grep -qE '^[a-zA-Z0-9._-]+$' \
+              || { echo "::warning::$p binary_name '$BIN' invalid, skip"; continue; }
+            case "$LANG" in
+              rust|go|typescript|node) : ;;
+              *) echo "::warning::$p lang '$LANG' not in {rust,go,typescript,node}, skip"; continue ;;
+            esac
+            # Category gate (defense in depth — GitLab's `plugin-store lint`
+            # enforces VALID_CATEGORIES = {dapp, strategy} per
+            # cli/src/submission/plugin_yaml.rs, but this is the last hop
+            # before assets land in a public release. ::error:: annotation
+            # surfaces in the workflow run UI; the offending plugin is
+            # skipped while well-formed siblings keep publishing.
+            case "$CAT" in
+              dapp|strategy) : ;;
+              *) echo "::error::$p category '$CAT' must be 'dapp' or 'strategy' (see docs/FOR-DEVELOPERS.md §4); skipping publish"; continue ;;
+            esac
+            if [ -n "$REPO" ] && [ "$REPO" != "null" ]; then
+              echo "$REPO" | grep -qE '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' \
+                || { echo "::warning::$p source_repo '$REPO' invalid, skip"; continue; }
+            fi
+            if [ -n "$COMMIT" ] && [ "$COMMIT" != "null" ]; then
+              echo "$COMMIT" | grep -qE '^[0-9a-f]{40}$' \
+                || { echo "::warning::$p source_commit '$COMMIT' not a 40-char hex SHA (branch / tag refused), skip"; continue; }
+            fi
+            case "$SUBDIR" in
+              *..*|/*)
+                echo "::warning::$p source_dir '$SUBDIR' contains '..' or is absolute, skip"
+                continue
+                ;;
+            esac
+
+            # Release-notes metadata. Sanitise everything we pass through
+            # shell quoting later — strip backtick, $, ", \ and collapse
+            # newlines (yaml's folded scalars can sneak \n into descriptions);
+            # cap length so a misbehaving plugin.yaml cannot bloat the JSON
+            # output beyond GitHub Actions' 1MB output limit.
+            DESC=$(yq -r '.description // ""'                   "$YAML" 2>/dev/null || echo "")
+            AUTH_NAME=$(yq -r '.author.name // .author // ""'   "$YAML" 2>/dev/null || echo "")
+            AUTH_GH=$(yq -r '.author.github // ""'              "$YAML" 2>/dev/null || echo "")
+            DESC=$(printf '%s' "$DESC"      | tr -d '`$"\\' | tr '\n\r' '  ' | cut -c1-300)
+            AUTH_NAME=$(printf '%s' "$AUTH_NAME" | tr -d '`$"\\' | tr '\n\r' '  ' | cut -c1-80)
+            AUTH_GH=$(printf '%s' "$AUTH_GH"   | tr -d '`$"\\' | tr '\n\r' '  ' | cut -c1-80)
+
+            # Prefer GitHub handle; fall back to display name; final fallback "Community".
+            CONTRIBUTOR="${AUTH_GH:-$AUTH_NAME}"
+            [ -z "$CONTRIBUTOR" ] && CONTRIBUTOR="Community"
+
+            # "Is this contributor new?" = no OTHER plugin in skills/ has the
+            # same author.github or author.name. Used by create-release to
+            # decide whether to render `## New Contributors`.
+            HITS=$(awk -F'\t' -v plugin="$p" -v c="$CONTRIBUTOR" \
+              '$1 != plugin && ($2 == c || $3 == c) { n++ } END { print (n+0) }' "$ALL_AUTHORS")
+            if [ "$HITS" -eq 0 ]; then IS_NEW="true"; else IS_NEW="false"; fi
+
+            # Build a single JSON entry then route it to the right bucket:
+            #   - rust / go      → BUILD_PLUGINS_JSON       (9-target native binary matrix)
+            #   - typescript / node → BUILD_NODE_PLUGINS_JSON (single npm package)
+            ENTRY=$(jq -nc \
+              --arg n "$p" --arg l "$LANG" --arg b "$BIN" --arg v "$VER" \
+              --arg r "$REPO" --arg c "$COMMIT" --arg s "$SUBDIR" \
+              --arg desc "$DESC" --arg an "$AUTH_NAME" --arg ag "$AUTH_GH" \
+              --arg ct "$CONTRIBUTOR" --arg new "$IS_NEW" \
+              '{name:$n, lang:$l, binary_name:$b, version:$v, source_repo:$r, source_commit:$c, source_dir:$s, description:$desc, author_name:$an, author_github:$ag, contributor:$ct, is_new_contributor:$new}')
+            case "$LANG" in
+              rust|go)
+                BUILD_PLUGINS_JSON=$(echo "$BUILD_PLUGINS_JSON" | jq --argjson e "$ENTRY" '. += [$e]')
+                echo "  + $p ($LANG, native) $BIN@$VER  contributor=$CONTRIBUTOR new=$IS_NEW"
+                ;;
+              typescript|node)
+                BUILD_NODE_PLUGINS_JSON=$(echo "$BUILD_NODE_PLUGINS_JSON" | jq --argjson e "$ENTRY" '. += [$e]')
+                echo "  + $p ($LANG, npm)    $BIN@$VER  contributor=$CONTRIBUTOR new=$IS_NEW"
+                ;;
+            esac
+          done
+
+          # GitHub Actions outputs: one JSON per bucket + has_* flags.
+          ONE_LINE=$(echo "$BUILD_PLUGINS_JSON" | jq -c .)
+          echo "build_plugins_json=${ONE_LINE}" >> "$GITHUB_OUTPUT"
+          COUNT=$(echo "$BUILD_PLUGINS_JSON" | jq 'length')
+          [ "$COUNT" -gt 0 ] && echo "has_builds=true" >> "$GITHUB_OUTPUT" \
+                             || echo "has_builds=false" >> "$GITHUB_OUTPUT"
+
+          NODE_ONE_LINE=$(echo "$BUILD_NODE_PLUGINS_JSON" | jq -c .)
+          echo "build_node_plugins_json=${NODE_ONE_LINE}" >> "$GITHUB_OUTPUT"
+          NODE_COUNT=$(echo "$BUILD_NODE_PLUGINS_JSON" | jq 'length')
+          [ "$NODE_COUNT" -gt 0 ] && echo "has_node_builds=true" >> "$GITHUB_OUTPUT" \
+                                  || echo "has_node_builds=false" >> "$GITHUB_OUTPUT"
+
+          echo "buildable plugins: $COUNT (native) + $NODE_COUNT (npm)"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 3  build-release
+  #
+  # Build matrix — plugin × target.  Every (plugin, platform) cell runs
+  # in its own runner, in parallel up to max-parallel.  Linux musl variants
+  # are cross-compiled from Ubuntu via cargo-zigbuild; macOS / Windows use
+  # GitHub-hosted native runners.  fail-fast: false so one bad cell does
+  # not cancel the rest.
+  #
+  # Matrix expansion: N plugins × 9 targets jobs per push.  GitHub Actions
+  # caps total matrix at 256, so single-push changes of more than 28
+  # buildable plugins will be rejected by the platform.  In practice MR
+  # diffs are 1-3 plugins, well within the cap.
+  # ═══════════════════════════════════════════════════════════════════════
+  build-release:
+    name: Build ${{ matrix.plugin.name }} for ${{ matrix.target }}
+    needs: detect
+    if: needs.detect.outputs.has_builds == 'true'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 50
+      matrix:
+        plugin: ${{ fromJSON(needs.detect.outputs.build_plugins_json) }}
+        target:
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-unknown-linux-musl
+          - i686-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - armv7-unknown-linux-musleabihf
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            zigbuild: true
+          - target: i686-unknown-linux-musl
+            os: ubuntu-latest
+            zigbuild: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            zigbuild: true
+          - target: armv7-unknown-linux-musleabihf
+            os: ubuntu-latest
+            zigbuild: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+    steps:
+      - name: Set up Go (for govulncheck on go plugins)
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Set up Zig (musl cross-compile)
+        if: matrix.zigbuild
+        uses: mlugg/setup-zig@53fc45b17fe98b52f92ee5ea08ff48a85a3e7eb7  # v1
+        with:
+          version: 0.13.0
+
+      - name: Install cargo-zigbuild
+        if: matrix.zigbuild
+        run: cargo install cargo-zigbuild --locked
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Build ${{ matrix.plugin.name }} for ${{ matrix.target }}
+        shell: bash
+        env:
+          NAME:     ${{ matrix.plugin.name }}
+          LANG:     ${{ matrix.plugin.lang }}
+          BIN:      ${{ matrix.plugin.binary_name }}
+          VER:      ${{ matrix.plugin.version }}
+          REPO:     ${{ matrix.plugin.source_repo }}
+          SHA:      ${{ matrix.plugin.source_commit }}
+          SUB:      ${{ matrix.plugin.source_dir }}
+          TARGET:   ${{ matrix.target }}
+          ZIGBUILD: ${{ matrix.zigbuild }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          EXT=""
+          case "$TARGET" in *-pc-windows-msvc) EXT=".exe" ;; esac
+
+          # ── Resolve source: local skills/<name>/ or external repo@commit
+          SRC_ROOT=""
+          if [ -n "$REPO" ] && [ "$REPO" != "null" ] && [ -n "$SHA" ] && [ "$SHA" != "null" ]; then
+            # External repo: hard-pin to commit SHA, never branch / tag
+            echo "::group::clone ${REPO}@${SHA:0:12}"
+            EXT_DIR="$RUNNER_TEMP/src-$NAME"
+            git clone --filter=blob:none --no-checkout "https://github.com/${REPO}.git" "$EXT_DIR"
+            git -C "$EXT_DIR" fetch --depth 1 origin "$SHA"
+            git -C "$EXT_DIR" checkout "$SHA"
+            SRC_ROOT="$EXT_DIR/$SUB"
+            echo "::endgroup::"
+          else
+            SRC_ROOT="skills/$NAME/$SUB"
+          fi
+
+          pushd "$SRC_ROOT" >/dev/null
+          echo "::group::build $NAME ($LANG) for $TARGET"
+          case "$LANG" in
+            rust)
+              # ── Auto-patch Cargo.toml for musl / Windows TLS compatibility ──
+              # reqwest's default features pull native-tls → openssl-sys,
+              # which fails to cross-compile under cargo-zigbuild on musl
+              # (no system OpenSSL) and is fragile under Windows MSVC
+              # (vcpkg perl/timeouts). Detect openssl-sys in Cargo.lock and:
+              #   1. Patch reqwest to use rustls-tls (pure Rust, no native deps)
+              #   2. Add vendored openssl for indirect deps (solana-sdk, etc.)
+              #   3. Install musl-tools on Linux for vendored openssl build
+              #   4. Regenerate Cargo.lock
+              #
+              # These edits are IN-MEMORY on the runner only — the plugin's
+              # source in git is never modified. The runner VM is destroyed
+              # at job end, so the patched Cargo.toml disappears.
+              # Ported from the historical .github/workflows/plugin-publish.yml
+              # (pre-audit version) where this logic was field-tested.
+              # Only apply the patcher for musl. Windows-msvc native-tls
+              # links to SChannel (system TLS), not OpenSSL — cfg() guards
+              # in native-tls's source skip openssl on cfg(target_os = "windows")
+              # even when openssl-sys is an indirect dep in Cargo.lock.
+              # If we patched Windows too, the `cargo add openssl --features
+              # vendored` step would require Perl + nmake to build OpenSSL
+              # from source on the Windows runner, which we don't have set
+              # up. Empirically this broke all 3 windows targets in run
+              # 26499485782 even though they had been succeeding before
+              # the patcher was introduced. Leave Windows on its happy
+              # native-tls path.
+              NEED_TLS_PATCH=false
+              case "$TARGET" in
+                *musl*) NEED_TLS_PATCH=true ;;
+              esac
+              if [ "$NEED_TLS_PATCH" = "true" ] && grep -q 'openssl-sys' Cargo.lock 2>/dev/null; then
+                echo "::group::auto-patch Cargo.toml for ${TARGET} (rustls-tls + vendored openssl)"
+                # 1. Patch reqwest to use rustls-tls, drop default-features.
+                # One-line python (no heredoc) to avoid YAML block-scalar
+                # indent issues inside the `run: |` block. Mirrors the
+                # historical pre-audit workflow's same one-liner.
+                python3 -c "import re; c=open('Cargo.toml').read(); c=re.sub(r'reqwest\s*=\s*\{[^}]+\}', lambda m: (m.group(0) if 'rustls-tls' in m.group(0) else re.sub(r'features\s*=\s*\[', 'features = [\"rustls-tls\", ', m.group(0).replace('}', ', default-features = false}') if 'default-features' not in m.group(0) else re.sub(r'default-features\s*=\s*true', 'default-features = false', m.group(0)))), c); open('Cargo.toml','w').write(c)"
+                # 2. Add vendored openssl for indirect deps (solana-sdk, pumpfun, …)
+                if ! grep -q 'openssl.*vendored' Cargo.toml 2>/dev/null; then
+                  cargo add openssl --features vendored 2>/dev/null || \
+                    sed -i 's/\[dependencies\]/[dependencies]\nopenssl = { version = "0.10", features = ["vendored"] }/' Cargo.toml
+                fi
+                # 3. musl: install musl-tools so vendored openssl's C build links
+                if [ "$ZIGBUILD" = "true" ]; then
+                  sudo apt-get install -y musl-tools 2>/dev/null || true
+                fi
+                # 4. Refresh lockfile so the patched deps resolve
+                cargo generate-lockfile 2>/dev/null || true
+                echo "::endgroup::"
+              fi
+
+              if [ "$ZIGBUILD" = "true" ]; then
+                cargo zigbuild --release --target "$TARGET"
+              else
+                cargo build --release --target "$TARGET"
+              fi
+              OUT_PATH="target/${TARGET}/release/${BIN}${EXT}"
+              ;;
+            go)
+              if [ "$TARGET" = "x86_64-unknown-linux-musl" ]; then
+                GOOS=linux  GOARCH=amd64
+              elif [ "$TARGET" = "aarch64-unknown-linux-musl" ]; then
+                GOOS=linux  GOARCH=arm64
+              elif [ "$TARGET" = "i686-unknown-linux-musl" ]; then
+                GOOS=linux  GOARCH=386
+              elif [ "$TARGET" = "armv7-unknown-linux-musleabihf" ]; then
+                GOOS=linux  GOARCH=arm GOARM=7
+              elif [ "$TARGET" = "x86_64-apple-darwin" ]; then
+                GOOS=darwin GOARCH=amd64
+              elif [ "$TARGET" = "aarch64-apple-darwin" ]; then
+                GOOS=darwin GOARCH=arm64
+              elif [ "$TARGET" = "x86_64-pc-windows-msvc" ]; then
+                GOOS=windows GOARCH=amd64
+              elif [ "$TARGET" = "i686-pc-windows-msvc" ]; then
+                GOOS=windows GOARCH=386
+              elif [ "$TARGET" = "aarch64-pc-windows-msvc" ]; then
+                GOOS=windows GOARCH=arm64
+              else
+                echo "::error::unsupported target $TARGET for go"
+                exit 1
+              fi
+              export GOOS GOARCH GOARM CGO_ENABLED=0
+              go build -ldflags="-s -w" -o "${BIN}${EXT}" .
+              OUT_PATH="${BIN}${EXT}"
+              ;;
+            *) echo "::error::lang $LANG not supported here"; exit 1 ;;
+          esac
+          echo "::endgroup::"
+
+          # Stage as <bin>-<target>[.exe] for the release asset name
+          ASSET="${BIN}-${TARGET}${EXT}"
+          cp "$OUT_PATH" "${GITHUB_WORKSPACE}/artifacts/${ASSET}"
+          ( cd "${GITHUB_WORKSPACE}/artifacts" && \
+            if command -v sha256sum >/dev/null; then sha256sum "$ASSET"; \
+            else shasum -a 256 "$ASSET"; fi )
+          popd >/dev/null
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          # Include plugin name so two plugins targeting the same platform
+          # do not collide on artifact name.
+          name: build-${{ matrix.plugin.name }}-${{ matrix.target }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 3.5  build-release-node
+  #
+  # TS / node plugins package via `npm pack` into a single
+  # `<binary_name>.tgz` (vs rust/go's 9 native binaries). One ubuntu
+  # runner per plugin — no target matrix dimension, because the .tgz is
+  # platform-agnostic JavaScript and the consumer-side install (in
+  # SKILL.md, injected by .gitlab-ci/scripts/inject-preflight.py) just
+  # does `npm install -g <tgz>` after verifying SHA256.
+  #
+  # We rename the file npm pack produces (`<package-name>-<ver>.tgz`)
+  # to `<binary_name>.tgz` so the consumer-side URL is deterministic
+  # (mirrors rust/go's `<bin>-<target>` asset naming convention).
+  # ═══════════════════════════════════════════════════════════════════════
+  build-release-node:
+    name: Build ${{ matrix.plugin.name }} (npm package)
+    needs: [verify-source, detect]
+    if: needs.detect.outputs.has_node_builds == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        plugin: ${{ fromJSON(needs.detect.outputs.build_node_plugins_json) }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4
+        with:
+          node-version: '22'
+
+      # Bun is required by plugins whose package.json `build` script uses
+      # `bun build` (e.g. digift-plugin v1.0.0 → run 26864242843 failed with
+      # "sh: 1: bun: not found"). Installing via npm keeps us on the already
+      # pinned setup-node toolchain — no extra SHA-pinned action to audit —
+      # and the `bun` npm package is the official publisher (oven-sh/bun-npm).
+      # Plugins that don't use bun pay only the install cost (~few seconds);
+      # cheaper than branching this step per-plugin.
+      - name: Install bun (some plugins build with bun)
+        run: npm install -g bun
+
+      - name: npm install + build + pack
+        env:
+          NAME: ${{ matrix.plugin.name }}
+          BIN: ${{ matrix.plugin.binary_name }}
+          SUBDIR: ${{ matrix.plugin.source_dir }}
+        run: |
+          set -euo pipefail
+          SRC_REL="skills/${NAME}/${SUBDIR:-.}"
+          SRC="${GITHUB_WORKSPACE}/${SRC_REL}"
+          [ -f "${SRC}/package.json" ] || { echo "::error::no package.json in ${SRC_REL}"; exit 1; }
+          mkdir -p "${GITHUB_WORKSPACE}/artifacts"
+
+          echo "::group::npm install"
+          ( cd "${SRC}" && npm install --no-audit --no-fund )
+          echo "::endgroup::"
+
+          # Run `npm run build` if package.json defines a build script,
+          # otherwise skip (some plugins ship pre-built dist/ already).
+          if grep -q '"build"[[:space:]]*:' "${SRC}/package.json"; then
+            echo "::group::npm run build"
+            ( cd "${SRC}" && npm run build )
+            echo "::endgroup::"
+          else
+            echo "::notice::no 'build' script in package.json; skipping build step"
+          fi
+
+          echo "::group::npm pack"
+          ( cd "${SRC}" && npm pack --quiet )
+          TGZ=$(ls -t "${SRC}"/*.tgz 2>/dev/null | head -1)
+          [ -n "${TGZ}" ] && [ -f "${TGZ}" ] || { echo "::error::npm pack produced no .tgz"; exit 1; }
+          # Rename to <binary_name>.tgz for predictable consumer-side URL
+          cp "${TGZ}" "${GITHUB_WORKSPACE}/artifacts/${BIN}.tgz"
+          ls -la "${GITHUB_WORKSPACE}/artifacts/${BIN}.tgz"
+          if command -v sha256sum >/dev/null; then sha256sum "${GITHUB_WORKSPACE}/artifacts/${BIN}.tgz"; \
+            else shasum -a 256 "${GITHUB_WORKSPACE}/artifacts/${BIN}.tgz"; fi
+          echo "::endgroup::"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          # Suffix `-node` so the artifact name doesn't collide with rust/go
+          # `build-<name>-<target>` artifacts in the merge-multiple download.
+          name: build-${{ matrix.plugin.name }}-node
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 4  create-release
+  #
+  # Per plugin in build_plugins_json:
+  #   • Tag:   plugins/<name>@<version>
+  #   • Title: <name> <version>
+  #   • Body:  short auto-generated notes (no commit-author leakage)
+  #   • Assets: every artifact produced by the matrix + checksums.txt
+  #
+  # If the tag already exists, we SKIP — releases are immutable. To re-publish,
+  # bump plugin.yaml version in GitLab and resync.
+  #
+  # Note on `checksums.txt` naming:
+  #   Multiple plugins can share the artifacts/ directory after
+  #   merge-multiple download. Each plugin's binaries + a freshly-generated
+  #   `checksums.txt` are staged into an underscore-prefixed per-plugin
+  #   subdir (artifacts/_${BIN}/), then uploaded from there. The literal
+  #   filename `checksums.txt` lands on the release as-is, so the
+  #   consumer-side SHA256 verification step in each SKILL.md (which
+  #   downloads `${RELEASE_BASE}/checksums.txt`) resolves correctly.
+  #   (`gh release create FILE#LABEL` sets only the display LABEL, not the
+  #   asset filename — hence the on-disk rename via the staging dir.)
+  # ═══════════════════════════════════════════════════════════════════════
+  create-release:
+    name: Create release
+    needs: [detect, build-release, build-release-node]
+    if: |
+      always() &&
+      (needs.detect.outputs.has_builds == 'true' || needs.detect.outputs.has_node_builds == 'true') &&
+      (needs.build-release.result == 'success' || needs.build-release.result == 'skipped') &&
+      (needs.build-release-node.result == 'success' || needs.build-release-node.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      # contents: write is required to create the git tag and the
+      # GitHub Release for each published plugin (see `gh release create`
+      # below). No other job in this workflow has contents: write —
+      # only this job, only for this purpose. The release tag itself is
+      # immutable (the create step skips if the tag already exists), so
+      # this permission cannot be used to rewrite previously-published
+      # releases. Audit reviewer: this is the single point of write
+      # access in the workflow.
+      contents: write
+    outputs:
+      published_json: ${{ steps.publish.outputs.published_json }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish releases
+        id: publish
+        env:
+          BUILD_PLUGINS: ${{ needs.detect.outputs.build_plugins_json }}
+          BUILD_NODE_PLUGINS: ${{ needs.detect.outputs.build_node_plugins_json }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          PUBLISHED='[]'
+          # Combine native + npm plugin lists into one stream; each entry
+          # carries its own `lang` field, so the publish loop branches on
+          # that to pick the right staging strategy.
+          ALL_PLUGINS=$(jq -nc \
+            --argjson native "${BUILD_PLUGINS:-[]}" \
+            --argjson npm    "${BUILD_NODE_PLUGINS:-[]}" \
+            '$native + $npm')
+          echo "$ALL_PLUGINS" | jq -c '.[]' | while read -r P; do
+            NAME=$(echo "$P" | jq -r .name)
+            BIN=$( echo "$P" | jq -r .binary_name)
+            VER=$( echo "$P" | jq -r .version)
+            LANG=$(echo "$P" | jq -r '.lang // "unknown"')
+            DESC=$(echo "$P" | jq -r '.description // ""')
+            CONTRIBUTOR=$(echo "$P" | jq -r '.contributor // "Community"')
+            IS_NEW=$(echo "$P" | jq -r '.is_new_contributor // "false"')
+            TAG="plugins/${NAME}@${VER}"
+
+            # Idempotency: skip if already released
+            if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+              echo "::notice::release $TAG already exists — skipping (immutable)"
+              continue
+            fi
+
+            # Stage this plugin's assets in artifacts/_${BIN}/ (underscore
+            # prefix keeps the dir name from matching the `${BIN}-*` glob
+            # and guarantees no overlap with other plugins). This lets us
+            # upload a real file named `checksums.txt` instead of relying
+            # on `gh release create FILE#LABEL`, which sets only the
+            # display LABEL — the asset filename would otherwise have
+            # remained `${BIN}-checksums.tmp`.
+            #
+            # Two staging shapes by lang:
+            #   - rust / go     : 9 binaries `${BIN}-<target>[.exe]`
+            #   - typescript / node : 1 npm package `${BIN}.tgz`
+            # checksums.txt is generated over whichever set is staged, so
+            # the consumer-side SHA256 check in inject-preflight.py finds
+            # exactly the asset it just downloaded.
+            STAGE="artifacts/_${BIN}"
+            mkdir -p "$STAGE"
+            case "$LANG" in
+              rust|go)
+                if ! ls artifacts/${BIN}-* >/dev/null 2>&1; then
+                  echo "::error::no artifacts found for ${NAME} (pattern: ${BIN}-*)"
+                  continue
+                fi
+                cp artifacts/${BIN}-* "$STAGE"/
+                ( cd "$STAGE" && sha256sum ${BIN}-* > checksums.txt )
+                PLATFORM_LABEL=$(ls "$STAGE"/${BIN}-* | wc -l | tr -d ' ')
+                ;;
+              typescript|node)
+                if [ ! -f "artifacts/${BIN}.tgz" ]; then
+                  echo "::error::no artifact found for ${NAME} (expected: ${BIN}.tgz)"
+                  continue
+                fi
+                cp "artifacts/${BIN}.tgz" "$STAGE"/
+                ( cd "$STAGE" && sha256sum "${BIN}.tgz" > checksums.txt )
+                PLATFORM_LABEL="any (npm)"
+                ;;
+            esac
+
+            ASSETS=$(ls "$STAGE"/* | tr '\n' ' ')
+            ASSET_COUNT=$(echo "$ASSETS" | wc -w | tr -d ' ')
+
+            # Build the release-notes body. Format mirrors the old
+            # cross-platform-release workflow so the GitHub release page
+            # keeps a consistent shape across the GitLab cut-over:
+            #   ## What's Changed   — bullets: name+version+desc / lang+count / install / source
+            #   ## New Contributors — only when detect marked this contributor as first-time
+            #   ## Contributors     — always the active contributor
+            #   --- Published by OKX Plugin Store CI
+            NOTES_FILE="release-notes-${NAME}.md"
+            {
+              printf "## What's Changed\n\n"
+              printf '%s\n' "- **${NAME}** v${VER} -- ${DESC}"
+              printf '%s\n' "- Language: ${LANG} | Platforms: ${PLATFORM_LABEL}"
+              printf '%s\n' "- Install: npx skills add ${REPO} --skill ${NAME}"
+              printf '%s\n' "- Source: skills/${NAME}/ (included in submission)"
+              if [ "$IS_NEW" = "true" ]; then
+                printf '\n## New Contributors\n\n'
+                printf '%s\n' "- **${CONTRIBUTOR}** made their first contribution"
+              fi
+              printf '\n## Contributors\n\n'
+              printf '%s\n' "- **${CONTRIBUTOR}**"
+              printf '\n---\nPublished by OKX Plugin Store CI\n'
+            } > "$NOTES_FILE"
+
+            echo "creating release $TAG with ${ASSET_COUNT} assets (incl. checksums.txt)"
+            gh release create "$TAG" \
+              --repo "$REPO" \
+              --title "${NAME} v${VER}" \
+              --notes-file "$NOTES_FILE" \
+              $ASSETS
+
+            PUBLISHED=$(echo "$PUBLISHED" | jq \
+              --arg n "$NAME" --arg v "$VER" --arg t "$TAG" \
+              '. += [{name:$n, version:$v, tag:$t}]')
+          done
+          ONE_LINE=$(echo "$PUBLISHED" | jq -c .)
+          echo "published_json=${ONE_LINE}" >> "$GITHUB_OUTPUT"
+
+      # ─────────────────────────────────────────────────────────────────
+      # Post-publish sweep: GUARANTEE no Draft releases remain.
+      #
+      # Background: the create-release flow does NOT use `gh release
+      # create --draft`, so under normal operation no Draft is produced.
+      # This step is a hard safety net that runs unconditionally
+      # (`if: always()`) and self-heals any Draft state — both from
+      # this run AND legacy Drafts left by earlier workflows that used
+      # a draft-then-un-draft pattern with `|| true` (which silently
+      # swallowed failures).
+      #
+      # Policy per Draft tag — completeness is shape-dependent because
+      # different plugin types produce different release shapes:
+      #
+      #   rust / go (native binary):
+      #     complete = 9 platform binaries + checksums.txt   → 10 assets
+      #     incomplete = anything less
+      #
+      #   typescript / node (npm package):
+      #     complete = 1 `<bin>.tgz` + checksums.txt          → 2 assets
+      #     (the .tgz is platform-agnostic JavaScript; no per-target build)
+      #
+      # We can't read plugin.yaml here (the release page is the only
+      # signal at sweep time), so we infer plugin type from the assets:
+      #   - any `*.tgz` present → typescript/node release
+      #   - no `*.tgz`          → rust/go release (expect the 9+1 shape)
+      #
+      # In both shapes, `checksums.txt` MUST be present in a complete
+      # release (consumer-side SHA256 verify in the inject pre-flight
+      # depends on it). A draft without checksums.txt is treated as
+      # incomplete and deleted.
+      #
+      # Result:
+      #   complete (un-draft):
+      #     - has checksums.txt AND has .tgz (ts/node shape)             → 2+ assets
+      #     - has checksums.txt AND has 9 binary-named assets (rust/go)  → 10 assets
+      #   incomplete (delete + cleanup tag): every other shape
+      #
+      # Final assertion: 0 drafts must remain or the job fails loudly.
+      # No `|| true` here — un-draft / delete errors propagate.
+      # ─────────────────────────────────────────────────────────────────
+      - name: Guarantee no drafts (post-publish sweep)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "::group::scan for drafts"
+          DRAFTS=$(gh release list --repo "$REPO" --limit 500 \
+            --json tagName,isDraft,createdAt \
+            --jq '.[] | select(.isDraft) | "\(.tagName)\t\(.createdAt)"')
+          if [ -z "$DRAFTS" ]; then
+            echo "✓ zero drafts — repo state already clean"
+            echo "::endgroup::"
+            exit 0
+          fi
+          DRAFT_COUNT=$(echo "$DRAFTS" | wc -l | tr -d ' ')
+          echo "found ${DRAFT_COUNT} draft(s); applying cleanup policy:"
+          echo "::endgroup::"
+
+          echo "::group::per-draft action"
+          echo "$DRAFTS" | while IFS=$'\t' read -r TAG CREATED; do
+            # Pull asset names (one per line) for shape detection.
+            ASSET_NAMES=$(gh release view "$TAG" --repo "$REPO" \
+              --json assets --jq -r '.assets[].name')
+            TOTAL=$(echo "$ASSET_NAMES" | grep -c . || true)
+            HAS_CHECKSUMS=$(echo "$ASSET_NAMES" | grep -cFx 'checksums.txt' || true)
+            HAS_TGZ=$(echo "$ASSET_NAMES" | grep -cE '\.tgz$' || true)
+            NON_CHECKSUM_COUNT=$(echo "$ASSET_NAMES" | grep -cvFx 'checksums.txt' || true)
+
+            COMPLETE=false
+            REASON=""
+            if [ "$HAS_CHECKSUMS" -ge 1 ] && [ "$HAS_TGZ" -ge 1 ]; then
+              # ts/node shape: .tgz + checksums.txt (≥ 2 assets)
+              COMPLETE=true
+              REASON="ts/node (.tgz + checksums.txt)"
+            elif [ "$HAS_CHECKSUMS" -ge 1 ] && [ "$NON_CHECKSUM_COUNT" -ge 9 ]; then
+              # rust/go shape: 9 binaries + checksums.txt
+              COMPLETE=true
+              REASON="rust/go (9 binaries + checksums.txt)"
+            fi
+
+            if [ "$COMPLETE" = "true" ]; then
+              echo "  un-draft     $TAG    (${TOTAL} assets, ${REASON}, created=${CREATED})"
+              gh release edit "$TAG" --repo "$REPO" --draft=false
+            else
+              echo "  delete+tag   $TAG    (${TOTAL} assets, incomplete: checksums=${HAS_CHECKSUMS}, tgz=${HAS_TGZ}, other=${NON_CHECKSUM_COUNT}, created=${CREATED})"
+              gh release delete "$TAG" --repo "$REPO" --yes --cleanup-tag
+            fi
+          done
+          echo "::endgroup::"
+
+          echo "::group::final assertion"
+          REMAINING=$(gh release list --repo "$REPO" --limit 500 \
+            --json isDraft --jq '[.[] | select(.isDraft)] | length')
+          if [ "$REMAINING" -gt 0 ]; then
+            echo "::error::post-sweep cleanup failed — ${REMAINING} draft(s) still exist"
+            exit 1
+          fi
+          echo "✓ post-sweep verified: zero drafts in repo"
+          echo "::endgroup::"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # JOB 5  notify-failure
+  #
+  # If any of the above jobs fail, alert the maintainer channel so we don't
+  # silently miss a broken release. Webhook URL configurable via secret;
+  # when not set, falls back to printing a CI warning.
+  # ═══════════════════════════════════════════════════════════════════════
+  notify-failure:
+    name: Notify failure
+    needs: [verify-source, detect, build-release, build-release-node, create-release]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions: read-all
+    steps:
+      - name: Send alert
+        env:
+          ALERT_URL: ${{ secrets.MAINTAINERS_ALERT_WEBHOOK }}
+        run: |
+          if [ -z "${ALERT_URL:-}" ]; then
+            echo "::warning::MAINTAINERS_ALERT_WEBHOOK not set — failure silent"
+            exit 0
+          fi
+          curl --silent --max-time 10 --header "Content-Type: application/json" \
+            --data "$(jq -nc \
+              --arg r "$GITHUB_REPOSITORY" \
+              --arg run "$GITHUB_RUN_ID" \
+              --arg c "${GITHUB_SHA:0:12}" \
+              '{event:"publish_failed", repo:$r, run_id:$run, commit:$c,
+                run_url:"https://github.com/\($r)/actions/runs/\($run)"}')" \
+            "$ALERT_URL"

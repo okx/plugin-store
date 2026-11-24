@@ -1,0 +1,32 @@
+schema_version: 1
+name: sushiswap-v3-plugin
+version: "0.1.2"
+description: "Swap tokens and manage concentrated liquidity positions on SushiSwap V3 across Ethereum, Arbitrum, Base, Polygon, and Optimism"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - sushiswap
+  - clmm
+  - swap
+  - liquidity
+  - multi-chain
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: sushiswap-v3-plugin
+
+api_calls:
+  - "https://api.sushi.com"
+  - "https://eth.llamarpc.com"
+  - "https://arb1.arbitrum.io"
+  - "https://mainnet.base.org"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://mainnet.optimism.io"

@@ -1,0 +1,7 @@
+{
+  "name": "relay-plugin",
+  "version": "0.1.1",
+  "description": "Fast cross-chain transfers using Relay Protocol's intent-based bridge",
+  "binary": "relay",
+  "chain": "multi"
+}

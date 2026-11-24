@@ -1,0 +1,26 @@
+schema_version: 1
+name: eigencloud-plugin
+version: "0.1.1"
+description: "Restake LSTs on EigenLayer to earn AVS operator yield — stake, delegate, and manage your restaking positions"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - restaking
+  - eigenlayer
+  - ethereum
+  - yield
+  - lrt
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: eigencloud-plugin
+
+api_calls:
+  - "https://ethereum.publicnode.com"

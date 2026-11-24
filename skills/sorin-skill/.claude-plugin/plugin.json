@@ -1,0 +1,12 @@
+{
+  "name": "sorin-skill",
+  "description": "Answer DeFi questions about tokens, pools, chains, protocols, and projects using Sahara's Sorin DeFi AI Services Gateway",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sahara AI"
+  },
+  "homepage": "https://github.com/SaharaLabsAI/skills/tree/main/sorin-skill",
+  "repository": "https://github.com/SaharaLabsAI/skills",
+  "license": "MIT",
+  "keywords": ["defi", "crypto", "analytics", "tokens", "yield"]
+}

@@ -1,0 +1,28 @@
+schema_version: 1
+name: aave-v2-plugin
+version: "0.1.1"
+description: "Aave V2 exit tool on Ethereum, Polygon, and Avalanche - all reserves are frozen by governance. Redeem aTokens, repay debt cleanly via uint256.max sentinel, claim stkAAVE/WMATIC/WAVAX rewards. New supply/borrow rejected; use aave-v3-plugin for active flows"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: dapp
+tags:
+  - aave
+  - lending
+  - borrowing
+  - ethereum
+  - polygon
+  - avalanche
+  - aave-v2
+  - defi
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: aave-v2-plugin
+api_calls:
+  - "https://ethereum-rpc.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://avalanche-c-chain-rpc.publicnode.com"

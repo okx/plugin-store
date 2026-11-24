@@ -1,0 +1,7 @@
+{
+  "name": "sushiswap-v3-plugin",
+  "version": "0.1.2",
+  "description": "Swap tokens and manage concentrated liquidity positions on SushiSwap V3 across Ethereum, Arbitrum, Base, Polygon, and Optimism",
+  "binary": "sushiswap-v3",
+  "chain": "multi"
+}

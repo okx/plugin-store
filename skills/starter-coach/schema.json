@@ -1,0 +1,865 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okx.com/dex/starter-coach/v1.0/strategy-spec.schema.json",
+  "title": "Starter Coach V2 — Strategy Spec",
+  "description": "Authoritative grammar for LLM-generated DEX spot-trading strategies. The LLM host (Claude / OpenCloud / Hermes agents) emits a JSON object matching this schema; the harness validates before any backtest or paper-trade gate. Long-only, no perps, no shorts. All on-chain tags (smart_money, dev, bundler, fresh_wallet, honeypot, lp_locked, taxes, top_holders) resolve via OnchainOS CLI at runtime.",
+  "type": "object",
+  "required": ["meta", "instrument", "entry", "exit", "sizing"],
+  "additionalProperties": false,
+  "x-version": "1.0",
+  "x-primitive-count": 53,
+  "x-meta-templates": ["grid"],
+
+  "properties": {
+    "meta": { "$ref": "#/$defs/Meta" },
+    "instrument": { "$ref": "#/$defs/Instrument" },
+    "universe": { "$ref": "#/$defs/Universe" },
+    "entry": { "$ref": "#/$defs/Entry" },
+    "exit": { "$ref": "#/$defs/Exit" },
+    "sizing": { "$ref": "#/$defs/Sizing" },
+    "filters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Filter" },
+      "maxItems": 40
+    },
+    "risk_overlays": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/RiskOverlay" },
+      "maxItems": 10
+    },
+    "grid": {
+      "$ref": "#/$defs/GridMetaTemplate",
+      "description": "Meta-template. If present, the harness expands it into primitives at validation time. Cannot coexist with entry/exit/sizing at top level."
+    }
+  },
+
+  "allOf": [
+    {
+      "description": "G-02 · If instrument.symbol is '*', the universe block is required (dynamic universe strategy)",
+      "if": {
+        "properties": { "instrument": { "properties": { "symbol": { "const": "*" } } } }
+      },
+      "then": { "required": ["universe"] }
+    },
+    {
+      "description": "Grid meta-template and explicit entry/exit/sizing are mutually exclusive",
+      "if": { "required": ["grid"] },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["entry"] },
+            { "required": ["exit"] },
+            { "required": ["sizing"] }
+          ]
+        }
+      }
+    }
+  ],
+
+  "$defs": {
+
+    "Meta": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{3,64}$",
+          "description": "snake_case identifier, 3–64 chars"
+        },
+        "version": {
+          "type": "string",
+          "default": "1.0"
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["passive", "conservative", "moderate", "aggressive", "speculative"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Plain-English intent, shown back to the user"
+        },
+        "author_intent": {
+          "type": "string",
+          "description": "User's original natural-language request, verbatim"
+        },
+        "live_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set to true if any primitive in the spec is live_only. Harness auto-derives this but LLM may pre-flag."
+        }
+      }
+    },
+
+    "Instrument": {
+      "type": "object",
+      "required": ["symbol", "timeframe"],
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Z0-9]{1,16}(-[A-Z0-9]{1,16}){1,2}$",
+              "description": "Single-symbol strategy, e.g. SOL-USDT"
+            },
+            {
+              "const": "*",
+              "description": "Dynamic universe — requires universe block"
+            }
+          ]
+        },
+        "timeframe": {
+          "type": "string",
+          "enum": ["1m", "5m", "15m", "1H", "4H", "1D"]
+        }
+      }
+    },
+
+    "Universe": {
+      "type": "object",
+      "required": ["selector", "chain"],
+      "additionalProperties": false,
+      "description": "G-02 · Dynamic universe block for * symbol strategies",
+      "properties": {
+        "selector": {
+          "type": "string",
+          "enum": ["ranking_entry", "wallet_copy_buy", "smart_money_buy"],
+          "description": "Entry primitive whose firing produces the token set"
+        },
+        "chain": {
+          "type": "string",
+          "enum": ["solana", "ethereum", "base", "arbitrum", "optimism", "polygon", "bnb", "avalanche"]
+        }
+      }
+    },
+
+    "Entry": {
+      "description": "Exactly one entry primitive. Discriminated by `type`.",
+      "oneOf": [
+        { "$ref": "#/$defs/entry_price_drop" },
+        { "$ref": "#/$defs/entry_price_breakout" },
+        { "$ref": "#/$defs/entry_ma_cross" },
+        { "$ref": "#/$defs/entry_rsi_threshold" },
+        { "$ref": "#/$defs/entry_volume_spike" },
+        { "$ref": "#/$defs/entry_time_schedule" },
+        { "$ref": "#/$defs/entry_smart_money_buy" },
+        { "$ref": "#/$defs/entry_dev_buy" },
+        { "$ref": "#/$defs/entry_macd_cross" },
+        { "$ref": "#/$defs/entry_bollinger_touch" },
+        { "$ref": "#/$defs/entry_ranking_entry" },
+        { "$ref": "#/$defs/entry_wallet_copy_buy" }
+      ]
+    },
+
+    "Exit": {
+      "type": "object",
+      "required": ["stop_loss"],
+      "additionalProperties": false,
+      "description": "G-01 · All exit entries are evaluated in parallel every tick. First-to-fire wins. On tie, stop_loss wins (fail-safe). H-01 · stop_loss is always required.",
+      "properties": {
+        "stop_loss": { "$ref": "#/$defs/exit_stop_loss_inner" },
+        "take_profit": { "$ref": "#/$defs/exit_take_profit_inner" },
+        "trailing_stop": { "$ref": "#/$defs/exit_trailing_stop_inner" },
+        "tiered_take_profit": { "$ref": "#/$defs/exit_tiered_take_profit_inner" },
+        "other": {
+          "type": "array",
+          "description": "Additional exit conditions. Each item is a discriminated primitive.",
+          "maxItems": 10,
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/exit_time_exit" },
+              { "$ref": "#/$defs/exit_indicator_reversal" },
+              { "$ref": "#/$defs/exit_smart_money_sell" },
+              { "$ref": "#/$defs/exit_dev_dump" },
+              { "$ref": "#/$defs/exit_wallet_mirror_sell" },
+              { "$ref": "#/$defs/exit_fast_dump_exit" }
+            ]
+          }
+        }
+      }
+    },
+
+    "Sizing": {
+      "description": "Exactly one sizing primitive. Discriminated by `type`. L3 hard bound: max 10% per trade.",
+      "oneOf": [
+        { "$ref": "#/$defs/sizing_fixed_pct" },
+        { "$ref": "#/$defs/sizing_fixed_usd" },
+        { "$ref": "#/$defs/sizing_volatility_scaled" }
+      ]
+    },
+
+    "Filter": {
+      "description": "Market-condition or token-safety filter. Discriminated by `type`. All filters must pass for entry to fire.",
+      "oneOf": [
+        { "$ref": "#/$defs/filter_time_window" },
+        { "$ref": "#/$defs/filter_volatility_range" },
+        { "$ref": "#/$defs/filter_volume_minimum" },
+        { "$ref": "#/$defs/filter_cooldown" },
+        { "$ref": "#/$defs/filter_market_regime" },
+        { "$ref": "#/$defs/filter_price_range" },
+        { "$ref": "#/$defs/filter_btc_overlay" },
+        { "$ref": "#/$defs/filter_top_zone_guard" },
+        { "$ref": "#/$defs/filter_mcap_range" },
+        { "$ref": "#/$defs/filter_launch_age" },
+        { "$ref": "#/$defs/filter_honeypot_check" },
+        { "$ref": "#/$defs/filter_lp_locked" },
+        { "$ref": "#/$defs/filter_buy_tax_max" },
+        { "$ref": "#/$defs/filter_sell_tax_max" },
+        { "$ref": "#/$defs/filter_liquidity_min" },
+        { "$ref": "#/$defs/filter_top_holders_max" },
+        { "$ref": "#/$defs/filter_bundler_ratio_max" },
+        { "$ref": "#/$defs/filter_dev_holding_max" },
+        { "$ref": "#/$defs/filter_insider_holding_max" },
+        { "$ref": "#/$defs/filter_fresh_wallet_ratio_max" },
+        { "$ref": "#/$defs/filter_smart_money_present_min" },
+        { "$ref": "#/$defs/filter_phishing_exclude" },
+        { "$ref": "#/$defs/filter_whale_concentration_max" }
+      ]
+    },
+
+    "RiskOverlay": {
+      "description": "Portfolio-level cap. Layered on top of harness L3.",
+      "oneOf": [
+        { "$ref": "#/$defs/risk_max_daily_trades" },
+        { "$ref": "#/$defs/risk_max_concurrent_positions" },
+        { "$ref": "#/$defs/risk_drawdown_pause" },
+        { "$ref": "#/$defs/risk_correlation_cap" },
+        { "$ref": "#/$defs/risk_session_loss_pause" }
+      ]
+    },
+
+    "GridMetaTemplate": {
+      "type": "object",
+      "description": "Grid meta-template. Expands at validation time into: time_schedule (entry) + price_range (filter) + fixed_usd (sizing) + per-slot take_profit + portfolio stop_loss + max_concurrent_positions risk overlay.",
+      "required": ["price_min", "price_max", "levels", "usd_per_level"],
+      "additionalProperties": false,
+      "properties": {
+        "price_min": { "type": "number", "exclusiveMinimum": 0 },
+        "price_max": { "type": "number", "exclusiveMinimum": 0 },
+        "levels": { "type": "integer", "minimum": 2, "maximum": 50 },
+        "usd_per_level": { "type": "number", "minimum": 10, "maximum": 10000 },
+        "take_profit_per_level_pct": { "type": "number", "minimum": 0.5, "maximum": 20, "default": 3 },
+        "portfolio_stop_loss_pct": { "type": "number", "minimum": 5, "maximum": 50, "default": 20 }
+      }
+    },
+
+    "_primitive_entry_base": {
+      "description": "Shared shape for entry primitives. Each concrete def overrides `type` with a const and adds its own params."
+    },
+
+    "entry_price_drop": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "pct", "lookback_bars"],
+      "properties": {
+        "type": { "const": "price_drop" },
+        "pct": { "type": "number", "minimum": 1, "maximum": 30 },
+        "lookback_bars": { "type": "integer", "minimum": 6, "maximum": 720 }
+      },
+      "x-live-only": false
+    },
+
+    "entry_price_breakout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "direction", "lookback_bars"],
+      "properties": {
+        "type": { "const": "price_breakout" },
+        "direction": { "enum": ["up", "down"] },
+        "lookback_bars": { "type": "integer", "minimum": 6, "maximum": 720 },
+        "confirm_pct": { "type": "number", "minimum": 0, "maximum": 5 }
+      },
+      "x-live-only": false
+    },
+
+    "entry_ma_cross": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "fast_period", "slow_period"],
+      "properties": {
+        "type": { "const": "ma_cross" },
+        "fast_period": { "type": "integer", "minimum": 5, "maximum": 50 },
+        "slow_period": { "type": "integer", "minimum": 10, "maximum": 200 },
+        "ma_type": { "enum": ["SMA", "EMA"], "default": "EMA" }
+      },
+      "x-live-only": false
+    },
+
+    "entry_rsi_threshold": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "period", "level", "direction"],
+      "properties": {
+        "type": { "const": "rsi_threshold" },
+        "period": { "type": "integer", "minimum": 7, "maximum": 30 },
+        "level": { "type": "number", "minimum": 10, "maximum": 90 },
+        "direction": { "enum": ["cross_up", "cross_down"] }
+      },
+      "x-live-only": false
+    },
+
+    "entry_volume_spike": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "multiplier", "avg_bars"],
+      "properties": {
+        "type": { "const": "volume_spike" },
+        "multiplier": { "type": "number", "minimum": 1.5, "maximum": 10 },
+        "avg_bars": { "type": "integer", "minimum": 12, "maximum": 168 }
+      },
+      "x-live-only": false
+    },
+
+    "entry_time_schedule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "interval"],
+      "properties": {
+        "type": { "const": "time_schedule" },
+        "interval": { "enum": ["1H", "4H", "1D", "1W"] },
+        "anchor_utc": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "description": "HH:MM in UTC"
+        }
+      },
+      "x-live-only": false
+    },
+
+    "entry_smart_money_buy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_wallets", "window_min"],
+      "description": "Event-driven: fires on SM buy transaction (G-05). Compare with filter smart_money_present_min (state check).",
+      "properties": {
+        "type": { "const": "smart_money_buy" },
+        "min_wallets": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "window_min": { "type": "integer", "minimum": 5, "maximum": 1440 },
+        "min_usd_each": { "type": "number", "minimum": 100, "maximum": 1000000 }
+      },
+      "x-live-only": true
+    },
+
+    "entry_dev_buy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_usd"],
+      "properties": {
+        "type": { "const": "dev_buy" },
+        "min_usd": { "type": "number", "minimum": 100, "maximum": 1000000 },
+        "window_min": { "type": "integer", "minimum": 5, "maximum": 1440 }
+      },
+      "x-live-only": true
+    },
+
+    "entry_macd_cross": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "fast_period", "slow_period", "signal_period", "direction"],
+      "properties": {
+        "type": { "const": "macd_cross" },
+        "fast_period": { "type": "integer", "minimum": 5, "maximum": 20 },
+        "slow_period": { "type": "integer", "minimum": 15, "maximum": 50 },
+        "signal_period": { "type": "integer", "minimum": 5, "maximum": 20 },
+        "direction": { "enum": ["cross_up", "cross_down"] }
+      },
+      "x-live-only": false
+    },
+
+    "entry_bollinger_touch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "period", "std_dev", "band"],
+      "properties": {
+        "type": { "const": "bollinger_touch" },
+        "period": { "type": "integer", "minimum": 10, "maximum": 50 },
+        "std_dev": { "type": "number", "minimum": 1.5, "maximum": 3.0 },
+        "band": { "enum": ["upper", "lower"] }
+      },
+      "x-live-only": false
+    },
+
+    "entry_ranking_entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "list_name", "top_n"],
+      "properties": {
+        "type": { "const": "ranking_entry" },
+        "list_name": { "enum": ["gainers", "volume", "trending", "new"] },
+        "top_n": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "timeframe": { "enum": ["1H", "4H", "24H"] }
+      },
+      "x-live-only": true
+    },
+
+    "entry_wallet_copy_buy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "target_wallet", "min_usd", "mirror_mode"],
+      "properties": {
+        "type": { "const": "wallet_copy_buy" },
+        "target_wallet": {
+          "oneOf": [
+            { "type": "string", "pattern": "^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$" },
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "maxItems": 20
+            }
+          ]
+        },
+        "min_usd": { "type": "number", "minimum": 10, "maximum": 100000 },
+        "mirror_mode": { "enum": ["instant", "mcap_target"] }
+      },
+      "x-live-only": true
+    },
+
+    "exit_stop_loss_inner": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pct"],
+      "description": "H-01 · Always required. Fixed % loss from entry.",
+      "properties": {
+        "pct": { "type": "number", "minimum": 1, "maximum": 20 }
+      }
+    },
+
+    "exit_take_profit_inner": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pct"],
+      "properties": {
+        "pct": { "type": "number", "minimum": 2, "maximum": 100 }
+      }
+    },
+
+    "exit_trailing_stop_inner": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pct"],
+      "properties": {
+        "pct": { "type": "number", "minimum": 1, "maximum": 20 },
+        "activate_after_pct": { "type": "number", "minimum": 0, "maximum": 50 }
+      }
+    },
+
+    "exit_tiered_take_profit_inner": {
+      "type": "object", "additionalProperties": false,
+      "required": ["tiers"],
+      "properties": {
+        "tiers": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["pct_gain", "pct_sell"],
+            "properties": {
+              "pct_gain": { "type": "number", "minimum": 2, "maximum": 1000 },
+              "pct_sell": { "type": "number", "minimum": 5, "maximum": 100 }
+            }
+          }
+        },
+        "runner_mode": { "enum": ["hold", "trail"] }
+      }
+    },
+
+    "exit_time_exit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_bars"],
+      "description": "G-06 · Max-hold duration from entry time (not absolute clock). Bars on instrument.timeframe.",
+      "properties": {
+        "type": { "const": "time_exit" },
+        "max_bars": { "type": "integer", "minimum": 1, "maximum": 720 }
+      },
+      "x-live-only": false
+    },
+
+    "exit_indicator_reversal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "mirror_entry"],
+      "properties": {
+        "type": { "const": "indicator_reversal" },
+        "mirror_entry": { "type": "boolean" }
+      },
+      "x-live-only": false
+    },
+
+    "exit_smart_money_sell": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_wallets", "window_min"],
+      "properties": {
+        "type": { "const": "smart_money_sell" },
+        "min_wallets": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "window_min": { "type": "integer", "minimum": 5, "maximum": 1440 }
+      },
+      "x-live-only": true
+    },
+
+    "exit_dev_dump": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_usd"],
+      "properties": {
+        "type": { "const": "dev_dump" },
+        "min_usd": { "type": "number", "minimum": 100, "maximum": 1000000 },
+        "min_pct_of_holding": { "type": "number", "minimum": 1, "maximum": 100 }
+      },
+      "x-live-only": true
+    },
+
+    "exit_wallet_mirror_sell": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "target_wallet"],
+      "properties": {
+        "type": { "const": "wallet_mirror_sell" },
+        "target_wallet": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          ]
+        },
+        "min_pct_sold": { "type": "number", "minimum": 10, "maximum": 100 }
+      },
+      "x-live-only": true
+    },
+
+    "exit_fast_dump_exit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "drop_pct", "window_sec"],
+      "properties": {
+        "type": { "const": "fast_dump_exit" },
+        "drop_pct": { "type": "number", "minimum": 3, "maximum": 50 },
+        "window_sec": { "type": "integer", "minimum": 5, "maximum": 300 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_time_window": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "start_hour", "end_hour"],
+      "properties": {
+        "type": { "const": "time_window" },
+        "start_hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "end_hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "weekdays_only": { "type": "boolean", "default": false }
+      },
+      "x-live-only": false
+    },
+
+    "filter_volatility_range": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "atr_period"],
+      "properties": {
+        "type": { "const": "volatility_range" },
+        "atr_period": { "type": "integer", "minimum": 7, "maximum": 50 },
+        "min_pct": { "type": "number", "minimum": 0, "maximum": 20 },
+        "max_pct": { "type": "number", "minimum": 0, "maximum": 50 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_volume_minimum": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_usd_24h"],
+      "properties": {
+        "type": { "const": "volume_minimum" },
+        "min_usd_24h": { "type": "number", "minimum": 100000 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_cooldown": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "bars"],
+      "properties": {
+        "type": { "const": "cooldown" },
+        "bars": { "type": "integer", "minimum": 1, "maximum": 168 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_market_regime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "regime"],
+      "properties": {
+        "type": { "const": "market_regime" },
+        "regime": { "enum": ["up", "down", "range", "any"] },
+        "ma_period": { "type": "integer", "minimum": 50, "maximum": 500 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_price_range": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type"],
+      "anyOf": [
+        { "required": ["min_price"] },
+        { "required": ["max_price"] }
+      ],
+      "properties": {
+        "type": { "const": "price_range" },
+        "min_price": { "type": "number", "exclusiveMinimum": 0 },
+        "max_price": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_btc_overlay": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "condition"],
+      "properties": {
+        "type": { "const": "btc_overlay" },
+        "condition": { "enum": ["above_ma", "green_candle", "uptrend"] },
+        "ma_period": { "type": "integer", "minimum": 20, "maximum": 200 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_top_zone_guard": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_zone_pct", "lookback_bars"],
+      "properties": {
+        "type": { "const": "top_zone_guard" },
+        "max_zone_pct": { "type": "number", "minimum": 50, "maximum": 95 },
+        "lookback_bars": { "type": "integer", "minimum": 12, "maximum": 720 }
+      },
+      "x-live-only": false
+    },
+
+    "filter_mcap_range": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type"],
+      "anyOf": [
+        { "required": ["min_usd"] },
+        { "required": ["max_usd"] }
+      ],
+      "properties": {
+        "type": { "const": "mcap_range" },
+        "min_usd": { "type": "number", "minimum": 1000, "maximum": 100000000000 },
+        "max_usd": { "type": "number", "minimum": 1000, "maximum": 100000000000 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_launch_age": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type"],
+      "anyOf": [
+        { "required": ["min_hours"] },
+        { "required": ["max_hours"] }
+      ],
+      "properties": {
+        "type": { "const": "launch_age" },
+        "min_hours": { "type": "number", "minimum": 0, "maximum": 8760 },
+        "max_hours": { "type": "number", "minimum": 1, "maximum": 8760 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_honeypot_check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "honeypot_check" },
+        "required": { "const": true, "default": true }
+      },
+      "x-live-only": true
+    },
+
+    "filter_lp_locked": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_pct_locked"],
+      "properties": {
+        "type": { "const": "lp_locked" },
+        "min_pct_locked": { "type": "number", "minimum": 50, "maximum": 100 },
+        "min_lock_days": { "type": "integer", "minimum": 7, "maximum": 3650 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_buy_tax_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "buy_tax_max" },
+        "max_pct": { "type": "number", "minimum": 0, "maximum": 15 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_sell_tax_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "sell_tax_max" },
+        "max_pct": { "type": "number", "minimum": 0, "maximum": 15 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_liquidity_min": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_usd"],
+      "properties": {
+        "type": { "const": "liquidity_min" },
+        "min_usd": { "type": "number", "minimum": 5000, "maximum": 10000000 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_top_holders_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "top_n", "max_pct"],
+      "properties": {
+        "type": { "const": "top_holders_max" },
+        "top_n": { "type": "integer", "minimum": 5, "maximum": 20 },
+        "max_pct": { "type": "number", "minimum": 15, "maximum": 60 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_bundler_ratio_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "bundler_ratio_max" },
+        "max_pct": { "type": "number", "minimum": 5, "maximum": 50 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_dev_holding_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "dev_holding_max" },
+        "max_pct": { "type": "number", "minimum": 0, "maximum": 20 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_insider_holding_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "insider_holding_max" },
+        "max_pct": { "type": "number", "minimum": 0, "maximum": 30 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_fresh_wallet_ratio_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "fresh_wallet_ratio_max" },
+        "max_pct": { "type": "number", "minimum": 20, "maximum": 80 },
+        "fresh_def": { "enum": ["age_days", "tx_count"] }
+      },
+      "x-live-only": true
+    },
+
+    "filter_smart_money_present_min": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "min_wallets"],
+      "description": "State check at entry-candidate time (G-05). Compare with entry smart_money_buy (event-driven).",
+      "properties": {
+        "type": { "const": "smart_money_present_min" },
+        "min_wallets": { "type": "integer", "minimum": 1, "maximum": 20 }
+      },
+      "x-live-only": true
+    },
+
+    "filter_phishing_exclude": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "phishing_exclude" },
+        "required": { "const": true, "default": true }
+      },
+      "x-live-only": true
+    },
+
+    "filter_whale_concentration_max": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_pct"],
+      "properties": {
+        "type": { "const": "whale_concentration_max" },
+        "max_pct": { "type": "number", "minimum": 3, "maximum": 25 }
+      },
+      "x-live-only": true
+    },
+
+    "sizing_fixed_pct": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "pct"],
+      "properties": {
+        "type": { "const": "fixed_pct" },
+        "pct": { "type": "number", "minimum": 0.5, "maximum": 10, "description": "L3 hard bound: 10% max per trade" }
+      },
+      "x-live-only": false
+    },
+
+    "sizing_fixed_usd": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "usd"],
+      "properties": {
+        "type": { "const": "fixed_usd" },
+        "usd": { "type": "number", "minimum": 10, "maximum": 10000 }
+      },
+      "x-live-only": false
+    },
+
+    "sizing_volatility_scaled": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "target_risk_pct"],
+      "properties": {
+        "type": { "const": "volatility_scaled" },
+        "target_risk_pct": { "type": "number", "minimum": 0.1, "maximum": 2 },
+        "atr_period": { "type": "integer", "minimum": 7, "maximum": 50 }
+      },
+      "x-live-only": false
+    },
+
+    "risk_max_daily_trades": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "n"],
+      "properties": {
+        "type": { "const": "max_daily_trades" },
+        "n": { "type": "integer", "minimum": 1, "maximum": 50 }
+      }
+    },
+
+    "risk_max_concurrent_positions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "n"],
+      "properties": {
+        "type": { "const": "max_concurrent_positions" },
+        "n": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+
+    "risk_drawdown_pause": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "pause_pct"],
+      "properties": {
+        "type": { "const": "drawdown_pause" },
+        "pause_pct": { "type": "number", "minimum": 3, "maximum": 15 },
+        "resume_pct": { "type": "number", "minimum": 0, "maximum": 10 }
+      }
+    },
+
+    "risk_correlation_cap": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "mode", "max_correlated"],
+      "description": "G-04 · v1.0 narrowed: same_token_dedupe only. Return-correlation grouping deferred to v1.2.",
+      "properties": {
+        "type": { "const": "correlation_cap" },
+        "mode": {
+          "const": "same_token_dedupe",
+          "description": "Only value accepted in v1.0"
+        },
+        "max_correlated": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+
+    "risk_session_loss_pause": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "max_consecutive_losses"],
+      "properties": {
+        "type": { "const": "session_loss_pause" },
+        "max_consecutive_losses": { "type": "integer", "minimum": 2, "maximum": 10 },
+        "session_hours": { "type": "integer", "minimum": 1, "maximum": 24 }
+      }
+    }
+
+  }
+}

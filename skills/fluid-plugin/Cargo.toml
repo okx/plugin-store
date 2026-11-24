@@ -1,0 +1,18 @@
+[package]
+name = "fluid-plugin"
+version = "0.1.1"
+edition = "2021"
+
+[[bin]]
+name = "fluid-plugin"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+tiny-keccak = { version = "2", features = ["keccak"] }
+hex = "0.4"

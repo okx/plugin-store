@@ -1,0 +1,5 @@
+{
+  "name": "sparklend-plugin",
+  "description": "SparkLend lending and borrowing on Ethereum Mainnet — supply, withdraw, borrow, repay, positions, health factor, reserves.",
+  "version": "0.1.1"
+}

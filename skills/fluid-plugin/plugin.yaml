@@ -1,0 +1,29 @@
+schema_version: 1
+name: fluid-plugin
+version: "0.1.1"
+description: "Supply and borrow on Fluid Protocol's smart collateral lending vaults on Ethereum and Arbitrum"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - fluid
+  - lending
+  - smart-collateral
+  - ethereum
+  - arbitrum
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: fluid-plugin
+
+api_calls:
+  - "https://api.fluid.xyz"
+  - "https://eth.llamarpc.com"
+  - "https://arb1.arbitrum.io/rpc"

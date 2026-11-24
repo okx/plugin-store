@@ -1,0 +1,29 @@
+# State & data (generated at runtime)
+state/
+data/
+results/
+strategy_archive/
+pairs.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+
+# Logs
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+*.env

@@ -1,0 +1,11 @@
+/target
+/cli/target
+official/core/target/
+.DS_Store
+.claude/
+.idea/
+.agents/
+skills-lock.json
+*.swp
+*.swo
+.env

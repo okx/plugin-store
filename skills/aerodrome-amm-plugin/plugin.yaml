@@ -1,0 +1,26 @@
+schema_version: 1
+name: aerodrome-amm-plugin
+version: "0.1.2"
+description: "Swap tokens and provide liquidity on Aerodrome AMM (volatile/stable pools) on Base"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - aerodrome
+  - amm
+  - base
+  - swap
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: aerodrome-amm-plugin
+
+api_calls:
+  - "https://base-rpc.publicnode.com"

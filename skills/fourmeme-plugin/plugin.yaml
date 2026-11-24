@@ -1,0 +1,33 @@
+schema_version: 1
+name: fourmeme-plugin
+version: "0.1.1"
+description: "Trade Four.meme bonding-curve memecoins on BNB Chain - buy/sell pre-graduate tokens via TokenManager V2 with Helper3 quoting"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: dapp
+tags:
+  - meme
+  - launchpad
+  - bonding-curve
+  - bsc
+  - bnb-chain
+  - four-meme
+  - token-trading
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: fourmeme-plugin
+
+api_calls:
+  - "https://bsc-rpc.publicnode.com"
+  - "https://bsc-dataseed.binance.org"
+  - "https://api.dexscreener.com"
+  - "https://four.meme"
+  - "https://static.four.meme"
+  - "https://bscscan.com"

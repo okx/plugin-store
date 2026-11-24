@@ -1,0 +1,20 @@
+[package]
+name = "fourmeme-plugin"
+version = "0.1.1"
+edition = "2021"
+
+[[bin]]
+name = "fourmeme-plugin"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+anyhow = "1"
+hex = "0.4"
+sha3 = "0.10"
+futures = "0.3"
+base64 = "0.22"

@@ -1,0 +1,2 @@
+# Python stdlib only — no pip dependencies
+# External: onchainos CLI v2.1.0+ (OKX DEX aggregator)

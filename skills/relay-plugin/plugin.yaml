@@ -1,0 +1,26 @@
+schema_version: 1
+name: relay-plugin
+version: "0.1.1"
+description: "Fast cross-chain transfers using Relay Protocol's intent-based bridge"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - bridge
+  - cross-chain
+  - relay
+  - fast-bridge
+  - intent
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: relay-plugin
+
+api_calls:
+  - "https://api.relay.link"

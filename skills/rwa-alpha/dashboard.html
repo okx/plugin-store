@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RWA Alpha Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   RWA ALPHA TERMINAL
+   Full-dark mode. Mint/lime brand. Obsidian palette.
+   ========================================================================= */
+:root {
+  --ldg-mint:      #39ffb0;
+  --ldg-mint-dim:  #1fc585;
+  --ldg-lime:      #bcff2f;
+  --ldg-lime-soft: #c7ff3b;
+  --ldg-cyan:      #8ef2ff;
+  --ldg-violet:    #b299ff;
+
+  --ldg-sky-0: #05090a;
+  --ldg-sky-1: #0a1012;
+  --ldg-sky-2: #0f1518;
+  --ldg-sky-3: #161e21;
+  --ldg-sky-4: #1d272b;
+  --ldg-sky-line: rgba(57,255,176,.14);
+  --ldg-sky-text:   rgba(240,255,245,.94);
+  --ldg-sky-text-2: rgba(220,240,228,.62);
+  --ldg-sky-text-3: rgba(200,220,210,.40);
+
+  --ldg-up:      #1fa56b;
+  --ldg-up-ink:  #39ffb0;
+  --ldg-down:    #d1425a;
+  --ldg-down-ink:#ff7f92;
+  --ldg-warn:    #c88b0a;
+  --ldg-info:    #2b4acb;
+
+  --ldg-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --ldg-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --ldg-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--ldg-sky-0);
+  color: var(--ldg-sky-text);
+  font-family: var(--ldg-sans);
+  font-size: 13px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================================
+   ANIMATIONS
+   ========================================================================= */
+@keyframes ldg-breathe {
+  0%, 100% { box-shadow: 0 0 20px rgba(57,255,176,.25), inset 0 1px 0 rgba(255,255,255,.3); }
+  50% { box-shadow: 0 0 32px rgba(57,255,176,.55), inset 0 1px 0 rgba(255,255,255,.4); }
+}
+@keyframes ldg-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+@keyframes ldg-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ldg-scan {
+  0%, 100% { transform: translateY(0); opacity: 0; }
+  10% { opacity: .7; }
+  90% { opacity: .7; }
+  50% { transform: translateY(300px); }
+}
+@keyframes ldg-flash-up { 0% { background: rgba(57,255,176,.35); } 100% { background: transparent; } }
+@keyframes ldg-flash-down { 0% { background: rgba(209,66,90,.35); } 100% { background: transparent; } }
+@keyframes ldg-ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes ldg-ring {
+  0% { transform: scale(1); opacity: .7; }
+  100% { transform: scale(3.5); opacity: 0; }
+}
+
+/* =========================================================================
+   APP SHELL — grid: rail | main
+   ========================================================================= */
+.ldg-app {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  height: 100vh; overflow: hidden;
+}
+
+/* ---- Left rail ---- */
+.ldg-rail {
+  background: var(--ldg-sky-0);
+  border-right: 1px solid var(--ldg-sky-line);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 0 10px; gap: 2px;
+  position: relative; z-index: 5;
+}
+.ldg-rail::after {
+  content: ''; position: absolute; top: 0; right: -1px; width: 1px; height: 100%;
+  background: linear-gradient(to bottom, transparent, var(--ldg-mint) 20%, var(--ldg-lime) 60%, transparent);
+  opacity: .35;
+}
+.ldg-rail-mark {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--ldg-mint), var(--ldg-lime));
+  color: #001108; font-family: var(--ldg-display); font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; letter-spacing: -.04em;
+  margin-bottom: 14px;
+  animation: ldg-breathe 3s ease-in-out infinite;
+}
+.ldg-rail-btn {
+  width: 38px; height: 38px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ldg-sky-text-3); cursor: pointer;
+  transition: background .15s, color .15s;
+  position: relative;
+}
+.ldg-rail-btn svg { width: 18px; height: 18px; }
+.ldg-rail-btn:hover { background: rgba(255,255,255,.05); color: var(--ldg-sky-text); }
+.ldg-rail-btn.active { color: var(--ldg-mint); background: rgba(57,255,176,.08); }
+.ldg-rail-btn.active::before {
+  content:''; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px;
+  background: var(--ldg-mint); border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px var(--ldg-mint);
+}
+.ldg-rail-sep { width: 24px; height: 1px; background: var(--ldg-sky-line); margin: 8px 0; }
+.ldg-rail-spacer { flex: 1; }
+
+/* ---- Main column ---- */
+.ldg-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+/* ---- Top bar ---- */
+.ldg-topbar {
+  height: 52px; flex-shrink: 0;
+  background: var(--ldg-sky-0);
+  border-bottom: 1px solid var(--ldg-sky-line);
+  color: var(--ldg-sky-text);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 16px 0 20px;
+  position: relative; z-index: 4;
+}
+.ldg-topbar .crumb {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--ldg-mono); font-size: 11px;
+  color: var(--ldg-sky-text-3); letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.ldg-topbar .crumb .cur { color: var(--ldg-mint); }
+.ldg-topbar .crumb .sep { opacity: .45; }
+.ldg-topbar .spacer { flex: 1; }
+.ldg-search {
+  width: 340px; height: 32px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--ldg-sky-line);
+  color: var(--ldg-sky-text-2); font-size: 12px;
+}
+.ldg-search:focus-within { border-color: var(--ldg-mint); background: rgba(57,255,176,.06); }
+.ldg-search input {
+  background: transparent; border: none; outline: none;
+  color: var(--ldg-sky-text); flex: 1; font-family: var(--ldg-sans); font-size: 12px;
+}
+.ldg-search input::placeholder { color: var(--ldg-sky-text-3); }
+.ldg-search svg { width: 14px; height: 14px; }
+.ldg-search kbd {
+  font-family: var(--ldg-mono); font-size: 10px;
+  padding: 1px 6px; border-radius: 3px;
+  background: rgba(255,255,255,.07); color: var(--ldg-sky-text-3);
+}
+.net-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(57,255,176,.08); color: var(--ldg-mint);
+  font-family: var(--ldg-mono); font-size: 11px;
+  border: 1px solid rgba(57,255,176,.2);
+}
+.net-chip .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ldg-mint); box-shadow: 0 0 8px var(--ldg-mint);
+  animation: ldg-pulse 2s ease-in-out infinite;
+  position: relative;
+}
+.net-chip .dot::before {
+  content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ldg-mint); opacity: .5;
+  animation: ldg-ring 2s ease-out infinite;
+}
+.ldg-icon-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ldg-sky-text-2); cursor: pointer;
+  background: transparent; border: 1px solid transparent;
+  transition: .15s;
+}
+.ldg-icon-btn:hover { background: rgba(255,255,255,.06); color: var(--ldg-sky-text); }
+.ldg-icon-btn svg { width: 16px; height: 16px; }
+.ldg-wallet {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 6px 4px 12px; height: 32px; border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--ldg-sky-line);
+  cursor: pointer; transition: .15s;
+}
+.ldg-wallet:hover { border-color: rgba(188,255,47,.4); }
+.ldg-wallet .addr { font-family: var(--ldg-mono); font-size: 11px; color: var(--ldg-sky-text); }
+.ldg-wallet .bal { font-family: var(--ldg-mono); font-size: 11px; color: var(--ldg-mint); }
+.ldg-wallet .av {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: conic-gradient(from 180deg, var(--ldg-lime), var(--ldg-mint), var(--ldg-cyan), var(--ldg-violet), var(--ldg-lime));
+}
+.ldg-clock {
+  font-family: var(--ldg-mono); font-size: 11px; color: var(--ldg-sky-text-3);
+}
+
+/* =========================================================================
+   PAGE — scrollable area
+   ========================================================================= */
+.ldg-page {
+  flex: 1; min-height: 0; overflow-y: auto;
+  background: var(--ldg-sky-0);
+}
+
+/* ---- Hero band ---- */
+.ldg-hero {
+  position: relative;
+  background: var(--ldg-sky-0);
+  color: var(--ldg-sky-text);
+  border-bottom: 1px solid var(--ldg-sky-line);
+  overflow: hidden;
+}
+.ldg-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(1100px 280px at 15% 0%, rgba(57,255,176,.12), transparent 60%),
+    radial-gradient(900px 300px at 85% 100%, rgba(188,255,47,.10), transparent 60%),
+    linear-gradient(0deg, rgba(57,255,176,.02), transparent 40%);
+  pointer-events: none;
+}
+.ldg-hero::after {
+  content:''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--ldg-sky-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ldg-sky-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+  opacity: .6; pointer-events: none;
+}
+.ldg-hero-inner { position: relative; z-index: 1; padding: 18px 22px; }
+.ldg-hero-scanline {
+  position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ldg-mint), transparent);
+  opacity: .6; animation: ldg-scan 5s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* ---- Title row ---- */
+.ldg-title-row { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 16px; }
+.ldg-title-row .ttl {
+  font-family: var(--ldg-display);
+  font-size: 26px; line-height: 1.1; font-weight: 500;
+  letter-spacing: -.015em; color: var(--ldg-sky-text); margin: 0;
+}
+.ldg-title-row .ttl .mint { color: var(--ldg-mint); }
+.ldg-title-row .sub {
+  font-family: var(--ldg-mono); font-size: 11px;
+  color: var(--ldg-sky-text-3); letter-spacing: .06em;
+  text-transform: uppercase; margin-top: 4px;
+}
+.ldg-title-row .spacer { flex: 1; }
+.ldg-title-row .actions { display: flex; gap: 8px; align-items: center; }
+
+/* ---- Pills / mode badges ---- */
+.ldg-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-family: var(--ldg-mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  border: 1px solid;
+}
+.ldg-pill.paper { color: var(--ldg-mint); background: rgba(57,255,176,.08); border-color: rgba(57,255,176,.25); }
+.ldg-pill.live { color: var(--ldg-down-ink); background: rgba(209,66,90,.08); border-color: rgba(209,66,90,.25); }
+.ldg-pill.strat { color: var(--ldg-cyan); background: rgba(142,242,255,.08); border-color: rgba(142,242,255,.25); }
+
+/* ---- KPI strip ---- */
+.ldg-kpis {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+  border: 1px solid var(--ldg-sky-line); border-radius: 10px;
+  background: rgba(10,16,18,.4); backdrop-filter: blur(6px);
+  overflow: hidden;
+}
+.ldg-kpi {
+  padding: 14px 16px; border-right: 1px solid var(--ldg-sky-line);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ldg-kpi:last-child { border-right: none; }
+.ldg-kpi .lbl {
+  font-family: var(--ldg-mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ldg-sky-text-3);
+}
+.ldg-kpi .val {
+  font-family: var(--ldg-display); font-size: 24px; font-weight: 500;
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1;
+  background: linear-gradient(90deg,
+    var(--ldg-sky-text) 0%, var(--ldg-sky-text) 40%,
+    var(--ldg-mint) 50%,
+    var(--ldg-sky-text) 60%, var(--ldg-sky-text) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ldg-shimmer 12s linear infinite;
+}
+.ldg-kpi .val .u {
+  font-size: 13px; font-weight: 400; margin-left: 4px;
+}
+.ldg-kpi .val.mint {
+  background: linear-gradient(90deg,
+    var(--ldg-mint) 0%, var(--ldg-mint) 40%, #fff 50%,
+    var(--ldg-mint) 60%, var(--ldg-mint) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ldg-shimmer 8s linear infinite;
+}
+.ldg-kpi .delta {
+  font-family: var(--ldg-mono); font-size: 11px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.ldg-kpi .delta.up { color: var(--ldg-mint); }
+.ldg-kpi .delta.down { color: var(--ldg-down-ink); }
+.ldg-kpi .spark { height: 24px; margin-top: 2px; }
+.ldg-kpi .spark svg { width: 100%; height: 100%; display: block; }
+
+/* ---- Ticker tape ---- */
+.ldg-ticker {
+  overflow: hidden;
+  border-top: 1px solid var(--ldg-sky-line);
+  border-bottom: 1px solid var(--ldg-sky-line);
+  margin-top: 14px; height: 34px;
+  display: flex; align-items: center;
+  background: rgba(5,9,10,0.5);
+  position: relative;
+}
+.ldg-ticker::before, .ldg-ticker::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2; pointer-events: none;
+}
+.ldg-ticker::before { left: 0; background: linear-gradient(90deg, rgba(5,9,10,1), transparent); }
+.ldg-ticker::after { right: 0; background: linear-gradient(270deg, rgba(5,9,10,1), transparent); }
+.ldg-ticker-track {
+  display: flex; gap: 32px; padding: 0 20px;
+  animation: ldg-ticker-scroll var(--ticker-dur, 60s) linear infinite;
+  white-space: nowrap; width: max-content;
+}
+.ldg-ticker-item {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--ldg-mono); font-size: 12px;
+  color: var(--ldg-sky-text-2);
+}
+.ldg-ticker-item .tk { color: var(--ldg-sky-text); font-weight: 500; font-family: var(--ldg-display); }
+.ldg-ticker-item .up { color: var(--ldg-mint); }
+.ldg-ticker-item .down { color: var(--ldg-down-ink); }
+.ldg-ticker-item .sep { color: var(--ldg-sky-line); }
+
+/* ---- Globe + Heatmap split ---- */
+.ldg-viz-grid {
+  margin-top: 14px;
+  display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px;
+  align-items: stretch;
+}
+.ldg-viz-panel {
+  border: 1px solid var(--ldg-sky-line); border-radius: 10px;
+  background: rgba(5,9,10,0.4); overflow: hidden; position: relative;
+}
+.ldg-viz-label {
+  position: absolute; top: 12px; left: 14px; z-index: 2;
+  font-family: var(--ldg-mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ldg-sky-text-3);
+}
+.ldg-viz-label-r {
+  position: absolute; top: 12px; right: 14px; z-index: 2;
+  font-family: var(--ldg-mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ldg-sky-text-3);
+}
+
+/* ---- Globe ---- */
+.ldg-globe { position: relative; width: 100%; }
+.ldg-globe svg { width: 100%; aspect-ratio: 2.5 / 1; display: block; }
+/* ---- Liquid Glass Legend ---- */
+.ldg-globe .legend {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 3px 5px;
+  padding: 8px 14px;
+  margin: -8px auto 12px; width: fit-content; max-width: 85%;
+  font-family: var(--ldg-mono); font-size: 8.5px; text-transform: uppercase;
+  letter-spacing: .04em; color: rgba(240,255,250,0.85);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.07) 100%),
+    rgba(14,24,28,0.5);
+  backdrop-filter: blur(24px) saturate(1.6) brightness(1.1);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6) brightness(1.1);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-top-color: rgba(255,255,255,0.25);
+  box-shadow:
+    0 6px 24px rgba(0,0,0,0.3),
+    0 1px 0 rgba(255,255,255,0.07) inset;
+}
+.ldg-globe .legend::before {
+  content: '';
+  position: absolute; top: 0; left: 15%; right: 15%; height: 45%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.08), transparent);
+  border-radius: 16px 16px 50% 50%;
+  pointer-events: none;
+}
+.ldg-globe .legend .item {
+  display: flex; align-items: center; gap: 3px; white-space: nowrap;
+  padding: 2px 6px 2px 5px; border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.2s ease;
+}
+.ldg-globe .legend .item:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.18);
+}
+.ldg-globe .legend .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  box-shadow: 0 0 5px 1px currentColor;
+  flex-shrink: 0;
+}
+.ldg-globe .legend .cnt {
+  opacity: 0.4; font-size: 7.5px; margin-left: 1px;
+}
+
+/* ---- Heatmap Toggle ---- */
+.hm-tog {
+  padding: 3px 8px; color: rgba(255,255,255,0.4);
+  transition: all 0.2s; background: transparent;
+}
+.hm-tog:hover { color: rgba(255,255,255,0.7); }
+.hm-tog.active { background: rgba(255,107,138,0.25); color: #ff6b8a; }
+
+/* ---- Heatmap ---- */
+.ldg-heatmap {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  margin: 0 6px 6px;
+}
+.ldg-heat-cell {
+  border-radius: 3px; position: relative; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 4px 6px; font-family: var(--ldg-mono);
+  transition: transform .1s; overflow: hidden; min-width: 0;
+}
+.ldg-heat-cell:hover { transform: scale(1.08); z-index: 2; outline: 1px solid rgba(255,255,255,.3); }
+.ldg-heat-cell::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.12), transparent 60%);
+  pointer-events: none;
+}
+.ldg-heat-cell .sym { font-family: var(--ldg-display); font-size: 10px; font-weight: 600; letter-spacing: -.02em; color: rgba(255,255,255,.95); text-shadow: 0 1px 2px rgba(0,0,0,.4); line-height: 1; }
+.ldg-heat-cell .chg { font-size: 9px; color: rgba(255,255,255,.85); text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+
+/* =========================================================================
+   WORKSPACE — dark cards (full-dark mode)
+   ========================================================================= */
+.ldg-ws { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.ldg-card {
+  background: var(--ldg-sky-1); border: 1px solid var(--ldg-sky-line);
+  border-radius: 10px; overflow: hidden;
+}
+.ldg-card-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--ldg-sky-line);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--ldg-sky-1);
+}
+.ldg-card-head h3 {
+  margin: 0; font-size: 13px; font-weight: 600; color: var(--ldg-sky-text);
+  font-family: var(--ldg-display); letter-spacing: -.005em;
+}
+.ldg-card-head .sub {
+  font-family: var(--ldg-mono); font-size: 10px;
+  color: var(--ldg-sky-text-3); text-transform: uppercase; letter-spacing: .06em;
+}
+.ldg-card-head .spacer { flex: 1; }
+.ldg-card-body { padding: 14px; }
+.ldg-card-body.flush { padding: 0; }
+
+/* ---- Segment buttons ---- */
+.ldg-seg {
+  display: inline-flex; padding: 2px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--ldg-sky-line);
+  border-radius: 8px; font-family: var(--ldg-mono); font-size: 11px;
+}
+.ldg-seg button {
+  padding: 4px 10px; height: 24px; border-radius: 6px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ldg-sky-text-3); font-family: inherit; font-size: inherit;
+  letter-spacing: .02em; text-transform: uppercase; transition: .15s;
+}
+.ldg-seg button:hover { color: var(--ldg-sky-text); }
+.ldg-seg button.active { background: var(--ldg-mint); color: #001108; }
+
+/* ---- Tables ---- */
+.ldg-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.ldg-table thead th {
+  background: var(--ldg-sky-0); font-family: var(--ldg-mono); font-weight: 500; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--ldg-sky-text-3);
+  padding: 9px 12px; text-align: left;
+  border-bottom: 1px solid var(--ldg-sky-line);
+  position: sticky; top: 0; z-index: 1;
+}
+.ldg-table thead th.r { text-align: right; }
+.ldg-table tbody td {
+  padding: 10px 12px; font-size: 13px; color: var(--ldg-sky-text);
+  border-bottom: 1px solid var(--ldg-sky-line);
+  vertical-align: middle; font-variant-numeric: tabular-nums;
+}
+.ldg-table tbody td.r { text-align: right; }
+.ldg-table tbody tr { transition: background .1s; }
+.ldg-table tbody tr:hover { background: rgba(255,255,255,.03); }
+.ldg-table tbody tr:last-child td { border-bottom: none; }
+.ldg-table .mono { font-family: var(--ldg-mono); font-size: 12px; color: var(--ldg-sky-text-2); }
+.ldg-table .up { color: var(--ldg-up-ink); }
+.ldg-table .down { color: var(--ldg-down-ink); }
+
+/* ---- Asset cell ---- */
+.ldg-asset-cell { display: flex; align-items: center; gap: 10px; }
+.ldg-asset-cell .av {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ldg-display); font-weight: 600; font-size: 10px;
+  color: #fff; flex-shrink: 0; letter-spacing: -.02em;
+  overflow: hidden;
+}
+.ldg-asset-cell .av img { width: 100%; height: 100%; object-fit: cover; }
+.ldg-asset-cell .nm { display: flex; flex-direction: column; gap: 1px; }
+.ldg-asset-cell .nm .ticker { font-family: var(--ldg-display); font-weight: 600; font-size: 13px; color: var(--ldg-sky-text); letter-spacing: -.005em; }
+.ldg-asset-cell .nm .full { font-size: 11px; color: var(--ldg-sky-text-3); }
+
+/* ---- Tags ---- */
+.ldg-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 1px 8px; border-radius: 4px; border: 1px solid;
+  font-size: 10px; font-family: var(--ldg-mono); line-height: 18px;
+  white-space: nowrap; text-transform: uppercase; letter-spacing: .04em;
+}
+.ldg-tag .dot { width: 5px; height: 5px; border-radius: 50%; }
+.ldg-tag-treasury { color: #9fabff; background: rgba(43,74,203,.14); border-color: rgba(43,74,203,.35); }
+.ldg-tag-treasury .dot { background: #4a6fe8; }
+.ldg-tag-gold { color: #f2d98a; background: rgba(200,139,10,.12); border-color: rgba(200,139,10,.35); }
+.ldg-tag-gold .dot { background: #c88b0a; }
+.ldg-tag-defi_yield { color: #8ae6ba; background: rgba(31,165,107,.14); border-color: rgba(31,165,107,.35); }
+.ldg-tag-defi_yield .dot { background: #1fa56b; }
+.ldg-tag-rwa_gov { color: #c9a5ff; background: rgba(122,58,214,.14); border-color: rgba(122,58,214,.35); }
+.ldg-tag-rwa_gov .dot { background: #7a3ad6; }
+.ldg-tag-yield_protocol { color: #8ef2ff; background: rgba(19,122,122,.14); border-color: rgba(19,122,122,.35); }
+.ldg-tag-yield_protocol .dot { background: #13a8a8; }
+.ldg-tag-rwa_infra { color: #e89050; background: rgba(176,90,26,.12); border-color: rgba(176,90,26,.35); }
+.ldg-tag-rwa_infra .dot { background: #b05a1a; }
+.ldg-tag-rwa_credit { color: #d4699e; background: rgba(156,45,107,.12); border-color: rgba(156,45,107,.35); }
+.ldg-tag-rwa_credit .dot { background: #9c2d6b; }
+.ldg-tag-xstock { color: #72c4ff; background: rgba(30,90,180,.14); border-color: rgba(30,90,180,.35); }
+.ldg-tag-xstock .dot { background: #1e5ab4; }
+.ldg-tag-ondo_tokenized { color: #ff9e6c; background: rgba(200,100,30,.14); border-color: rgba(200,100,30,.35); }
+.ldg-tag-ondo_tokenized .dot { background: #c8641e; }
+.ldg-tag-stablestock { color: #7be89c; background: rgba(40,150,80,.14); border-color: rgba(40,150,80,.35); }
+.ldg-tag-stablestock .dot { background: #289650; }
+.ldg-tag-prestock { color: #e8d57b; background: rgba(180,160,40,.14); border-color: rgba(180,160,40,.35); }
+.ldg-tag-prestock .dot { background: #b4a028; }
+.ldg-tag-rstock { color: #ff7b9a; background: rgba(180,50,80,.14); border-color: rgba(180,50,80,.35); }
+.ldg-tag-rstock .dot { background: #b43250; }
+.ldg-tag-leveraged { color: #ff6b6b; background: rgba(200,40,40,.14); border-color: rgba(200,40,40,.35); }
+.ldg-tag-leveraged .dot { background: #c82828; }
+
+/* ---- Conviction bar ---- */
+.conv-bar { width: 40px; height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; display: inline-block; }
+.conv-fill { height: 100%; background: var(--ldg-mint); border-radius: 2px; }
+
+/* ---- Gate badge ---- */
+.gate { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 3px; font-family: var(--ldg-mono); text-transform: uppercase; letter-spacing: .04em; }
+.gate.ok { background: rgba(31,165,107,.14); color: var(--ldg-mint); border: 1px solid rgba(31,165,107,.3); }
+.gate.no { background: rgba(209,66,90,.14); color: var(--ldg-down-ink); border: 1px solid rgba(209,66,90,.3); }
+
+/* ---- Source tag ---- */
+.src-tag { font-size: 9px; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,.04); color: var(--ldg-sky-text-3); border: 1px solid var(--ldg-sky-line); font-family: var(--ldg-mono); }
+
+/* ---- Signal badges ---- */
+.sig-act { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .03em; font-family: var(--ldg-mono); }
+.sig-act.buy { background: rgba(57,255,176,.14); color: var(--ldg-mint); border: 1px solid rgba(57,255,176,.3); }
+.sig-act.sell { background: rgba(209,66,90,.14); color: var(--ldg-down-ink); border: 1px solid rgba(209,66,90,.3); }
+
+/* ---- Allocation bars ---- */
+.al-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.al-row:last-child { margin-bottom: 0; }
+.al-lbl { font-size: 11px; font-weight: 500; color: var(--ldg-sky-text-2); min-width: 80px; font-family: var(--ldg-mono); }
+.al-bar { flex: 1; height: 18px; background: rgba(255,255,255,.04); border-radius: 4px; overflow: hidden; }
+.al-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 6px; font-size: 9px; font-weight: 600; color: rgba(255,255,255,.9); transition: width .5s; }
+.al-val { font-family: var(--ldg-mono); font-size: 11px; color: var(--ldg-sky-text-3); min-width: 55px; text-align: right; }
+
+/* ---- Feed / signals ---- */
+.feed-i { display: flex; align-items: flex-start; gap: 8px; padding: 7px 14px; border-bottom: 1px solid var(--ldg-sky-line); font-size: 12px; }
+.feed-i:last-child { border-bottom: none; }
+.feed-i:hover { background: rgba(255,255,255,.02); }
+.feed-ts { font-family: var(--ldg-mono); font-size: 10px; color: var(--ldg-sky-text-3); flex-shrink: 0; min-width: 50px; padding-top: 1px; }
+.feed-msg { color: var(--ldg-sky-text-2); flex: 1; }
+.feed-tag { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,.04); color: var(--ldg-sky-text-3); border: 1px solid var(--ldg-sky-line); font-family: var(--ldg-mono); }
+
+.sig-i { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-bottom: 1px solid var(--ldg-sky-line); }
+.sig-i:last-child { border-bottom: none; }
+.sig-i:hover { background: rgba(255,255,255,.02); }
+.sig-sym { font-weight: 600; color: var(--ldg-sky-text); font-size: 12px; font-family: var(--ldg-display); }
+.sig-src { font-size: 10px; color: var(--ldg-sky-text-3); font-family: var(--ldg-mono); }
+.sig-conv { font-family: var(--ldg-mono); font-size: 10px; color: var(--ldg-sky-text-3); margin-left: auto; }
+
+.empty { text-align: center; padding: 24px 16px; color: var(--ldg-sky-text-3); font-size: 11px; font-family: var(--ldg-mono); }
+
+/* ---- Sparkline ---- */
+.ldg-spark { width: 80px; height: 22px; }
+
+/* ---- 2-column grid ---- */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+
+/* ---- Collapse button ---- */
+.collapse-btn {
+  font-size: 10px; color: var(--ldg-mint); cursor: pointer;
+  border: none; background: none; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+  font-family: var(--ldg-mono);
+}
+.collapse-btn:hover { background: rgba(57,255,176,.08); }
+
+/* Flash classes */
+.ldg-flash-up { animation: ldg-flash-up .8s ease-out; }
+.ldg-flash-down { animation: ldg-flash-down .8s ease-out; }
+
+/* ---- Responsive ---- */
+@media(max-width:1200px) {
+  .ldg-kpis { grid-template-columns: repeat(3, 1fr); }
+  .g2, .g3, .ldg-viz-grid { grid-template-columns: 1fr; }
+}
+@media(max-width:900px) {
+  .ldg-rail { display: none; }
+  .ldg-app { grid-template-columns: 1fr; }
+  .ldg-kpis { grid-template-columns: repeat(2, 1fr); }
+  .ldg-search { width: 200px; }
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--ldg-sky-0); }
+::-webkit-scrollbar-thumb { background: rgba(57,255,176,.15); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="ldg-app">
+  <!-- LEFT RAIL -->
+  <nav class="ldg-rail">
+    <div class="ldg-rail-mark">R</div>
+    <div class="ldg-rail-btn active" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </div>
+    <div class="ldg-rail-btn" title="Positions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7V5a2 2 0 0 1 2-2h12"/><rect x="3" y="7" width="18" height="14" rx="2"/><circle cx="16" cy="14" r="1.5" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <div class="ldg-rail-btn" title="Charts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 20h18M6 16l4-6 4 3 5-8"/></svg>
+    </div>
+    <div class="ldg-rail-btn" title="Activity">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+    </div>
+    <div class="ldg-rail-btn" title="Universe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5M3 18l9 5 9-5"/></svg>
+    </div>
+    <div class="ldg-rail-sep"></div>
+    <div class="ldg-rail-btn" title="Signals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+    </div>
+    <div class="ldg-rail-spacer"></div>
+    <div class="ldg-rail-btn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1l2.1-2.1M17 7l2.1-2.1"/></svg>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="ldg-main">
+    <!-- TOP BAR -->
+    <div class="ldg-topbar">
+      <div class="crumb">
+        <span>RWA Alpha</span><span class="sep">/</span>
+        <span>Terminal</span><span class="sep">/</span>
+        <span class="cur">Dashboard</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="ldg-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input placeholder="Search assets, signals, events…">
+        <kbd>/</kbd>
+      </div>
+      <div class="net-chip" id="netChip"><span class="dot"></span><span id="netLabel">Paper · Ethereum</span></div>
+      <div class="ldg-icon-btn" title="Alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8z"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+      </div>
+      <div class="ldg-wallet">
+        <span class="bal" id="wBal">$0.00</span>
+        <span class="addr">RWA α</span>
+        <div class="av"></div>
+      </div>
+      <div class="ldg-clock" id="clk">--:--:--</div>
+    </div>
+
+    <!-- PAGE -->
+    <div class="ldg-page">
+      <!-- HERO BAND -->
+      <div class="ldg-hero">
+        <div class="ldg-hero-inner">
+          <div class="ldg-hero-scanline"></div>
+
+          <!-- Title -->
+          <div class="ldg-title-row">
+            <div>
+              <h1 class="ttl">RWA <span class="mint">Alpha</span> Terminal</h1>
+              <div class="sub" id="heroSub">969 assets · Ethereum · Paper Mode</div>
+            </div>
+            <div class="spacer"></div>
+            <div class="actions">
+              <span class="ldg-pill paper" id="pMode">PAPER</span>
+              <span class="ldg-pill strat" id="pStrat">FULL ALPHA</span>
+            </div>
+          </div>
+
+          <!-- KPI Strip -->
+          <div class="ldg-kpis" id="kpiStrip"></div>
+
+          <!-- Ticker Tape -->
+          <div class="ldg-ticker"><div class="ldg-ticker-track" id="ticker"></div></div>
+
+          <!-- Globe + Heatmap -->
+          <div class="ldg-viz-grid">
+            <div class="ldg-viz-panel">
+              <div class="ldg-viz-label"><span style="color:#39ffb0">Asset Network</span> · Live Flows</div>
+              <div class="ldg-globe">
+                <svg id="globeSvg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet"></svg>
+                <div class="legend" id="globeLegend"></div>
+              </div>
+            </div>
+            <div class="ldg-viz-panel" style="display:flex;flex-direction:column;overflow:hidden">
+              <div class="ldg-viz-label"><span style="color:#ff6b8a">24H Heatmap</span> · <span id="heatmapModeLabel">Sized by Volume</span></div>
+              <div class="ldg-viz-label-r" style="display:flex;align-items:center;gap:8px">
+                <div id="heatmapToggle" style="display:flex;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;font-family:var(--ldg-mono);font-size:8px;text-transform:uppercase;letter-spacing:.06em">
+                  <div class="hm-tog active" data-mode="volume" onclick="setHeatmapMode('volume')">Volume</div>
+                  <div class="hm-tog" data-mode="mcap" onclick="setHeatmapMode('mcap')">Mcap</div>
+                </div>
+                <span style="display:inline-block;width:32px;height:5px;border-radius:3px;background:linear-gradient(to right,#7d1f30,#d1425a,#e4969f,#67d3a1,#1fa56b,#0e8c5c)"></span>
+              </div>
+              <div class="ldg-heatmap" id="heatmap" style="margin-top:32px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE -->
+      <div class="ldg-ws">
+        <!-- Positions + Allocation -->
+        <div class="g3">
+          <div class="ldg-card">
+            <div class="ldg-card-head"><h3>Open Positions</h3><span class="sub" id="posSub">0 / 6</span></div>
+            <div class="ldg-card-body flush" style="max-height:280px;overflow-y:auto">
+              <table class="ldg-table"><thead><tr>
+                <th>Token</th><th>Category</th><th class="r">Entry</th><th class="r">Current</th><th class="r">PnL</th><th>Conv</th><th>Source</th>
+              </tr></thead><tbody id="posT"></tbody></table>
+            </div>
+          </div>
+          <div class="ldg-card">
+            <div class="ldg-card-head"><h3>Allocation</h3></div>
+            <div class="ldg-card-body" id="allocB"><div class="empty">No positions</div></div>
+          </div>
+        </div>
+
+        <!-- Macro + Signals -->
+        <div class="g2">
+          <div class="ldg-card">
+            <div class="ldg-card-head"><h3>Macro Events</h3><span class="sub">15 playbook events</span></div>
+            <div class="ldg-card-body flush" id="macroB" style="max-height:260px;overflow-y:auto"><div class="empty">No events detected</div></div>
+          </div>
+          <div class="ldg-card">
+            <div class="ldg-card-head"><h3>Signal Log</h3></div>
+            <div class="ldg-card-body flush" id="sigB" style="max-height:260px;overflow-y:auto"><div class="empty">No signals</div></div>
+          </div>
+        </div>
+
+        <!-- Token Universe -->
+        <div class="ldg-card">
+          <div class="ldg-card-head">
+            <h3>Token Universe</h3><span class="sub" id="uniSub">969 tokens</span>
+            <div class="spacer"></div>
+            <input type="text" id="uniSearch" placeholder="Search tokens..." style="background:var(--ldg-sky-2);border:1px solid var(--ldg-sky-line);border-radius:6px;color:var(--ldg-sky-text);padding:4px 10px;font-size:12px;width:160px;outline:none;font-family:var(--ldg-mono)">
+            <div class="ldg-seg" id="uniFilter" style="flex-wrap:wrap;gap:2px"></div>
+            <button class="collapse-btn" id="uniToggle" onclick="toggleUni()">Collapse</button>
+          </div>
+          <div class="ldg-card-body flush" id="uniB" style="max-height:400px;overflow-y:auto">
+            <table class="ldg-table"><thead><tr>
+              <th>Token</th><th>Category</th><th class="r">Price</th><th class="r">24h</th><th class="r">MCap</th><th class="r">Liquidity</th><th>7d</th><th class="r">Gate</th>
+            </tr></thead><tbody id="uniT"></tbody></table>
+          </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="ldg-card">
+          <div class="ldg-card-head"><h3>Activity Feed</h3></div>
+          <div class="ldg-card-body flush" id="actB" style="max-height:220px;overflow-y:auto"><div class="empty">No activity</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   DATA + HELPERS
+   ========================================================================= */
+const CN = {treasury:'Treasuries',gold:'Gold',defi_yield:'DeFi Yield',rwa_gov:'RWA Gov',yield_protocol:'Yield',rwa_infra:'RWA Infra',rwa_credit:'Credit',xstock:'xStock',ondo_tokenized:'Ondo',stablestock:'Stablestock',prestock:'PreStocks',rstock:'rStock',leveraged:'Leveraged'};
+const CAT_GRAD = {
+  treasury:'linear-gradient(135deg,#2b4acb,#4a6fe8)',
+  gold:'linear-gradient(135deg,#c88b0a,#ffb93c)',
+  defi_yield:'linear-gradient(135deg,#0a6f42,#39ffb0)',
+  rwa_gov:'linear-gradient(135deg,#7a3ad6,#b299ff)',
+  yield_protocol:'linear-gradient(135deg,#0a6f6f,#8ef2ff)',
+  rwa_infra:'linear-gradient(135deg,#b05a1a,#e89050)',
+  rwa_credit:'linear-gradient(135deg,#9c2d6b,#d4699e)',
+  xstock:'linear-gradient(135deg,#1e5ab4,#72c4ff)',
+  ondo_tokenized:'linear-gradient(135deg,#c8641e,#ff9e6c)',
+  stablestock:'linear-gradient(135deg,#289650,#7be89c)',
+  prestock:'linear-gradient(135deg,#b4a028,#e8d57b)',
+  rstock:'linear-gradient(135deg,#b43250,#ff7b9a)',
+  leveraged:'linear-gradient(135deg,#c82828,#ff6b6b)'
+};
+const CAT_CLR = {treasury:'#4a6fe8',gold:'#ffb93c',defi_yield:'#39ffb0',rwa_gov:'#b299ff',yield_protocol:'#8ef2ff',rwa_infra:'#e89050',rwa_credit:'#d4699e',xstock:'#72c4ff',ondo_tokenized:'#ff9e6c',stablestock:'#7be89c',prestock:'#e8d57b',rstock:'#ff7b9a',leveraged:'#ff6b6b'};
+const AL_CLR = {treasury:'#4a6fe8',gold:'#c88b0a',defi_yield:'#1fa56b',rwa_gov:'#7a3ad6',yield_protocol:'#13a8a8',rwa_infra:'#b05a1a',rwa_credit:'#9c2d6b',xstock:'#1e5ab4',ondo_tokenized:'#c8641e',stablestock:'#289650',prestock:'#b4a028',rstock:'#b43250',leveraged:'#c82828'};
+
+// Fallback tokens (used until /api/universe loads)
+let TOKENS = {
+  USDY:  {name:'Ondo USDY',         cat:'treasury',       backed:true,  addr:'0x96F6eF951840721AdBF46Ac996b59E0235CB985C'},
+  OUSG:  {name:'Ondo OUSG',          cat:'treasury',       backed:true,  addr:'0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92'},
+  sDAI:  {name:'Savings DAI',        cat:'treasury',       backed:true,  addr:'0x83F20F44975D03b1b09e64809B757c47f942BEeA'},
+  bIB01: {name:'Backed IB01 T-Bill', cat:'treasury',       backed:true,  addr:'0xCA30c93B02514f86d5C86a6e375E3A330B435Fb5'},
+  PAXG:  {name:'Pax Gold',           cat:'gold',           backed:true,  addr:'0x45804880De22913dAFE09f4980848ECE6EcbAf78'},
+  XAUT:  {name:'Tether Gold',        cat:'gold',           backed:true,  addr:'0x68749665FF8D2d112Fa859AA293F07A622782F38'},
+  USDe:  {name:'Ethena USDe',        cat:'defi_yield',     backed:true,  addr:'0x4c9EDD5852cd905f086C759E8383e09bff1E68B3'},
+  ONDO:  {name:'Ondo Finance',       cat:'rwa_gov',        backed:false, addr:'0xfAbA6f8e4a5E8Ab82F62fe7C39859FA577269BE3'},
+  CFG:   {name:'Centrifuge',         cat:'rwa_gov',        backed:false, addr:'0xc221b7E65FfC80DE234bbB6667aBDd46593D34F0'},
+  MPL:   {name:'Maple Finance',      cat:'rwa_gov',        backed:false, addr:'0x33349B282065b0284d756F0577FB39c158F935e6'},
+  PENDLE:{name:'Pendle Finance',     cat:'yield_protocol', backed:false, addr:'0x808507121B80c02388fAd14726482e061B8da827'},
+  PLUME: {name:'Plume Network',      cat:'rwa_infra',      backed:false, addr:'0x4C1746A800D224393fE2470C70A35717eD4eA5F1'},
+  OM:    {name:'MANTRA',             cat:'rwa_infra',      backed:false, addr:'0x3593D125a4f7849a1B059E64F4517A86Dd60c95d'},
+  GFI:   {name:'Goldfinch',          cat:'rwa_credit',     backed:false, addr:'0xdab396cCF3d84Cf2D07C4454e10C8A6F5b008D2b'},
+  TRU:   {name:'TrueFi',             cat:'rwa_credit',     backed:false, addr:'0x4C19596f5aAfF459fA38B0f7eD92F11AE6543784'},
+};
+let _universeLoaded = false;
+
+async function loadUniverse(){
+  // Try /api/universe first (new server), fallback to static JSON files
+  try {
+    const r = await fetch('/api/universe');
+    if(!r.ok) throw 0;
+    const data = await r.json();
+    if(data.tokens && Object.keys(data.tokens).length > 0){
+      TOKENS = data.tokens;
+      _universeLoaded = true;
+      buildRings(); initGlobeData();
+      return;
+    }
+  } catch(e){ console.warn('/api/universe unavailable, trying static files'); }
+  // Fallback: load static JSON files directly
+  try {
+    const [extR, natR] = await Promise.all([
+      fetch('data/rwa_universe.json').then(r=>r.ok?r.json():{}),
+      fetch('data/native_rwa.json').then(r=>r.ok?r.json():{})
+    ]);
+    const merged = {};
+    // CSV-derived first, then native overrides
+    for(const [sym, t] of Object.entries(extR)){
+      merged[sym] = {name:t.name||sym, cat:t.category||'', backed:t.asset_backed||false, has_nav:t.has_nav||false, source:t.source||'csv', chains:t.chains||[], addr:Object.values(t.addresses||{})[0]||'', logo:t.logo||''};
+    }
+    for(const [sym, t] of Object.entries(natR)){
+      merged[sym] = {name:t.name||sym, cat:t.category||'', backed:t.asset_backed||false, has_nav:t.has_nav||false, source:t.source||'native', chains:t.chains||[], addr:Object.values(t.addresses||{})[0]||'', logo:t.logo||''};
+    }
+    if(Object.keys(merged).length > 0){
+      TOKENS = merged;
+      _universeLoaded = true;
+      buildRings(); initGlobeData();
+    }
+  } catch(e2){ console.warn('static JSON fallback also failed', e2); }
+}
+
+function assetCell(sym,info){
+  const logo = info.logo || '';
+  const imgHtml = logo
+    ? `<img src="${logo}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="${sym}"><span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-size:10px">${sym.slice(0,3)}</span>`
+    : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:10px">${sym.slice(0,3)}</span>`;
+  return `<div class="ldg-asset-cell"><div class="av" style="background:${CAT_GRAD[info.cat]}">${imgHtml}</div><div class="nm"><div class="ticker">${sym}</div><div class="full">${info.name}</div></div></div>`;
+}
+function catTag(cat){return `<span class="ldg-tag ldg-tag-${cat}"><span class="dot"></span>${CN[cat]||cat}</span>`;}
+
+let D = null, uniCollapsed = false, uniCatFilter = 'all', uniSearch = '', uniShowAll = false, heatmapMode = 'volume';
+function setHeatmapMode(mode){
+  heatmapMode = mode;
+  document.querySelectorAll('.hm-tog').forEach(el=>{
+    el.classList.toggle('active', el.dataset.mode === mode);
+  });
+  document.getElementById('heatmapModeLabel').textContent = mode === 'volume' ? 'Sized by Volume' : 'Sized by Market Cap';
+  if(D) render();
+}
+function fmt(n,d=2){return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fU(n){return '$'+fmt(n,2)}
+function fC(n){if(n>=1e9)return '$'+fmt(n/1e9,2)+'B';if(n>=1e6)return '$'+fmt(n/1e6,1)+'M';if(n>=1e3)return '$'+fmt(n/1e3,0)+'K';return '$'+fmt(n,0)}
+function fP(n){return n>=100?fU(n):'$'+fmt(n,n<0.01?6:4)}
+function toggleUni(){uniCollapsed=!uniCollapsed;document.getElementById('uniB').style.display=uniCollapsed?'none':'';document.getElementById('uniToggle').textContent=uniCollapsed?'Expand':'Collapse';}
+
+/* =========================================================================
+   SPARKLINE GENERATOR
+   ========================================================================= */
+function genSeries(seed,n=30,trend=0){
+  let v=100+(seed%20);const out=[];
+  for(let i=0;i<n;i++){v+=(Math.sin(seed+i*0.4)*1.6+(Math.cos(seed*0.7+i*0.2)*1.2)+trend*0.15);out.push(v);}
+  return out;
+}
+function sparkSvg(data,color,w=160,h=24){
+  const min=Math.min(...data),max=Math.max(...data),range=max-min||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/range)*(h-2)-1}`).join(' ');
+  const fill=`0,${h} ${pts} ${w},${h}`;
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:100%;display:block"><polyline points="${fill}" fill="${color}" opacity="0.16" stroke="none"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+/* =========================================================================
+   ANIMATED NETWORK GLOBE — ported from viz.jsx
+   ========================================================================= */
+let globeRAF, globeT = 0;
+const GLOBE_W = 800, GLOBE_H = 400, GLOBE_CX = GLOBE_W/2, GLOBE_CY = GLOBE_H/2, GLOBE_TILT = 0.42;
+let RINGS = [];
+function buildRings(){
+  // Discover categories present in TOKENS, assign ring radii dynamically
+  const cats = new Set();
+  Object.values(TOKENS).forEach(t=>cats.add(t.cat));
+  const catArr = [...cats];
+  const rMin = 130, rMax = 360, step = catArr.length > 1 ? (rMax-rMin)/(catArr.length-1) : 0;
+  RINGS = catArr.map((cat,i)=>({
+    cat, r: rMin + i*step, color: CAT_CLR[cat]||'#999', items:[]
+  }));
+}
+buildRings();
+
+function initGlobeData(){
+  RINGS.forEach(r=>r.items=[]);
+  Object.entries(TOKENS).forEach(([sym,info])=>{
+    const ring = RINGS.find(r=>r.cat===info.cat);
+    if(ring) ring.items.push({sym,info});
+  });
+  // Cap items per ring for globe readability (max 12 per ring)
+  RINGS.forEach(r=>{ if(r.items.length > 12) r.items = r.items.slice(0, 12); });
+  // Legend
+  const leg = document.getElementById('globeLegend');
+  const counts = {};
+  Object.values(TOKENS).forEach(t=>{ counts[t.cat]=(counts[t.cat]||0)+1; });
+  leg.innerHTML = RINGS.filter(r=>counts[r.cat]>0).map(r=>
+    `<div class="item"><span class="dot" style="background:${r.color};color:${r.color}"></span>${CN[r.cat]}<span class="cnt">${counts[r.cat]}</span></div>`
+  ).join('');
+}
+
+function renderGlobe(t){
+  const svg = document.getElementById('globeSvg');
+  const stroke = 'rgba(57,255,176,0.15)';
+  const ringStroke = 'rgba(255,255,255,0.06)';
+  let html = `<defs>
+    <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#39ffb0" stop-opacity="0.6"/><stop offset="60%" stop-color="#39ffb0" stop-opacity="0.05"/><stop offset="100%" stop-color="#39ffb0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="hubCore" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" stop-opacity="1"/><stop offset="40%" stop-color="#bcff2f" stop-opacity="0.95"/><stop offset="100%" stop-color="#39ffb0" stop-opacity="0.6"/></radialGradient>
+  </defs>`;
+
+  // Ring ellipses
+  RINGS.forEach((ring,i)=>{
+    html += `<ellipse cx="${GLOBE_CX}" cy="${GLOBE_CY}" rx="${ring.r}" ry="${ring.r*GLOBE_TILT}" fill="none" stroke="${ringStroke}" stroke-width="1" ${i>0?'stroke-dasharray="2 4"':''}/>`;
+  });
+
+  // Meridian lines
+  [-60,-30,0,30,60].forEach(deg=>{
+    const rad=deg*Math.PI/180, xR=360*Math.cos(rad), yR=360*Math.sin(rad)*GLOBE_TILT;
+    html += `<line x1="${GLOBE_CX-xR}" y1="${GLOBE_CY-yR}" x2="${GLOBE_CX+xR}" y2="${GLOBE_CY+yR}" stroke="${ringStroke}" stroke-width="1"/>`;
+  });
+
+  // Hub glow
+  html += `<circle cx="${GLOBE_CX}" cy="${GLOBE_CY}" r="80" fill="url(#hubGlow)"/>`;
+
+  // Build node positions
+  const nodes = [];
+  RINGS.forEach((ring,ringIdx)=>{
+    const baseAngle = t*(0.05+ringIdx*0.02)*(ringIdx%2?1:-1);
+    ring.items.forEach((item,i)=>{
+      const ang = baseAngle + (i/ring.items.length)*Math.PI*2;
+      const x = GLOBE_CX + Math.cos(ang)*ring.r;
+      const y = GLOBE_CY + Math.sin(ang)*ring.r*GLOBE_TILT;
+      nodes.push({...item, x, y, ring, ang, depth: Math.sin(ang)});
+    });
+  });
+  nodes.sort((a,b)=>a.depth-b.depth);
+
+  // Active flows
+  for(let i=0;i<6;i++){
+    const idx = Math.floor((t*0.4+i*1.6))%nodes.length;
+    const phase = ((t*0.4+i*1.6)%1);
+    const n = nodes[idx];
+    if(n){
+      const dx=n.x-GLOBE_CX, dy=n.y-GLOBE_CY;
+      const px=GLOBE_CX+dx*phase, py=GLOBE_CY+dy*phase;
+      html += `<line x1="${GLOBE_CX}" y1="${GLOBE_CY}" x2="${n.x}" y2="${n.y}" stroke="${n.ring.color}" stroke-width="0.7" opacity="0.35" stroke-dasharray="2 3"/>`;
+      html += `<circle cx="${px}" cy="${py}" r="3" fill="${n.ring.color}" opacity="${1-phase*0.7}"/>`;
+      html += `<circle cx="${px}" cy="${py}" r="6" fill="${n.ring.color}" opacity="${(1-phase)*0.3}"/>`;
+    }
+  }
+
+  // Asset nodes
+  nodes.forEach(n=>{
+    const front = n.depth > 0;
+    const r = front ? 7 : 5;
+    const op = front ? 1 : 0.4;
+    html += `<g opacity="${op}">`;
+    html += `<circle cx="${n.x}" cy="${n.y}" r="${r+5}" fill="${n.ring.color}" opacity="0.18"/>`;
+    html += `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${n.ring.color}" stroke="#0a1012" stroke-width="1.5"/>`;
+    if(front) html += `<text x="${n.x}" y="${n.y-r-6}" text-anchor="middle" font-size="9.5" font-family="JetBrains Mono, monospace" fill="rgba(240,255,245,.9)" style="letter-spacing:0.04em">${n.sym}</text>`;
+    html += `</g>`;
+  });
+
+  // Hub
+  html += `<circle cx="${GLOBE_CX}" cy="${GLOBE_CY}" r="22" fill="url(#hubCore)"/>`;
+  html += `<circle cx="${GLOBE_CX}" cy="${GLOBE_CY}" r="22" fill="none" stroke="#39ffb0" stroke-width="1" opacity="0.5"/>`;
+  html += `<text x="${GLOBE_CX}" y="${GLOBE_CY+4}" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="700" font-size="12" fill="#001108" letter-spacing="-0.04em">RWA</text>`;
+
+  // Outer halo
+  html += `<circle cx="${GLOBE_CX}" cy="${GLOBE_CY}" r="390" fill="none" stroke="${stroke}" stroke-dasharray="2 12" opacity="0.5"/>`;
+
+  svg.innerHTML = html;
+}
+
+function globeLoop(now){
+  globeT = (now || 0) / 1000;
+  renderGlobe(globeT);
+  globeRAF = requestAnimationFrame(globeLoop);
+}
+
+/* =========================================================================
+   HEATMAP — ported from viz.jsx
+   ========================================================================= */
+function renderHeatmap(prices){
+  const el = document.getElementById('heatmap');
+  const syms = Object.keys(TOKENS);
+  const pr = prices || {};
+  // Build items weighted by 24h trading volume
+  const items = [];
+  const useVol = heatmapMode === 'volume';
+  syms.forEach((sym,i)=>{
+    const p = pr[sym] || {};
+    const rawVal = useVol ? parseFloat(p.volume_24h || 0) : parseFloat(p.mc || 0);
+    const chg = parseFloat(p.priceChange24H || 0) || ((i*13.7)%7-3)*0.4;
+    if(rawVal > 0 || p.price) items.push({sym, chg, weight: Math.log10(Math.max(rawVal, 10)) });
+  });
+  // If no real data yet, fall back to simulated weights
+  if(items.length < 5){
+    items.length = 0;
+    syms.forEach((sym,i)=>{
+      const p = pr[sym] || {};
+      const chg = parseFloat(p.priceChange24H || 0) || ((i*13.7)%7-3)*0.4;
+      const isNative = (TOKENS[sym]||{}).source === 'native';
+      const w = (isNative ? 500000 : 50000) + (((i*7919)%100000));
+      items.push({sym, chg, weight: w});
+    });
+  }
+  // Sort by volume descending, take top 35
+  items.sort((a,b)=>b.weight-a.weight);
+  const top = items.slice(0, 35);
+
+  function colorFor(c){
+    if(c>=4) return '#0e8c5c';
+    if(c>=2) return '#1fa56b';
+    if(c>=0.5) return '#3cbf85';
+    if(c>=0) return '#67d3a1';
+    if(c>=-0.5) return '#e4969f';
+    if(c>=-2) return '#d1425a';
+    if(c>=-4) return '#ad2e44';
+    return '#7d1f30';
+  }
+
+  // Squarified treemap layout
+  function squarify(items, rect){
+    if(!items.length) return [];
+    const rects = [];
+    const totalArea = rect.w * rect.h;
+    const totalWeight = items.reduce((s,it)=>s+it.weight,0);
+    let remaining = [...items];
+    let {x, y, w, h} = rect;
+
+    while(remaining.length > 0){
+      const remWeight = remaining.reduce((s,it)=>s+it.weight,0);
+      const isWide = w >= h;
+      const side = isWide ? h : w;
+      let row = [remaining[0]];
+      let rowWeight = remaining[0].weight;
+
+      function worst(rw, rl){
+        const s = side;
+        const rowArea = (rw / remWeight) * w * h;
+        const rowSide = rowArea / s;
+        let mx = 0;
+        let rSum = 0;
+        for(const it of rl){
+          const itArea = (it.weight / remWeight) * w * h;
+          const itSide = itArea / rowSide;
+          const ratio = Math.max(itSide/rowSide, rowSide/itSide);
+          if(ratio > mx) mx = ratio;
+        }
+        return mx;
+      }
+
+      for(let i = 1; i < remaining.length; i++){
+        const newRow = [...row, remaining[i]];
+        const newWeight = rowWeight + remaining[i].weight;
+        if(worst(newWeight, newRow) <= worst(rowWeight, row)){
+          row = newRow;
+          rowWeight = newWeight;
+        } else break;
+      }
+
+      // Lay out the row
+      const rowArea = (rowWeight / remWeight) * w * h;
+      const rowSide = isWide ? rowArea / h : rowArea / w;
+      let offset = 0;
+      row.forEach(it=>{
+        const frac = it.weight / rowWeight;
+        const itLen = frac * (isWide ? h : w);
+        if(isWide){
+          rects.push({...it, rx: x+offset*0, ry: y+offset*0,
+            rx: x, ry: y + offset, rw: rowSide, rh: itLen});
+          offset += itLen;
+        } else {
+          rects.push({...it, rx: x + offset, ry: y, rw: itLen, rh: rowSide});
+          offset += itLen;
+        }
+      });
+
+      // Shrink remaining rect
+      if(isWide){ x += rowSide; w -= rowSide; }
+      else { y += rowSide; h -= rowSide; }
+      remaining = remaining.slice(row.length);
+    }
+    return rects;
+  }
+
+  const pad = 0;
+  const W = el.clientWidth || 400;
+  const H = el.clientHeight || 300;
+  const laid = squarify(top, {x:0, y:0, w:W, h:H});
+
+  el.innerHTML = laid.map(a=>{
+    const fs = Math.max(8, Math.min(12, Math.sqrt(a.rw * a.rh) / 5));
+    const showChg = a.rw > 45 && a.rh > 30;
+    return `<div class="ldg-heat-cell" style="position:absolute;left:${a.rx}px;top:${a.ry}px;width:${a.rw-2}px;height:${a.rh-2}px;background:${colorFor(a.chg)};font-size:${fs}px">` +
+      `<div class="sym">${a.sym}</div>` +
+      (showChg ? `<div class="chg">${a.chg>=0?'+':''}${a.chg.toFixed(2)}%</div>` : '') +
+      `</div>`;
+  }).join('');
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  if(!D) return;
+  const pr=D.prices||{}, pos=D.positions||{}, feed=D.feed||[], sigs=D.signals||[], trades=D.trades||[], sess=D.session||{}, pf=D.portfolio||{};
+
+  // Mode pills
+  const live = D.mode==='live';
+  document.getElementById('pMode').className = 'ldg-pill '+(live?'live':'paper');
+  document.getElementById('pMode').textContent = live?'LIVE':'PAPER';
+  document.getElementById('pStrat').textContent = (D.strategy_mode||'').replace('_',' ').toUpperCase();
+  document.getElementById('netLabel').textContent = (live?'Live':'Paper')+' · Ethereum'+(D.paused?' (PAUSED)':'');
+
+  // Hero subtitle
+  const nPr = Object.keys(pr).length;
+  document.getElementById('heroSub').textContent = `${Object.keys(TOKENS).length} assets · ${nPr} live · ${D.mode||'paper'} mode`;
+
+  // Wallet
+  const pv = pf.portfolio_value||0;
+  document.getElementById('wBal').textContent = fU(pv);
+
+  // KPI Strip
+  const pc = Object.keys(pos).length, pnl = pf.total_pnl||0, inv = pf.total_invested||0;
+  const ret = inv>0?((pnl/inv)*100).toFixed(1):'0.0';
+  const kpis = [
+    {lbl:'Portfolio Value', val:fU(pv), u:'', delta:(inv>0?fU(inv)+' invested':'No positions'), up:true, seed:21},
+    {lbl:'Unrealized P&L', val:(pnl>=0?'+':'')+fU(pnl), u:'', delta:ret+'% return', up:pnl>=0, mint:true, seed:43},
+    {lbl:'Active Positions', val:pc+' / 6', u:'', delta:Object.keys(pf.categories||{}).length+' categories', up:true, seed:11},
+    {lbl:'Today Trades', val:String(sess.daily_trades||0), u:'/10', delta:(sess.wins||0)+'W / '+(sess.losses||0)+'L', up:true, seed:77},
+    {lbl:'Price Feeds', val:nPr+'/'+Object.keys(TOKENS).length, u:'', delta:'live onchain', up:nPr>0, seed:91},
+  ];
+  document.getElementById('kpiStrip').innerHTML = kpis.map(k=>{
+    const spark = genSeries(k.seed, 30, k.up?1:-0.5);
+    return `<div class="ldg-kpi">
+      <div class="lbl">${k.lbl}</div>
+      <div class="val ${k.mint?'mint':''}">${k.val}<span class="u">${k.u}</span></div>
+      <div class="delta ${k.up?'up':'down'}">${k.up?'▲':'▼'} ${k.delta}</div>
+      <div class="spark">${sparkSvg(spark, k.up?'#39ffb0':'#ff7f92')}</div>
+    </div>`;
+  }).join('');
+
+  // Ticker tape
+  const sorted = Object.entries(TOKENS).sort((a,b)=>(pr[b[0]]||{}).liquidity||0-(pr[a[0]]||{}).liquidity||0);
+  const priced = sorted.filter(([s])=>pr[s]&&pr[s].price>0);
+  const tkHtml = priced.map(([sym,info])=>{
+    const p=pr[sym]||{};
+    const chg=parseFloat(p.priceChange24H||0);
+    const up=chg>=0;
+    return `<div class="ldg-ticker-item"><span class="tk">${sym}</span><span>${fP(p.price)}</span><span class="${up?'up':'down'}">${up?'▲ +':'▼ '}${fmt(chg,2)}%</span><span class="sep">|</span></div>`;
+  }).join('');
+  const tickerEl = document.getElementById('ticker');
+  tickerEl.innerHTML = tkHtml + tkHtml;
+  tickerEl.parentElement.style.setProperty('--ticker-dur', Math.max(30, priced.length*4)+'s');
+
+  // Heatmap
+  renderHeatmap(pr);
+
+  // Positions
+  const pe = Object.entries(pos);
+  document.getElementById('posSub').textContent = pe.length+' / 6';
+  document.getElementById('posT').innerHTML = pe.length===0
+    ?'<tr><td colspan="7" class="empty">No open positions</td></tr>'
+    :pe.map(([sym,p])=>{
+      const pp=p.pnl_pct||0, pu=p.pnl_usd||0, cl=pp>=0?'up':'down';
+      const info=TOKENS[sym]||{cat:'treasury',name:sym,addr:''};
+      return `<tr>
+        <td>${assetCell(p.symbol||sym,info)}</td>
+        <td>${catTag(info.cat)}</td>
+        <td class="r mono">${fmt(p.entry_price||0,4)}</td>
+        <td class="r mono">${fmt(p.current_price||0,4)}</td>
+        <td class="r"><span class="${cl} mono">${pp>=0?'+':''}${fmt(pp,2)}%</span> <span style="color:var(--ldg-sky-text-3);font-size:10px">${pu>=0?'+':''}${fU(pu)}</span></td>
+        <td><div class="conv-bar"><div class="conv-fill" style="width:${(p.conviction||0)*100}%"></div></div></td>
+        <td><span class="src-tag">${(p.signal_source||'').split(':').pop()||'-'}</span></td>
+      </tr>`;
+    }).join('');
+
+  // Allocation
+  const cats = pf.categories||{};
+  document.getElementById('allocB').innerHTML = Object.keys(cats).length===0
+    ?'<div class="empty">No positions</div>'
+    :Object.entries(cats).map(([c,d])=>{
+      const pct = inv>0?(d.invested/inv)*100:0;
+      return `<div class="al-row"><div class="al-lbl">${CN[c]||c}</div><div class="al-bar"><div class="al-fill" style="width:${pct}%;background:${AL_CLR[c]||'#666'}">${pct>8?fmt(pct,0)+'%':''}</div></div><div class="al-val">${fU(d.invested)}</div></div>`;
+    }).join('');
+
+  // Macro events
+  const mf = feed.filter(f=>f.cat==='macro').slice(0,15);
+  document.getElementById('macroB').innerHTML = mf.length===0
+    ?'<div class="empty">No events detected</div>'
+    :mf.map(f=>`<div class="feed-i"><span class="feed-ts">${f.t}</span><span class="feed-msg">${f.msg}</span></div>`).join('');
+
+  // Signals
+  document.getElementById('sigB').innerHTML = sigs.length===0
+    ?'<div class="empty">No signals</div>'
+    :sigs.slice(0,12).map(s=>{
+      const buy=(s.action||'').toUpperCase().includes('BUY');
+      return `<div class="sig-i"><span class="sig-act ${buy?'buy':'sell'}">${s.action}</span><span class="sig-sym">${s.sym}</span><span class="sig-src">${s.source||''}</span><span class="sig-conv">${((s.conviction||0)*100).toFixed(0)}%</span></div>`;
+    }).join('');
+
+  // Universe filter — dynamic from categories present
+  const uniCats = new Set();
+  Object.values(TOKENS).forEach(t=>uniCats.add(t.cat));
+  const catBtns = ['all', ...uniCats].map(f=>
+    `<button class="${uniCatFilter===f?'active':''}" onclick="uniCatFilter='${f}';render()">${f==='all'?'All':CN[f]||f}</button>`
+  ).join('');
+  document.getElementById('uniFilter').innerHTML = catBtns;
+
+  // Token universe — with search + row limit
+  const searchEl = document.getElementById('uniSearch');
+  if(searchEl && !searchEl._bound){ searchEl._bound=true; searchEl.addEventListener('input',e=>{uniSearch=e.target.value.toLowerCase();uniShowAll=false;render();}); }
+  let allT = Object.entries(TOKENS).filter(([,info])=>uniCatFilter==='all'||info.cat===uniCatFilter);
+  if(uniSearch){ allT = allT.filter(([sym,info])=>sym.toLowerCase().includes(uniSearch)||info.name.toLowerCase().includes(uniSearch)); }
+  const prU = allT.filter(([s])=>pr[s]&&pr[s].price>0);
+  const npU = allT.filter(([s])=>!pr[s]||!pr[s].price);
+  const combined = [...prU,...npU];
+  const UNI_LIMIT = 50;
+  const shown = uniShowAll ? combined : combined.slice(0, UNI_LIMIT);
+  document.getElementById('uniSub').textContent = `${allT.length} tokens · ${prU.length} live`;
+  document.getElementById('uniT').innerHTML = shown.map(([sym,info])=>{
+    const p=pr[sym]||{}, price=p.price||0, mc=p.mc||0, liq=p.liquidity||0;
+    const chg=parseFloat(p.priceChange24H||0), gate=liq>=200000;
+    const spark = price>0 ? genSeries(sym.charCodeAt(0)+sym.charCodeAt(1),24,chg) : null;
+    const sparkColor = chg>=0 ? '#39ffb0' : '#ff7f92';
+    return `<tr>
+      <td>${assetCell(sym,info)}</td>
+      <td>${catTag(info.cat)}</td>
+      <td class="r mono">${price>0?fP(price):'--'}</td>
+      <td class="r">${price>0?`<span class="${chg>=0?'up':'down'}">${chg>=0?'+':''}${fmt(chg,2)}%</span>`:'<span style="color:var(--ldg-sky-text-3)">--</span>'}</td>
+      <td class="r mono">${mc>0?fC(mc):'--'}</td>
+      <td class="r mono">${liq>0?fC(liq):'--'}</td>
+      <td>${spark?`<svg class="ldg-spark" viewBox="0 0 80 22" preserveAspectRatio="none"><polyline points="${spark.map((v,i)=>`${(i/23)*80},${22-((v-Math.min(...spark))/(Math.max(...spark)-Math.min(...spark)||1))*20-1}`).join(' ')}" fill="none" stroke="${sparkColor}" stroke-width="1.2" stroke-linejoin="round"/></svg>`:'--'}</td>
+      <td class="r"><span class="gate ${gate?'ok':'no'}">${gate?'PASS':'LOW'}</span></td>
+    </tr>`;
+  }).join('') + (combined.length > UNI_LIMIT && !uniShowAll ? `<tr><td colspan="8" style="text-align:center;padding:12px"><button onclick="uniShowAll=true;render()" style="background:var(--ldg-sky-3);color:var(--ldg-sky-text);border:1px solid var(--ldg-sky-line);border-radius:6px;padding:6px 18px;cursor:pointer;font-size:12px">Show all ${combined.length} tokens</button></td></tr>` : '');
+
+  // Activity
+  document.getElementById('actB').innerHTML = feed.length===0
+    ?'<div class="empty">No activity</div>'
+    :feed.slice(0,20).map(f=>`<div class="feed-i"><span class="feed-ts">${f.t}</span><span class="feed-msg">${f.msg}</span><span class="feed-tag">${f.cat}</span></div>`).join('');
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+async function fetchData(){
+  try{const r=await fetch('/api/state');if(!r.ok)throw 0;D=await r.json();render();}
+  catch(e){console.warn('fetch failed',e);}
+}
+function tick(){document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});}
+
+initGlobeData();
+globeLoop(0);
+loadUniverse().then(()=>{ fetchData(); });
+setInterval(fetchData, 3000);
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

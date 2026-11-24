@@ -1,0 +1,26 @@
+schema_version: 1
+name: aerodrome-slipstream-plugin
+version: "0.2.1"
+description: "Swap tokens and manage concentrated liquidity positions on Aerodrome Slipstream (CLMM) on Base. Supports 9 commands: swap, quote, pools, prices, positions, mint, add/remove liquidity, collect fees."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - aerodrome
+  - concentrated-liquidity
+  - base
+  - clmm
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: aerodrome-slipstream-plugin
+
+api_calls:
+  - "https://mainnet.base.org"

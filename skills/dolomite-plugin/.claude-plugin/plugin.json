@@ -1,0 +1,19 @@
+{
+  "name": "dolomite-plugin",
+  "description": "Dolomite Finance lending/borrowing on Arbitrum - supply assets to earn interest, open isolated borrow positions, repay, withdraw via DolomiteMargin.",
+  "version": "0.1.1",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "dolomite",
+    "margin",
+    "arbitrum",
+    "defi",
+    "dolo"
+  ]
+}

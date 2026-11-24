@@ -1,0 +1,19 @@
+{
+  "name": "compound-v3-plugin",
+  "description": "Compound V3 (Comet) lending plugin: supply collateral, borrow/repay the base asset, and claim COMP rewards",
+  "version": "0.2.8",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "homepage": "https://github.com/skylavis-sky/onchainos-plugins/tree/main/compound-v3",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": [
+    "lending",
+    "borrowing",
+    "defi",
+    "compound",
+    "comet"
+  ]
+}

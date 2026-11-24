@@ -1,0 +1,23 @@
+# State files (auto-generated at runtime)
+state/launches.json
+state/templates.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+*.env
+.aidesigner/*
+!.aidesigner/.gitkeep

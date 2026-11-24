@@ -1,0 +1,16 @@
+[package]
+name = "orca-plugin"
+version = "0.6.4"
+edition = "2021"
+
+[[bin]]
+name = "orca-plugin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }

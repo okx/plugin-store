@@ -1,0 +1,5 @@
+{
+  "name": "pendle-plugin",
+  "description": "Pendle Finance yield tokenization plugin \u2014 buy/sell PT & YT, add/remove liquidity, mint/redeem PT+YT pairs across Ethereum, Arbitrum, BSC, and Base",
+  "version": "0.2.9"
+}

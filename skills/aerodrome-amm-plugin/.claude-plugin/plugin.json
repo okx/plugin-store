@@ -1,0 +1,7 @@
+{
+  "name": "aerodrome-amm-plugin",
+  "version": "0.1.1",
+  "description": "Swap tokens and provide liquidity on Aerodrome AMM (volatile/stable pools) on Base",
+  "binary": "aerodrome-amm",
+  "chain": "base"
+}

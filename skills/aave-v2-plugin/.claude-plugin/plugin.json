@@ -1,0 +1,5 @@
+{
+  "name": "aave-v2-plugin",
+  "version": "0.1.1",
+  "description": "Aave V2 exit tool across Ethereum, Polygon, and Avalanche - all reserves frozen by governance. Redeem aTokens, repay legacy debt, claim stkAAVE/WMATIC/WAVAX rewards. Use aave-v3-plugin for active supply/borrow."
+}

@@ -1,0 +1,22 @@
+{
+  "name": "aerodrome-slipstream-plugin",
+  "description": "Swap tokens and manage concentrated liquidity positions on Aerodrome Slipstream (CLMM) on Base",
+  "version": "0.2.1",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "homepage": "https://aerodrome.finance",
+  "repository": "https://github.com/skylavis-sky/onchainos-plugins",
+  "license": "MIT",
+  "keywords": [
+    "dex",
+    "amm",
+    "concentrated-liquidity",
+    "clmm",
+    "aerodrome",
+    "base",
+    "liquidity",
+    "defi"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "pancakeswap-v2-plugin",
+  "description": "Swap tokens and manage liquidity on PancakeSwap V2 (xyk AMM) on BSC, Base, and Arbitrum. Triggers: swap pancakeswap v2, add/remove liquidity pancake, pcs v2 quote, check pancake pair.",
+  "version": "0.2.6",
+  "author": {
+    "name": "skylavis-sky",
+    "github": "skylavis-sky"
+  },
+  "license": "MIT"
+}

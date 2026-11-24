@@ -1,0 +1,23 @@
+{
+  "name": "market-structure-analyzer",
+  "description": "Crypto market-structure research agent — 24+ indicators across derivatives, options (gamma wall, skew), on-chain (MVRV, smart money, DEX hot tokens), and macro sentiment. Live dashboard with K-line charts, TA indicators, and 12-signal composite scoring. Powered by OKX CeFi CLI + OnchainOS.",
+  "version": "3.0.0",
+  "author": {
+    "name": "VibeCodeDaddy",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bitcoin",
+    "ethereum",
+    "derivatives",
+    "options",
+    "on-chain",
+    "market-structure",
+    "gamma-wall",
+    "mvrv",
+    "smart-money",
+    "live-dashboard"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

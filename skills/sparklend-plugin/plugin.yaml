@@ -1,0 +1,30 @@
+schema_version: 1
+name: sparklend-plugin
+version: "0.1.1"
+description: "SparkLend lending and borrowing on Ethereum Mainnet — supply, withdraw, borrow, repay, positions, health factor, reserves."
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+license: MIT
+homepage: https://spark.fi
+repository: https://github.com/skylavis-sky/plugin-store
+tags:
+  - defi
+  - lending
+  - ethereum
+  - sparklend
+  - aave
+chains:
+  - ethereum
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: sparklend-plugin
+
+api_calls:
+  - "https://ethereum.publicnode.com"

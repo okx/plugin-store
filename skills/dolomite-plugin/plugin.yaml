@@ -1,0 +1,24 @@
+schema_version: 1
+name: dolomite-plugin
+version: "0.1.3"
+description: Dolomite Finance lending and borrowing on Arbitrum - supply assets to earn interest, open isolated borrow positions, and manage repay/withdraw via DolomiteMargin
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: dapp
+tags:
+  - lending
+  - borrowing
+  - dolomite
+  - margin
+  - arbitrum
+  - dolo
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: dolomite-plugin
+api_calls:
+  - "https://arbitrum-one-rpc.publicnode.com"

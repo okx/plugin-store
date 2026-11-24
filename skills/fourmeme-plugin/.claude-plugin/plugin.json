@@ -1,0 +1,21 @@
+{
+  "name": "fourmeme-plugin",
+  "description": "Trade Four.meme bonding-curve memecoins on BNB Chain - buy and sell pre-graduate tokens, get live quotes, view holdings. Trigger phrases: buy four meme token, sell four meme, four.meme price, fourmeme quote, fourmeme positions, my fourmeme holdings, list four meme tokens, trending four.meme.",
+  "version": "0.1.1",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "homepage": "https://github.com/okx/plugin-store",
+  "repository": "https://github.com/okx/plugin-store",
+  "license": "MIT",
+  "keywords": [
+    "meme",
+    "launchpad",
+    "bonding-curve",
+    "bsc",
+    "bnb-chain",
+    "four-meme",
+    "token-trading"
+  ]
+}

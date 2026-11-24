@@ -1,0 +1,28 @@
+schema_version: 1
+name: quickswap-plugin
+version: "0.1.2"
+description: "Swap tokens on QuickSwap V3 (Algebra CLMM) on Polygon — with price quotes and pool discovery"
+author:
+  name: skylavis-sky
+  github: skylavis-sky
+category: dapp
+tags:
+  - quickswap
+  - polygon
+  - clmm
+  - swap
+  - defi
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: quickswap-plugin
+
+api_calls:
+  - "https://polygon.publicnode.com"
+  - "https://api.thegraph.com"
+  - "https://polygonscan.com"

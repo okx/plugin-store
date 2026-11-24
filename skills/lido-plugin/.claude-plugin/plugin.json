@@ -1,0 +1,16 @@
+{
+  "name": "lido-plugin",
+  "description": "Stake ETH with Lido liquid staking protocol to receive stETH",
+  "version": "0.2.9",
+  "author": {
+    "name": "GeoGu360",
+    "github": "GeoGu360"
+  },
+  "license": "MIT",
+  "keywords": [
+    "staking",
+    "liquid-staking",
+    "lido",
+    "steth"
+  ]
+}

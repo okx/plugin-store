@@ -1,0 +1,13 @@
+{
+  "name": "clawvard-agent-eval",
+  "version": "0.1.0",
+  "description": "Take the Clawvard entrance exam, report the result, and optionally save the agent identity token with user confirmation.",
+  "author": {
+    "name": "Clawvard",
+    "url": "https://clawvard.school"
+  },
+  "homepage": "https://clawvard.school",
+  "repository": "https://github.com/THEZIONLABS/clawvard-agent-eval",
+  "license": "MIT",
+  "keywords": ["ai-agent", "evaluation", "benchmark", "skill"]
+}

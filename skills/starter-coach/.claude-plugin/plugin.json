@@ -1,0 +1,22 @@
+{
+  "name": "starter-coach",
+  "description": "Starter Coach V2 — conversational 6-step skill that guides users to build their own automated DEX spot-trading bot on OKX DEX. Onboard → Profile → Build Strategy → Paper Trade → Go Live. Uses OnchainOS CLI for all on-chain data and execution.",
+  "version": "1.0.0",
+  "author": {
+    "name": "VibeCodeDaddy",
+    "github": "VibeCodeDaddy69"
+  },
+  "license": "MIT",
+  "keywords": [
+    "trading-bot",
+    "strategy-builder",
+    "coaching",
+    "paper-trade",
+    "backtesting",
+    "dex",
+    "onchainos",
+    "solana",
+    "ethereum"
+  ],
+  "repository": "https://github.com/okx/plugin-store"
+}

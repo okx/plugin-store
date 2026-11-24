@@ -1,0 +1,5 @@
+{
+  "name": "compound-v2-plugin",
+  "version": "0.1.1",
+  "description": "Compound V2 exit tool on Ethereum mainnet - redeem, repay, claim COMP for legacy V2 positions. Use compound-v3-plugin for active supply/borrow."
+}

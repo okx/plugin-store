@@ -1,0 +1,29 @@
+schema_version: 1
+name: lifi-plugin
+version: "0.1.1"
+description: "LI.FI cross-chain bridge & swap aggregator - list chains/tokens, get quotes, bridge or swap, track tx status across Ethereum, Arbitrum, Base, BSC, Polygon, and Optimism"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: dapp
+tags:
+  - bridge
+  - cross-chain
+  - aggregator
+  - lifi
+  - swap
+license: MIT
+components:
+  skill:
+    dir: .
+build:
+  lang: rust
+  binary_name: lifi-plugin
+api_calls:
+  - "https://li.quest"
+  - "https://ethereum-rpc.publicnode.com"
+  - "https://arbitrum-one-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"
+  - "https://bsc-rpc.publicnode.com"
+  - "https://polygon-bor-rpc.publicnode.com"
+  - "https://optimism-rpc.publicnode.com"

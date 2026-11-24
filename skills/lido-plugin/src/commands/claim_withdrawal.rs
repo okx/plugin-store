@@ -1,0 +1,173 @@
+use crate::{config, onchainos, rpc};
+use clap::Args;
+
+#[derive(Args)]
+pub struct ClaimWithdrawalArgs {
+    /// Comma-separated list of request IDs to claim (e.g. 12345,67890)
+    #[arg(long, value_delimiter = ',')]
+    pub ids: Vec<u128>,
+
+    /// Wallet address (optional, resolved from onchainos if omitted)
+    #[arg(long)]
+    pub from: Option<String>,
+
+    /// Dry run — show calldata without broadcasting
+    #[arg(long, default_value_t = false)]
+    pub dry_run: bool,
+    /// Confirm and broadcast the transaction (without this flag, prints a preview only)
+    #[arg(long)]
+    pub confirm: bool,
+}
+
+pub async fn run(args: ClaimWithdrawalArgs) -> anyhow::Result<()> {
+    let chain_id = config::CHAIN_ID;
+
+    if args.ids.is_empty() {
+        anyhow::bail!("No request IDs provided. Use --ids <ID1,ID2,...>");
+    }
+
+    // Resolve wallet address — must not be zero
+    let wallet = match args.from.clone() {
+        Some(f) => f,
+        None => onchainos::resolve_wallet(chain_id).await.unwrap_or_default(),
+    };
+    if wallet.is_empty() {
+        anyhow::bail!("Cannot get wallet address. Pass --from or ensure onchainos is logged in.");
+    }
+
+    // Step 1: getLastCheckpointIndex() -> uint256
+    eprintln!("Step 1/3: Getting last checkpoint index...");
+    let checkpoint_calldata = format!("0x{}", config::SEL_GET_LAST_CHECKPOINT_INDEX);
+    let checkpoint_result = onchainos::eth_call(
+        chain_id,
+        config::WITHDRAWAL_QUEUE_ADDRESS,
+        &checkpoint_calldata,
+    ).await?;
+
+    let last_checkpoint = match rpc::extract_return_data(&checkpoint_result) {
+        Ok(hex) => rpc::decode_uint256(&hex).unwrap_or(1) as u64,
+        Err(e) => {
+            anyhow::bail!("Failed to get last checkpoint index: {}", e);
+        }
+    };
+    eprintln!("Last checkpoint index: {}", last_checkpoint);
+
+    // Step 2a: getWithdrawalStatus — filter out PENDING / CLAIMED before calling findCheckpointHints.
+    eprintln!("Step 2/3: Checking request status...");
+    let status_calldata = rpc::calldata_get_withdrawal_status(&args.ids);
+    let status_result = onchainos::eth_call(
+        chain_id,
+        config::WITHDRAWAL_QUEUE_ADDRESS,
+        &status_calldata,
+    ).await?;
+
+    if let Ok(hex) = rpc::extract_return_data(&status_result) {
+        let hex = hex.trim_start_matches("0x");
+        let data = if hex.len() > 128 { &hex[128..] } else { hex };
+        let entry_size = 6 * 64;
+        let mut pending_ids: Vec<u128> = vec![];
+        let mut already_claimed: Vec<u128> = vec![];
+        for (i, &id) in args.ids.iter().enumerate() {
+            let start = i * entry_size;
+            if start + entry_size > data.len() {
+                break;
+            }
+            let entry = &data[start..start + entry_size];
+            let is_finalized = u128::from_str_radix(&entry[4 * 64..5 * 64], 16).unwrap_or(0) != 0;
+            let is_claimed   = u128::from_str_radix(&entry[5 * 64..6 * 64], 16).unwrap_or(0) != 0;
+            if is_claimed {
+                already_claimed.push(id);
+            } else if !is_finalized {
+                pending_ids.push(id);
+            }
+        }
+        if !already_claimed.is_empty() {
+            eprintln!("Warning: already claimed — skipping: {:?}", already_claimed);
+        }
+        if !pending_ids.is_empty() {
+            anyhow::bail!(
+                "The following requests are not yet finalized (still PENDING): {:?}\n\
+                 Run `lido get-withdrawals` to check status. Withdrawal finalization typically takes 1–5 days.",
+                pending_ids
+            );
+        }
+    }
+
+    // Step 2b: findCheckpointHints
+    eprintln!("  Finding checkpoint hints...");
+    let hints_calldata =
+        rpc::calldata_find_checkpoint_hints(&args.ids, 1, last_checkpoint);
+    let hints_result = onchainos::eth_call(
+        chain_id,
+        config::WITHDRAWAL_QUEUE_ADDRESS,
+        &hints_calldata,
+    ).await?;
+
+    let hints = match rpc::extract_return_data(&hints_result) {
+        Ok(hex) => rpc::decode_uint256_array(&hex).unwrap_or_default(),
+        Err(e) => {
+            anyhow::bail!("Failed to get checkpoint hints: {}", e);
+        }
+    };
+
+    if hints.len() != args.ids.len() {
+        anyhow::bail!(
+            "Hint count ({}) does not match ID count ({}). Some requests may not be finalized.",
+            hints.len(),
+            args.ids.len()
+        );
+    }
+
+    // Step 3: claimWithdrawals(uint256[] requestIds, uint256[] hints)
+    let claim_calldata = rpc::calldata_claim_withdrawals(&args.ids, &hints);
+
+    if args.dry_run {
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "dry_run": true,
+            "action": "claimWithdrawal",
+            "from": wallet,
+            "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+            "contract": config::WITHDRAWAL_QUEUE_ADDRESS,
+            "calldata": claim_calldata,
+            "note": "Add --confirm to broadcast"
+        }));
+        return Ok(());
+    }
+
+    if !args.confirm {
+        println!("{}", serde_json::json!({
+            "ok": true,
+            "preview": true,
+            "action": "claimWithdrawal",
+            "from": wallet,
+            "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+            "note": "Add --confirm to execute"
+        }));
+        return Ok(());
+    }
+
+    eprintln!("Step 3/3: Claiming withdrawals...");
+    let claim_result = onchainos::wallet_contract_call(
+        chain_id,
+        config::WITHDRAWAL_QUEUE_ADDRESS,
+        &claim_calldata,
+        Some(&wallet),
+        None,
+        args.confirm,
+        args.dry_run,
+    )
+    .await?;
+
+    let tx_hash = onchainos::extract_tx_hash(&claim_result);
+    println!("{}", serde_json::json!({
+        "ok": true,
+        "action": "claimWithdrawal",
+        "from": wallet,
+        "requestIds": args.ids.iter().map(|id| id.to_string()).collect::<Vec<_>>(),
+        "txHash": tx_hash,
+        "note": "ETH sent to wallet, unstETH NFT(s) burned"
+    }));
+
+    Ok(())
+}

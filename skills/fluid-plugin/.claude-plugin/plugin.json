@@ -1,0 +1,23 @@
+{
+  "name": "fluid-plugin",
+  "version": "0.1.1",
+  "description": "Supply collateral and borrow on Fluid Protocol's smart lending vaults on Ethereum and Arbitrum",
+  "author": {
+    "name": "skylavis-sky"
+  },
+  "category": "defi-protocol",
+  "tags": [
+    "fluid",
+    "lending",
+    "ethereum",
+    "arbitrum",
+    "instadapp",
+    "defi"
+  ],
+  "license": "MIT",
+  "binary": "fluid",
+  "chain": [
+    1,
+    42161
+  ]
+}

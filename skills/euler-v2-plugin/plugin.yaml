@@ -1,0 +1,33 @@
+schema_version: 1
+name: euler-v2-plugin
+version: "0.1.2"
+description: "Supply, borrow and earn yield on Euler v2 - a modular lending protocol with isolated-risk vaults (EVK)"
+author:
+  name: GeoGu360
+  github: GeoGu360
+category: dapp
+tags:
+  - lending
+  - borrowing
+  - defi
+  - earn
+  - euler
+  - euler-v2
+  - evk
+  - collateral
+license: MIT
+
+components:
+  skill:
+    dir: .
+
+build:
+  lang: rust
+  binary_name: euler-v2-plugin
+
+api_calls:
+  - "https://app.euler.finance"
+  - "https://api.merkl.xyz"
+  - "https://ethereum-rpc.publicnode.com"
+  - "https://base-rpc.publicnode.com"
+  - "https://arbitrum.drpc.org"
